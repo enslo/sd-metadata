@@ -48,3 +48,6 @@ export {
   parseSwarmUI,
   parseTensorArt,
 } from './parsers';
+
+// Unified API
+export { parsePng } from './api/png';
