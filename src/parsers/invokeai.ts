@@ -47,18 +47,13 @@ export function parseInvokeAI(chunks: PngTextChunk[]): ParseResult {
     });
   }
 
-  // Extract dimensions (required)
-  const width = data.width;
-  const height = data.height;
-  if (width === undefined || height === undefined) {
-    return Result.error({
-      type: 'parseError',
-      message: 'Missing width or height in invokeai_metadata',
-    });
-  }
+  // Extract dimensions (fallback to 0 for IHDR extraction)
+  const width = data.width ?? 0;
+  const height = data.height ?? 0;
 
   // Build metadata
   const metadata: InvokeAIMetadata = {
+    type: 'invokeai',
     software: 'invokeai',
     prompt: data.positive_prompt ?? '',
     negativePrompt: data.negative_prompt ?? '',

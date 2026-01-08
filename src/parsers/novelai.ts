@@ -81,15 +81,9 @@ export function parseNovelAI(chunks: PngTextChunk[]): ParseResult {
     });
   }
 
-  // Extract dimensions (required)
-  const width = comment.width;
-  const height = comment.height;
-  if (width === undefined || height === undefined) {
-    return Result.error({
-      type: 'parseError',
-      message: 'Missing width or height in Comment',
-    });
-  }
+  // Extract dimensions (fallback to 0 for IHDR extraction)
+  const width = comment.width ?? 0;
+  const height = comment.height ?? 0;
 
   // Extract prompt - prefer V4 base_caption if available
   const prompt =
@@ -99,6 +93,7 @@ export function parseNovelAI(chunks: PngTextChunk[]): ParseResult {
 
   // Build metadata
   const metadata: NovelAIMetadata = {
+    type: 'novelai',
     software: 'novelai',
     prompt,
     negativePrompt,

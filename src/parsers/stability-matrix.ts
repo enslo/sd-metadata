@@ -46,18 +46,13 @@ export function parseStabilityMatrix(chunks: PngTextChunk[]): ParseResult {
     });
   }
 
-  // Extract dimensions
+  // Extract dimensions (fallback to 0 for IHDR extraction)
   const width = data.Width ?? 0;
   const height = data.Height ?? 0;
-  if (width === 0 || height === 0) {
-    return Result.error({
-      type: 'parseError',
-      message: 'Missing Width or Height in parameters-json',
-    });
-  }
 
   // Build metadata
   const metadata: ComfyUIMetadata = {
+    type: 'comfyui',
     software: 'stability-matrix',
     prompt: data.PositivePrompt ?? '',
     negativePrompt: data.NegativePrompt ?? '',
