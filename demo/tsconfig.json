@@ -13,6 +13,10 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "sd-metadata": ["../src/index.ts"]
+    },
 
     /* Linting */
     "strict": true,
