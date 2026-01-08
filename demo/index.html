@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sd-metadata Demo</title>
+    <meta name="description" content="Extract and view AI-generated image metadata from PNG files" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>sd-metadata Demo</h1>
+        <p>Extract metadata from AI-generated images</p>
+        <a href="https://github.com/enslo/sd-metadata" target="_blank" rel="noopener">GitHub</a>
+      </header>
+
+      <main>
+        <section class="drop-zone" id="dropZone">
+          <div class="drop-zone-content" id="dropZoneContent">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17,8 12,3 7,8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <p>Drop PNG image here or click to select</p>
+            <input type="file" id="fileInput" accept="image/png" hidden />
+          </div>
+          <div class="drop-zone-preview" id="dropZonePreview" hidden>
+            <img id="previewImage" alt="Uploaded image preview" />
+            <div class="image-info" id="imageInfo"></div>
+            <p class="change-hint">Click or drop to change image</p>
+          </div>
+        </section>
+
+        <section class="results" id="results" hidden>
+          <div class="tabs">
+            <button class="tab active" data-tab="parsed">Parsed Metadata</button>
+            <button class="tab" data-tab="raw">Raw Data</button>
+          </div>
+
+          <div class="tab-content" id="parsedTab">
+            <div class="metadata-display" id="parsedMetadata"></div>
+          </div>
+
+          <div class="tab-content" id="rawTab" hidden>
+            <pre class="raw-data" id="rawData"></pre>
+          </div>
+        </section>
+
+        <section class="error" id="error" hidden>
+          <p id="errorMessage"></p>
+        </section>
+      </main>
+
+      <footer>
+        <p>Powered by <a href="https://github.com/enslo/sd-metadata">sd-metadata</a></p>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
