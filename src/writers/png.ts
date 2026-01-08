@@ -164,12 +164,17 @@ function collectNonTextChunks(data: Uint8Array): {
 
 /**
  * Serialize a tEXt chunk to binary
+ *
+ * Per PNG spec, tEXt uses Latin-1 encoding. However, to maintain round-trip
+ * compatibility with tools that incorrectly write UTF-8 (e.g., TensorArt),
+ * we encode the text as UTF-8 bytes. This allows non-ASCII characters to
+ * survive the read-write cycle.
  */
 function serializeTExtChunk(chunk: TExtChunk): Uint8Array {
-  // Encode keyword as Latin-1
+  // Encode keyword as Latin-1 (keywords are ASCII-safe)
   const keyword = latin1Encode(chunk.keyword);
-  // Encode text as Latin-1
-  const text = latin1Encode(chunk.text);
+  // Encode text as UTF-8 (for round-trip compatibility with non-compliant tools)
+  const text = utf8Encode(chunk.text);
 
   // Data: keyword + null + text
   const chunkData = new Uint8Array(keyword.length + 1 + text.length);

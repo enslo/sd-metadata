@@ -143,6 +143,11 @@ function readChunkType(data: Uint8Array, offset: number): string {
 
 /**
  * Parse tEXt chunk data
+ *
+ * Per PNG specification, tEXt chunks use Latin-1 (ISO-8859-1) encoding.
+ * However, some tools (notably TensorArt) incorrectly write UTF-8 bytes
+ * directly into tEXt chunks. To handle these non-compliant tools, we
+ * attempt UTF-8 decoding first and fall back to Latin-1 if that fails.
  */
 function parseTExtChunk(data: Uint8Array): TExtChunk | null {
   // Find null separator
@@ -151,13 +156,25 @@ function parseTExtChunk(data: Uint8Array): TExtChunk | null {
     return null;
   }
 
-  // Keyword is Latin-1 encoded
+  // Keyword is Latin-1 encoded (per spec, keywords are ASCII-safe)
   const keyword = latin1Decode(data.slice(0, nullIndex));
 
-  // Text is Latin-1 encoded
-  const text = latin1Decode(data.slice(nullIndex + 1));
+  // Text: Try UTF-8 first (for non-compliant tools), fallback to Latin-1
+  const textData = data.slice(nullIndex + 1);
+  const text = tryUtf8Decode(textData) ?? latin1Decode(textData);
 
   return { type: 'tEXt', keyword, text };
+}
+
+/**
+ * Try to decode data as UTF-8, return null if invalid
+ */
+function tryUtf8Decode(data: Uint8Array): string | null {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(data);
+  } catch {
+    return null;
+  }
 }
 
 /**

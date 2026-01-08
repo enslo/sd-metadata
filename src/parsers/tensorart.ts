@@ -20,21 +20,6 @@ interface TensorArtGenerationData {
 }
 
 /**
- * Re-interpret Latin-1 encoded string as UTF-8
- *
- * TensorArt incorrectly stores UTF-8 bytes in tEXt chunks (which use Latin-1).
- * This function converts the corrupted string back to proper UTF-8.
- */
-function fixLatin1ToUtf8(text: string): string {
-  try {
-    const bytes = new Uint8Array([...text].map((c) => c.charCodeAt(0)));
-    return new TextDecoder('utf-8').decode(bytes);
-  } catch {
-    return text;
-  }
-}
-
-/**
  * Parse TensorArt metadata from PNG chunks
  *
  * TensorArt stores metadata in tEXt chunks:
@@ -52,10 +37,10 @@ export function parseTensorArt(chunks: PngTextChunk[]): ParseResult {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  // Parse JSON (trim NUL characters, fix Latin-1/UTF-8 encoding issue)
+  // Parse JSON (TensorArt appends NUL characters)
   let data: TensorArtGenerationData;
   try {
-    const text = fixLatin1ToUtf8(dataChunk.text.replace(/\0+$/, ''));
+    const text = dataChunk.text.replace(/\0+$/, '');
     data = JSON.parse(text);
   } catch {
     return Result.error({
