@@ -18,7 +18,7 @@ function loadChunks(filename: string) {
 }
 
 describe('parseComfyUI', () => {
-  it('should parse comfyui.png', () => {
+  it('should parse comfyui.png with Japanese text', () => {
     const chunks = loadChunks('comfyui.png');
     const result = parseComfyUI(chunks);
 
@@ -29,6 +29,9 @@ describe('parseComfyUI', () => {
     expect(result.value.prompt).toBeDefined();
     expect(result.value.width).toBeGreaterThan(0);
     expect(result.value.height).toBeGreaterThan(0);
+
+    // Verify Japanese text is correctly extracted
+    expect(result.value.prompt).toContain('テスト');
 
     // Model settings
     expect(result.value.model).toBeDefined();

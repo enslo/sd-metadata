@@ -58,6 +58,7 @@ const newImageData = writeMetadata(imageData, metadata);
 
 - [ ] Unified read API (readPngMetadata returns GenerationMetadata directly)
 - [ ] Image size fallback (extract width/height from IHDR when not in metadata)
+- [ ] ComfyUI: workflow-based prompt extraction (node-independent, includes comments)
 
 ### Phase 2: JPEG Support
 
