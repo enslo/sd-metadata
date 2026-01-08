@@ -18,7 +18,7 @@ function loadChunks(filename: string) {
 }
 
 describe('parseA1111', () => {
-  it('should parse forge-neo.png', () => {
+  it('should parse forge-neo.png with Japanese text', () => {
     const chunks = loadChunks('forge-neo.png');
     const result = parseA1111(chunks);
 
@@ -30,6 +30,9 @@ describe('parseA1111', () => {
     expect(result.value.negativePrompt).toContain('bad quality');
     expect(result.value.width).toBe(1024);
     expect(result.value.height).toBe(1024);
+
+    // Verify Japanese text is correctly extracted
+    expect(result.value.prompt).toContain('テスト');
 
     // Model settings
     expect(result.value.model).toBeDefined();

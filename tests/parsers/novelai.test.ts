@@ -18,7 +18,7 @@ function loadChunks(filename: string) {
 }
 
 describe('parseNovelAI', () => {
-  it('should parse novelai-full.png', () => {
+  it('should parse novelai-full.png with Japanese text', () => {
     const chunks = loadChunks('novelai-full.png');
     const result = parseNovelAI(chunks);
 
@@ -30,6 +30,9 @@ describe('parseNovelAI', () => {
     expect(result.value.width).toBe(832);
     expect(result.value.height).toBe(1216);
 
+    // Verify Japanese text is correctly extracted
+    expect(result.value.prompt).toContain('#テスト');
+
     // Sampling settings
     expect(result.value.sampling).toBeDefined();
     expect(result.value.sampling?.steps).toBe(28);
@@ -38,7 +41,7 @@ describe('parseNovelAI', () => {
     expect(result.value.sampling?.scheduler).toBe('karras');
   });
 
-  it('should parse novelai-curated.png', () => {
+  it('should parse novelai-curated.png with Japanese text', () => {
     const chunks = loadChunks('novelai-curated.png');
     const result = parseNovelAI(chunks);
 
@@ -47,6 +50,9 @@ describe('parseNovelAI', () => {
 
     expect(result.value.software).toBe('novelai');
     expect(result.value.prompt).toBeDefined();
+
+    // Verify Japanese text is correctly extracted
+    expect(result.value.prompt).toContain('#テスト');
   });
 
   it('should return error for non-NovelAI format', () => {
@@ -58,7 +64,7 @@ describe('parseNovelAI', () => {
     expect(result.error.type).toBe('unsupportedFormat');
   });
 
-  it('should parse V4 character prompts from novelai-full-3char.png', () => {
+  it('should parse V4 character prompts from novelai-full-3char.png with Japanese text', () => {
     const chunks = loadChunks('novelai-full-3char.png');
     const result = parseNovelAI(chunks);
 
@@ -66,6 +72,9 @@ describe('parseNovelAI', () => {
     if (!result.ok) return;
 
     expect(result.value.software).toBe('novelai');
+
+    // Verify Japanese text is correctly extracted from base prompt
+    expect(result.value.prompt).toContain('#テスト');
 
     // Type narrow to NovelAIMetadata
     if (result.value.software !== 'novelai') return;
