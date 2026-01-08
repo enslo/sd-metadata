@@ -28,6 +28,18 @@ export type PngReadError =
 export type PngMetadataResult = Result<PngMetadata, PngReadError>;
 
 /**
+ * Error types for PNG writing
+ */
+export type PngWriteError =
+  | { type: 'invalidSignature' }
+  | { type: 'noIhdrChunk' };
+
+/**
+ * Result type for PNG metadata writing
+ */
+export type PngWriteResult = Result<Uint8Array, PngWriteError>;
+
+/**
  * PNG metadata container
  */
 export interface PngMetadata {
