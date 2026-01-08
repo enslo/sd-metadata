@@ -99,6 +99,7 @@ export function parseNovelAI(chunks: PngTextChunk[]): ParseResult {
 
   // Build metadata
   const metadata: NovelAIMetadata = {
+    type: 'novelai',
     software: 'novelai',
     prompt,
     negativePrompt,

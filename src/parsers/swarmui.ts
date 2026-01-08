@@ -69,6 +69,7 @@ export function parseSwarmUI(chunks: PngTextChunk[]): ParseResult {
 
   // Build metadata
   const metadata: SwarmUIMetadata = {
+    type: 'swarmui',
     software: 'swarmui',
     prompt: params.prompt ?? '',
     negativePrompt: params.negativeprompt ?? '',

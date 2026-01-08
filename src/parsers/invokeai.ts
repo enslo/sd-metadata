@@ -59,6 +59,7 @@ export function parseInvokeAI(chunks: PngTextChunk[]): ParseResult {
 
   // Build metadata
   const metadata: InvokeAIMetadata = {
+    type: 'invokeai',
     software: 'invokeai',
     prompt: data.positive_prompt ?? '',
     negativePrompt: data.negative_prompt ?? '',

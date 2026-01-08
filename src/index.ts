@@ -13,6 +13,7 @@ export type {
   HiresSettings,
   InvokeAIMetadata,
   ITXtChunk,
+  MetadataFormat,
   ModelSettings,
   NovelAIMetadata,
   ParseError,

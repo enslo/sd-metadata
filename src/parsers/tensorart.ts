@@ -61,6 +61,7 @@ export function parseTensorArt(chunks: PngTextChunk[]): ParseResult {
 
   // Build metadata
   const metadata: ComfyUIMetadata = {
+    type: 'comfyui',
     software: 'tensorart',
     prompt: data.prompt ?? '',
     negativePrompt: data.negativePrompt ?? '',

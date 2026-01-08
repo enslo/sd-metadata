@@ -95,6 +95,7 @@ export function parseComfyUI(chunks: PngTextChunk[]): ParseResult {
 
   // Build metadata
   const metadata: ComfyUIMetadata = {
+    type: 'comfyui',
     software: 'comfyui',
     prompt: extractText(positiveClip),
     negativePrompt: extractText(negativeClip),

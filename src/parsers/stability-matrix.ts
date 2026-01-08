@@ -58,6 +58,7 @@ export function parseStabilityMatrix(chunks: PngTextChunk[]): ParseResult {
 
   // Build metadata
   const metadata: ComfyUIMetadata = {
+    type: 'comfyui',
     software: 'stability-matrix',
     prompt: data.PositivePrompt ?? '',
     negativePrompt: data.NegativePrompt ?? '',

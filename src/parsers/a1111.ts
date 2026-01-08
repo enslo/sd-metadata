@@ -56,6 +56,7 @@ export function parseA1111(chunks: PngTextChunk[]): ParseResult {
 
   // Build metadata
   const metadata: A1111Metadata = {
+    type: 'a1111',
     software,
     prompt,
     negativePrompt,
