@@ -45,7 +45,19 @@ const newImageData = writeMetadata(imageData, metadata);
 
 - [x] PNG reading (extract metadata from tEXt / iTXt chunks)
 - [x] PNG writing (embed metadata into chunks)
-- [ ] Tool-specific parsers (NovelAI, ComfyUI, SD WebUI)
+- [x] Tool-specific parsers (NovelAI, ComfyUI, A1111/Forge)
+
+### Phase 1.5: Additional Tool Support
+
+- [ ] InvokeAI parser
+- [ ] SwarmUI parser
+- [ ] TensorArt parser
+- [ ] Stability Matrix parser
+
+### Phase 1.6: API Simplification
+
+- [ ] Unified read API (readPngMetadata returns GenerationMetadata directly)
+- [ ] Image size fallback (extract width/height from IHDR when not in metadata)
 
 ### Phase 2: JPEG Support
 
