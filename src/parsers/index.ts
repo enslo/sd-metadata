@@ -2,12 +2,20 @@ import type { ParseResult, PngMetadata } from '../types';
 import { Result } from '../types';
 import { parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
+import { parseInvokeAI } from './invokeai';
 import { parseNovelAI } from './novelai';
+import { parseStabilityMatrix } from './stability-matrix';
+import { parseSwarmUI } from './swarmui';
+import { parseTensorArt } from './tensorart';
 
 // Re-export individual parsers
 export { parseA1111 } from './a1111';
 export { parseComfyUI } from './comfyui';
+export { parseInvokeAI } from './invokeai';
 export { parseNovelAI } from './novelai';
+export { parseStabilityMatrix } from './stability-matrix';
+export { parseSwarmUI } from './swarmui';
+export { parseTensorArt } from './tensorart';
 
 /**
  * Parse PNG metadata to unified format
@@ -33,11 +41,19 @@ export function parseMetadata(metadata: PngMetadata): ParseResult {
     case 'comfyui':
       return parseComfyUI(chunks);
 
-    // Currently unsupported formats
-    case 'swarmui':
-    case 'tensorart':
-    case 'stability-matrix':
     case 'invokeai':
+      return parseInvokeAI(chunks);
+
+    case 'swarmui':
+      return parseSwarmUI(chunks);
+
+    case 'tensorart':
+      return parseTensorArt(chunks);
+
+    case 'stability-matrix':
+      return parseStabilityMatrix(chunks);
+
+    // Currently unsupported formats
     case 'animagine':
       return Result.error({ type: 'unsupportedFormat' });
 
@@ -50,6 +66,22 @@ export function parseMetadata(metadata: PngMetadata): ParseResult {
       // Then try ComfyUI
       const comfyResult = parseComfyUI(chunks);
       if (comfyResult.ok) return comfyResult;
+
+      // Then try InvokeAI
+      const invokeResult = parseInvokeAI(chunks);
+      if (invokeResult.ok) return invokeResult;
+
+      // Then try SwarmUI
+      const swarmResult = parseSwarmUI(chunks);
+      if (swarmResult.ok) return swarmResult;
+
+      // Then try TensorArt
+      const tensorResult = parseTensorArt(chunks);
+      if (tensorResult.ok) return tensorResult;
+
+      // Then try Stability Matrix
+      const stabilityResult = parseStabilityMatrix(chunks);
+      if (stabilityResult.ok) return stabilityResult;
 
       // Finally try NovelAI
       const novelaiResult = parseNovelAI(chunks);

@@ -11,6 +11,7 @@ export type {
   GenerationMetadata,
   GenerationSoftware,
   HiresSettings,
+  InvokeAIMetadata,
   ITXtChunk,
   ModelSettings,
   NovelAIMetadata,
@@ -24,6 +25,7 @@ export type {
   PngWriteResult,
   Result,
   SamplingSettings,
+  SwarmUIMetadata,
   TExtChunk,
   UpscaleSettings,
 } from './types';
@@ -40,5 +42,9 @@ export {
   parseMetadata,
   parseA1111,
   parseComfyUI,
+  parseInvokeAI,
   parseNovelAI,
+  parseStabilityMatrix,
+  parseSwarmUI,
+  parseTensorArt,
 } from './parsers';
