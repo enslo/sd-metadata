@@ -60,15 +60,17 @@ const newImageData = writeMetadata(imageData, metadata);
 - [x] Image size fallback (extract width/height from IHDR when not in metadata)
 - [x] ComfyUI: workflow-based prompt extraction (node-independent, includes comments)
 
-### Phase 2: JPEG Support
+### Phase 2: JPEG/WebP Reading ✅
 
-- [ ] JPEG reading (COM segment / Exif UserComment)
-- [ ] JPEG writing
+- [x] Shared Exif parsing utilities
+- [x] JPEG reading (UserComment, ImageDescription, Make, COM segment)
+- [x] WebP reading (EXIF chunk)
+- [x] Segment tracking for round-trip preservation
 
-### Phase 3: WebP Support
+### Phase 3: JPEG/WebP Writing
 
-- [ ] WebP reading (EXIF / XMP chunks)
-- [ ] WebP writing
+- [ ] JPEG writing (Exif UserComment, COM segment)
+- [ ] WebP writing (EXIF chunk)
 
 ### Phase 4: Format Conversion
 
