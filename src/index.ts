@@ -4,8 +4,18 @@
 
 // Types
 export type {
+  A1111Metadata,
+  BaseMetadata,
+  CharacterPrompt,
+  ComfyUIMetadata,
+  GenerationMetadata,
   GenerationSoftware,
+  HiresSettings,
   ITXtChunk,
+  ModelSettings,
+  NovelAIMetadata,
+  ParseError,
+  ParseResult,
   PngMetadata,
   PngMetadataResult,
   PngReadError,
@@ -13,7 +23,9 @@ export type {
   PngWriteError,
   PngWriteResult,
   Result,
+  SamplingSettings,
   TExtChunk,
+  UpscaleSettings,
 } from './types';
 export { Result as ResultHelper } from './types';
 
@@ -22,3 +34,11 @@ export { readPngMetadata } from './readers/png';
 
 // PNG Writer
 export { writePngMetadata } from './writers/png';
+
+// Parsers
+export {
+  parseMetadata,
+  parseA1111,
+  parseComfyUI,
+  parseNovelAI,
+} from './parsers';
