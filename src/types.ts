@@ -151,10 +151,12 @@ export interface CharacterPrompt {
 }
 
 /**
- * ComfyUI-specific metadata
+ * ComfyUI-format metadata (ComfyUI, TensorArt, Stability Matrix)
+ *
+ * These tools use ComfyUI-compatible workflow format.
  */
 export interface ComfyUIMetadata extends BaseMetadata {
-  software: 'comfyui';
+  software: 'comfyui' | 'tensorart' | 'stability-matrix';
   /** Full workflow JSON (for reproducibility) */
   workflow?: unknown;
 }
@@ -164,6 +166,20 @@ export interface ComfyUIMetadata extends BaseMetadata {
  */
 export interface A1111Metadata extends BaseMetadata {
   software: 'sd-webui' | 'forge' | 'forge-neo';
+}
+
+/**
+ * InvokeAI-specific metadata
+ */
+export interface InvokeAIMetadata extends BaseMetadata {
+  software: 'invokeai';
+}
+
+/**
+ * SwarmUI-specific metadata
+ */
+export interface SwarmUIMetadata extends BaseMetadata {
+  software: 'swarmui';
 }
 
 /**
@@ -179,7 +195,9 @@ export interface A1111Metadata extends BaseMetadata {
 export type GenerationMetadata =
   | NovelAIMetadata
   | ComfyUIMetadata
-  | A1111Metadata;
+  | A1111Metadata
+  | InvokeAIMetadata
+  | SwarmUIMetadata;
 
 /**
  * Model settings
