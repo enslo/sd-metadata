@@ -16,6 +16,10 @@ interface SwarmUIParameters {
     height?: number;
     sampler?: string;
     scheduler?: string;
+    // Refiner/Upscale settings
+    refinerupscale?: number;
+    refinerupscalemethod?: string;
+    refinercontrolpercentage?: number;
   };
 }
 
@@ -94,6 +98,19 @@ export function parseSwarmUI(chunks: PngTextChunk[]): ParseResult {
       cfg: params.cfgscale,
       sampler: params.sampler,
       scheduler: params.scheduler,
+    };
+  }
+
+  // Add hires/upscale settings
+  if (
+    params.refinerupscale !== undefined ||
+    params.refinerupscalemethod !== undefined ||
+    params.refinercontrolpercentage !== undefined
+  ) {
+    metadata.hires = {
+      scale: params.refinerupscale,
+      upscaler: params.refinerupscalemethod,
+      denoise: params.refinercontrolpercentage,
     };
   }
 

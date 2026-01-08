@@ -316,7 +316,8 @@ function renderParsedMetadata(metadata: GenerationMetadata): string {
  */
 function isJson(text: string): boolean {
   try {
-    JSON.parse(text);
+    // Trim NUL characters that some tools append
+    JSON.parse(text.replace(/\0+$/, ''));
     return true;
   } catch {
     return false;
@@ -337,7 +338,12 @@ function renderRawChunks(
       let formattedText = chunk.text;
       if (format === 'JSON') {
         try {
-          formattedText = JSON.stringify(JSON.parse(chunk.text), null, 2);
+          // Trim NUL characters that some tools append
+          formattedText = JSON.stringify(
+            JSON.parse(chunk.text.replace(/\0+$/, '')),
+            null,
+            2,
+          );
         } catch {
           // Keep original if formatting fails
         }
