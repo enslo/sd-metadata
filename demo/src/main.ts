@@ -168,6 +168,14 @@ function showResults(
   // Show raw data as individual chunks
   rawData.innerHTML = renderRawChunks(raw.chunks);
 
+  // Reset to Parsed Metadata tab
+  for (const tab of tabs) {
+    const tabName = (tab as HTMLElement).dataset.tab;
+    tab.classList.toggle('active', tabName === 'parsed');
+  }
+  parsedTab.hidden = false;
+  rawTab.hidden = true;
+
   results.hidden = false;
 }
 
@@ -233,12 +241,39 @@ function renderParsedMetadata(metadata: GenerationMetadata): string {
     `;
   }
 
-  // Generation Settings
-  const settings: [string, unknown][] = [
-    ['Width', metadata.width],
-    ['Height', metadata.height],
-  ];
+  // NovelAI Character Prompts
+  if (
+    metadata.software === 'novelai' &&
+    metadata.characterPrompts &&
+    metadata.characterPrompts.length > 0
+  ) {
+    html += `
+      <div class="metadata-section">
+        <h4>Character Prompts</h4>
+        ${metadata.characterPrompts
+          .map(
+            (char, i) => `
+          <div class="character-prompt">
+            <div class="character-header">Character ${i + 1}${char.center ? ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)` : ''}</div>
+            <div class="prompt-text">${escapeHtml(char.prompt)}</div>
+          </div>
+        `,
+          )
+          .join('')}
+      </div>
+    `;
+  }
 
+  // Generation Settings (Model → Sampling → Hires → Size)
+  const settings: [string, unknown][] = [];
+
+  // 1. Model
+  if (metadata.model) {
+    if (metadata.model.name) settings.push(['Model', metadata.model.name]);
+    if (metadata.model.hash) settings.push(['Model Hash', metadata.model.hash]);
+  }
+
+  // 2. Sampling
   if (metadata.sampling) {
     if (metadata.sampling.sampler)
       settings.push(['Sampler', metadata.sampling.sampler]);
@@ -253,58 +288,24 @@ function renderParsedMetadata(metadata: GenerationMetadata): string {
       settings.push(['CLIP Skip', metadata.sampling.clipSkip]);
   }
 
-  if (metadata.model) {
-    if (metadata.model.name) settings.push(['Model', metadata.model.name]);
-    if (metadata.model.hash) settings.push(['Model Hash', metadata.model.hash]);
-  }
-
-  if (settings.length > 2) {
-    html += `
-      <div class="metadata-section">
-        <h4>Generation Settings</h4>
-        ${settings
-          .map(
-            ([label, value]) => `
-          <div class="metadata-field">
-            <span class="label">${label}</span>
-            <span class="value">${value}</span>
-          </div>
-        `,
-          )
-          .join('')}
-      </div>
-    `;
-  }
-
-  // Hires Settings
+  // 3. Hires/Upscale
   if (metadata.hires) {
-    const hiresSettings: [string, unknown][] = [];
     if (metadata.hires.upscaler)
-      hiresSettings.push(['Upscaler', metadata.hires.upscaler]);
+      settings.push(['Upscaler', metadata.hires.upscaler]);
     if (metadata.hires.scale)
-      hiresSettings.push(['Scale', metadata.hires.scale]);
+      settings.push(['Hires Scale', metadata.hires.scale]);
     if (metadata.hires.steps)
-      hiresSettings.push(['Steps', metadata.hires.steps]);
+      settings.push(['Hires Steps', metadata.hires.steps]);
     if (metadata.hires.denoise)
-      hiresSettings.push(['Denoise', metadata.hires.denoise]);
+      settings.push(['Hires Denoise', metadata.hires.denoise]);
+  }
 
-    if (hiresSettings.length > 0) {
-      html += `
-        <div class="metadata-section">
-          <h4>Hires.fix Settings</h4>
-          ${hiresSettings
-            .map(
-              ([label, value]) => `
-            <div class="metadata-field">
-              <span class="label">${label}</span>
-              <span class="value">${value}</span>
-            </div>
-          `,
-            )
-            .join('')}
-        </div>
-      `;
-    }
+  // 4. Image Size
+  settings.push(['Width', metadata.width]);
+  settings.push(['Height', metadata.height]);
+
+  if (settings.length > 0) {
+    html += `<div class="metadata-section"><h4>Generation Settings</h4>${settings.map(([label, value]) => `<div class="metadata-field"><span class="label">${label}</span><span class="value">${value}</span></div>`).join('')}</div>`;
   }
 
   return html;

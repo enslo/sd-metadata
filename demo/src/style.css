@@ -247,6 +247,22 @@ header a:hover {
   word-break: break-word;
 }
 
+/* Character Prompts (NovelAI) */
+.character-prompt {
+  margin-bottom: 1rem;
+}
+
+.character-prompt:last-child {
+  margin-bottom: 0;
+}
+
+.character-header {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
 /* Raw Data */
 .raw-data {
   display: flex;
