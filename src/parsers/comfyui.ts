@@ -66,20 +66,13 @@ export function parseComfyUI(chunks: PngTextChunk[]): ParseResult {
     'EmptySD3LatentImage',
   ]);
 
-  // Extract dimensions from latent image or save image
+  // Extract dimensions (fallback to 0 for IHDR extraction)
   let width = 0;
   let height = 0;
 
   if (latentImage) {
     width = Number(latentImage.inputs.width) || 0;
     height = Number(latentImage.inputs.height) || 0;
-  }
-
-  // If no dimensions found, use defaults
-  if (width === 0 || height === 0) {
-    // Try to find from other sources or use placeholder
-    width = width || 512;
-    height = height || 512;
   }
 
   // Find workflow chunk

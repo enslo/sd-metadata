@@ -49,15 +49,9 @@ export function parseTensorArt(chunks: PngTextChunk[]): ParseResult {
     });
   }
 
-  // Extract dimensions
+  // Extract dimensions (fallback to 0 for IHDR extraction)
   const width = data.width ?? 0;
   const height = data.height ?? 0;
-  if (width === 0 || height === 0) {
-    return Result.error({
-      type: 'parseError',
-      message: 'Missing width or height in generation_data',
-    });
-  }
 
   // Build metadata
   const metadata: ComfyUIMetadata = {

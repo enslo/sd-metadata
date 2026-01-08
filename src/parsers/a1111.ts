@@ -43,12 +43,6 @@ export function parseA1111(chunks: PngTextChunk[]): ParseResult {
     });
   }
   const [width, height] = parseSize(size);
-  if (width === 0 || height === 0) {
-    return Result.error({
-      type: 'parseError',
-      message: 'Invalid Size format',
-    });
-  }
 
   // Determine software variant
   const version = settingsMap.get('Version');

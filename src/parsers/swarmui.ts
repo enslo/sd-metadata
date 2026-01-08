@@ -57,15 +57,9 @@ export function parseSwarmUI(chunks: PngTextChunk[]): ParseResult {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  // Extract dimensions
+  // Extract dimensions (fallback to 0 for IHDR extraction)
   const width = params.width ?? 0;
   const height = params.height ?? 0;
-  if (width === 0 || height === 0) {
-    return Result.error({
-      type: 'parseError',
-      message: 'Missing width or height in sui_image_params',
-    });
-  }
 
   // Build metadata
   const metadata: SwarmUIMetadata = {
