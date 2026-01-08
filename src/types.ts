@@ -54,6 +54,75 @@ export interface PngMetadata {
  */
 export type PngTextChunk = TExtChunk | ITXtChunk;
 
+// ============================================================================
+// Exif Metadata Types (shared between JPEG/WebP)
+// ============================================================================
+
+/**
+ * Source location of a metadata segment.
+ * Used for round-tripping: reading and writing back to the correct location.
+ */
+export type MetadataSegmentSource =
+  | { type: 'exifUserComment' }
+  | { type: 'exifImageDescription'; prefix?: string }
+  | { type: 'exifMake'; prefix?: string }
+  | { type: 'jpegCom' };
+
+/**
+ * A single metadata segment with source tracking
+ */
+export interface MetadataSegment {
+  /** Source location of this segment */
+  source: MetadataSegmentSource;
+  /** Raw data string */
+  data: string;
+}
+
+/**
+ * Unified metadata container for JPEG/WebP formats
+ */
+export interface ExifMetadata {
+  /** All metadata segments found in the file */
+  segments: MetadataSegment[];
+  /** Detected generation software */
+  software: GenerationSoftware | null;
+}
+
+// ============================================================================
+// JPEG Metadata Types
+// ============================================================================
+
+/**
+ * Error types for JPEG reading
+ */
+export type JpegReadError =
+  | { type: 'invalidSignature' }
+  | { type: 'noMetadata' }
+  | { type: 'parseError'; message: string };
+
+/**
+ * Result type for JPEG metadata reading
+ */
+export type JpegMetadataResult = Result<ExifMetadata, JpegReadError>;
+
+// ============================================================================
+// WebP Metadata Types
+// ============================================================================
+
+/**
+ * Error types for WebP reading
+ */
+export type WebpReadError =
+  | { type: 'invalidSignature' }
+  | { type: 'noExifChunk' }
+  | { type: 'noMetadata' }
+  | { type: 'parseError'; message: string };
+
+/**
+ * Result type for WebP metadata reading
+ */
+export type WebpMetadataResult = Result<ExifMetadata, WebpReadError>;
+
 /**
  * tEXt chunk (Latin-1 encoded text)
  */
