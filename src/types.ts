@@ -123,6 +123,30 @@ export type WebpReadError =
  */
 export type WebpMetadataResult = Result<ExifMetadata, WebpReadError>;
 
+// ============================================================================
+// Write Result Types
+// ============================================================================
+
+/**
+ * Error types for JPEG writing
+ */
+export type JpegWriteError = { type: 'invalidSignature' };
+
+/**
+ * Result type for JPEG metadata writing
+ */
+export type JpegWriteResult = Result<Uint8Array, JpegWriteError>;
+
+/**
+ * Error types for WebP writing
+ */
+export type WebpWriteError = { type: 'invalidSignature' };
+
+/**
+ * Result type for WebP metadata writing
+ */
+export type WebpWriteResult = Result<Uint8Array, WebpWriteError>;
+
 /**
  * tEXt chunk (Latin-1 encoded text)
  */

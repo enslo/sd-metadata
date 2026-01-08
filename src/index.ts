@@ -36,6 +36,10 @@ export type {
   UpscaleSettings,
   WebpMetadataResult,
   WebpReadError,
+  JpegWriteError,
+  JpegWriteResult,
+  WebpWriteError,
+  WebpWriteResult,
 } from './types';
 export { Result as ResultHelper } from './types';
 
@@ -51,6 +55,12 @@ export { readWebpMetadata } from './readers/webp';
 // PNG Writer
 export { writePngMetadata } from './writers/png';
 
+// JPEG Writer
+export { writeJpegMetadata } from './writers/jpeg';
+
+// WebP Writer
+export { writeWebpMetadata } from './writers/webp';
+
 // Parsers
 export {
   parseMetadata,
@@ -65,3 +75,5 @@ export {
 
 // Unified API
 export { parsePng } from './api/png';
+export { parseJpeg } from './api/jpeg';
+export { parseWebp } from './api/webp';
