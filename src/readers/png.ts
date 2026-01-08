@@ -328,9 +328,8 @@ function detectSoftware(chunks: PngTextChunk[]): GenerationSoftware | null {
     return 'sd-webui';
   }
 
-  // ComfyUI: has prompt chunk (JSON with class_type)
-  const prompt = chunkMap.get('prompt');
-  if (prompt?.includes('class_type')) {
+  // ComfyUI: has workflow chunk
+  if (chunkMap.has('workflow')) {
     return 'comfyui';
   }
 
