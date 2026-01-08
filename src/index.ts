@@ -8,12 +8,17 @@ export type {
   BaseMetadata,
   CharacterPrompt,
   ComfyUIMetadata,
+  ExifMetadata,
   GenerationMetadata,
   GenerationSoftware,
   HiresSettings,
   InvokeAIMetadata,
   ITXtChunk,
+  JpegMetadataResult,
+  JpegReadError,
   MetadataFormat,
+  MetadataSegment,
+  MetadataSegmentSource,
   ModelSettings,
   NovelAIMetadata,
   ParseError,
@@ -29,11 +34,19 @@ export type {
   SwarmUIMetadata,
   TExtChunk,
   UpscaleSettings,
+  WebpMetadataResult,
+  WebpReadError,
 } from './types';
 export { Result as ResultHelper } from './types';
 
 // PNG Reader
 export { readPngMetadata } from './readers/png';
+
+// JPEG Reader
+export { readJpegMetadata } from './readers/jpeg';
+
+// WebP Reader
+export { readWebpMetadata } from './readers/webp';
 
 // PNG Writer
 export { writePngMetadata } from './writers/png';
