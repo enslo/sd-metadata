@@ -54,11 +54,11 @@ const newImageData = writeMetadata(imageData, metadata);
 - [x] TensorArt parser
 - [x] Stability Matrix parser
 
-### Phase 1.6: API Simplification (In Progress)
+### Phase 1.6: API Simplification ✅
 
 - [x] Unified read API (`parsePng` returns GenerationMetadata directly)
 - [x] Image size fallback (extract width/height from IHDR when not in metadata)
-- [ ] ComfyUI: workflow-based prompt extraction (node-independent, includes comments)
+- [x] ComfyUI: workflow-based prompt extraction (node-independent, includes comments)
 
 ### Phase 2: JPEG Support
 

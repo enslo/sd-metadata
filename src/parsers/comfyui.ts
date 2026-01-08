@@ -16,6 +16,63 @@ interface ComfyNode {
 type ComfyPrompt = Record<string, ComfyNode>;
 
 /**
+ * ComfyUI workflow node structure (from workflow chunk)
+ * Contains widgets_values which preserves original user input including comments
+ */
+interface ComfyWorkflowNode {
+  id: string | number;
+  type: string;
+  widgets_values?: unknown[];
+  inputs?: Array<{ name: string; type: string; link?: number | null }>;
+  outputs?: Array<{ name: string; type: string; links?: number[] }>;
+}
+
+/**
+ * ComfyUI workflow structure (from workflow chunk)
+ */
+interface ComfyWorkflow {
+  nodes: ComfyWorkflowNode[];
+  links?: unknown[];
+}
+
+/**
+ * Build a map from node ID to workflow node
+ *
+ * @param workflow - Parsed workflow object
+ * @returns Map of node ID (as string) to workflow node
+ */
+function buildWorkflowNodeMap(
+  workflow: ComfyWorkflow,
+): Map<string, ComfyWorkflowNode> {
+  const map = new Map<string, ComfyWorkflowNode>();
+  for (const node of workflow.nodes) {
+    map.set(String(node.id), node);
+  }
+  return map;
+}
+
+/**
+ * Extract text from workflow node's widgets_values
+ * CLIPTextEncode nodes typically have text as the first widget value
+ *
+ * @param workflowNode - Workflow node to extract text from
+ * @returns Extracted text or empty string
+ */
+function extractTextFromWorkflowNode(
+  workflowNode: ComfyWorkflowNode | undefined,
+): string {
+  if (!workflowNode?.widgets_values) return '';
+
+  // CLIPTextEncode: first widget is the text
+  const firstWidget = workflowNode.widgets_values[0];
+  if (typeof firstWidget === 'string') {
+    return firstWidget;
+  }
+
+  return '';
+}
+
+/**
  * Parse ComfyUI metadata from PNG chunks
  *
  * ComfyUI stores metadata in tEXt chunks:
@@ -75,23 +132,58 @@ export function parseComfyUI(chunks: PngTextChunk[]): ParseResult {
     height = Number(latentImage.inputs.height) || 0;
   }
 
-  // Find workflow chunk
+  // Find workflow chunk and parse it
   const workflowChunk = chunks.find((c) => c.keyword === 'workflow');
-  let workflow: unknown;
+  let workflow: ComfyWorkflow | undefined;
+  let workflowNodeMap: Map<string, ComfyWorkflowNode> | undefined;
+
   if (workflowChunk) {
     try {
-      workflow = JSON.parse(workflowChunk.text);
+      const parsed = JSON.parse(workflowChunk.text);
+      // Validate workflow structure
+      if (parsed && Array.isArray(parsed.nodes)) {
+        workflow = parsed as ComfyWorkflow;
+        workflowNodeMap = buildWorkflowNodeMap(workflow);
+      }
     } catch {
       // Ignore invalid workflow JSON
     }
+  }
+
+  // Extract prompts: prefer workflow widgets_values, fallback to prompt inputs
+  const positiveNodeId = findNodeIdByLink(prompt, ksampler, 'positive');
+  const negativeNodeId = findNodeIdByLink(prompt, ksampler, 'negative');
+
+  let positiveText = '';
+  let negativeText = '';
+
+  // Try to get text from workflow (preserves comments)
+  if (workflowNodeMap) {
+    const positiveWorkflowNode = positiveNodeId
+      ? workflowNodeMap.get(positiveNodeId)
+      : undefined;
+    const negativeWorkflowNode = negativeNodeId
+      ? workflowNodeMap.get(negativeNodeId)
+      : undefined;
+
+    positiveText = extractTextFromWorkflowNode(positiveWorkflowNode);
+    negativeText = extractTextFromWorkflowNode(negativeWorkflowNode);
+  }
+
+  // Fallback to prompt chunk if workflow extraction failed
+  if (!positiveText) {
+    positiveText = extractText(positiveClip);
+  }
+  if (!negativeText) {
+    negativeText = extractText(negativeClip);
   }
 
   // Build metadata
   const metadata: ComfyUIMetadata = {
     type: 'comfyui',
     software: 'comfyui',
-    prompt: extractText(positiveClip),
-    negativePrompt: extractText(negativeClip),
+    prompt: positiveText,
+    negativePrompt: negativeText,
     width,
     height,
     workflow,
@@ -125,6 +217,29 @@ export function parseComfyUI(chunks: PngTextChunk[]): ParseResult {
   }
 
   return Result.ok(metadata);
+}
+
+/**
+ * Find node ID from KSampler input link
+ *
+ * @param prompt - Prompt data (not directly used, kept for consistency)
+ * @param ksampler - KSampler node
+ * @param inputName - Name of the input ('positive' or 'negative')
+ * @returns Node ID as string, or undefined if not found
+ */
+function findNodeIdByLink(
+  _prompt: ComfyPrompt,
+  ksampler: ComfyNode | undefined,
+  inputName: string,
+): string | undefined {
+  if (!ksampler) return undefined;
+
+  const link = ksampler.inputs[inputName];
+  if (Array.isArray(link) && link.length >= 1) {
+    return String(link[0]);
+  }
+
+  return undefined;
 }
 
 /**
