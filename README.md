@@ -43,7 +43,7 @@ const newImageData = writeMetadata(imageData, metadata);
 
 ### Phase 1: PNG Support ⬅️ Current
 
-- [ ] PNG reading (extract metadata from tEXt / iTXt chunks)
+- [x] PNG reading (extract metadata from tEXt / iTXt chunks)
 - [ ] PNG writing (embed metadata into chunks)
 - [ ] Tool-specific parsers (NovelAI, ComfyUI, SD WebUI)
 
