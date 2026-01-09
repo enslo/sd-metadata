@@ -6,8 +6,7 @@
 
 import { parseMetadata } from '../parsers';
 import { readJpegMetadata } from '../readers/jpeg';
-import type { GenerationMetadata, JpegReadError, ParseResult } from '../types';
-import { Result } from '../types';
+import type { JpegReadError, ParseResult } from '../types';
 import { segmentsToEntries } from '../utils/convert';
 
 /**
@@ -24,8 +23,8 @@ import { segmentsToEntries } from '../utils/convert';
  * @example
  * ```typescript
  * const result = parseJpeg(jpegData);
- * if (result.ok) {
- *   console.log(result.value.prompt);
+ * if (result.status === 'success') {
+ *   console.log(result.metadata.prompt);
  * }
  * ```
  */
@@ -33,13 +32,25 @@ export function parseJpeg(data: Uint8Array): ParseResult {
   // Read JPEG metadata segments
   const readResult = readJpegMetadata(data);
   if (!readResult.ok) {
-    return Result.error({
-      type: 'parseError',
+    // invalidSignature is invalid, noMetadata is empty
+    if (readResult.error.type === 'noMetadata') {
+      return { status: 'empty' };
+    }
+    return {
+      status: 'invalid',
       message: formatReadError(readResult.error),
-    });
+    };
   }
 
   const segments = readResult.value;
+
+  // No segments found (already handled above, but for safety)
+  if (segments.length === 0) {
+    return { status: 'empty' };
+  }
+
+  // Build raw metadata
+  const raw = { format: 'jpeg' as const, segments };
 
   // Convert segments to format-agnostic entries
   const entries = segmentsToEntries(segments);
@@ -47,16 +58,10 @@ export function parseJpeg(data: Uint8Array): ParseResult {
   // Parse metadata (software detection is handled by the parser)
   const parseResult = parseMetadata(entries);
   if (!parseResult.ok) {
-    return parseResult;
+    return { status: 'unrecognized', raw };
   }
 
-  // Attach the correct raw data to create GenerationMetadata
-  const metadata = {
-    ...parseResult.value,
-    raw: { format: 'jpeg' as const, segments },
-  };
-
-  return Result.ok(metadata as GenerationMetadata);
+  return { status: 'success', metadata: parseResult.value, raw };
 }
 
 /**

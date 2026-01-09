@@ -6,8 +6,7 @@
 
 import { parseMetadata } from '../parsers';
 import { readPngMetadata } from '../readers/png';
-import type { GenerationMetadata, ParseResult, PngReadError } from '../types';
-import { Result } from '../types';
+import type { ParseResult, PngReadError } from '../types';
 import { readUint32BE } from '../utils/binary';
 import { pngChunksToEntries } from '../utils/convert';
 
@@ -38,13 +37,21 @@ export function parsePng(data: Uint8Array): ParseResult {
   // Read PNG chunks
   const readResult = readPngMetadata(data);
   if (!readResult.ok) {
-    return Result.error({
-      type: 'parseError',
+    return {
+      status: 'invalid',
       message: formatReadError(readResult.error),
-    });
+    };
   }
 
   const chunks = readResult.value;
+
+  // No metadata chunks found
+  if (chunks.length === 0) {
+    return { status: 'empty' };
+  }
+
+  // Build raw metadata
+  const raw = { format: 'png' as const, chunks };
 
   // Convert chunks to format-agnostic entries
   const entries = pngChunksToEntries(chunks);
@@ -52,16 +59,11 @@ export function parsePng(data: Uint8Array): ParseResult {
   // Parse metadata (software detection is handled by the parser)
   const parseResult = parseMetadata(entries);
   if (!parseResult.ok) {
-    return parseResult;
+    return { status: 'unrecognized', raw };
   }
 
-  // Attach the correct raw data to create GenerationMetadata
-  const metadata = {
-    ...parseResult.value,
-    raw: { format: 'png' as const, chunks },
-  };
-
   // Fallback: extract dimensions from IHDR if missing
+  const metadata = { ...parseResult.value };
   if (metadata.width === 0 || metadata.height === 0) {
     const ihdrDimensions = readIhdrDimensions(data);
     if (ihdrDimensions) {
@@ -70,7 +72,7 @@ export function parsePng(data: Uint8Array): ParseResult {
     }
   }
 
-  return Result.ok(metadata as GenerationMetadata);
+  return { status: 'success', metadata, raw };
 }
 
 /**

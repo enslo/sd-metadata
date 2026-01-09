@@ -6,15 +6,8 @@
  */
 
 import './style.css';
-import {
-  parseJpeg,
-  parsePng,
-  parseWebp,
-  readJpegMetadata,
-  readPngMetadata,
-  readWebpMetadata,
-} from 'sd-metadata';
-import type { MetadataSegment, ParseResult, PngTextChunk } from 'sd-metadata';
+import { parseJpeg, parsePng, parseWebp } from 'sd-metadata';
+import type { ParseResult } from 'sd-metadata';
 import {
   createError,
   createExifSegments,
@@ -148,13 +141,13 @@ async function processFile(file: File) {
   // Process based on format
   switch (format) {
     case 'png':
-      processPng(data);
+      showResults(parsePng(data), format);
       break;
     case 'jpeg':
-      processJpeg(data);
+      showResults(parseJpeg(data), format);
       break;
     case 'webp':
-      processWebp(data);
+      showResults(parseWebp(data), format);
       break;
   }
 }
@@ -167,48 +160,6 @@ function getImageFormat(mimeType: string): 'png' | 'jpeg' | 'webp' | null {
   if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') return 'jpeg';
   if (mimeType === 'image/webp') return 'webp';
   return null;
-}
-
-/**
- * Process PNG file
- */
-function processPng(data: Uint8Array) {
-  const readResult = readPngMetadata(data);
-  if (!readResult.ok) {
-    showError(`Failed to read PNG: ${readResult.error.type}`);
-    return;
-  }
-
-  const parseResult = parsePng(data);
-  showPngResults(readResult.value, parseResult);
-}
-
-/**
- * Process JPEG file
- */
-function processJpeg(data: Uint8Array) {
-  const readResult = readJpegMetadata(data);
-  if (!readResult.ok) {
-    showError(`Failed to read JPEG: ${readResult.error.type}`);
-    return;
-  }
-
-  const parseResult = parseJpeg(data);
-  showExifResults(readResult.value, parseResult);
-}
-
-/**
- * Process WebP file
- */
-function processWebp(data: Uint8Array) {
-  const readResult = readWebpMetadata(data);
-  if (!readResult.ok) {
-    showError(`Failed to read WebP: ${readResult.error.type}`);
-    return;
-  }
-
-  const parseResult = parseWebp(data);
-  showExifResults(readResult.value, parseResult);
 }
 
 // =============================================================================
@@ -242,57 +193,50 @@ function resetDropZone() {
 }
 
 /**
- * Show results with PNG chunks
+ * Show results based on parse result
  */
-function showPngResults(raw: PngTextChunk[], parseResult: ParseResult) {
+function showResults(
+  parseResult: ParseResult,
+  format: 'png' | 'jpeg' | 'webp',
+) {
   const { imageInfo, parsedMetadata, rawData, results } = elements;
 
-  // Update image info
-  imageInfo.replaceChildren(
-    createImageInfo(
-      parseResult.ok ? parseResult.value : null,
-      parseResult.ok ? undefined : parseResult.error.type,
-    ),
-  );
+  // Handle different statuses
+  switch (parseResult.status) {
+    case 'success':
+      imageInfo.replaceChildren(createImageInfo(parseResult.metadata));
+      parsedMetadata.replaceChildren(
+        createParsedMetadata(parseResult.metadata),
+      );
+      // Show raw data based on format
+      if (parseResult.raw.format === 'png') {
+        rawData.replaceChildren(createRawChunks(parseResult.raw.chunks));
+      } else {
+        rawData.replaceChildren(createExifSegments(parseResult.raw.segments));
+      }
+      break;
 
-  // Show parsed metadata or error
-  parsedMetadata.replaceChildren(
-    parseResult.ok
-      ? createParsedMetadata(parseResult.value)
-      : createError(parseResult.error.type),
-  );
+    case 'unrecognized':
+      imageInfo.replaceChildren(createImageInfo(null, 'unrecognized'));
+      parsedMetadata.replaceChildren(createError('unrecognized'));
+      // Show raw data even when unrecognized
+      if (parseResult.raw.format === 'png') {
+        rawData.replaceChildren(createRawChunks(parseResult.raw.chunks));
+      } else {
+        rawData.replaceChildren(createExifSegments(parseResult.raw.segments));
+      }
+      break;
 
-  // Show raw data as individual chunks
-  rawData.replaceChildren(createRawChunks(raw));
+    case 'empty':
+      imageInfo.replaceChildren(createImageInfo(null, 'empty'));
+      parsedMetadata.replaceChildren(createError('empty'));
+      rawData.replaceChildren(createError('empty'));
+      break;
 
-  // Reset to Parsed Metadata tab
-  setActiveTab('parsed');
-  results.hidden = false;
-}
-
-/**
- * Show results with Exif segments (JPEG/WebP)
- */
-function showExifResults(raw: MetadataSegment[], parseResult: ParseResult) {
-  const { imageInfo, parsedMetadata, rawData, results } = elements;
-
-  // Update image info
-  imageInfo.replaceChildren(
-    createImageInfo(
-      parseResult.ok ? parseResult.value : null,
-      parseResult.ok ? undefined : parseResult.error.type,
-    ),
-  );
-
-  // Show parsed metadata or error
-  parsedMetadata.replaceChildren(
-    parseResult.ok
-      ? createParsedMetadata(parseResult.value)
-      : createError(parseResult.error.type),
-  );
-
-  // Show raw data as segments
-  rawData.replaceChildren(createExifSegments(raw));
+    case 'invalid':
+      showError(parseResult.message ?? `Invalid ${format.toUpperCase()} file`);
+      return;
+  }
 
   // Reset to Parsed Metadata tab
   setActiveTab('parsed');

@@ -21,7 +21,6 @@ export type {
   MetadataSegmentSource,
   ModelSettings,
   NovelAIMetadata,
-  ParsedMetadata,
   ParseError,
   ParseResult,
   InternalParseResult,
