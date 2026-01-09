@@ -5,6 +5,7 @@ import type {
   NovelAIMetadata,
 } from '../types';
 import { Result } from '../types';
+import { buildEntryRecord } from '../utils/entries';
 
 /**
  * NovelAI Comment JSON structure
@@ -51,19 +52,16 @@ interface V4Prompt {
  * @returns Parsed metadata or error
  */
 export function parseNovelAI(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry map for easy access
-  const entryMap = new Map<string, string>();
-  for (const entry of entries) {
-    entryMap.set(entry.keyword, entry.text);
-  }
+  // Build entry record for easy access
+  const entryRecord = buildEntryRecord(entries);
 
   // Verify NovelAI format
-  if (entryMap.get('Software') !== 'NovelAI') {
+  if (entryRecord.Software !== 'NovelAI') {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   // Parse Comment JSON
-  const commentText = entryMap.get('Comment');
+  const commentText = entryRecord.Comment;
   if (!commentText) {
     return Result.error({
       type: 'parseError',

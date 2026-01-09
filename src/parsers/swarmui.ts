@@ -4,6 +4,7 @@ import type {
   SwarmUIMetadata,
 } from '../types';
 import { Result } from '../types';
+import { buildEntryRecord } from '../utils/entries';
 
 /**
  * SwarmUI parameters JSON structure
@@ -38,14 +39,11 @@ interface SwarmUIParameters {
  * @returns Parsed metadata or error
  */
 export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry map for easy access
-  const entryMap = new Map<string, string>();
-  for (const entry of entries) {
-    entryMap.set(entry.keyword, entry.text);
-  }
+  // Build entry record for easy access
+  const entryRecord = buildEntryRecord(entries);
 
   // Find parameters entry (PNG uses 'parameters', JPEG/WebP uses 'Comment')
-  const parametersText = entryMap.get('parameters') ?? entryMap.get('Comment');
+  const parametersText = entryRecord.parameters ?? entryRecord.Comment;
   if (!parametersText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
