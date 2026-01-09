@@ -65,6 +65,13 @@ function detectFromKeywords(
 function detectFromContent(
   entryRecord: EntryRecord,
 ): GenerationSoftware | null {
+  // ComfyUI: prioritize if both prompt and workflow exist
+  // This handles custom nodes like SaveImageWithMetadata that output both
+  // A1111-style parameters AND ComfyUI prompt/workflow
+  if ('prompt' in entryRecord && 'workflow' in entryRecord) {
+    return 'comfyui';
+  }
+
   // Check parameters entry (PNG) or Comment entry (JPEG/WebP)
   const text = entryRecord.parameters ?? entryRecord.Comment ?? '';
 

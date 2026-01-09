@@ -126,8 +126,8 @@ describe('parsePng', () => {
 
       expect(result.status === 'success').toBe(true);
       if (result.status === 'success') {
-        // Uses A1111 format
-        expect(result.metadata.software).toBe('sd-webui');
+        // Has both A1111 parameters and ComfyUI workflow, but ComfyUI is prioritized
+        expect(result.metadata.software).toBe('comfyui');
       }
     });
   });
