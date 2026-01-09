@@ -1,7 +1,7 @@
 import type { WebpMetadataResult } from '../types';
 import { Result } from '../types';
 import { arraysEqual, readUint32LE } from '../utils/binary';
-import { parseExifMetadataSegments } from '../utils/exif';
+import { parseExifMetadataSegments } from './exif';
 
 /** WebP file signature: "RIFF" */
 const RIFF_SIGNATURE = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
