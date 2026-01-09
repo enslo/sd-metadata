@@ -6,7 +6,7 @@ import { convertMetadata, parseJpeg, parsePng } from '../../src';
 const SAMPLES_DIR = path.join(__dirname, '../../samples');
 
 describe('A1111-format metadata conversion', () => {
-  describe('PNG → JPEG conversion', () => {
+  describe('PNG → JPEG/WebP conversion', () => {
     test('should convert forge-neo PNG to JPEG format', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/forge-neo.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
@@ -54,11 +54,46 @@ describe('A1111-format metadata conversion', () => {
       if (!conversionResult.ok) return;
 
       expect(conversionResult.value.format).toBe('webp');
+      if (conversionResult.value.format !== 'webp') return;
+
+      // Should have exifUserComment with A1111 format
+      expect(conversionResult.value.segments.length).toBeGreaterThan(0);
+      const userComment = conversionResult.value.segments.find(
+        (s) => s.source.type === 'exifUserComment',
+      );
+      expect(userComment).toBeDefined();
+      expect(userComment?.data).toMatch(/Steps:/);
+    });
+
+    test('should convert forge-neo-hires.png with A1111 format', () => {
+      const pngPath = path.join(SAMPLES_DIR, 'png/forge-neo-hires.png');
+      const pngData = new Uint8Array(fs.readFileSync(pngPath));
+
+      const pngResult = parsePng(pngData);
+      expect(pngResult.status).toBe('success');
+      if (pngResult.status !== 'success') return;
+
+      expect(pngResult.metadata.software).toBe('forge-neo');
+
+      const conversionResult = convertMetadata(pngResult, 'jpeg');
+      expect(conversionResult.ok).toBe(true);
+      if (!conversionResult.ok) return;
+
+      expect(conversionResult.value.format).toBe('jpeg');
+      if (conversionResult.value.format !== 'jpeg') return;
+
+      // Verify A1111 format
+      expect(conversionResult.value.segments.length).toBeGreaterThan(0);
+      const userComment = conversionResult.value.segments.find(
+        (s) => s.source.type === 'exifUserComment',
+      );
+      expect(userComment).toBeDefined();
+      expect(userComment?.data).toMatch(/Steps:/);
     });
   });
 
-  describe('JPEG → PNG conversion', () => {
-    test('should convert forge-neo JPEG to PNG format', () => {
+  describe('JPEG/WebP → PNG conversion', () => {
+    test('should convert forge-neo JPEG to PNG with parameters chunk', () => {
       const jpegPath = path.join(SAMPLES_DIR, 'jpg/forge-neo.jpeg');
       const jpegData = new Uint8Array(fs.readFileSync(jpegPath));
 
@@ -76,16 +111,40 @@ describe('A1111-format metadata conversion', () => {
       expect(conversionResult.value.format).toBe('png');
       if (conversionResult.value.format !== 'png') return;
 
-      // Should have parameters chunk
+      // Should have parameters chunk with A1111 format
+      expect(conversionResult.value.chunks.length).toBeGreaterThan(0);
       const parameters = conversionResult.value.chunks.find(
         (c) => c.keyword === 'parameters',
       );
       expect(parameters).toBeDefined();
+      expect(parameters?.text).toMatch(/Steps:/);
+      expect(parameters?.text).toContain('masterpiece');
+    });
 
-      // Content should be plain text
-      if (parameters) {
-        expect(parameters.text).toContain('masterpiece');
-      }
+    test('should convert civitai.jpeg to PNG with A1111 format', () => {
+      const jpegPath = path.join(SAMPLES_DIR, 'jpg/civitai.jpeg');
+      const jpegData = new Uint8Array(fs.readFileSync(jpegPath));
+
+      const jpegResult = parseJpeg(jpegData);
+      expect(jpegResult.status).toBe('success');
+      if (jpegResult.status !== 'success') return;
+
+      expect(['sd-webui', 'civitai']).toContain(jpegResult.metadata.software);
+
+      const conversionResult = convertMetadata(jpegResult, 'png');
+      expect(conversionResult.ok).toBe(true);
+      if (!conversionResult.ok) return;
+
+      expect(conversionResult.value.format).toBe('png');
+      if (conversionResult.value.format !== 'png') return;
+
+      // Should have parameters chunk with A1111 format
+      expect(conversionResult.value.chunks.length).toBeGreaterThan(0);
+      const parameters = conversionResult.value.chunks.find(
+        (c) => c.keyword === 'parameters',
+      );
+      expect(parameters).toBeDefined();
+      expect(parameters?.text).toMatch(/Steps:/);
     });
   });
 

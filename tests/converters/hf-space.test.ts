@@ -6,7 +6,7 @@ import { convertMetadata, parsePng } from '../../src';
 const SAMPLES_DIR = path.join(__dirname, '../../samples');
 
 describe('HuggingFace Space metadata conversion', () => {
-  describe('PNG → JPEG/WebP conversion', () => {
+  describe('PNG → JPEG conversion', () => {
     test('should convert huggingface-animagine.png to JPEG with JSON metadata', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/huggingface-animagine.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
@@ -26,6 +26,7 @@ describe('HuggingFace Space metadata conversion', () => {
       if (conversionResult.value.format !== 'jpeg') return;
 
       // Should have exifUserComment segment
+      expect(conversionResult.value.segments.length).toBeGreaterThan(0);
       const userComment = conversionResult.value.segments.find(
         (s) => s.source.type === 'exifUserComment',
       );

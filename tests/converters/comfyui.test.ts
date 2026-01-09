@@ -7,7 +7,7 @@ const SAMPLES_DIR = path.join(__dirname, '../../samples');
 
 describe('ComfyUI metadata conversion', () => {
   describe('PNG → JPEG/WebP conversion', () => {
-    test('should convert ComfyUI PNG to JPEG format', () => {
+    test('should convert comfyui.png to JPEG with prompt and workflow', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/comfyui.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
@@ -26,6 +26,7 @@ describe('ComfyUI metadata conversion', () => {
       if (conversionResult.value.format !== 'jpeg') return;
 
       // Should have exifUserComment
+      expect(conversionResult.value.segments.length).toBeGreaterThan(0);
       const userComment = conversionResult.value.segments.find(
         (s) => s.source.type === 'exifUserComment',
       );
@@ -38,6 +39,50 @@ describe('ComfyUI metadata conversion', () => {
         expect(parsed.workflow).toBeDefined();
       }
     });
+
+    // Additional ComfyUI PNG samples
+    const additionalPngSamples = [
+      'png/comfyui-hires.png',
+      'png/comfyui-upscale.png',
+      'png/comfyui-saveimage-plus.png',
+      'png/comfyui-save-image-extended.png',
+      'png/comfyui-saveimagewithmetadata.png',
+    ];
+
+    test.each(additionalPngSamples)(
+      'should convert %s to JPEG with ComfyUI JSON',
+      (samplePath) => {
+        const fullPath = path.join(SAMPLES_DIR, samplePath);
+        const data = new Uint8Array(fs.readFileSync(fullPath));
+
+        const result = parsePng(data);
+        expect(result.status).toBe('success');
+        if (result.status !== 'success') return;
+
+        expect(result.metadata.software).toBe('comfyui');
+
+        const conversion = convertMetadata(result, 'jpeg');
+        expect(conversion.ok).toBe(true);
+        if (!conversion.ok) return;
+
+        expect(conversion.value.format).toBe('jpeg');
+        if (conversion.value.format !== 'jpeg') return;
+
+        // Verify segments
+        expect(conversion.value.segments.length).toBeGreaterThan(0);
+        const userComment = conversion.value.segments.find(
+          (s) => s.source.type === 'exifUserComment',
+        );
+        expect(userComment).toBeDefined();
+
+        // Should be valid JSON with prompt and workflow
+        if (userComment) {
+          const parsed = JSON.parse(userComment.data);
+          expect(parsed.prompt).toBeDefined();
+          expect(parsed.workflow).toBeDefined();
+        }
+      },
+    );
   });
 
   describe('JPEG/WebP → PNG conversion', () => {

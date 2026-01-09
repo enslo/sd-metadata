@@ -7,7 +7,7 @@ const SAMPLES_DIR = path.join(__dirname, '../../samples');
 
 describe('InvokeAI metadata conversion', () => {
   describe('PNG → JPEG/WebP conversion', () => {
-    test('should convert InvokeAI PNG to WebP format', () => {
+    test('should convert invokeai.png to WebP with iTXt chunks', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/invokeai.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
@@ -41,7 +41,7 @@ describe('InvokeAI metadata conversion', () => {
   });
 
   describe('Round-trip conversion', () => {
-    test('PNG → WebP → PNG should preserve both chunks', () => {
+    test('should preserve both iTXt chunks in round-trip (PNG → WebP → PNG)', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/invokeai.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
