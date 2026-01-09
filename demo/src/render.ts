@@ -62,7 +62,13 @@ export function createParsedMetadata(
 
   // Prompt
   if (metadata.prompt) {
-    sections.push(createSection('Prompt', createPromptText(metadata.prompt)));
+    sections.push(
+      createSection(
+        'Prompt',
+        createPromptText(metadata.prompt),
+        metadata.prompt,
+      ),
+    );
   }
 
   // Negative Prompt
@@ -71,6 +77,7 @@ export function createParsedMetadata(
       createSection(
         'Negative Prompt',
         createPromptText(metadata.negativePrompt),
+        metadata.negativePrompt,
       ),
     );
   }
@@ -84,9 +91,12 @@ export function createParsedMetadata(
     const chars = metadata.characterPrompts.map((char, i) =>
       h('div', { class: 'character-prompt' }, [
         h('div', { class: 'character-header' }, [
-          `Character ${i + 1}`,
-          char.center &&
-            ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`,
+          h('span', {}, [
+            `Character ${i + 1}`,
+            char.center &&
+              ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`,
+          ]),
+          createCopyButton(char.prompt),
         ]),
         createPromptText(char.prompt),
       ]),
@@ -97,10 +107,13 @@ export function createParsedMetadata(
   // Generation Settings
   const settings = buildSettingsList(metadata);
   if (settings.length > 0) {
-    const fields = settings.map(([label, value]) =>
+    const fields = settings.map(([label, value, copyable]) =>
       h('div', { class: 'metadata-field' }, [
         h('span', { class: 'label' }, [label]),
-        h('span', { class: 'value' }, [String(value)]),
+        h('span', { class: 'value' }, [
+          String(value),
+          copyable && createCopyButton(String(value)),
+        ]),
       ]),
     );
     sections.push(createSection('Generation Settings', fragment(fields)));
@@ -110,11 +123,18 @@ export function createParsedMetadata(
 }
 
 /**
- * Create a metadata section
+ * Create a metadata section with optional copy button
  */
-function createSection(title: string, content: Node): HTMLElement {
+function createSection(
+  title: string,
+  content: Node,
+  copyValue?: string,
+): HTMLElement {
   return h('div', { class: 'metadata-section' }, [
-    h('h4', {}, [title]),
+    h('div', { class: 'section-header' }, [
+      h('h4', {}, [title]),
+      copyValue !== undefined && createCopyButton(copyValue),
+    ]),
     content,
   ]);
 }
@@ -127,47 +147,79 @@ function createPromptText(text: string): HTMLElement {
 }
 
 /**
- * Build settings list from metadata
+ * Create a copy button
  */
-function buildSettingsList(metadata: GenerationMetadata): [string, unknown][] {
-  const settings: [string, unknown][] = [];
+function createCopyButton(value: string): HTMLButtonElement {
+  const btn = h('button', { class: 'copy-btn', title: 'Copy to clipboard' }, [
+    '📋',
+  ]);
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(value);
+      btn.textContent = '✓';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '📋';
+        btn.classList.remove('copied');
+      }, 1500);
+    } catch {
+      btn.textContent = '✗';
+      setTimeout(() => {
+        btn.textContent = '📋';
+      }, 1500);
+    }
+  });
+  return btn;
+}
+
+/**
+ * Build settings list from metadata
+ * Returns [label, value, copyable] tuples
+ */
+function buildSettingsList(
+  metadata: GenerationMetadata,
+): [string, unknown, boolean][] {
+  const settings: [string, unknown, boolean][] = [];
 
   // Model
   if (metadata.model) {
-    if (metadata.model.name) settings.push(['Model', metadata.model.name]);
-    if (metadata.model.hash) settings.push(['Model Hash', metadata.model.hash]);
+    if (metadata.model.name)
+      settings.push(['Model', metadata.model.name, false]);
+    if (metadata.model.hash)
+      settings.push(['Model Hash', metadata.model.hash, false]);
   }
 
   // Sampling
   if (metadata.sampling) {
     const s = metadata.sampling;
-    if (s.sampler) settings.push(['Sampler', s.sampler]);
-    if (s.scheduler) settings.push(['Scheduler', s.scheduler]);
-    if (s.steps) settings.push(['Steps', s.steps]);
-    if (s.cfg) settings.push(['CFG Scale', s.cfg]);
-    if (s.seed) settings.push(['Seed', s.seed]);
-    if (s.clipSkip) settings.push(['CLIP Skip', s.clipSkip]);
+    if (s.sampler) settings.push(['Sampler', s.sampler, false]);
+    if (s.scheduler) settings.push(['Scheduler', s.scheduler, false]);
+    if (s.steps) settings.push(['Steps', s.steps, false]);
+    if (s.cfg) settings.push(['CFG Scale', s.cfg, false]);
+    if (s.seed) settings.push(['Seed', s.seed, true]); // Copyable!
+    if (s.clipSkip) settings.push(['CLIP Skip', s.clipSkip, false]);
   }
 
   // Hires/Upscale
   if (metadata.hires) {
-    const h = metadata.hires;
-    if (h.upscaler) settings.push(['Upscaler', h.upscaler]);
-    if (h.scale) settings.push(['Hires Scale', h.scale]);
-    if (h.steps) settings.push(['Hires Steps', h.steps]);
-    if (h.denoise) settings.push(['Hires Denoise', h.denoise]);
+    const hr = metadata.hires;
+    if (hr.upscaler) settings.push(['Upscaler', hr.upscaler, false]);
+    if (hr.scale) settings.push(['Hires Scale', hr.scale, false]);
+    if (hr.steps) settings.push(['Hires Steps', hr.steps, false]);
+    if (hr.denoise) settings.push(['Hires Denoise', hr.denoise, false]);
   }
 
   // Upscale (post-generation)
   if (metadata.upscale) {
     const u = metadata.upscale;
-    if (u.upscaler) settings.push(['Upscaler', u.upscaler]);
-    if (u.scale) settings.push(['Upscale Factor', u.scale]);
+    if (u.upscaler) settings.push(['Upscaler', u.upscaler, false]);
+    if (u.scale) settings.push(['Upscale Factor', u.scale, false]);
   }
 
   // Image Size
-  settings.push(['Width', metadata.width]);
-  settings.push(['Height', metadata.height]);
+  settings.push(['Width', metadata.width, false]);
+  settings.push(['Height', metadata.height, false]);
 
   return settings;
 }
