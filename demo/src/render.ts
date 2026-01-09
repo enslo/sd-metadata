@@ -1,58 +1,70 @@
 /**
- * HTML rendering functions for the demo site
+ * Component rendering functions for the demo site
+ *
+ * Uses createElement pattern instead of template literals
+ * for better type safety and XSS protection.
  */
 
 import type { GenerationMetadata, PngTextChunk } from 'sd-metadata';
-import { escapeHtml, getSoftwareLabel, isJson } from './utils';
+import { fragment, h } from './dom';
+import { formatJson, getSoftwareLabel } from './utils';
+
+// =============================================================================
+// Image Info
+// =============================================================================
 
 /**
- * Render image info section
+ * Create image info section element
  *
  * @param parsed - Parsed metadata or null
  * @param error - Error message if any
- * @returns HTML string
+ * @returns HTML element
  */
-export function renderImageInfo(
+export function createImageInfo(
   parsed: GenerationMetadata | null,
   error?: string,
-): string {
+): DocumentFragment {
   const software = parsed?.software || 'Unknown';
   const softwareLabel = getSoftwareLabel(software);
 
-  return `
-    <h3>Detected Software</h3>
-    <span class="software-badge">${softwareLabel}</span>
-    ${error ? `<p style="color: var(--color-error); margin-top: 0.5rem;">Parse error: ${error}</p>` : ''}
-  `;
+  return fragment([
+    h('h3', {}, ['Detected Software']),
+    h('span', { class: 'software-badge' }, [softwareLabel]),
+    error &&
+      h('p', { style: 'color: var(--color-error); margin-top: 0.5rem;' }, [
+        `Parse error: ${error}`,
+      ]),
+  ]);
 }
 
+// =============================================================================
+// Parsed Metadata
+// =============================================================================
+
 /**
- * Render parsed metadata as HTML
+ * Create parsed metadata view
  *
  * @param metadata - Parsed generation metadata
- * @returns HTML string
+ * @returns HTML element
  */
-export function renderParsedMetadata(metadata: GenerationMetadata): string {
-  const sections: string[] = [];
+export function createParsedMetadata(
+  metadata: GenerationMetadata,
+): DocumentFragment {
+  const sections: Node[] = [];
 
   // Prompt
   if (metadata.prompt) {
-    sections.push(`
-      <div class="metadata-section">
-        <h4>Prompt</h4>
-        <div class="prompt-text">${escapeHtml(metadata.prompt)}</div>
-      </div>
-    `);
+    sections.push(createSection('Prompt', createPromptText(metadata.prompt)));
   }
 
   // Negative Prompt
   if (metadata.negativePrompt) {
-    sections.push(`
-      <div class="metadata-section">
-        <h4>Negative Prompt</h4>
-        <div class="prompt-text">${escapeHtml(metadata.negativePrompt)}</div>
-      </div>
-    `);
+    sections.push(
+      createSection(
+        'Negative Prompt',
+        createPromptText(metadata.negativePrompt),
+      ),
+    );
   }
 
   // NovelAI Character Prompts
@@ -61,26 +73,55 @@ export function renderParsedMetadata(metadata: GenerationMetadata): string {
     metadata.characterPrompts &&
     metadata.characterPrompts.length > 0
   ) {
-    const chars = metadata.characterPrompts
-      .map(
-        (char, i) => `
-          <div class="character-prompt">
-            <div class="character-header">Character ${i + 1}${char.center ? ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)` : ''}</div>
-            <div class="prompt-text">${escapeHtml(char.prompt)}</div>
-          </div>
-        `,
-      )
-      .join('');
-
-    sections.push(`
-      <div class="metadata-section">
-        <h4>Character Prompts</h4>
-        ${chars}
-      </div>
-    `);
+    const chars = metadata.characterPrompts.map((char, i) =>
+      h('div', { class: 'character-prompt' }, [
+        h('div', { class: 'character-header' }, [
+          `Character ${i + 1}`,
+          char.center &&
+            ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`,
+        ]),
+        createPromptText(char.prompt),
+      ]),
+    );
+    sections.push(createSection('Character Prompts', fragment(chars)));
   }
 
   // Generation Settings
+  const settings = buildSettingsList(metadata);
+  if (settings.length > 0) {
+    const fields = settings.map(([label, value]) =>
+      h('div', { class: 'metadata-field' }, [
+        h('span', { class: 'label' }, [label]),
+        h('span', { class: 'value' }, [String(value)]),
+      ]),
+    );
+    sections.push(createSection('Generation Settings', fragment(fields)));
+  }
+
+  return fragment(sections);
+}
+
+/**
+ * Create a metadata section
+ */
+function createSection(title: string, content: Node): HTMLElement {
+  return h('div', { class: 'metadata-section' }, [
+    h('h4', {}, [title]),
+    content,
+  ]);
+}
+
+/**
+ * Create prompt text element
+ */
+function createPromptText(text: string): HTMLElement {
+  return h('div', { class: 'prompt-text' }, [text]);
+}
+
+/**
+ * Build settings list from metadata
+ */
+function buildSettingsList(metadata: GenerationMetadata): [string, unknown][] {
   const settings: [string, unknown][] = [];
 
   // Model
@@ -91,103 +132,71 @@ export function renderParsedMetadata(metadata: GenerationMetadata): string {
 
   // Sampling
   if (metadata.sampling) {
-    if (metadata.sampling.sampler)
-      settings.push(['Sampler', metadata.sampling.sampler]);
-    if (metadata.sampling.scheduler)
-      settings.push(['Scheduler', metadata.sampling.scheduler]);
-    if (metadata.sampling.steps)
-      settings.push(['Steps', metadata.sampling.steps]);
-    if (metadata.sampling.cfg)
-      settings.push(['CFG Scale', metadata.sampling.cfg]);
-    if (metadata.sampling.seed) settings.push(['Seed', metadata.sampling.seed]);
-    if (metadata.sampling.clipSkip)
-      settings.push(['CLIP Skip', metadata.sampling.clipSkip]);
+    const s = metadata.sampling;
+    if (s.sampler) settings.push(['Sampler', s.sampler]);
+    if (s.scheduler) settings.push(['Scheduler', s.scheduler]);
+    if (s.steps) settings.push(['Steps', s.steps]);
+    if (s.cfg) settings.push(['CFG Scale', s.cfg]);
+    if (s.seed) settings.push(['Seed', s.seed]);
+    if (s.clipSkip) settings.push(['CLIP Skip', s.clipSkip]);
   }
 
   // Hires/Upscale
   if (metadata.hires) {
-    if (metadata.hires.upscaler)
-      settings.push(['Upscaler', metadata.hires.upscaler]);
-    if (metadata.hires.scale)
-      settings.push(['Hires Scale', metadata.hires.scale]);
-    if (metadata.hires.steps)
-      settings.push(['Hires Steps', metadata.hires.steps]);
-    if (metadata.hires.denoise)
-      settings.push(['Hires Denoise', metadata.hires.denoise]);
+    const h = metadata.hires;
+    if (h.upscaler) settings.push(['Upscaler', h.upscaler]);
+    if (h.scale) settings.push(['Hires Scale', h.scale]);
+    if (h.steps) settings.push(['Hires Steps', h.steps]);
+    if (h.denoise) settings.push(['Hires Denoise', h.denoise]);
   }
 
   // Image Size
   settings.push(['Width', metadata.width]);
   settings.push(['Height', metadata.height]);
 
-  if (settings.length > 0) {
-    const fields = settings
-      .map(
-        ([label, value]) =>
-          `<div class="metadata-field"><span class="label">${label}</span><span class="value">${value}</span></div>`,
-      )
-      .join('');
-
-    sections.push(`
-      <div class="metadata-section">
-        <h4>Generation Settings</h4>
-        ${fields}
-      </div>
-    `);
-  }
-
-  return sections.join('');
+  return settings;
 }
 
+// =============================================================================
+// Raw Chunks
+// =============================================================================
+
 /**
- * Render raw chunks as collapsible sections
+ * Create raw chunks view
  *
  * @param chunks - PNG text chunks
- * @returns HTML string
+ * @returns HTML element
  */
-export function renderRawChunks(chunks: PngTextChunk[]): string {
-  return chunks
-    .map((chunk) => {
-      const format = isJson(chunk.text) ? 'JSON' : 'Text';
+export function createRawChunks(chunks: PngTextChunk[]): DocumentFragment {
+  const elements = chunks.map((chunk) => {
+    const { formatted, isJson } = formatJson(chunk.text);
+    const format = isJson ? 'JSON' : 'Text';
 
-      // Format JSON for display
-      let formattedText = chunk.text;
-      if (format === 'JSON') {
-        try {
-          formattedText = JSON.stringify(
-            JSON.parse(chunk.text.replace(/\0+$/, '')),
-            null,
-            2,
-          );
-        } catch {
-          // Keep original if formatting fails
-        }
-      }
+    return h('details', { class: 'raw-chunk', open: true }, [
+      h('summary', { class: 'raw-chunk-header' }, [
+        h('span', { class: 'chunk-keyword' }, [chunk.keyword]),
+        h('span', { class: 'chunk-type' }, [chunk.type]),
+        h('span', { class: 'chunk-format' }, [format]),
+      ]),
+      h('pre', { class: 'chunk-content' }, [formatted]),
+    ]);
+  });
 
-      return `
-        <details class="raw-chunk" open>
-          <summary class="raw-chunk-header">
-            <span class="chunk-keyword">${escapeHtml(chunk.keyword)}</span>
-            <span class="chunk-type">${chunk.type}</span>
-            <span class="chunk-format">${format}</span>
-          </summary>
-          <pre class="chunk-content">${escapeHtml(formattedText)}</pre>
-        </details>
-      `;
-    })
-    .join('');
+  return fragment(elements);
 }
 
+// =============================================================================
+// Error
+// =============================================================================
+
 /**
- * Render error message
+ * Create error message element
  *
  * @param error - Error type or message
- * @returns HTML string
+ * @returns HTML element
  */
-export function renderError(error: string): string {
-  return `
-    <div class="error-inline">
-      <p>Could not parse metadata: ${error || 'Unknown format'}</p>
-    </div>
-  `;
+export function createError(error: string): HTMLElement {
+  return h('div', { class: 'error-inline' }, [
+    h('p', {}, [`Could not parse metadata: ${error || 'Unknown format'}`]),
+  ]);
 }

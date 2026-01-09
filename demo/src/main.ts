@@ -9,10 +9,10 @@ import './style.css';
 import { parsePng, readPngMetadata } from 'sd-metadata';
 import type { GenerationMetadata, PngTextChunk } from 'sd-metadata';
 import {
-  renderError,
-  renderImageInfo,
-  renderParsedMetadata,
-  renderRawChunks,
+  createError,
+  createImageInfo,
+  createParsedMetadata,
+  createRawChunks,
 } from './render';
 
 // =============================================================================
@@ -191,15 +191,17 @@ function showResults(
     elements;
 
   // Update image info
-  imageInfo.innerHTML = renderImageInfo(parsed, error);
+  imageInfo.replaceChildren(createImageInfo(parsed, error));
 
   // Show parsed metadata or error
-  parsedMetadata.innerHTML = parsed
-    ? renderParsedMetadata(parsed)
-    : renderError(error || 'Unknown format');
+  parsedMetadata.replaceChildren(
+    parsed
+      ? createParsedMetadata(parsed)
+      : createError(error || 'Unknown format'),
+  );
 
   // Show raw data as individual chunks
-  rawData.innerHTML = renderRawChunks(raw);
+  rawData.replaceChildren(createRawChunks(raw));
 
   // Reset to Parsed Metadata tab
   for (const tab of tabs) {
