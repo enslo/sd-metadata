@@ -11,6 +11,7 @@ import type {
   RawMetadata,
 } from '../types';
 import { Result } from '../types';
+import { convertA1111PngToSegments, convertA1111SegmentsToPng } from './a1111';
 import {
   convertNovelaiPngToSegments,
   convertNovelaiSegmentsToPng,
@@ -83,7 +84,18 @@ function convertBySoftware(
     return convertNovelai(raw, targetFormat);
   }
 
-  // Unsupported software - for now, only NovelAI is supported
+  // A1111-format conversion (sd-webui, forge, forge-neo, civitai, hf-space)
+  if (
+    software === 'sd-webui' ||
+    software === 'forge' ||
+    software === 'forge-neo' ||
+    software === 'civitai' ||
+    software === 'hf-space'
+  ) {
+    return convertA1111(raw, targetFormat);
+  }
+
+  // Unsupported software
   return Result.error({
     type: 'unsupportedSoftware',
     software: software ?? 'unknown',
@@ -121,6 +133,42 @@ function convertNovelai(
   }
 
   const chunks = convertNovelaiSegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert A1111-format metadata between formats
+ */
+function convertA1111(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertA1111PngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    // JPEG ↔ WebP: just copy segments
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertA1111SegmentsToPng(raw.segments);
   return Result.ok({
     format: 'png',
     chunks,
