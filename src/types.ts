@@ -167,7 +167,7 @@ export type GenerationSoftware =
   | 'forge'
   | 'sd-webui'
   | 'civitai'
-  | 'animagine';
+  | 'hf-space';
 
 /**
  * Metadata format classification
@@ -253,7 +253,7 @@ export interface ComfyUIMetadata extends BaseMetadata {
  */
 export interface A1111Metadata extends BaseMetadata {
   type: 'a1111';
-  software: 'sd-webui' | 'forge' | 'forge-neo' | 'civitai' | 'animagine';
+  software: 'sd-webui' | 'forge' | 'forge-neo' | 'civitai' | 'hf-space';
 }
 
 /**

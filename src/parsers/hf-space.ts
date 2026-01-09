@@ -1,0 +1,87 @@
+import type {
+  A1111Metadata,
+  InternalParseResult,
+  MetadataEntry,
+} from '../types';
+import { Result } from '../types';
+import { buildEntryRecord } from '../utils/entries';
+
+/**
+ * HuggingFace Space JSON metadata structure
+ */
+interface HfSpaceJsonMetadata {
+  prompt?: string;
+  negative_prompt?: string;
+  resolution?: string;
+  guidance_scale?: number;
+  num_inference_steps?: number;
+  style_preset?: string;
+  seed?: number;
+  sampler?: string;
+  Model?: string;
+  'Model hash'?: string;
+  use_upscaler?: unknown;
+}
+
+/**
+ * Parse HuggingFace Space metadata from entries
+ *
+ * HuggingFace Spaces using Gradio + Diffusers store metadata as JSON
+ * in the parameters chunk.
+ *
+ * @param entries - Metadata entries
+ * @returns Parsed metadata or error
+ */
+export function parseHfSpace(entries: MetadataEntry[]): InternalParseResult {
+  const entryRecord = buildEntryRecord(entries);
+
+  // Find parameters entry
+  const parametersText = entryRecord.parameters;
+  if (!parametersText) {
+    return Result.error({ type: 'unsupportedFormat' });
+  }
+
+  // Parse JSON
+  let json: HfSpaceJsonMetadata;
+  try {
+    json = JSON.parse(parametersText);
+  } catch {
+    return Result.error({
+      type: 'parseError',
+      message: 'Invalid JSON in parameters entry',
+    });
+  }
+
+  // Parse resolution (format: "832 x 1216")
+  let width = 0;
+  let height = 0;
+  if (json.resolution) {
+    const match = json.resolution.match(/(\d+)\s*x\s*(\d+)/);
+    if (match?.[1] && match?.[2]) {
+      width = Number.parseInt(match[1], 10);
+      height = Number.parseInt(match[2], 10);
+    }
+  }
+
+  // Build metadata
+  const metadata: Omit<A1111Metadata, 'raw'> = {
+    type: 'a1111',
+    software: 'hf-space',
+    prompt: json.prompt ?? '',
+    negativePrompt: json.negative_prompt ?? '',
+    width,
+    height,
+    model: {
+      name: json.Model,
+      hash: json['Model hash'],
+    },
+    sampling: {
+      sampler: json.sampler,
+      steps: json.num_inference_steps,
+      cfg: json.guidance_scale,
+      seed: json.seed,
+    },
+  };
+
+  return Result.ok(metadata);
+}

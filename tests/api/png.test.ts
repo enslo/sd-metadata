@@ -254,14 +254,15 @@ describe('parsePng', () => {
       }
     });
 
-    it.fails('should parse huggingface-animagine.png', () => {
-      // TODO: Fix Animagine parsing - missing Size field
+    it('should parse huggingface-animagine.png', () => {
       const data = loadSample('huggingface-animagine.png');
       const result = parsePng(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('animagine');
+        expect(result.value.software).toBe('hf-space');
+        expect(result.value.prompt).toBeTruthy();
+        expect(result.value.width).toBeGreaterThan(0);
       }
     });
   });
