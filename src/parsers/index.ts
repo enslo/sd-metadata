@@ -3,6 +3,7 @@ import { Result } from '../types';
 import { parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
 import { detectSoftware } from './detect';
+import { parseHfSpace } from './hf-space';
 import { parseInvokeAI } from './invokeai';
 import { parseNovelAI } from './novelai';
 import { parseStabilityMatrix } from './stability-matrix';
@@ -11,6 +12,7 @@ import { parseTensorArt } from './tensorart';
 
 // Re-export individual parsers
 export { parseA1111 } from './a1111';
+export { parseHfSpace } from './hf-space';
 export { parseComfyUI } from './comfyui';
 export { detectSoftware } from './detect';
 export { parseInvokeAI } from './invokeai';
@@ -40,8 +42,10 @@ export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
     case 'sd-webui':
     case 'forge':
     case 'forge-neo':
-    case 'animagine':
       return parseA1111(entries);
+
+    case 'hf-space':
+      return parseHfSpace(entries);
 
     case 'civitai': {
       // Civitai can use either ComfyUI JSON or A1111 text format

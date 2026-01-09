@@ -111,6 +111,11 @@ function detectFromJson(json: string): GenerationSoftware | null {
     return 'novelai';
   }
 
+  // HuggingFace Space JSON format (Gradio + Diffusers)
+  if (json.includes('"Model"') && json.includes('"resolution"')) {
+    return 'hf-space';
+  }
+
   // ComfyUI JSON format
   if (json.includes('"prompt"') || json.includes('"nodes"')) {
     return 'comfyui';
