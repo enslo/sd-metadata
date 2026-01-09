@@ -7,6 +7,7 @@ import type {
   TExtChunk,
 } from '../types';
 import { Result } from '../types';
+import { readChunkType, readUint32BE } from '../utils/binary';
 
 /** PNG file signature (magic bytes) */
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -115,30 +116,6 @@ function extractTextChunks(
   }
 
   return Result.ok(chunks);
-}
-
-/**
- * Read 4-byte big-endian unsigned integer
- */
-function readUint32BE(data: Uint8Array, offset: number): number {
-  return (
-    ((data[offset] ?? 0) << 24) |
-    ((data[offset + 1] ?? 0) << 16) |
-    ((data[offset + 2] ?? 0) << 8) |
-    (data[offset + 3] ?? 0)
-  );
-}
-
-/**
- * Read 4-byte chunk type as string
- */
-function readChunkType(data: Uint8Array, offset: number): string {
-  return String.fromCharCode(
-    data[offset] ?? 0,
-    data[offset + 1] ?? 0,
-    data[offset + 2] ?? 0,
-    data[offset + 3] ?? 0,
-  );
 }
 
 /**

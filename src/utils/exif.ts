@@ -1,4 +1,5 @@
 import type { GenerationSoftware, MetadataSegment } from '../types';
+import { readUint16, readUint32 } from './binary';
 
 /** UserComment tag ID in Exif */
 const USER_COMMENT_TAG = 0x9286;
@@ -334,44 +335,6 @@ function decodeAscii(data: Uint8Array): string {
   }
 
   return chars.join('');
-}
-
-/**
- * Read 16-bit unsigned integer
- */
-function readUint16(
-  data: Uint8Array,
-  offset: number,
-  isLittleEndian: boolean,
-): number {
-  if (isLittleEndian) {
-    return (data[offset] ?? 0) | ((data[offset + 1] ?? 0) << 8);
-  }
-  return ((data[offset] ?? 0) << 8) | (data[offset + 1] ?? 0);
-}
-
-/**
- * Read 32-bit unsigned integer
- */
-function readUint32(
-  data: Uint8Array,
-  offset: number,
-  isLittleEndian: boolean,
-): number {
-  if (isLittleEndian) {
-    return (
-      (data[offset] ?? 0) |
-      ((data[offset + 1] ?? 0) << 8) |
-      ((data[offset + 2] ?? 0) << 16) |
-      ((data[offset + 3] ?? 0) << 24)
-    );
-  }
-  return (
-    ((data[offset] ?? 0) << 24) |
-    ((data[offset + 1] ?? 0) << 16) |
-    ((data[offset + 2] ?? 0) << 8) |
-    (data[offset + 3] ?? 0)
-  );
 }
 
 /**

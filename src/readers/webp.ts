@@ -1,5 +1,6 @@
 import type { MetadataSegment, WebpMetadataResult } from '../types';
 import { Result } from '../types';
+import { readUint32LE } from '../utils/binary';
 import { detectSoftware, parseExifUserComment } from '../utils/exif';
 
 /** WebP file signature: "RIFF" */
@@ -134,18 +135,6 @@ export function findExifChunk(
   }
 
   return null;
-}
-
-/**
- * Read 32-bit unsigned integer (little-endian)
- */
-function readUint32LE(data: Uint8Array, offset: number): number {
-  return (
-    (data[offset] ?? 0) |
-    ((data[offset + 1] ?? 0) << 8) |
-    ((data[offset + 2] ?? 0) << 16) |
-    ((data[offset + 3] ?? 0) << 24)
-  );
 }
 
 /**

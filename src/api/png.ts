@@ -8,6 +8,7 @@ import { parseMetadata } from '../parsers';
 import { readPngMetadata } from '../readers/png';
 import type { GenerationMetadata, ParseResult, PngReadError } from '../types';
 import { Result } from '../types';
+import { readUint32BE } from '../utils/binary';
 import { pngChunksToEntries } from '../utils/convert';
 
 /** PNG file signature */
@@ -91,19 +92,6 @@ function readIhdrDimensions(
   const height = readUint32BE(data, PNG_SIGNATURE_LENGTH + 12);
 
   return { width, height };
-}
-
-/**
- * Read 4-byte big-endian unsigned integer
- */
-function readUint32BE(data: Uint8Array, offset: number): number {
-  return (
-    (((data[offset] ?? 0) << 24) |
-      ((data[offset + 1] ?? 0) << 16) |
-      ((data[offset + 2] ?? 0) << 8) |
-      (data[offset + 3] ?? 0)) >>>
-    0
-  );
 }
 
 /**
