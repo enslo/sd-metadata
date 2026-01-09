@@ -265,10 +265,10 @@ function buildChunk(type: string, data: Uint8Array): Uint8Array {
  */
 function readUint32BE(data: Uint8Array, offset: number): number {
   return (
-    (data[offset] << 24) |
-    (data[offset + 1] << 16) |
-    (data[offset + 2] << 8) |
-    data[offset + 3]
+    ((data[offset] ?? 0) << 24) |
+    ((data[offset + 1] ?? 0) << 16) |
+    ((data[offset + 2] ?? 0) << 8) |
+    (data[offset + 3] ?? 0)
   );
 }
 
@@ -287,10 +287,10 @@ function writeUint32BE(data: Uint8Array, offset: number, value: number): void {
  */
 function readChunkType(data: Uint8Array, offset: number): string {
   return String.fromCharCode(
-    data[offset],
-    data[offset + 1],
-    data[offset + 2],
-    data[offset + 3],
+    data[offset] ?? 0,
+    data[offset + 1] ?? 0,
+    data[offset + 2] ?? 0,
+    data[offset + 3] ?? 0,
   );
 }
 
@@ -344,7 +344,7 @@ function makeCrcTable(): Uint32Array {
 function calculateCrc32(data: Uint8Array): number {
   let crc = 0xffffffff;
   for (let i = 0; i < data.length; i++) {
-    crc = CRC_TABLE[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+    crc = (CRC_TABLE[(crc ^ (data[i] ?? 0)) & 0xff] ?? 0) ^ (crc >>> 8);
   }
   return (crc ^ 0xffffffff) >>> 0;
 }

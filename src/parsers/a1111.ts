@@ -191,8 +191,8 @@ function parseSettings(settings: string): Map<string, string> {
 
   let match = regex.exec(settings);
   while (match !== null) {
-    const key = match[1].trim();
-    const value = match[2].trim();
+    const key = (match[1] ?? '').trim();
+    const value = (match[2] ?? '').trim();
     result.set(key, value);
     match = regex.exec(settings);
   }
@@ -206,7 +206,10 @@ function parseSettings(settings: string): Map<string, string> {
 function parseSize(size: string): [number, number] {
   const match = size.match(/(\d+)x(\d+)/);
   if (!match) return [0, 0];
-  return [Number.parseInt(match[1], 10), Number.parseInt(match[2], 10)];
+  return [
+    Number.parseInt(match[1] ?? '0', 10),
+    Number.parseInt(match[2] ?? '0', 10),
+  ];
 }
 
 /**

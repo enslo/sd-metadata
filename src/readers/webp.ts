@@ -141,10 +141,10 @@ export function findExifChunk(
  */
 function readUint32LE(data: Uint8Array, offset: number): number {
   return (
-    data[offset] |
-    (data[offset + 1] << 8) |
-    (data[offset + 2] << 16) |
-    (data[offset + 3] << 24)
+    (data[offset] ?? 0) |
+    ((data[offset + 1] ?? 0) << 8) |
+    ((data[offset + 2] ?? 0) << 16) |
+    ((data[offset + 3] ?? 0) << 24)
   );
 }
 

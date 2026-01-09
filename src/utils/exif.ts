@@ -139,7 +139,7 @@ function extractTagsFromIfd(
  */
 function extractPrefix(text: string): string | null {
   const match = text.match(/^([A-Za-z]+):\s/);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 /**
@@ -299,7 +299,7 @@ function decodeUtf16BE(data: Uint8Array): string {
   const chars: string[] = [];
 
   for (let i = 0; i < data.length - 1; i += 2) {
-    const code = (data[i] << 8) | data[i + 1];
+    const code = ((data[i] ?? 0) << 8) | (data[i + 1] ?? 0);
     if (code === 0) break; // Stop at null terminator
     chars.push(String.fromCharCode(code));
   }
@@ -314,7 +314,7 @@ function decodeUtf16LE(data: Uint8Array): string {
   const chars: string[] = [];
 
   for (let i = 0; i < data.length - 1; i += 2) {
-    const code = data[i] | (data[i + 1] << 8);
+    const code = (data[i] ?? 0) | ((data[i + 1] ?? 0) << 8);
     if (code === 0) break; // Stop at null terminator
     chars.push(String.fromCharCode(code));
   }
@@ -330,7 +330,7 @@ function decodeAscii(data: Uint8Array): string {
 
   for (let i = 0; i < data.length; i++) {
     if (data[i] === 0) break; // Stop at null terminator
-    chars.push(String.fromCharCode(data[i]));
+    chars.push(String.fromCharCode(data[i] ?? 0));
   }
 
   return chars.join('');
@@ -345,9 +345,9 @@ function readUint16(
   isLittleEndian: boolean,
 ): number {
   if (isLittleEndian) {
-    return data[offset] | (data[offset + 1] << 8);
+    return (data[offset] ?? 0) | ((data[offset + 1] ?? 0) << 8);
   }
-  return (data[offset] << 8) | data[offset + 1];
+  return ((data[offset] ?? 0) << 8) | (data[offset + 1] ?? 0);
 }
 
 /**
@@ -360,17 +360,17 @@ function readUint32(
 ): number {
   if (isLittleEndian) {
     return (
-      data[offset] |
-      (data[offset + 1] << 8) |
-      (data[offset + 2] << 16) |
-      (data[offset + 3] << 24)
+      (data[offset] ?? 0) |
+      ((data[offset + 1] ?? 0) << 8) |
+      ((data[offset + 2] ?? 0) << 16) |
+      ((data[offset + 3] ?? 0) << 24)
     );
   }
   return (
-    (data[offset] << 24) |
-    (data[offset + 1] << 16) |
-    (data[offset + 2] << 8) |
-    data[offset + 3]
+    ((data[offset] ?? 0) << 24) |
+    ((data[offset + 1] ?? 0) << 16) |
+    ((data[offset + 2] ?? 0) << 8) |
+    (data[offset + 3] ?? 0)
   );
 }
 
@@ -421,10 +421,10 @@ export function detectSoftware(userComment: string): GenerationSoftware | null {
   const versionMatch = userComment.match(/Version:\s*([^\s,]+)/);
   if (versionMatch) {
     const version = versionMatch[1];
-    if (version === 'neo' || version.startsWith('neo')) {
+    if (version === 'neo' || version?.startsWith('neo')) {
       return 'forge-neo';
     }
-    if (version.startsWith('f') && /^f\d/.test(version)) {
+    if (version?.startsWith('f') && /^f\d/.test(version)) {
       return 'forge';
     }
     if (version === 'ComfyUI') {

@@ -122,10 +122,10 @@ function extractTextChunks(
  */
 function readUint32BE(data: Uint8Array, offset: number): number {
   return (
-    (data[offset] << 24) |
-    (data[offset + 1] << 16) |
-    (data[offset + 2] << 8) |
-    data[offset + 3]
+    ((data[offset] ?? 0) << 24) |
+    ((data[offset + 1] ?? 0) << 16) |
+    ((data[offset + 2] ?? 0) << 8) |
+    (data[offset + 3] ?? 0)
   );
 }
 
@@ -134,10 +134,10 @@ function readUint32BE(data: Uint8Array, offset: number): number {
  */
 function readChunkType(data: Uint8Array, offset: number): string {
   return String.fromCharCode(
-    data[offset],
-    data[offset + 1],
-    data[offset + 2],
-    data[offset + 3],
+    data[offset] ?? 0,
+    data[offset + 1] ?? 0,
+    data[offset + 2] ?? 0,
+    data[offset + 3] ?? 0,
   );
 }
 
@@ -191,12 +191,12 @@ function parseITXtChunk(data: Uint8Array): ITXtChunk | null {
 
   // Read compression flag (1 byte)
   if (offset >= data.length) return null;
-  const compressionFlag = data[offset];
+  const compressionFlag = data[offset] ?? 0;
   offset += 1;
 
   // Read compression method (1 byte)
   if (offset >= data.length) return null;
-  const compressionMethod = data[offset];
+  const compressionMethod = data[offset] ?? 0;
   offset += 1;
 
   // Read language tag (null-terminated)
@@ -251,7 +251,7 @@ function findNull(data: Uint8Array, offset: number): number {
 function latin1Decode(data: Uint8Array): string {
   let result = '';
   for (let i = 0; i < data.length; i++) {
-    result += String.fromCharCode(data[i]);
+    result += String.fromCharCode(data[i] ?? 0);
   }
   return result;
 }

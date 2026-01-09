@@ -121,7 +121,7 @@ export function findApp1Segment(
     }
 
     // Get segment length (big-endian, includes length bytes)
-    const length = (data[offset + 2] << 8) | data[offset + 3];
+    const length = ((data[offset + 2] ?? 0) << 8) | (data[offset + 3] ?? 0);
 
     // Check for APP1 marker
     if (marker === APP1_MARKER) {
@@ -180,7 +180,7 @@ export function findComSegment(
     }
 
     // Get segment length (big-endian, includes length bytes)
-    const length = (data[offset + 2] << 8) | data[offset + 3];
+    const length = ((data[offset + 2] ?? 0) << 8) | (data[offset + 3] ?? 0);
 
     // Check for COM marker
     if (marker === COM_MARKER) {

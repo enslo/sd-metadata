@@ -98,10 +98,10 @@ function readIhdrDimensions(
  */
 function readUint32BE(data: Uint8Array, offset: number): number {
   return (
-    ((data[offset] << 24) |
-      (data[offset + 1] << 16) |
-      (data[offset + 2] << 8) |
-      data[offset + 3]) >>>
+    (((data[offset] ?? 0) << 24) |
+      ((data[offset + 1] ?? 0) << 16) |
+      ((data[offset + 2] ?? 0) << 8) |
+      (data[offset + 3] ?? 0)) >>>
     0
   );
 }
