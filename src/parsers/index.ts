@@ -40,12 +40,22 @@ export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
     case 'sd-webui':
     case 'forge':
     case 'forge-neo':
-    case 'civitai':
     case 'animagine':
       return parseA1111(entries);
 
-    case 'comfyui':
-      return parseComfyUI(entries);
+    case 'civitai': {
+      // Civitai can use either ComfyUI JSON or A1111 text format
+      const comfyResult = parseComfyUI(entries);
+      if (comfyResult.ok) return comfyResult;
+      return parseA1111(entries);
+    }
+
+    case 'comfyui': {
+      // ComfyUI can use either JSON or A1111 text format (e.g., comfy-image-saver)
+      const comfyResult = parseComfyUI(entries);
+      if (comfyResult.ok) return comfyResult;
+      return parseA1111(entries);
+    }
 
     case 'invokeai':
       return parseInvokeAI(entries);

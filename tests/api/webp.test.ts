@@ -58,4 +58,41 @@ describe('parseWebp', () => {
       }
     }
   });
+
+  // Regression tests for ComfyUI variants
+  describe('ComfyUI variant support', () => {
+    it('should parse comfyui-comfy-image-saver WebP (A1111 format)', () => {
+      const data = loadSample('comfyui-comfy-image-saver.webp');
+      const result = parseWebp(data);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // Uses A1111 format with Version: ComfyUI, falls back to sd-webui
+        expect(result.value.software).toBe('sd-webui');
+        expect(result.value.prompt).toBeTruthy();
+      }
+    });
+
+    it('should parse comfyui-save-image-extended WebP', () => {
+      const data = loadSample('comfyui-save-image-extended.webp');
+      const result = parseWebp(data);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.software).toBe('comfyui');
+        expect(result.value.prompt).toBeTruthy();
+      }
+    });
+
+    it('should parse comfyui-saveimage-plus WebP', () => {
+      const data = loadSample('comfyui-saveimage-plus.webp');
+      const result = parseWebp(data);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.software).toBe('comfyui');
+        expect(result.value.prompt).toBeTruthy();
+      }
+    });
+  });
 });

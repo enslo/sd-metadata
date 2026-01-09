@@ -4,7 +4,7 @@ import type {
   MetadataEntry,
 } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import { type EntryRecord, buildEntryRecord } from '../utils/entries';
 
 /**
  * ComfyUI node structure
@@ -78,6 +78,68 @@ function extractTextFromWorkflowNode(
 }
 
 /**
+ * Find ComfyUI prompt JSON from entry record
+ *
+ * PNG uses 'prompt', JPEG/WebP may use Comment, Description, or Make.
+ * This function returns the first valid ComfyUI prompt JSON found.
+ *
+ * @param entryRecord - Entry record to search
+ * @returns Prompt JSON string or undefined
+ */
+function findPromptJson(entryRecord: EntryRecord): string | undefined {
+  // PNG format: prompt entry
+  if (entryRecord.prompt) {
+    return entryRecord.prompt;
+  }
+
+  // JPEG/WebP format: may be in various entries
+  // - Comment: from jpegCom or exifUserComment
+  // - Description/Make: from exifImageDescription/exifMake (no prefix)
+  // - Prompt: from exifMake with "Prompt:" prefix (save-image-extended)
+  // - Workflow: from exifImageDescription with "Workflow:" prefix
+  const candidates = [
+    entryRecord.Comment,
+    entryRecord.Description,
+    entryRecord.Make,
+    entryRecord.Prompt, // save-image-extended uses this
+    entryRecord.Workflow, // Not a prompt, but may contain nodes info
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+
+    // Check if it's JSON that looks like ComfyUI prompt
+    if (candidate.startsWith('{')) {
+      try {
+        // Remove null terminators that some tools append
+        const cleaned = candidate.replace(/\0+$/, '');
+        const parsed = JSON.parse(cleaned);
+        // Check if it's a prompt object (has nodes with class_type)
+        // or wrapped in {"prompt": {...}} format
+        if (parsed.prompt && typeof parsed.prompt === 'object') {
+          // Wrapped format: {"prompt": {...}}
+          return JSON.stringify(parsed.prompt);
+        }
+        // Check for nodes with class_type
+        const values = Object.values(parsed);
+        if (
+          values.some(
+            (v: unknown) =>
+              v && typeof v === 'object' && 'class_type' in (v as object),
+          )
+        ) {
+          return candidate;
+        }
+      } catch {
+        // Not valid JSON, skip
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Parse ComfyUI metadata from entries
  *
  * ComfyUI stores metadata with:
@@ -91,8 +153,9 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   // Build entry record for easy access
   const entryRecord = buildEntryRecord(entries);
 
-  // Find prompt entry
-  const promptText = entryRecord.prompt;
+  // Find prompt entry from various possible keywords
+  // PNG uses 'prompt', JPEG/WebP may use Comment, Description, or Make
+  const promptText = findPromptJson(entryRecord);
   if (!promptText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
