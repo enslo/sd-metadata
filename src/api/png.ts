@@ -6,8 +6,9 @@
 
 import { parseMetadata } from '../parsers';
 import { readPngMetadata } from '../readers/png';
-import type { ParseResult, PngReadError } from '../types';
+import type { GenerationMetadata, ParseResult, PngReadError } from '../types';
 import { Result } from '../types';
+import { pngChunksToEntries } from '../utils/convert';
 
 /** PNG file signature */
 const PNG_SIGNATURE_LENGTH = 8;
@@ -42,14 +43,24 @@ export function parsePng(data: Uint8Array): ParseResult {
     });
   }
 
+  const { chunks, software } = readResult.value;
+
+  // Convert chunks to format-agnostic entries
+  const entries = pngChunksToEntries(chunks);
+
   // Parse metadata
-  const parseResult = parseMetadata(readResult.value);
+  const parseResult = parseMetadata({ entries, software });
   if (!parseResult.ok) {
     return parseResult;
   }
 
+  // Attach the correct raw data to create GenerationMetadata
+  const metadata = {
+    ...parseResult.value,
+    raw: { format: 'png' as const, chunks },
+  };
+
   // Fallback: extract dimensions from IHDR if missing
-  const metadata = parseResult.value;
   if (metadata.width === 0 || metadata.height === 0) {
     const ihdrDimensions = readIhdrDimensions(data);
     if (ihdrDimensions) {
@@ -58,7 +69,7 @@ export function parsePng(data: Uint8Array): ParseResult {
     }
   }
 
-  return Result.ok(metadata);
+  return Result.ok(metadata as GenerationMetadata);
 }
 
 /**

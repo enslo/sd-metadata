@@ -16,19 +16,24 @@ export type {
   ITXtChunk,
   JpegMetadataResult,
   JpegReadError,
+  MetadataEntry,
+  MetadataEntries,
   MetadataFormat,
   MetadataSegment,
   MetadataSegmentSource,
   ModelSettings,
   NovelAIMetadata,
+  ParsedMetadata,
   ParseError,
   ParseResult,
+  InternalParseResult,
   PngMetadata,
   PngMetadataResult,
   PngReadError,
   PngTextChunk,
   PngWriteError,
   PngWriteResult,
+  RawMetadata,
   Result,
   SamplingSettings,
   SwarmUIMetadata,
@@ -65,3 +70,5 @@ export {
 
 // Unified API
 export { parsePng } from './api/png';
+export { parseJpeg } from './api/jpeg';
+export { parseWebp } from './api/webp';

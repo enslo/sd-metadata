@@ -3,24 +3,25 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseA1111 } from '../../src/parsers/a1111';
 import { readPngMetadata } from '../../src/readers/png';
+import { pngChunksToEntries } from '../../src/utils/convert';
 
 const SAMPLES_DIR = join(__dirname, '../../samples/png');
 
 /**
- * Load sample and extract chunks
+ * Load sample and extract entries
  */
-function loadChunks(filename: string) {
+function loadEntries(filename: string) {
   const path = join(SAMPLES_DIR, filename);
   const data = new Uint8Array(readFileSync(path));
   const result = readPngMetadata(data);
   if (!result.ok) throw new Error(`Failed to read ${filename}`);
-  return result.value.chunks;
+  return pngChunksToEntries(result.value.chunks);
 }
 
 describe('parseA1111', () => {
   it('should parse forge-neo.png with Japanese text', () => {
-    const chunks = loadChunks('forge-neo.png');
-    const result = parseA1111(chunks);
+    const entries = loadEntries('forge-neo.png');
+    const result = parseA1111(entries);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -50,8 +51,8 @@ describe('parseA1111', () => {
   });
 
   it('should parse forge-neo-hires.png with hires settings', () => {
-    const chunks = loadChunks('forge-neo-hires.png');
-    const result = parseA1111(chunks);
+    const entries = loadEntries('forge-neo-hires.png');
+    const result = parseA1111(entries);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -67,8 +68,8 @@ describe('parseA1111', () => {
   });
 
   it('should parse civitai.png', () => {
-    const chunks = loadChunks('civitai.png');
-    const result = parseA1111(chunks);
+    const entries = loadEntries('civitai.png');
+    const result = parseA1111(entries);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -81,11 +82,14 @@ describe('parseA1111', () => {
   });
 
   it('should return error for non-A1111 format', () => {
-    const chunks = loadChunks('novelai-full.png');
-    const result = parseA1111(chunks);
+    const entries = loadEntries('novelai-full.png');
+    const result = parseA1111(entries);
 
+    // NovelAI has 'Comment' keyword which A1111 parser now accepts,
+    // but it should fail to parse because the format is different (JSON vs A1111 text)
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.type).toBe('unsupportedFormat');
+    // May return parseError (invalid format) or unsupportedFormat (no parameters/Comment)
+    expect(['parseError', 'unsupportedFormat']).toContain(result.error.type);
   });
 });

@@ -1,4 +1,8 @@
-import type { ComfyUIMetadata, ParseResult, PngTextChunk } from '../types';
+import type {
+  ComfyUIMetadata,
+  InternalParseResult,
+  MetadataEntry,
+} from '../types';
 import { Result } from '../types';
 
 /**
@@ -16,7 +20,7 @@ interface ComfyNode {
 type ComfyPrompt = Record<string, ComfyNode>;
 
 /**
- * ComfyUI workflow node structure (from workflow chunk)
+ * ComfyUI workflow node structure (from workflow entry)
  * Contains widgets_values which preserves original user input including comments
  */
 interface ComfyWorkflowNode {
@@ -28,7 +32,7 @@ interface ComfyWorkflowNode {
 }
 
 /**
- * ComfyUI workflow structure (from workflow chunk)
+ * ComfyUI workflow structure (from workflow entry)
  */
 interface ComfyWorkflow {
   nodes: ComfyWorkflowNode[];
@@ -73,30 +77,36 @@ function extractTextFromWorkflowNode(
 }
 
 /**
- * Parse ComfyUI metadata from PNG chunks
+ * Parse ComfyUI metadata from entries
  *
- * ComfyUI stores metadata in tEXt chunks:
+ * ComfyUI stores metadata with:
  * - prompt: JSON containing node graph with inputs
  * - workflow: JSON containing the full workflow (not parsed here)
  *
- * @param chunks - PNG text chunks
+ * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseComfyUI(chunks: PngTextChunk[]): ParseResult {
-  // Find prompt chunk
-  const promptChunk = chunks.find((c) => c.keyword === 'prompt');
-  if (!promptChunk) {
+export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
+  // Build entry map for easy access
+  const entryMap = new Map<string, string>();
+  for (const entry of entries) {
+    entryMap.set(entry.keyword, entry.text);
+  }
+
+  // Find prompt entry
+  const promptText = entryMap.get('prompt');
+  if (!promptText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   // Parse prompt JSON
   let prompt: ComfyPrompt;
   try {
-    prompt = JSON.parse(promptChunk.text);
+    prompt = JSON.parse(promptText);
   } catch {
     return Result.error({
       type: 'parseError',
-      message: 'Invalid JSON in prompt chunk',
+      message: 'Invalid JSON in prompt entry',
     });
   }
 
@@ -132,14 +142,14 @@ export function parseComfyUI(chunks: PngTextChunk[]): ParseResult {
     height = Number(latentImage.inputs.height) || 0;
   }
 
-  // Find workflow chunk and parse it
-  const workflowChunk = chunks.find((c) => c.keyword === 'workflow');
+  // Find workflow entry and parse it
+  const workflowText = entryMap.get('workflow');
   let workflow: ComfyWorkflow | undefined;
   let workflowNodeMap: Map<string, ComfyWorkflowNode> | undefined;
 
-  if (workflowChunk) {
+  if (workflowText) {
     try {
-      const parsed = JSON.parse(workflowChunk.text);
+      const parsed = JSON.parse(workflowText);
       // Validate workflow structure
       if (parsed && Array.isArray(parsed.nodes)) {
         workflow = parsed as ComfyWorkflow;
@@ -170,7 +180,7 @@ export function parseComfyUI(chunks: PngTextChunk[]): ParseResult {
     negativeText = extractTextFromWorkflowNode(negativeWorkflowNode);
   }
 
-  // Fallback to prompt chunk if workflow extraction failed
+  // Fallback to prompt entry if workflow extraction failed
   if (!positiveText) {
     positiveText = extractText(positiveClip);
   }
@@ -179,7 +189,7 @@ export function parseComfyUI(chunks: PngTextChunk[]): ParseResult {
   }
 
   // Build metadata
-  const metadata: ComfyUIMetadata = {
+  const metadata: Omit<ComfyUIMetadata, 'raw'> = {
     type: 'comfyui',
     software: 'comfyui',
     prompt: positiveText,
@@ -187,7 +197,6 @@ export function parseComfyUI(chunks: PngTextChunk[]): ParseResult {
     width,
     height,
     workflow,
-    raw: chunks,
   };
 
   // Add model settings

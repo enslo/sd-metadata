@@ -1,13 +1,19 @@
-import type { A1111Metadata, ParseResult, PngTextChunk } from '../types';
+import type {
+  A1111Metadata,
+  InternalParseResult,
+  MetadataEntry,
+} from '../types';
 import { Result } from '../types';
 
 /**
- * Parse A1111-format metadata from PNG chunks
+ * Parse A1111-format metadata from entries
  *
  * A1111 format is used by:
  * - Stable Diffusion WebUI (AUTOMATIC1111)
  * - Forge
  * - Forge Neo
+ * - Civitai
+ * - Animagine
  *
  * Format:
  * ```
@@ -16,17 +22,19 @@ import { Result } from '../types';
  * Steps: 20, Sampler: Euler a, Schedule type: Automatic, CFG scale: 7, ...
  * ```
  *
- * @param chunks - PNG text chunks
+ * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseA1111(chunks: PngTextChunk[]): ParseResult {
-  // Find parameters chunk
-  const parametersChunk = chunks.find((c) => c.keyword === 'parameters');
-  if (!parametersChunk) {
+export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
+  // Find parameters entry (PNG uses 'parameters', JPEG/WebP uses 'Comment')
+  const parametersEntry = entries.find(
+    (e) => e.keyword === 'parameters' || e.keyword === 'Comment',
+  );
+  if (!parametersEntry) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  const text = parametersChunk.text;
+  const text = parametersEntry.text;
 
   // Parse the text into sections
   const { prompt, negativePrompt, settings } = parseParametersText(text);
@@ -49,14 +57,13 @@ export function parseA1111(chunks: PngTextChunk[]): ParseResult {
   const software = detectSoftwareVariant(version);
 
   // Build metadata
-  const metadata: A1111Metadata = {
+  const metadata: Omit<A1111Metadata, 'raw'> = {
     type: 'a1111',
     software,
     prompt,
     negativePrompt,
     width,
     height,
-    raw: chunks,
   };
 
   // Add model settings

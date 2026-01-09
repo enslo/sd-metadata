@@ -1,8 +1,8 @@
 import type {
   CharacterPrompt,
+  InternalParseResult,
+  MetadataEntry,
   NovelAIMetadata,
-  ParseResult,
-  PngTextChunk,
 } from '../types';
 import { Result } from '../types';
 
@@ -41,33 +41,33 @@ interface V4Prompt {
 }
 
 /**
- * Parse NovelAI metadata from PNG chunks
+ * Parse NovelAI metadata from entries
  *
- * NovelAI stores metadata in tEXt chunks:
+ * NovelAI stores metadata with:
  * - Software: "NovelAI"
  * - Comment: JSON containing generation parameters
  *
- * @param chunks - PNG text chunks
+ * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseNovelAI(chunks: PngTextChunk[]): ParseResult {
-  // Build chunk map for easy access
-  const chunkMap = new Map<string, string>();
-  for (const chunk of chunks) {
-    chunkMap.set(chunk.keyword, chunk.text);
+export function parseNovelAI(entries: MetadataEntry[]): InternalParseResult {
+  // Build entry map for easy access
+  const entryMap = new Map<string, string>();
+  for (const entry of entries) {
+    entryMap.set(entry.keyword, entry.text);
   }
 
   // Verify NovelAI format
-  if (chunkMap.get('Software') !== 'NovelAI') {
+  if (entryMap.get('Software') !== 'NovelAI') {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   // Parse Comment JSON
-  const commentText = chunkMap.get('Comment');
+  const commentText = entryMap.get('Comment');
   if (!commentText) {
     return Result.error({
       type: 'parseError',
-      message: 'Missing Comment chunk',
+      message: 'Missing Comment entry',
     });
   }
 
@@ -77,7 +77,7 @@ export function parseNovelAI(chunks: PngTextChunk[]): ParseResult {
   } catch {
     return Result.error({
       type: 'parseError',
-      message: 'Invalid JSON in Comment chunk',
+      message: 'Invalid JSON in Comment entry',
     });
   }
 
@@ -92,14 +92,13 @@ export function parseNovelAI(chunks: PngTextChunk[]): ParseResult {
     comment.v4_negative_prompt?.caption?.base_caption ?? comment.uc ?? '';
 
   // Build metadata
-  const metadata: NovelAIMetadata = {
+  const metadata: Omit<NovelAIMetadata, 'raw'> = {
     type: 'novelai',
     software: 'novelai',
     prompt,
     negativePrompt,
     width,
     height,
-    raw: chunks,
   };
 
   // Add sampling settings if present
