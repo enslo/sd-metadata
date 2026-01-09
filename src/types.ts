@@ -208,8 +208,6 @@ export interface BaseMetadata {
   width: number;
   /** Image height */
   height: number;
-  /** Raw metadata (for write-back) */
-  raw: RawMetadata;
 }
 
 /**
@@ -354,18 +352,20 @@ export type ParseError =
   | { type: 'parseError'; message: string };
 
 /**
- * Parsed metadata without raw data (returned by individual parsers)
+ * Result type for internal parsers
+ */
+export type InternalParseResult = Result<GenerationMetadata, ParseError>;
+
+/**
+ * Parse result with 4-status design
  *
- * Parsers return this type; the API layer attaches the appropriate `raw` field.
+ * - `success`: Parsing succeeded, metadata and raw data available
+ * - `empty`: No metadata found in the file
+ * - `unrecognized`: Metadata exists but format is not recognized
+ * - `invalid`: File is corrupted or not a valid image
  */
-export type ParsedMetadata = Omit<GenerationMetadata, 'raw'>;
-
-/**
- * Result type for internal parsers (without raw)
- */
-export type InternalParseResult = Result<ParsedMetadata, ParseError>;
-
-/**
- * Result type for metadata parsing (with raw)
- */
-export type ParseResult = Result<GenerationMetadata, ParseError>;
+export type ParseResult =
+  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
+  | { status: 'empty' }
+  | { status: 'unrecognized'; raw: RawMetadata }
+  | { status: 'invalid'; message?: string };

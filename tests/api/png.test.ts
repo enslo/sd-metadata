@@ -12,16 +12,13 @@ function loadSample(filename: string): Uint8Array {
 }
 
 describe('parsePng', () => {
-  it('should return error for invalid PNG', () => {
+  it('should return invalid for corrupted PNG', () => {
     const data = new Uint8Array([0, 1, 2, 3, 4, 5]);
     const result = parsePng(data);
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.type).toBe('parseError');
-      if (result.error.type === 'parseError') {
-        expect(result.error.message).toBe('Not a valid PNG file');
-      }
+    expect(result.status).toBe('invalid');
+    if (result.status === 'invalid') {
+      expect(result.message).toBe('Not a valid PNG file');
     }
   });
 
@@ -30,11 +27,11 @@ describe('parsePng', () => {
       const data = loadSample('novelai-full.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('novelai');
-        expect(result.value.prompt).toBeTruthy();
-        expect(result.value.width).toBeGreaterThan(0);
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('novelai');
+        expect(result.metadata.prompt).toBeTruthy();
+        expect(result.metadata.width).toBeGreaterThan(0);
       }
     });
 
@@ -42,10 +39,10 @@ describe('parsePng', () => {
       const data = loadSample('novelai-curated.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('novelai');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('novelai');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
 
@@ -53,10 +50,10 @@ describe('parsePng', () => {
       const data = loadSample('novelai-full-3char.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('novelai');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('novelai');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
   });
@@ -66,10 +63,10 @@ describe('parsePng', () => {
       const data = loadSample('comfyui.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('comfyui');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
 
@@ -77,9 +74,9 @@ describe('parsePng', () => {
       const data = loadSample('comfyui-hires.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('comfyui');
       }
     });
 
@@ -87,9 +84,9 @@ describe('parsePng', () => {
       const data = loadSample('comfyui-upscale.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('comfyui');
       }
     });
 
@@ -97,9 +94,9 @@ describe('parsePng', () => {
       const data = loadSample('comfyui-comfy-image-saver.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('comfyui');
       }
     });
 
@@ -107,9 +104,9 @@ describe('parsePng', () => {
       const data = loadSample('comfyui-save-image-extended.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('comfyui');
       }
     });
 
@@ -117,9 +114,9 @@ describe('parsePng', () => {
       const data = loadSample('comfyui-saveimage-plus.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('comfyui');
       }
     });
 
@@ -127,10 +124,10 @@ describe('parsePng', () => {
       const data = loadSample('comfyui-saveimagewithmetadata.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
         // Uses A1111 format
-        expect(result.value.software).toBe('sd-webui');
+        expect(result.metadata.software).toBe('sd-webui');
       }
     });
   });
@@ -140,10 +137,10 @@ describe('parsePng', () => {
       const data = loadSample('forge-neo.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('forge-neo');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('forge-neo');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
 
@@ -151,9 +148,9 @@ describe('parsePng', () => {
       const data = loadSample('forge-neo-hires.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('forge-neo');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('forge-neo');
       }
     });
   });
@@ -163,10 +160,10 @@ describe('parsePng', () => {
       const data = loadSample('swarmui.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('swarmui');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('swarmui');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
 
@@ -174,9 +171,9 @@ describe('parsePng', () => {
       const data = loadSample('swarmui-hires.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('swarmui');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('swarmui');
       }
     });
 
@@ -184,9 +181,9 @@ describe('parsePng', () => {
       const data = loadSample('swarmui-upscale.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('swarmui');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('swarmui');
       }
     });
   });
@@ -196,9 +193,9 @@ describe('parsePng', () => {
       const data = loadSample('stability-matrix.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('stability-matrix');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('stability-matrix');
       }
     });
 
@@ -206,9 +203,9 @@ describe('parsePng', () => {
       const data = loadSample('stability-matrix-hires.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('stability-matrix');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('stability-matrix');
       }
     });
 
@@ -216,9 +213,9 @@ describe('parsePng', () => {
       const data = loadSample('stability-matrix-upscale.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('stability-matrix');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('stability-matrix');
       }
     });
   });
@@ -228,9 +225,9 @@ describe('parsePng', () => {
       const data = loadSample('civitai.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('sd-webui');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('sd-webui');
       }
     });
 
@@ -238,9 +235,9 @@ describe('parsePng', () => {
       const data = loadSample('invokeai.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('invokeai');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('invokeai');
       }
     });
 
@@ -248,9 +245,9 @@ describe('parsePng', () => {
       const data = loadSample('tensorart.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('tensorart');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('tensorart');
       }
     });
 
@@ -258,11 +255,11 @@ describe('parsePng', () => {
       const data = loadSample('huggingface-animagine.png');
       const result = parsePng(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('hf-space');
-        expect(result.value.prompt).toBeTruthy();
-        expect(result.value.width).toBeGreaterThan(0);
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('hf-space');
+        expect(result.metadata.prompt).toBeTruthy();
+        expect(result.metadata.width).toBeGreaterThan(0);
       }
     });
   });

@@ -247,20 +247,14 @@ function resetDropZone() {
 function showPngResults(raw: PngTextChunk[], parseResult: ParseResult) {
   const { imageInfo, parsedMetadata, rawData, results } = elements;
 
-  // Update image info
-  imageInfo.replaceChildren(
-    createImageInfo(
-      parseResult.ok ? parseResult.value : null,
-      parseResult.ok ? undefined : parseResult.error.type,
-    ),
-  );
-
-  // Show parsed metadata or error
-  parsedMetadata.replaceChildren(
-    parseResult.ok
-      ? createParsedMetadata(parseResult.value)
-      : createError(parseResult.error.type),
-  );
+  // Update image info and parsed metadata based on status
+  if (parseResult.status === 'success') {
+    imageInfo.replaceChildren(createImageInfo(parseResult.metadata));
+    parsedMetadata.replaceChildren(createParsedMetadata(parseResult.metadata));
+  } else {
+    imageInfo.replaceChildren(createImageInfo(null, parseResult.status));
+    parsedMetadata.replaceChildren(createError(parseResult.status));
+  }
 
   // Show raw data as individual chunks
   rawData.replaceChildren(createRawChunks(raw));
@@ -276,20 +270,14 @@ function showPngResults(raw: PngTextChunk[], parseResult: ParseResult) {
 function showExifResults(raw: MetadataSegment[], parseResult: ParseResult) {
   const { imageInfo, parsedMetadata, rawData, results } = elements;
 
-  // Update image info
-  imageInfo.replaceChildren(
-    createImageInfo(
-      parseResult.ok ? parseResult.value : null,
-      parseResult.ok ? undefined : parseResult.error.type,
-    ),
-  );
-
-  // Show parsed metadata or error
-  parsedMetadata.replaceChildren(
-    parseResult.ok
-      ? createParsedMetadata(parseResult.value)
-      : createError(parseResult.error.type),
-  );
+  // Update image info and parsed metadata based on status
+  if (parseResult.status === 'success') {
+    imageInfo.replaceChildren(createImageInfo(parseResult.metadata));
+    parsedMetadata.replaceChildren(createParsedMetadata(parseResult.metadata));
+  } else {
+    imageInfo.replaceChildren(createImageInfo(null, parseResult.status));
+    parsedMetadata.replaceChildren(createError(parseResult.status));
+  }
 
   // Show raw data as segments
   rawData.replaceChildren(createExifSegments(raw));

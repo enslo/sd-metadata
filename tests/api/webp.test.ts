@@ -12,16 +12,13 @@ function loadSample(filename: string): Uint8Array {
 }
 
 describe('parseWebp', () => {
-  it('should return error for invalid WebP', () => {
+  it('should return invalid for corrupted WebP', () => {
     const data = new Uint8Array([0, 1, 2, 3, 4, 5]);
     const result = parseWebp(data);
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.type).toBe('parseError');
-      if (result.error.type === 'parseError') {
-        expect(result.error.message).toBe('Not a valid WebP file');
-      }
+    expect(result.status).toBe('invalid');
+    if (result.status === 'invalid') {
+      expect(result.message).toBe('Not a valid WebP file');
     }
   });
 
@@ -30,11 +27,11 @@ describe('parseWebp', () => {
       const data = loadSample('novelai-curated.webp');
       const result = parseWebp(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('novelai');
-        expect(result.value.prompt).toBeTruthy();
-        expect(result.value.raw.format).toBe('webp');
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('novelai');
+        expect(result.metadata.prompt).toBeTruthy();
+        expect(result.raw.format).toBe('webp');
       }
     });
 
@@ -42,10 +39,10 @@ describe('parseWebp', () => {
       const data = loadSample('novelai-full-3char.webp');
       const result = parseWebp(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('novelai');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('novelai');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
   });
@@ -55,10 +52,10 @@ describe('parseWebp', () => {
       const data = loadSample('forge-neo.webp');
       const result = parseWebp(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('forge-neo');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('forge-neo');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
   });
@@ -68,10 +65,10 @@ describe('parseWebp', () => {
       const data = loadSample('swarmui.webp');
       const result = parseWebp(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('swarmui');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('swarmui');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
   });
@@ -81,11 +78,11 @@ describe('parseWebp', () => {
       const data = loadSample('comfyui-comfy-image-saver.webp');
       const result = parseWebp(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
         // Uses A1111 format with Version: ComfyUI, falls back to sd-webui
-        expect(result.value.software).toBe('sd-webui');
-        expect(result.value.prompt).toBeTruthy();
+        expect(result.metadata.software).toBe('sd-webui');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
 
@@ -93,10 +90,10 @@ describe('parseWebp', () => {
       const data = loadSample('comfyui-save-image-extended.webp');
       const result = parseWebp(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('comfyui');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
 
@@ -104,10 +101,10 @@ describe('parseWebp', () => {
       const data = loadSample('comfyui-saveimage-plus.webp');
       const result = parseWebp(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
-        expect(result.value.prompt).toBeTruthy();
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
+        expect(result.metadata.software).toBe('comfyui');
+        expect(result.metadata.prompt).toBeTruthy();
       }
     });
 
@@ -115,10 +112,10 @@ describe('parseWebp', () => {
       const data = loadSample('comfyui-saveimagewithmetadata.webp');
       const result = parseWebp(data);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
+      expect(result.status === 'success').toBe(true);
+      if (result.status === 'success') {
         // Uses A1111 format
-        expect(result.value.software).toBe('sd-webui');
+        expect(result.metadata.software).toBe('sd-webui');
       }
     });
   });
