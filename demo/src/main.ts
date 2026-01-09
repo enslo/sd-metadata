@@ -70,16 +70,20 @@ function setupDropZone() {
   dropZone.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', handleFileSelect);
 
-  dropZone.addEventListener('dragover', (e) => {
+  // Enable drop anywhere on the page
+  document.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropZone.classList.add('drag-over');
   });
 
-  dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('drag-over');
+  document.addEventListener('dragleave', (e) => {
+    // Only remove highlight when leaving the document
+    if (e.relatedTarget === null) {
+      dropZone.classList.remove('drag-over');
+    }
   });
 
-  dropZone.addEventListener('drop', (e) => {
+  document.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
     const file = e.dataTransfer?.files[0];
