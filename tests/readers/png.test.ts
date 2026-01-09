@@ -37,17 +37,16 @@ describe('readPngMetadata', () => {
   });
 
   describe('NovelAI', () => {
-    it('should detect NovelAI from novelai-full.png', () => {
+    it('should extract chunks from novelai-full.png', () => {
       const data = loadSample('novelai-full.png');
       const result = readPngMetadata(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('novelai');
-        expect(result.value.chunks.length).toBeGreaterThan(0);
+        expect(result.value.length).toBeGreaterThan(0);
 
         // Check for expected chunks
-        const keywords = result.value.chunks.map((c) => c.keyword);
+        const keywords = result.value.map((c) => c.keyword);
         expect(keywords).toContain('Software');
         expect(keywords).toContain('Comment');
       }
@@ -55,15 +54,13 @@ describe('readPngMetadata', () => {
   });
 
   describe('ComfyUI', () => {
-    it('should detect ComfyUI from comfyui.png', () => {
+    it('should extract chunks from comfyui.png', () => {
       const data = loadSample('comfyui.png');
       const result = readPngMetadata(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
-
-        const keywords = result.value.chunks.map((c) => c.keyword);
+        const keywords = result.value.map((c) => c.keyword);
         expect(keywords).toContain('prompt');
         expect(keywords).toContain('workflow');
       }
@@ -71,30 +68,26 @@ describe('readPngMetadata', () => {
   });
 
   describe('Forge Neo', () => {
-    it('should detect Forge Neo from forge-neo.png', () => {
+    it('should extract chunks from forge-neo.png', () => {
       const data = loadSample('forge-neo.png');
       const result = readPngMetadata(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('forge-neo');
-
-        const keywords = result.value.chunks.map((c) => c.keyword);
+        const keywords = result.value.map((c) => c.keyword);
         expect(keywords).toContain('parameters');
       }
     });
   });
 
   describe('SwarmUI', () => {
-    it('should detect SwarmUI from swarmui.png', () => {
+    it('should extract chunks from swarmui.png', () => {
       const data = loadSample('swarmui.png');
       const result = readPngMetadata(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('swarmui');
-
-        const keywords = result.value.chunks.map((c) => c.keyword);
+        const keywords = result.value.map((c) => c.keyword);
         expect(keywords).toContain('prompt');
         expect(keywords).toContain('parameters');
       }
@@ -102,45 +95,39 @@ describe('readPngMetadata', () => {
   });
 
   describe('InvokeAI', () => {
-    it('should detect InvokeAI from invokeai.png', () => {
+    it('should extract chunks from invokeai.png', () => {
       const data = loadSample('invokeai.png');
       const result = readPngMetadata(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('invokeai');
-
-        const keywords = result.value.chunks.map((c) => c.keyword);
+        const keywords = result.value.map((c) => c.keyword);
         expect(keywords).toContain('invokeai_metadata');
       }
     });
   });
 
   describe('TensorArt', () => {
-    it('should detect TensorArt from tensorart.png', () => {
+    it('should extract chunks from tensorart.png', () => {
       const data = loadSample('tensorart.png');
       const result = readPngMetadata(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('tensorart');
-
-        const keywords = result.value.chunks.map((c) => c.keyword);
+        const keywords = result.value.map((c) => c.keyword);
         expect(keywords).toContain('generation_data');
       }
     });
   });
 
   describe('Stability Matrix', () => {
-    it('should detect Stability Matrix from stability-matrix.png', () => {
+    it('should extract chunks from stability-matrix.png', () => {
       const data = loadSample('stability-matrix.png');
       const result = readPngMetadata(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('stability-matrix');
-
-        const keywords = result.value.chunks.map((c) => c.keyword);
+        const keywords = result.value.map((c) => c.keyword);
         expect(keywords).toContain('smproj');
       }
     });

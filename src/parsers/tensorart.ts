@@ -4,6 +4,7 @@ import type {
   MetadataEntry,
 } from '../types';
 import { Result } from '../types';
+import { buildEntryRecord } from '../utils/entries';
 
 /**
  * TensorArt generation_data JSON structure
@@ -34,14 +35,11 @@ interface TensorArtGenerationData {
  * @returns Parsed metadata or error
  */
 export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry map for easy access
-  const entryMap = new Map<string, string>();
-  for (const entry of entries) {
-    entryMap.set(entry.keyword, entry.text);
-  }
+  // Build entry record for easy access
+  const entryRecord = buildEntryRecord(entries);
 
   // Find generation_data entry
-  const dataText = entryMap.get('generation_data');
+  const dataText = entryRecord.generation_data;
   if (!dataText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
@@ -73,7 +71,7 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   };
 
   // Extract ComfyUI-compatible workflow from prompt entry
-  const promptText = entryMap.get('prompt');
+  const promptText = entryRecord.prompt;
   if (promptText) {
     try {
       metadata.workflow = JSON.parse(promptText);

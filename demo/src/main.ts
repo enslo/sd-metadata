@@ -1,6 +1,6 @@
 import './style.css';
 import { parsePng, readPngMetadata } from 'sd-metadata';
-import type { GenerationMetadata, PngMetadata } from 'sd-metadata';
+import type { GenerationMetadata, PngTextChunk } from 'sd-metadata';
 
 // DOM Elements
 const dropZone = document.getElementById('dropZone') as HTMLElement;
@@ -149,12 +149,12 @@ function resetDropZone() {
  * Show results with parsed and raw data
  */
 function showResults(
-  raw: PngMetadata,
+  raw: PngTextChunk[],
   parsed: GenerationMetadata | null,
   error?: string,
 ) {
   // Update image info
-  updateImageInfo(raw, parsed, error);
+  updateImageInfo(parsed, error);
 
   // Show parsed metadata
   if (parsed) {
@@ -166,7 +166,7 @@ function showResults(
   }
 
   // Show raw data as individual chunks
-  rawData.innerHTML = renderRawChunks(raw.chunks);
+  rawData.innerHTML = renderRawChunks(raw);
 
   // Reset to Parsed Metadata tab
   for (const tab of tabs) {
@@ -182,12 +182,8 @@ function showResults(
 /**
  * Update image info section
  */
-function updateImageInfo(
-  raw: PngMetadata,
-  parsed: GenerationMetadata | null,
-  error?: string,
-) {
-  const software = parsed?.software || raw.software || 'Unknown';
+function updateImageInfo(parsed: GenerationMetadata | null, error?: string) {
+  const software = parsed?.software || 'Unknown';
   const softwareLabel = getSoftwareLabel(software);
 
   imageInfo.innerHTML = `

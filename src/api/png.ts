@@ -8,6 +8,7 @@ import { parseMetadata } from '../parsers';
 import { readPngMetadata } from '../readers/png';
 import type { GenerationMetadata, ParseResult, PngReadError } from '../types';
 import { Result } from '../types';
+import { readUint32BE } from '../utils/binary';
 import { pngChunksToEntries } from '../utils/convert';
 
 /** PNG file signature */
@@ -43,13 +44,13 @@ export function parsePng(data: Uint8Array): ParseResult {
     });
   }
 
-  const { chunks, software } = readResult.value;
+  const chunks = readResult.value;
 
   // Convert chunks to format-agnostic entries
   const entries = pngChunksToEntries(chunks);
 
-  // Parse metadata
-  const parseResult = parseMetadata({ entries, software });
+  // Parse metadata (software detection is handled by the parser)
+  const parseResult = parseMetadata(entries);
   if (!parseResult.ok) {
     return parseResult;
   }
@@ -91,19 +92,6 @@ function readIhdrDimensions(
   const height = readUint32BE(data, PNG_SIGNATURE_LENGTH + 12);
 
   return { width, height };
-}
-
-/**
- * Read 4-byte big-endian unsigned integer
- */
-function readUint32BE(data: Uint8Array, offset: number): number {
-  return (
-    ((data[offset] << 24) |
-      (data[offset + 1] << 16) |
-      (data[offset + 2] << 8) |
-      data[offset + 3]) >>>
-    0
-  );
 }
 
 /**

@@ -14,7 +14,7 @@ function loadChunks(filename: string) {
   const data = new Uint8Array(readFileSync(path));
   const result = readPngMetadata(data);
   if (!result.ok) throw new Error(`Failed to read ${filename}`);
-  return result.value.chunks;
+  return result.value;
 }
 
 describe('parseNovelAI', () => {

@@ -1,4 +1,5 @@
 import type { GenerationSoftware, MetadataSegment } from '../types';
+import { readUint16, readUint32 } from './binary';
 
 /** UserComment tag ID in Exif */
 const USER_COMMENT_TAG = 0x9286;
@@ -139,7 +140,7 @@ function extractTagsFromIfd(
  */
 function extractPrefix(text: string): string | null {
   const match = text.match(/^([A-Za-z]+):\s/);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 /**
@@ -179,32 +180,6 @@ function decodeAsciiString(data: Uint8Array): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Parse Exif TIFF structure and extract UserComment (legacy function)
- *
- * @param exifData - TIFF data (starting with II/MM byte order marker)
- * @returns UserComment text or null if not found
- */
-export function parseExifUserComment(exifData: Uint8Array): string | null {
-  const segments = parseExifMetadataSegments(exifData);
-  // Return first UserComment found
-  for (const segment of segments) {
-    if (segment.source.type === 'exifUserComment') {
-      return segment.data;
-    }
-  }
-  // Fall back to ImageDescription if no UserComment
-  for (const segment of segments) {
-    if (
-      segment.source.type === 'exifImageDescription' ||
-      segment.source.type === 'exifMake'
-    ) {
-      return segment.data;
-    }
-  }
-  return null;
 }
 
 /**
@@ -299,7 +274,7 @@ function decodeUtf16BE(data: Uint8Array): string {
   const chars: string[] = [];
 
   for (let i = 0; i < data.length - 1; i += 2) {
-    const code = (data[i] << 8) | data[i + 1];
+    const code = ((data[i] ?? 0) << 8) | (data[i + 1] ?? 0);
     if (code === 0) break; // Stop at null terminator
     chars.push(String.fromCharCode(code));
   }
@@ -314,7 +289,7 @@ function decodeUtf16LE(data: Uint8Array): string {
   const chars: string[] = [];
 
   for (let i = 0; i < data.length - 1; i += 2) {
-    const code = data[i] | (data[i + 1] << 8);
+    const code = (data[i] ?? 0) | ((data[i + 1] ?? 0) << 8);
     if (code === 0) break; // Stop at null terminator
     chars.push(String.fromCharCode(code));
   }
@@ -330,48 +305,10 @@ function decodeAscii(data: Uint8Array): string {
 
   for (let i = 0; i < data.length; i++) {
     if (data[i] === 0) break; // Stop at null terminator
-    chars.push(String.fromCharCode(data[i]));
+    chars.push(String.fromCharCode(data[i] ?? 0));
   }
 
   return chars.join('');
-}
-
-/**
- * Read 16-bit unsigned integer
- */
-function readUint16(
-  data: Uint8Array,
-  offset: number,
-  isLittleEndian: boolean,
-): number {
-  if (isLittleEndian) {
-    return data[offset] | (data[offset + 1] << 8);
-  }
-  return (data[offset] << 8) | data[offset + 1];
-}
-
-/**
- * Read 32-bit unsigned integer
- */
-function readUint32(
-  data: Uint8Array,
-  offset: number,
-  isLittleEndian: boolean,
-): number {
-  if (isLittleEndian) {
-    return (
-      data[offset] |
-      (data[offset + 1] << 8) |
-      (data[offset + 2] << 16) |
-      (data[offset + 3] << 24)
-    );
-  }
-  return (
-    (data[offset] << 24) |
-    (data[offset + 1] << 16) |
-    (data[offset + 2] << 8) |
-    data[offset + 3]
-  );
 }
 
 /**
@@ -421,10 +358,10 @@ export function detectSoftware(userComment: string): GenerationSoftware | null {
   const versionMatch = userComment.match(/Version:\s*([^\s,]+)/);
   if (versionMatch) {
     const version = versionMatch[1];
-    if (version === 'neo' || version.startsWith('neo')) {
+    if (version === 'neo' || version?.startsWith('neo')) {
       return 'forge-neo';
     }
-    if (version.startsWith('f') && /^f\d/.test(version)) {
+    if (version?.startsWith('f') && /^f\d/.test(version)) {
       return 'forge';
     }
     if (version === 'ComfyUI') {

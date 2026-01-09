@@ -4,6 +4,7 @@ import type {
   MetadataEntry,
 } from '../types';
 import { Result } from '../types';
+import { buildEntryRecord } from '../utils/entries';
 
 /**
  * ComfyUI node structure
@@ -87,14 +88,11 @@ function extractTextFromWorkflowNode(
  * @returns Parsed metadata or error
  */
 export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry map for easy access
-  const entryMap = new Map<string, string>();
-  for (const entry of entries) {
-    entryMap.set(entry.keyword, entry.text);
-  }
+  // Build entry record for easy access
+  const entryRecord = buildEntryRecord(entries);
 
   // Find prompt entry
-  const promptText = entryMap.get('prompt');
+  const promptText = entryRecord.prompt;
   if (!promptText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
@@ -143,7 +141,7 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Find workflow entry and parse it
-  const workflowText = entryMap.get('workflow');
+  const workflowText = entryRecord.workflow;
   let workflow: ComfyWorkflow | undefined;
   let workflowNodeMap: Map<string, ComfyWorkflowNode> | undefined;
 

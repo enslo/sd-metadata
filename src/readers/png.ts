@@ -1,5 +1,4 @@
 import type {
-  GenerationSoftware,
   ITXtChunk,
   PngMetadataResult,
   PngReadError,
@@ -7,6 +6,7 @@ import type {
   TExtChunk,
 } from '../types';
 import { Result } from '../types';
+import { readChunkType, readUint32BE } from '../utils/binary';
 
 /** PNG file signature (magic bytes) */
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -28,13 +28,7 @@ export function readPngMetadata(data: Uint8Array): PngMetadataResult {
     return chunksResult;
   }
 
-  // Detect software from chunks
-  const software = detectSoftware(chunksResult.value);
-
-  return Result.ok({
-    chunks: chunksResult.value,
-    software,
-  });
+  return Result.ok(chunksResult.value);
 }
 
 /**
@@ -118,30 +112,6 @@ function extractTextChunks(
 }
 
 /**
- * Read 4-byte big-endian unsigned integer
- */
-function readUint32BE(data: Uint8Array, offset: number): number {
-  return (
-    (data[offset] << 24) |
-    (data[offset + 1] << 16) |
-    (data[offset + 2] << 8) |
-    data[offset + 3]
-  );
-}
-
-/**
- * Read 4-byte chunk type as string
- */
-function readChunkType(data: Uint8Array, offset: number): string {
-  return String.fromCharCode(
-    data[offset],
-    data[offset + 1],
-    data[offset + 2],
-    data[offset + 3],
-  );
-}
-
-/**
  * Parse tEXt chunk data
  *
  * Per PNG specification, tEXt chunks use Latin-1 (ISO-8859-1) encoding.
@@ -191,12 +161,12 @@ function parseITXtChunk(data: Uint8Array): ITXtChunk | null {
 
   // Read compression flag (1 byte)
   if (offset >= data.length) return null;
-  const compressionFlag = data[offset];
+  const compressionFlag = data[offset] ?? 0;
   offset += 1;
 
   // Read compression method (1 byte)
   if (offset >= data.length) return null;
-  const compressionMethod = data[offset];
+  const compressionMethod = data[offset] ?? 0;
   offset += 1;
 
   // Read language tag (null-terminated)
@@ -251,7 +221,7 @@ function findNull(data: Uint8Array, offset: number): number {
 function latin1Decode(data: Uint8Array): string {
   let result = '';
   for (let i = 0; i < data.length; i++) {
-    result += String.fromCharCode(data[i]);
+    result += String.fromCharCode(data[i] ?? 0);
   }
   return result;
 }
@@ -273,68 +243,5 @@ function utf8Decode(data: Uint8Array): string {
  */
 function decompressZlib(_data: Uint8Array): Uint8Array | null {
   // Not yet implemented - no compressed iTXt samples encountered
-  return null;
-}
-
-/**
- * Detect generation software from chunks
- *
- * NOTE: This is a temporary implementation for testing purposes.
- * In the future, this logic should be moved to tool-specific parsers
- * in src/parsers/ directory. The reader should only extract raw chunks.
- */
-function detectSoftware(chunks: PngTextChunk[]): GenerationSoftware | null {
-  const chunkMap = new Map<string, string>();
-  for (const chunk of chunks) {
-    chunkMap.set(chunk.keyword, chunk.text);
-  }
-
-  // NovelAI: tEXt Software = "NovelAI"
-  if (chunkMap.get('Software') === 'NovelAI') {
-    return 'novelai';
-  }
-
-  // InvokeAI: iTXt invokeai_metadata
-  if (chunkMap.has('invokeai_metadata')) {
-    return 'invokeai';
-  }
-
-  // TensorArt: has generation_data chunk
-  if (chunkMap.has('generation_data')) {
-    return 'tensorart';
-  }
-
-  // Stability Matrix: has smproj chunk
-  if (chunkMap.has('smproj')) {
-    return 'stability-matrix';
-  }
-
-  // Check for parameters chunk (A1111 format)
-  const parameters = chunkMap.get('parameters');
-  if (parameters) {
-    // SwarmUI: has sui_image_params
-    if (parameters.includes('sui_image_params')) {
-      return 'swarmui';
-    }
-    // Forge Neo: Version: neo
-    if (parameters.includes('Version: neo')) {
-      return 'forge-neo';
-    }
-    // Forge: Version: f*
-    if (/Version: f\d/.test(parameters)) {
-      return 'forge';
-    }
-    // SD WebUI: has parameters but no specific version
-    return 'sd-webui';
-  }
-
-  // ComfyUI: has workflow chunk
-  if (chunkMap.has('workflow')) {
-    return 'comfyui';
-  }
-
-  // Animagine: check for specific markers (TBD)
-  // For now, return null for unknown
-
   return null;
 }

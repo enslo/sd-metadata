@@ -25,7 +25,7 @@ export type PngReadError =
 /**
  * Result type for PNG metadata reading
  */
-export type PngMetadataResult = Result<PngMetadata, PngReadError>;
+export type PngMetadataResult = Result<PngTextChunk[], PngReadError>;
 
 /**
  * Error types for PNG writing
@@ -38,16 +38,6 @@ export type PngWriteError =
  * Result type for PNG metadata writing
  */
 export type PngWriteResult = Result<Uint8Array, PngWriteError>;
-
-/**
- * PNG metadata container
- */
-export interface PngMetadata {
-  /** Raw chunk data for write-back */
-  chunks: PngTextChunk[];
-  /** Detected generation software */
-  software: GenerationSoftware | null;
-}
 
 /**
  * PNG text chunk (tEXt or iTXt)
@@ -95,36 +85,12 @@ export interface MetadataEntry {
 }
 
 /**
- * Format-agnostic metadata container for parsers
- */
-export interface MetadataEntries {
-  /** All metadata entries */
-  entries: MetadataEntry[];
-  /** Detected generation software */
-  software: GenerationSoftware | null;
-}
-
-/**
  * Raw metadata for write-back (preserves original format)
  */
 export type RawMetadata =
   | { format: 'png'; chunks: PngTextChunk[] }
   | { format: 'jpeg'; segments: MetadataSegment[] }
   | { format: 'webp'; segments: MetadataSegment[] };
-
-/**
- * Unified metadata container for JPEG/WebP formats
- */
-export interface ExifMetadata {
-  /** All metadata segments found in the file */
-  segments: MetadataSegment[];
-  /** Detected generation software */
-  software: GenerationSoftware | null;
-}
-
-// ============================================================================
-// JPEG Metadata Types
-// ============================================================================
 
 /**
  * Error types for JPEG reading
@@ -137,7 +103,7 @@ export type JpegReadError =
 /**
  * Result type for JPEG metadata reading
  */
-export type JpegMetadataResult = Result<ExifMetadata, JpegReadError>;
+export type JpegMetadataResult = Result<MetadataSegment[], JpegReadError>;
 
 // ============================================================================
 // WebP Metadata Types
@@ -155,7 +121,7 @@ export type WebpReadError =
 /**
  * Result type for WebP metadata reading
  */
-export type WebpMetadataResult = Result<ExifMetadata, WebpReadError>;
+export type WebpMetadataResult = Result<MetadataSegment[], WebpReadError>;
 
 /**
  * tEXt chunk (Latin-1 encoded text)

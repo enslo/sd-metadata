@@ -1,6 +1,7 @@
 import type { JpegMetadataResult, MetadataSegment } from '../types';
 import { Result } from '../types';
-import { detectSoftware, parseExifMetadataSegments } from '../utils/exif';
+import { arraysEqual } from '../utils/binary';
+import { parseExifMetadataSegments } from '../utils/exif';
 
 /** JPEG file signature (magic bytes): FFD8 */
 const JPEG_SIGNATURE = new Uint8Array([0xff, 0xd8]);
@@ -61,26 +62,7 @@ export function readJpegMetadata(data: Uint8Array): JpegMetadataResult {
     return Result.error({ type: 'noMetadata' });
   }
 
-  // Detect software from all segments
-  const software = detectSoftwareFromSegments(segments);
-
-  return Result.ok({
-    segments,
-    software,
-  });
-}
-
-/**
- * Detect software from multiple segments
- */
-function detectSoftwareFromSegments(segments: MetadataSegment[]) {
-  for (const segment of segments) {
-    const software = detectSoftware(segment.data);
-    if (software !== null) {
-      return software;
-    }
-  }
-  return null;
+  return Result.ok(segments);
 }
 
 /**
@@ -121,7 +103,7 @@ export function findApp1Segment(
     }
 
     // Get segment length (big-endian, includes length bytes)
-    const length = (data[offset + 2] << 8) | data[offset + 3];
+    const length = ((data[offset + 2] ?? 0) << 8) | (data[offset + 3] ?? 0);
 
     // Check for APP1 marker
     if (marker === APP1_MARKER) {
@@ -180,7 +162,7 @@ export function findComSegment(
     }
 
     // Get segment length (big-endian, includes length bytes)
-    const length = (data[offset + 2] << 8) | data[offset + 3];
+    const length = ((data[offset + 2] ?? 0) << 8) | (data[offset + 3] ?? 0);
 
     // Check for COM marker
     if (marker === COM_MARKER) {
@@ -217,17 +199,3 @@ function decodeComSegment(data: Uint8Array): string | null {
     return null;
   }
 }
-
-/**
- * Compare two Uint8Arrays for equality
- */
-function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
-
-// Re-export shared utilities for test convenience
-export { detectSoftware, decodeUserComment } from '../utils/exif';

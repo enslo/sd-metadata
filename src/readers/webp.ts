@@ -1,6 +1,7 @@
-import type { MetadataSegment, WebpMetadataResult } from '../types';
+import type { WebpMetadataResult } from '../types';
 import { Result } from '../types';
-import { detectSoftware, parseExifUserComment } from '../utils/exif';
+import { arraysEqual, readUint32LE } from '../utils/binary';
+import { parseExifMetadataSegments } from '../utils/exif';
 
 /** WebP file signature: "RIFF" */
 const RIFF_SIGNATURE = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
@@ -30,46 +31,20 @@ export function readWebpMetadata(data: Uint8Array): WebpMetadataResult {
     return Result.error({ type: 'noExifChunk' });
   }
 
-  const segments: MetadataSegment[] = [];
-
   const exifData = data.slice(
     exifChunk.offset,
     exifChunk.offset + exifChunk.length,
   );
-  const userComment = parseExifUserComment(exifData);
 
-  if (userComment !== null) {
-    segments.push({
-      source: { type: 'exifUserComment' },
-      data: userComment,
-    });
-  }
+  // Parse all EXIF metadata segments (UserComment, ImageDescription, Make)
+  const segments = parseExifMetadataSegments(exifData);
 
   // No metadata found
   if (segments.length === 0) {
     return Result.error({ type: 'noMetadata' });
   }
 
-  // Detect software from all segments
-  const software = detectSoftwareFromSegments(segments);
-
-  return Result.ok({
-    segments,
-    software,
-  });
-}
-
-/**
- * Detect software from multiple segments
- */
-function detectSoftwareFromSegments(segments: MetadataSegment[]) {
-  for (const segment of segments) {
-    const software = detectSoftware(segment.data);
-    if (software !== null) {
-      return software;
-    }
-  }
-  return null;
+  return Result.ok(segments);
 }
 
 /**
@@ -135,29 +110,3 @@ export function findExifChunk(
 
   return null;
 }
-
-/**
- * Read 32-bit unsigned integer (little-endian)
- */
-function readUint32LE(data: Uint8Array, offset: number): number {
-  return (
-    data[offset] |
-    (data[offset + 1] << 8) |
-    (data[offset + 2] << 16) |
-    (data[offset + 3] << 24)
-  );
-}
-
-/**
- * Compare two Uint8Arrays for equality
- */
-function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
-
-// Re-export detectSoftware for convenience
-export { detectSoftware };

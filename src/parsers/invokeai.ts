@@ -4,6 +4,7 @@ import type {
   MetadataEntry,
 } from '../types';
 import { Result } from '../types';
+import { buildEntryRecord } from '../utils/entries';
 
 /**
  * InvokeAI metadata JSON structure
@@ -34,14 +35,11 @@ interface InvokeAIMetadataJson {
  * @returns Parsed metadata or error
  */
 export function parseInvokeAI(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry map for easy access
-  const entryMap = new Map<string, string>();
-  for (const entry of entries) {
-    entryMap.set(entry.keyword, entry.text);
-  }
+  // Build entry record for easy access
+  const entryRecord = buildEntryRecord(entries);
 
   // Find invokeai_metadata entry
-  const metadataText = entryMap.get('invokeai_metadata');
+  const metadataText = entryRecord.invokeai_metadata;
   if (!metadataText) {
     return Result.error({ type: 'unsupportedFormat' });
   }

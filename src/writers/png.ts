@@ -5,6 +5,7 @@ import type {
   TExtChunk,
 } from '../types';
 import { Result } from '../types';
+import { readChunkType, readUint32BE, writeUint32BE } from '../utils/binary';
 
 /** PNG file signature (magic bytes) */
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -261,40 +262,6 @@ function buildChunk(type: string, data: Uint8Array): Uint8Array {
 }
 
 /**
- * Read 4-byte big-endian unsigned integer
- */
-function readUint32BE(data: Uint8Array, offset: number): number {
-  return (
-    (data[offset] << 24) |
-    (data[offset + 1] << 16) |
-    (data[offset + 2] << 8) |
-    data[offset + 3]
-  );
-}
-
-/**
- * Write 4-byte big-endian unsigned integer
- */
-function writeUint32BE(data: Uint8Array, offset: number, value: number): void {
-  data[offset] = (value >>> 24) & 0xff;
-  data[offset + 1] = (value >>> 16) & 0xff;
-  data[offset + 2] = (value >>> 8) & 0xff;
-  data[offset + 3] = value & 0xff;
-}
-
-/**
- * Read 4-byte chunk type as string
- */
-function readChunkType(data: Uint8Array, offset: number): string {
-  return String.fromCharCode(
-    data[offset],
-    data[offset + 1],
-    data[offset + 2],
-    data[offset + 3],
-  );
-}
-
-/**
  * Encode string as Latin-1 bytes
  */
 function latin1Encode(str: string): Uint8Array {
@@ -344,7 +311,7 @@ function makeCrcTable(): Uint32Array {
 function calculateCrc32(data: Uint8Array): number {
   let crc = 0xffffffff;
   for (let i = 0; i < data.length; i++) {
-    crc = CRC_TABLE[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+    crc = (CRC_TABLE[(crc ^ (data[i] ?? 0)) & 0xff] ?? 0) ^ (crc >>> 8);
   }
   return (crc ^ 0xffffffff) >>> 0;
 }

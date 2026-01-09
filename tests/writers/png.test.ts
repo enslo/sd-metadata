@@ -52,9 +52,7 @@ describe('writePngMetadata', () => {
       if (!originalRead.ok) return;
 
       // Filter only tEXt chunks
-      const textChunks = originalRead.value.chunks.filter(
-        (c) => c.type === 'tEXt',
-      );
+      const textChunks = originalRead.value.filter((c) => c.type === 'tEXt');
 
       // Write chunks
       const writeResult = writePngMetadata(sampleData, textChunks);
@@ -67,9 +65,9 @@ describe('writePngMetadata', () => {
       if (!readBack.ok) return;
 
       // Verify chunks match
-      expect(readBack.value.chunks.length).toBe(textChunks.length);
+      expect(readBack.value.length).toBe(textChunks.length);
       for (let i = 0; i < textChunks.length; i++) {
-        expect(readBack.value.chunks[i]).toEqual(textChunks[i]);
+        expect(readBack.value[i]).toEqual(textChunks[i]);
       }
     });
   });
@@ -82,9 +80,7 @@ describe('writePngMetadata', () => {
       if (!originalRead.ok) return;
 
       // Filter only iTXt chunks
-      const itxtChunks = originalRead.value.chunks.filter(
-        (c) => c.type === 'iTXt',
-      );
+      const itxtChunks = originalRead.value.filter((c) => c.type === 'iTXt');
 
       // Write chunks
       const writeResult = writePngMetadata(sampleData, itxtChunks);
@@ -97,9 +93,9 @@ describe('writePngMetadata', () => {
       if (!readBack.ok) return;
 
       // Verify chunks match
-      expect(readBack.value.chunks.length).toBe(itxtChunks.length);
+      expect(readBack.value.length).toBe(itxtChunks.length);
       for (let i = 0; i < itxtChunks.length; i++) {
-        expect(readBack.value.chunks[i]).toEqual(itxtChunks[i]);
+        expect(readBack.value[i]).toEqual(itxtChunks[i]);
       }
     });
   });
@@ -116,10 +112,7 @@ describe('writePngMetadata', () => {
       if (!originalRead.ok) return;
 
       // Write metadata back
-      const writeResult = writePngMetadata(
-        sampleData,
-        originalRead.value.chunks,
-      );
+      const writeResult = writePngMetadata(sampleData, originalRead.value);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -129,15 +122,10 @@ describe('writePngMetadata', () => {
       if (!readBack.ok) return;
 
       // Verify all chunks match exactly
-      expect(readBack.value.chunks.length).toBe(
-        originalRead.value.chunks.length,
-      );
-      for (let i = 0; i < originalRead.value.chunks.length; i++) {
-        expect(readBack.value.chunks[i]).toEqual(originalRead.value.chunks[i]);
+      expect(readBack.value.length).toBe(originalRead.value.length);
+      for (let i = 0; i < originalRead.value.length; i++) {
+        expect(readBack.value[i]).toEqual(originalRead.value[i]);
       }
-
-      // Verify software detection still works
-      expect(readBack.value.software).toBe(originalRead.value.software);
     });
   });
 
@@ -153,8 +141,7 @@ describe('writePngMetadata', () => {
       expect(readBack.ok).toBe(true);
       if (!readBack.ok) return;
 
-      expect(readBack.value.chunks.length).toBe(0);
-      expect(readBack.value.software).toBe(null);
+      expect(readBack.value.length).toBe(0);
     });
   });
 });

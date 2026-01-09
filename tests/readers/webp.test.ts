@@ -24,7 +24,7 @@ function getFirstSegmentData(
   result: ReturnType<typeof readWebpMetadata>,
 ): string | null {
   if (!result.ok) return null;
-  return result.value.segments[0]?.data ?? null;
+  return result.value[0]?.data ?? null;
 }
 
 describe('readWebpMetadata', () => {
@@ -89,8 +89,7 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('forge-neo');
-        expect(result.value.segments.length).toBeGreaterThan(0);
+        expect(result.value.length).toBeGreaterThan(0);
         expect(getFirstSegmentData(result)).toContain('Version: neo');
       }
     });
@@ -101,7 +100,6 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
         expect(getFirstSegmentData(result)).toContain('Version: ComfyUI');
       }
     });
@@ -112,7 +110,6 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
         expect(getFirstSegmentData(result)).toContain('"prompt"');
       }
     });
@@ -123,7 +120,6 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('swarmui');
         expect(getFirstSegmentData(result)).toContain('sui_image_params');
       }
     });
@@ -134,9 +130,12 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('novelai');
-        // NovelAI WebP uses JSON with Software field
-        expect(getFirstSegmentData(result)).toContain('"Software":"NovelAI"');
+        expect(result.value.length).toBeGreaterThan(0);
+        // NovelAI WebP stores JSON with Software field in one of the segments
+        const hasNovelAI = result.value.some((s) =>
+          s.data.includes('"Software":"NovelAI"'),
+        );
+        expect(hasNovelAI).toBe(true);
       }
     });
 
@@ -146,7 +145,50 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('novelai');
+        expect(result.value.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('should extract multiple segments from comfyui-save-image-extended.webp', () => {
+      const data = loadSample('comfyui-save-image-extended.webp');
+      const result = readWebpMetadata(data);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // This file uses ImageDescription (Workflow:) and Make (Prompt:)
+        expect(result.value.length).toBe(2);
+
+        // Check ImageDescription segment (Workflow)
+        const workflowSegment = result.value.find(
+          (s) => s.source.type === 'exifImageDescription',
+        );
+        expect(workflowSegment).toBeDefined();
+        expect(workflowSegment?.source).toEqual({
+          type: 'exifImageDescription',
+          prefix: 'Workflow',
+        });
+        expect(workflowSegment?.data).toContain('"nodes"');
+
+        // Check Make segment (Prompt)
+        const promptSegment = result.value.find(
+          (s) => s.source.type === 'exifMake',
+        );
+        expect(promptSegment).toBeDefined();
+        expect(promptSegment?.source).toEqual({
+          type: 'exifMake',
+          prefix: 'Prompt',
+        });
+        expect(promptSegment?.data).toContain('"inputs"');
+      }
+    });
+
+    it('should extract metadata from comfyui-saveimagewithmetadata.webp', () => {
+      const data = loadSample('comfyui-saveimagewithmetadata.webp');
+      const result = readWebpMetadata(data);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.length).toBeGreaterThan(0);
       }
     });
   });

@@ -1,7 +1,8 @@
-import type { InternalParseResult, MetadataEntries } from '../types';
+import type { InternalParseResult, MetadataEntry } from '../types';
 import { Result } from '../types';
 import { parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
+import { detectSoftware } from './detect';
 import { parseInvokeAI } from './invokeai';
 import { parseNovelAI } from './novelai';
 import { parseStabilityMatrix } from './stability-matrix';
@@ -11,6 +12,7 @@ import { parseTensorArt } from './tensorart';
 // Re-export individual parsers
 export { parseA1111 } from './a1111';
 export { parseComfyUI } from './comfyui';
+export { detectSoftware } from './detect';
 export { parseInvokeAI } from './invokeai';
 export { parseNovelAI } from './novelai';
 export { parseStabilityMatrix } from './stability-matrix';
@@ -23,11 +25,12 @@ export { parseTensorArt } from './tensorart';
  * Automatically detects the generation software and applies the appropriate parser.
  * This function returns metadata WITHOUT the `raw` field; callers should attach it.
  *
- * @param input - Format-agnostic metadata entries
+ * @param entries - Format-agnostic metadata entries
  * @returns Parsed metadata or error
  */
-export function parseMetadata(input: MetadataEntries): InternalParseResult {
-  const { software, entries } = input;
+export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
+  // Detect software from entries
+  const software = detectSoftware(entries);
 
   // Route to appropriate parser based on detected software
   switch (software) {

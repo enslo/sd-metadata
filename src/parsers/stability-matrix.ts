@@ -4,6 +4,7 @@ import type {
   MetadataEntry,
 } from '../types';
 import { Result } from '../types';
+import { buildEntryRecord } from '../utils/entries';
 
 /**
  * Stability Matrix parameters-json structure
@@ -35,14 +36,11 @@ interface StabilityMatrixJson {
 export function parseStabilityMatrix(
   entries: MetadataEntry[],
 ): InternalParseResult {
-  // Build entry map for easy access
-  const entryMap = new Map<string, string>();
-  for (const entry of entries) {
-    entryMap.set(entry.keyword, entry.text);
-  }
+  // Build entry record for easy access
+  const entryRecord = buildEntryRecord(entries);
 
   // Find parameters-json entry (preferred)
-  const jsonText = entryMap.get('parameters-json');
+  const jsonText = entryRecord['parameters-json'];
   if (!jsonText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
@@ -73,7 +71,7 @@ export function parseStabilityMatrix(
   };
 
   // Extract ComfyUI-compatible workflow from prompt entry
-  const promptText = entryMap.get('prompt');
+  const promptText = entryRecord.prompt;
   if (promptText) {
     try {
       metadata.workflow = JSON.parse(promptText);
