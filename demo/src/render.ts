@@ -154,6 +154,13 @@ function buildSettingsList(metadata: GenerationMetadata): [string, unknown][] {
     if (h.denoise) settings.push(['Hires Denoise', h.denoise]);
   }
 
+  // Upscale (post-generation)
+  if (metadata.upscale) {
+    const u = metadata.upscale;
+    if (u.upscaler) settings.push(['Upscaler', u.upscaler]);
+    if (u.scale) settings.push(['Upscale Factor', u.scale]);
+  }
+
   // Image Size
   settings.push(['Width', metadata.width]);
   settings.push(['Height', metadata.height]);
