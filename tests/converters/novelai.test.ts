@@ -121,14 +121,14 @@ describe('NovelAI metadata conversion', () => {
 
   describe('Error cases', () => {
     test('should return error for unsupported software', () => {
-      const pngPath = path.join(SAMPLES_DIR, 'png/comfyui.png');
+      const pngPath = path.join(SAMPLES_DIR, 'png/invokeai.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
       const pngResult = parsePng(pngData);
       expect(pngResult.status).toBe('success');
       if (pngResult.status !== 'success') return;
 
-      // ComfyUI is not supported yet
+      // InvokeAI is not supported yet
       const conversionResult = convertMetadata(pngResult, 'webp');
       expect(conversionResult.ok).toBe(false);
       if (conversionResult.ok) return;
