@@ -39,13 +39,13 @@ export function parseWebp(data: Uint8Array): ParseResult {
     });
   }
 
-  const { segments, software } = readResult.value;
+  const segments = readResult.value;
 
   // Convert segments to format-agnostic entries
   const entries = segmentsToEntries(segments);
 
-  // Parse metadata
-  const parseResult = parseMetadata({ entries, software });
+  // Parse metadata (software detection is handled by the parser)
+  const parseResult = parseMetadata(entries);
   if (!parseResult.ok) {
     return parseResult;
   }

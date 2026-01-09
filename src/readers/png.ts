@@ -1,5 +1,4 @@
 import type {
-  GenerationSoftware,
   ITXtChunk,
   PngMetadataResult,
   PngReadError,
@@ -29,13 +28,7 @@ export function readPngMetadata(data: Uint8Array): PngMetadataResult {
     return chunksResult;
   }
 
-  // Detect software from chunks
-  const software = detectSoftware(chunksResult.value);
-
-  return Result.ok({
-    chunks: chunksResult.value,
-    software,
-  });
+  return Result.ok(chunksResult.value);
 }
 
 /**
@@ -250,68 +243,5 @@ function utf8Decode(data: Uint8Array): string {
  */
 function decompressZlib(_data: Uint8Array): Uint8Array | null {
   // Not yet implemented - no compressed iTXt samples encountered
-  return null;
-}
-
-/**
- * Detect generation software from chunks
- *
- * NOTE: This is a temporary implementation for testing purposes.
- * In the future, this logic should be moved to tool-specific parsers
- * in src/parsers/ directory. The reader should only extract raw chunks.
- */
-function detectSoftware(chunks: PngTextChunk[]): GenerationSoftware | null {
-  const chunkMap = new Map<string, string>();
-  for (const chunk of chunks) {
-    chunkMap.set(chunk.keyword, chunk.text);
-  }
-
-  // NovelAI: tEXt Software = "NovelAI"
-  if (chunkMap.get('Software') === 'NovelAI') {
-    return 'novelai';
-  }
-
-  // InvokeAI: iTXt invokeai_metadata
-  if (chunkMap.has('invokeai_metadata')) {
-    return 'invokeai';
-  }
-
-  // TensorArt: has generation_data chunk
-  if (chunkMap.has('generation_data')) {
-    return 'tensorart';
-  }
-
-  // Stability Matrix: has smproj chunk
-  if (chunkMap.has('smproj')) {
-    return 'stability-matrix';
-  }
-
-  // Check for parameters chunk (A1111 format)
-  const parameters = chunkMap.get('parameters');
-  if (parameters) {
-    // SwarmUI: has sui_image_params
-    if (parameters.includes('sui_image_params')) {
-      return 'swarmui';
-    }
-    // Forge Neo: Version: neo
-    if (parameters.includes('Version: neo')) {
-      return 'forge-neo';
-    }
-    // Forge: Version: f*
-    if (/Version: f\d/.test(parameters)) {
-      return 'forge';
-    }
-    // SD WebUI: has parameters but no specific version
-    return 'sd-webui';
-  }
-
-  // ComfyUI: has workflow chunk
-  if (chunkMap.has('workflow')) {
-    return 'comfyui';
-  }
-
-  // Animagine: check for specific markers (TBD)
-  // For now, return null for unknown
-
   return null;
 }

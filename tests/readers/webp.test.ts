@@ -24,7 +24,7 @@ function getFirstSegmentData(
   result: ReturnType<typeof readWebpMetadata>,
 ): string | null {
   if (!result.ok) return null;
-  return result.value.segments[0]?.data ?? null;
+  return result.value[0]?.data ?? null;
 }
 
 describe('readWebpMetadata', () => {
@@ -89,8 +89,7 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('forge-neo');
-        expect(result.value.segments.length).toBeGreaterThan(0);
+        expect(result.value.length).toBeGreaterThan(0);
         expect(getFirstSegmentData(result)).toContain('Version: neo');
       }
     });
@@ -101,7 +100,6 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
         expect(getFirstSegmentData(result)).toContain('Version: ComfyUI');
       }
     });
@@ -112,7 +110,6 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('comfyui');
         expect(getFirstSegmentData(result)).toContain('"prompt"');
       }
     });
@@ -123,7 +120,6 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('swarmui');
         expect(getFirstSegmentData(result)).toContain('sui_image_params');
       }
     });
@@ -134,7 +130,6 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('novelai');
         // NovelAI WebP uses JSON with Software field
         expect(getFirstSegmentData(result)).toContain('"Software":"NovelAI"');
       }
@@ -146,7 +141,7 @@ describe('readWebpMetadata', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('novelai');
+        expect(result.value.length).toBeGreaterThan(0);
       }
     });
   });

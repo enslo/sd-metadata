@@ -1,6 +1,6 @@
 import type { JpegMetadataResult, MetadataSegment } from '../types';
 import { Result } from '../types';
-import { detectSoftware, parseExifMetadataSegments } from '../utils/exif';
+import { parseExifMetadataSegments } from '../utils/exif';
 
 /** JPEG file signature (magic bytes): FFD8 */
 const JPEG_SIGNATURE = new Uint8Array([0xff, 0xd8]);
@@ -61,26 +61,7 @@ export function readJpegMetadata(data: Uint8Array): JpegMetadataResult {
     return Result.error({ type: 'noMetadata' });
   }
 
-  // Detect software from all segments
-  const software = detectSoftwareFromSegments(segments);
-
-  return Result.ok({
-    segments,
-    software,
-  });
-}
-
-/**
- * Detect software from multiple segments
- */
-function detectSoftwareFromSegments(segments: MetadataSegment[]) {
-  for (const segment of segments) {
-    const software = detectSoftware(segment.data);
-    if (software !== null) {
-      return software;
-    }
-  }
-  return null;
+  return Result.ok(segments);
 }
 
 /**
@@ -230,4 +211,4 @@ function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
 }
 
 // Re-export shared utilities for test convenience
-export { detectSoftware, decodeUserComment } from '../utils/exif';
+export { decodeUserComment } from '../utils/exif';

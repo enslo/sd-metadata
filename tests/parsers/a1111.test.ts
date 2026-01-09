@@ -15,7 +15,7 @@ function loadEntries(filename: string) {
   const data = new Uint8Array(readFileSync(path));
   const result = readPngMetadata(data);
   if (!result.ok) throw new Error(`Failed to read ${filename}`);
-  return pngChunksToEntries(result.value.chunks);
+  return pngChunksToEntries(result.value);
 }
 
 describe('parseA1111', () => {

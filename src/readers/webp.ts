@@ -1,7 +1,7 @@
 import type { MetadataSegment, WebpMetadataResult } from '../types';
 import { Result } from '../types';
 import { readUint32LE } from '../utils/binary';
-import { detectSoftware, parseExifUserComment } from '../utils/exif';
+import { parseExifUserComment } from '../utils/exif';
 
 /** WebP file signature: "RIFF" */
 const RIFF_SIGNATURE = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
@@ -51,26 +51,7 @@ export function readWebpMetadata(data: Uint8Array): WebpMetadataResult {
     return Result.error({ type: 'noMetadata' });
   }
 
-  // Detect software from all segments
-  const software = detectSoftwareFromSegments(segments);
-
-  return Result.ok({
-    segments,
-    software,
-  });
-}
-
-/**
- * Detect software from multiple segments
- */
-function detectSoftwareFromSegments(segments: MetadataSegment[]) {
-  for (const segment of segments) {
-    const software = detectSoftware(segment.data);
-    if (software !== null) {
-      return software;
-    }
-  }
-  return null;
+  return Result.ok(segments);
 }
 
 /**
@@ -147,6 +128,3 @@ function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
   }
   return true;
 }
-
-// Re-export detectSoftware for convenience
-export { detectSoftware };

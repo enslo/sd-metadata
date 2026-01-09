@@ -44,13 +44,13 @@ export function parsePng(data: Uint8Array): ParseResult {
     });
   }
 
-  const { chunks, software } = readResult.value;
+  const chunks = readResult.value;
 
   // Convert chunks to format-agnostic entries
   const entries = pngChunksToEntries(chunks);
 
-  // Parse metadata
-  const parseResult = parseMetadata({ entries, software });
+  // Parse metadata (software detection is handled by the parser)
+  const parseResult = parseMetadata(entries);
   if (!parseResult.ok) {
     return parseResult;
   }
