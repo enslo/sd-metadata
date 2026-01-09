@@ -17,6 +17,10 @@ import {
   convertComfyUISegmentsToPng,
 } from './comfyui';
 import {
+  convertInvokeAIPngToSegments,
+  convertInvokeAISegmentsToPng,
+} from './invokeai';
+import {
   convertNovelaiPngToSegments,
   convertNovelaiSegmentsToPng,
 } from './novelai';
@@ -115,6 +119,11 @@ function convertBySoftware(
     software === 'stability-matrix'
   ) {
     return convertComfyUI(raw, targetFormat);
+  }
+
+  // InvokeAI conversion
+  if (software === 'invokeai') {
+    return convertInvokeAI(raw, targetFormat);
   }
 
   // Unsupported software
@@ -261,6 +270,41 @@ function convertComfyUI(
   }
 
   const chunks = convertComfyUISegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert InvokeAI metadata between formats
+ */
+function convertInvokeAI(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertInvokeAIPngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertInvokeAISegmentsToPng(raw.segments);
   return Result.ok({
     format: 'png',
     chunks,

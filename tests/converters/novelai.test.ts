@@ -120,22 +120,6 @@ describe('NovelAI metadata conversion', () => {
   });
 
   describe('Error cases', () => {
-    test('should return error for unsupported software', () => {
-      const pngPath = path.join(SAMPLES_DIR, 'png/invokeai.png');
-      const pngData = new Uint8Array(fs.readFileSync(pngPath));
-
-      const pngResult = parsePng(pngData);
-      expect(pngResult.status).toBe('success');
-      if (pngResult.status !== 'success') return;
-
-      // InvokeAI is not supported yet
-      const conversionResult = convertMetadata(pngResult, 'webp');
-      expect(conversionResult.ok).toBe(false);
-      if (conversionResult.ok) return;
-
-      expect(conversionResult.error.type).toBe('unsupportedSoftware');
-    });
-
     test('should return as-is when source and target format match', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/novelai-full.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
