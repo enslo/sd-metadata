@@ -1,5 +1,5 @@
 import './style.css';
-import { parseMetadata, readPngMetadata } from 'sd-metadata';
+import { parsePng, readPngMetadata } from 'sd-metadata';
 import type { GenerationMetadata, PngMetadata } from 'sd-metadata';
 
 // DOM Elements
@@ -104,7 +104,7 @@ async function processFile(file: File) {
   // Show preview
   showPreview(file);
 
-  // Read metadata
+  // Read raw metadata for display
   const readResult = readPngMetadata(data);
   if (!readResult.ok) {
     showError(`Failed to read PNG: ${readResult.error.type}`);
@@ -113,8 +113,8 @@ async function processFile(file: File) {
 
   const pngMetadata = readResult.value;
 
-  // Parse metadata
-  const parseResult = parseMetadata(pngMetadata);
+  // Parse metadata using unified API
+  const parseResult = parsePng(data);
 
   if (parseResult.ok) {
     showResults(pngMetadata, parseResult.value);
