@@ -72,9 +72,13 @@ const newImageData = writeMetadata(imageData, metadata);
 - [x] JPEG writing (Exif UserComment, COM segment)
 - [x] WebP writing (EXIF chunk)
 
-### Phase 4: Format Conversion
+### Phase 4: Format Conversion ✅
 
-- [ ] Convert between formats while preserving metadata
+- [x] Metadata converters for all supported tools
+  - NovelAI, ComfyUI, A1111/Forge/Civitai, SwarmUI, InvokeAI, HF-Space
+- [x] PNG ↔ JPEG/WebP round-trip preservation
+- [x] HuggingFace Space converter (separate from A1111, uses JSON format)
+- [x] ComfyUI detection priority (prioritize when prompt + workflow exist)
 
 ## Development
 
