@@ -49,20 +49,16 @@ describe('parseJpeg', () => {
       }
     });
 
-    it.fails('should parse civitai-upscale.jpg (ComfyUI JSON format)', () => {
-      // TODO: Fix - upscale workflow parses but extracts no useful data
+    it('should parse civitai-upscale.jpg (ComfyUI JSON format)', () => {
+      // Uses extraMetadata for original generation params
       const data = loadSample('civitai-upscale.jpg');
       const result = parseJpeg(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('comfyui');
-        // Should have at least width/height or prompt
-        const hasContent =
-          result.value.width > 0 ||
-          result.value.height > 0 ||
-          result.value.prompt;
-        expect(hasContent).toBe(true);
+        expect(result.value.prompt).toBeTruthy();
+        expect(result.value.width).toBeGreaterThan(0);
       }
     });
   });

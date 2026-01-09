@@ -140,6 +140,49 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
 }
 
 /**
+ * Civitai extraMetadata structure (nested JSON in prompt)
+ */
+interface CivitaiExtraMetadata {
+  prompt?: string;
+  negativePrompt?: string;
+  cfgScale?: number;
+  sampler?: string;
+  clipSkip?: number;
+  steps?: number;
+  seed?: number;
+  width?: number;
+  height?: number;
+  baseModel?: string;
+  transformations?: Array<{
+    type?: string;
+    upscaleWidth?: number;
+    upscaleHeight?: number;
+  }>;
+}
+
+/**
+ * Extract extraMetadata from ComfyUI prompt
+ *
+ * Civitai upscale workflows embed original generation params in extraMetadata field
+ *
+ * @param prompt - ComfyUI prompt object
+ * @returns Parsed extraMetadata or undefined
+ */
+function extractExtraMetadata(
+  prompt: ComfyPrompt,
+): CivitaiExtraMetadata | undefined {
+  // extraMetadata is stored as a JSON string in the prompt object
+  const extraMetaField = (prompt as Record<string, unknown>).extraMetadata;
+  if (typeof extraMetaField !== 'string') return undefined;
+
+  try {
+    return JSON.parse(extraMetaField);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Parse ComfyUI metadata from entries
  *
  * ComfyUI stores metadata with:
@@ -249,6 +292,23 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
     negativeText = extractText(negativeClip);
   }
 
+  // Try extraMetadata as last fallback (Civitai upscale workflows)
+  const extraMeta = extractExtraMetadata(prompt);
+  if (extraMeta) {
+    if (!positiveText && extraMeta.prompt) {
+      positiveText = extraMeta.prompt;
+    }
+    if (!negativeText && extraMeta.negativePrompt) {
+      negativeText = extraMeta.negativePrompt;
+    }
+    if (width === 0 && extraMeta.width) {
+      width = extraMeta.width;
+    }
+    if (height === 0 && extraMeta.height) {
+      height = extraMeta.height;
+    }
+  }
+
   // Build metadata
   const metadata: Omit<ComfyUIMetadata, 'raw'> = {
     type: 'comfyui',
@@ -268,6 +328,11 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
         name: ckptName,
       };
     }
+  } else if (extraMeta?.baseModel) {
+    // Fallback to extraMetadata for model settings (Civitai upscale workflows)
+    metadata.model = {
+      name: extraMeta.baseModel,
+    };
   }
 
   // Add sampling settings
@@ -284,6 +349,32 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
       scheduler:
         typeof inputs.scheduler === 'string' ? inputs.scheduler : undefined,
     };
+  } else if (extraMeta) {
+    // Fallback to extraMetadata for sampling settings (Civitai upscale workflows)
+    metadata.sampling = {
+      seed: extraMeta.seed,
+      steps: extraMeta.steps,
+      cfg: extraMeta.cfgScale,
+      sampler: extraMeta.sampler,
+      clipSkip: extraMeta.clipSkip,
+    };
+  }
+
+  // Add upscale settings from extraMetadata (Civitai upscale workflows)
+  if (extraMeta?.transformations) {
+    const upscaleTransform = extraMeta.transformations.find(
+      (t) => t.type === 'upscale',
+    );
+    if (upscaleTransform) {
+      // Calculate scale factor from original and upscaled dimensions
+      const originalWidth = extraMeta.width ?? width;
+      if (originalWidth > 0 && upscaleTransform.upscaleWidth) {
+        const scale = upscaleTransform.upscaleWidth / originalWidth;
+        metadata.upscale = {
+          scale: Math.round(scale * 100) / 100, // Round to 2 decimal places
+        };
+      }
+    }
   }
 
   return Result.ok(metadata);
