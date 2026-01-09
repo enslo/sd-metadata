@@ -47,6 +47,7 @@ export function getSoftwareLabel(software: string): string {
     'sd-webui': 'SD WebUI',
     forge: 'Forge',
     'forge-neo': 'Forge Neo',
+    'hf-space': 'HuggingFace Space',
   };
   return labels[software] || software;
 }
