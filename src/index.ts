@@ -41,6 +41,10 @@ export type {
   WebpReadError,
   WebpWriteError,
   WebpWriteResult,
+  // Conversion types
+  ConversionError,
+  ConversionResult,
+  ConversionTargetFormat,
 } from './types';
 export { Result as ResultHelper } from './types';
 
@@ -78,3 +82,6 @@ export {
 export { parsePng } from './api/png';
 export { parseJpeg } from './api/jpeg';
 export { parseWebp } from './api/webp';
+
+// Metadata Conversion
+export { convertMetadata } from './converters';
