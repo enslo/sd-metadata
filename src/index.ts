@@ -20,51 +20,18 @@ import { writeJpegMetadata } from './writers/jpeg';
 import { writePngMetadata } from './writers/png';
 import { writeWebpMetadata } from './writers/webp';
 
-// Export types
+// Export types (minimal public API)
 export type {
-  A1111Metadata,
-  BaseMetadata,
-  CharacterPrompt,
-  ComfyUIMetadata,
   GenerationMetadata,
   GenerationSoftware,
-  HiresSettings,
-  InvokeAIMetadata,
-  ITXtChunk,
-  JpegWriteError,
-  JpegWriteResult,
-  MetadataEntry,
   MetadataFormat,
-  MetadataSegment,
-  MetadataSegmentSource,
-  ModelSettings,
-  NovelAIMetadata,
-  ParseError,
   ParseResult,
-  InternalParseResult,
-  PngTextChunk,
-  PngWriteError,
-  PngWriteResult,
   RawMetadata,
-  Result,
-  SamplingSettings,
-  SwarmUIMetadata,
-  TExtChunk,
-  UpscaleSettings,
-  WebpWriteError,
-  WebpWriteResult,
-  ConversionError,
-  ConversionResult,
-  ConversionTargetFormat,
 } from './types';
-export { Result as ResultHelper } from './types';
 
 // ============================================================================
 // Unified API
 // ============================================================================
-
-// Export ImageFormat from binary utils
-export type { ImageFormat } from './utils/binary';
 
 /**
  * Result of the write operation

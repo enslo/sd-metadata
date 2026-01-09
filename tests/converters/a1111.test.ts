@@ -1,7 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { convertMetadata, parseJpeg, parsePng } from '../../src';
+import { convertMetadata } from '../../src/converters';
+import { read } from '../../src/index';
 
 const SAMPLES_DIR = path.join(__dirname, '../../samples');
 
@@ -11,7 +12,7 @@ describe('A1111-format metadata conversion', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/forge-neo.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
-      const pngResult = parsePng(pngData);
+      const pngResult = read(pngData);
       expect(pngResult.status).toBe('success');
       if (pngResult.status !== 'success') return;
 
@@ -41,7 +42,7 @@ describe('A1111-format metadata conversion', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/civitai.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
-      const pngResult = parsePng(pngData);
+      const pngResult = read(pngData);
       expect(pngResult.status).toBe('success');
       if (pngResult.status !== 'success') return;
 
@@ -69,7 +70,7 @@ describe('A1111-format metadata conversion', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/forge-neo-hires.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
-      const pngResult = parsePng(pngData);
+      const pngResult = read(pngData);
       expect(pngResult.status).toBe('success');
       if (pngResult.status !== 'success') return;
 
@@ -97,7 +98,7 @@ describe('A1111-format metadata conversion', () => {
       const jpegPath = path.join(SAMPLES_DIR, 'jpg/forge-neo.jpeg');
       const jpegData = new Uint8Array(fs.readFileSync(jpegPath));
 
-      const jpegResult = parseJpeg(jpegData);
+      const jpegResult = read(jpegData);
       expect(jpegResult.status).toBe('success');
       if (jpegResult.status !== 'success') return;
 
@@ -125,7 +126,7 @@ describe('A1111-format metadata conversion', () => {
       const jpegPath = path.join(SAMPLES_DIR, 'jpg/civitai.jpeg');
       const jpegData = new Uint8Array(fs.readFileSync(jpegPath));
 
-      const jpegResult = parseJpeg(jpegData);
+      const jpegResult = read(jpegData);
       expect(jpegResult.status).toBe('success');
       if (jpegResult.status !== 'success') return;
 
@@ -154,7 +155,7 @@ describe('A1111-format metadata conversion', () => {
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
       // Parse original PNG
-      const originalResult = parsePng(pngData);
+      const originalResult = read(pngData);
       expect(originalResult.status).toBe('success');
       if (originalResult.status !== 'success') return;
 

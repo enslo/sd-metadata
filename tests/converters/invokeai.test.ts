@@ -1,7 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { convertMetadata, parsePng } from '../../src';
+import { convertMetadata } from '../../src/converters';
+import { read } from '../../src/index';
 
 const SAMPLES_DIR = path.join(__dirname, '../../samples');
 
@@ -11,7 +12,7 @@ describe('InvokeAI metadata conversion', () => {
       const pngPath = path.join(SAMPLES_DIR, 'png/invokeai.png');
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
-      const pngResult = parsePng(pngData);
+      const pngResult = read(pngData);
       expect(pngResult.status).toBe('success');
       if (pngResult.status !== 'success') return;
 
@@ -46,7 +47,7 @@ describe('InvokeAI metadata conversion', () => {
       const pngData = new Uint8Array(fs.readFileSync(pngPath));
 
       // Parse original PNG
-      const originalResult = parsePng(pngData);
+      const originalResult = read(pngData);
       expect(originalResult.status).toBe('success');
       if (originalResult.status !== 'success') return;
 

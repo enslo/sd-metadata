@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>sd-metadata</title>
-    <meta name="description" content="Extract and view AI-generated image metadata from PNG files" />
+    <meta name="description" content="Extract and view AI-generated image metadata from PNG, JPEG, and WebP files" />
   </head>
   <body>
     <div id="app">
@@ -21,8 +21,8 @@
               <polyline points="17,8 12,3 7,8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            <p>Drop PNG image here or click to select</p>
-            <input type="file" id="fileInput" accept="image/png" hidden />
+            <p>Drop PNG, JPEG, or WebP image here</p>
+            <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden />
           </div>
           <div class="drop-zone-preview" id="dropZonePreview" hidden>
             <img id="previewImage" alt="Uploaded image preview" />
