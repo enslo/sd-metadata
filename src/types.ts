@@ -401,3 +401,26 @@ export type ParseResult =
   | { status: 'empty' }
   | { status: 'unrecognized'; raw: RawMetadata }
   | { status: 'invalid'; message?: string };
+
+// ============================================================================
+// Metadata Conversion Types
+// ============================================================================
+
+/**
+ * Target format for metadata conversion
+ */
+export type ConversionTargetFormat = 'png' | 'jpeg' | 'webp';
+
+/**
+ * Conversion error types
+ */
+export type ConversionError =
+  | { type: 'unsupportedSoftware'; software: string }
+  | { type: 'invalidParseResult'; status: string }
+  | { type: 'missingRawData' }
+  | { type: 'parseError'; message: string };
+
+/**
+ * Result type for metadata conversion
+ */
+export type ConversionResult = Result<RawMetadata, ConversionError>;
