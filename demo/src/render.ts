@@ -5,7 +5,11 @@
  * for better type safety and XSS protection.
  */
 
-import type { GenerationMetadata, PngTextChunk } from 'sd-metadata';
+import type {
+  GenerationMetadata,
+  MetadataSegment,
+  PngTextChunk,
+} from 'sd-metadata';
 import { fragment, h } from './dom';
 import { formatJson, getSoftwareLabel } from './utils';
 
@@ -176,6 +180,36 @@ export function createRawChunks(chunks: PngTextChunk[]): DocumentFragment {
       h('summary', { class: 'raw-chunk-header' }, [
         h('span', { class: 'chunk-keyword' }, [chunk.keyword]),
         h('span', { class: 'chunk-type' }, [chunk.type]),
+        h('span', { class: 'chunk-format' }, [format]),
+      ]),
+      h('pre', { class: 'chunk-content' }, [formatted]),
+    ]);
+  });
+
+  return fragment(elements);
+}
+
+/**
+ * Create Exif segments view (for JPEG/WebP)
+ *
+ * @param segments - Metadata segments
+ * @returns HTML element
+ */
+export function createExifSegments(
+  segments: MetadataSegment[],
+): DocumentFragment {
+  const elements = segments.map((segment) => {
+    const { formatted, isJson } = formatJson(segment.data);
+    const format = isJson ? 'JSON' : 'Text';
+    const sourceType = segment.source.type;
+    const prefix =
+      'prefix' in segment.source ? segment.source.prefix : undefined;
+
+    const label = prefix ? `${sourceType} (${prefix})` : sourceType;
+
+    return h('details', { class: 'raw-chunk', open: true }, [
+      h('summary', { class: 'raw-chunk-header' }, [
+        h('span', { class: 'chunk-keyword' }, [label]),
         h('span', { class: 'chunk-format' }, [format]),
       ]),
       h('pre', { class: 'chunk-content' }, [formatted]),

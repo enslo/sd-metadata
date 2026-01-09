@@ -6,10 +6,22 @@
  */
 
 import './style.css';
-import { parsePng, readPngMetadata } from 'sd-metadata';
-import type { GenerationMetadata, PngTextChunk } from 'sd-metadata';
+import {
+  parseJpeg,
+  parsePng,
+  parseWebp,
+  readJpegMetadata,
+  readPngMetadata,
+  readWebpMetadata,
+} from 'sd-metadata';
+import type {
+  GenerationMetadata,
+  MetadataSegment,
+  PngTextChunk,
+} from 'sd-metadata';
 import {
   createError,
+  createExifSegments,
   createImageInfo,
   createParsedMetadata,
   createRawChunks,
@@ -120,8 +132,9 @@ async function processFile(file: File) {
   resetDropZone();
 
   // Validate file type
-  if (!file.type.startsWith('image/png')) {
-    showError('Please upload a PNG file');
+  const format = getImageFormat(file.type);
+  if (!format) {
+    showError('Please upload a PNG, JPEG, or WebP file');
     return;
   }
 
@@ -132,20 +145,81 @@ async function processFile(file: File) {
   // Show preview
   showPreview(file);
 
-  // Read raw metadata for display
+  // Process based on format
+  switch (format) {
+    case 'png':
+      processPng(data);
+      break;
+    case 'jpeg':
+      processJpeg(data);
+      break;
+    case 'webp':
+      processWebp(data);
+      break;
+  }
+}
+
+/**
+ * Get image format from MIME type
+ */
+function getImageFormat(mimeType: string): 'png' | 'jpeg' | 'webp' | null {
+  if (mimeType === 'image/png') return 'png';
+  if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') return 'jpeg';
+  if (mimeType === 'image/webp') return 'webp';
+  return null;
+}
+
+/**
+ * Process PNG file
+ */
+function processPng(data: Uint8Array) {
   const readResult = readPngMetadata(data);
   if (!readResult.ok) {
     showError(`Failed to read PNG: ${readResult.error.type}`);
     return;
   }
 
-  // Parse metadata using unified API
   const parseResult = parsePng(data);
-
   if (parseResult.ok) {
-    showResults(readResult.value, parseResult.value);
+    showPngResults(readResult.value, parseResult.value);
   } else {
-    showResults(readResult.value, null, parseResult.error.type);
+    showPngResults(readResult.value, null, parseResult.error.type);
+  }
+}
+
+/**
+ * Process JPEG file
+ */
+function processJpeg(data: Uint8Array) {
+  const readResult = readJpegMetadata(data);
+  if (!readResult.ok) {
+    showError(`Failed to read JPEG: ${readResult.error.type}`);
+    return;
+  }
+
+  const parseResult = parseJpeg(data);
+  if (parseResult.ok) {
+    showExifResults(readResult.value, parseResult.value);
+  } else {
+    showExifResults(readResult.value, null, parseResult.error.type);
+  }
+}
+
+/**
+ * Process WebP file
+ */
+function processWebp(data: Uint8Array) {
+  const readResult = readWebpMetadata(data);
+  if (!readResult.ok) {
+    showError(`Failed to read WebP: ${readResult.error.type}`);
+    return;
+  }
+
+  const parseResult = parseWebp(data);
+  if (parseResult.ok) {
+    showExifResults(readResult.value, parseResult.value);
+  } else {
+    showExifResults(readResult.value, null, parseResult.error.type);
   }
 }
 
@@ -180,15 +254,14 @@ function resetDropZone() {
 }
 
 /**
- * Show results with parsed and raw data
+ * Show results with PNG chunks
  */
-function showResults(
+function showPngResults(
   raw: PngTextChunk[],
   parsed: GenerationMetadata | null,
   error?: string,
 ) {
-  const { imageInfo, parsedMetadata, rawData, parsedTab, rawTab, results } =
-    elements;
+  const { imageInfo, parsedMetadata, rawData, results } = elements;
 
   // Update image info
   imageInfo.replaceChildren(createImageInfo(parsed, error));
@@ -204,14 +277,49 @@ function showResults(
   rawData.replaceChildren(createRawChunks(raw));
 
   // Reset to Parsed Metadata tab
-  for (const tab of tabs) {
-    const tabName = (tab as HTMLElement).dataset.tab;
-    tab.classList.toggle('active', tabName === 'parsed');
-  }
-  parsedTab.hidden = false;
-  rawTab.hidden = true;
-
+  setActiveTab('parsed');
   results.hidden = false;
+}
+
+/**
+ * Show results with Exif segments (JPEG/WebP)
+ */
+function showExifResults(
+  raw: MetadataSegment[],
+  parsed: GenerationMetadata | null,
+  error?: string,
+) {
+  const { imageInfo, parsedMetadata, rawData, results } = elements;
+
+  // Update image info
+  imageInfo.replaceChildren(createImageInfo(parsed, error));
+
+  // Show parsed metadata or error
+  parsedMetadata.replaceChildren(
+    parsed
+      ? createParsedMetadata(parsed)
+      : createError(error || 'Unknown format'),
+  );
+
+  // Show raw data as segments
+  rawData.replaceChildren(createExifSegments(raw));
+
+  // Reset to Parsed Metadata tab
+  setActiveTab('parsed');
+  results.hidden = false;
+}
+
+/**
+ * Set active tab
+ */
+function setActiveTab(tabName: 'parsed' | 'raw') {
+  const { parsedTab, rawTab } = elements;
+  for (const tab of tabs) {
+    const name = (tab as HTMLElement).dataset.tab;
+    tab.classList.toggle('active', name === tabName);
+  }
+  parsedTab.hidden = tabName !== 'parsed';
+  rawTab.hidden = tabName !== 'raw';
 }
 
 /**
