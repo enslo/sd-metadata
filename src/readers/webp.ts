@@ -1,7 +1,7 @@
-import type { MetadataSegment, WebpMetadataResult } from '../types';
+import type { WebpMetadataResult } from '../types';
 import { Result } from '../types';
 import { arraysEqual, readUint32LE } from '../utils/binary';
-import { parseExifUserComment } from '../utils/exif';
+import { parseExifMetadataSegments } from '../utils/exif';
 
 /** WebP file signature: "RIFF" */
 const RIFF_SIGNATURE = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
@@ -31,20 +31,13 @@ export function readWebpMetadata(data: Uint8Array): WebpMetadataResult {
     return Result.error({ type: 'noExifChunk' });
   }
 
-  const segments: MetadataSegment[] = [];
-
   const exifData = data.slice(
     exifChunk.offset,
     exifChunk.offset + exifChunk.length,
   );
-  const userComment = parseExifUserComment(exifData);
 
-  if (userComment !== null) {
-    segments.push({
-      source: { type: 'exifUserComment' },
-      data: userComment,
-    });
-  }
+  // Parse all EXIF metadata segments (UserComment, ImageDescription, Make)
+  const segments = parseExifMetadataSegments(exifData);
 
   // No metadata found
   if (segments.length === 0) {

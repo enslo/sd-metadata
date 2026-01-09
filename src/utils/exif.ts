@@ -183,32 +183,6 @@ function decodeAsciiString(data: Uint8Array): string | null {
 }
 
 /**
- * Parse Exif TIFF structure and extract UserComment (legacy function)
- *
- * @param exifData - TIFF data (starting with II/MM byte order marker)
- * @returns UserComment text or null if not found
- */
-export function parseExifUserComment(exifData: Uint8Array): string | null {
-  const segments = parseExifMetadataSegments(exifData);
-  // Return first UserComment found
-  for (const segment of segments) {
-    if (segment.source.type === 'exifUserComment') {
-      return segment.data;
-    }
-  }
-  // Fall back to ImageDescription if no UserComment
-  for (const segment of segments) {
-    if (
-      segment.source.type === 'exifImageDescription' ||
-      segment.source.type === 'exifMake'
-    ) {
-      return segment.data;
-    }
-  }
-  return null;
-}
-
-/**
  * Find Exif IFD offset from IFD0
  */
 function findExifIfdOffset(

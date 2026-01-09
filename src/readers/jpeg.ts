@@ -199,6 +199,3 @@ function decodeComSegment(data: Uint8Array): string | null {
     return null;
   }
 }
-
-// Re-export shared utilities for test convenience
-export { decodeUserComment } from '../utils/exif';
