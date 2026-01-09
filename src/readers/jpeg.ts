@@ -1,7 +1,7 @@
 import type { JpegMetadataResult, MetadataSegment } from '../types';
 import { Result } from '../types';
 import { arraysEqual } from '../utils/binary';
-import { parseExifMetadataSegments } from '../utils/exif';
+import { parseExifMetadataSegments } from './exif';
 
 /** JPEG file signature (magic bytes): FFD8 */
 const JPEG_SIGNATURE = new Uint8Array([0xff, 0xd8]);

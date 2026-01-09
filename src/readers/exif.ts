@@ -1,17 +1,17 @@
+/**
+ * Exif reading utilities
+ *
+ * Functions for parsing Exif/TIFF structures and extracting metadata segments.
+ */
+
 import type { GenerationSoftware, MetadataSegment } from '../types';
-import { readUint16, readUint32 } from './binary';
-
-/** UserComment tag ID in Exif */
-const USER_COMMENT_TAG = 0x9286;
-
-/** ImageDescription tag ID */
-const IMAGE_DESCRIPTION_TAG = 0x010e;
-
-/** Make tag ID */
-const MAKE_TAG = 0x010f;
-
-/** Exif IFD pointer tag */
-const EXIF_IFD_POINTER_TAG = 0x8769;
+import { readUint16, readUint32 } from '../utils/binary';
+import {
+  EXIF_IFD_POINTER_TAG,
+  IMAGE_DESCRIPTION_TAG,
+  MAKE_TAG,
+  USER_COMMENT_TAG,
+} from '../utils/exif-constants';
 
 /**
  * Parse Exif TIFF structure and extract all metadata segments
@@ -57,11 +57,6 @@ export function parseExifMetadataSegments(
 
 /**
  * Extract metadata tags from an IFD
- *
- * @param data - TIFF data
- * @param ifdOffset - Offset to IFD
- * @param isLittleEndian - Byte order
- * @returns Array of metadata segments found in this IFD
  */
 function extractTagsFromIfd(
   data: Uint8Array,
@@ -107,7 +102,7 @@ function extractTagsFromIfd(
         const prefix = extractPrefix(text);
         segments.push({
           source: { type: 'exifImageDescription', prefix: prefix ?? undefined },
-          data: prefix ? text.slice(prefix.length + 2) : text, // Remove "Prefix: " from data
+          data: prefix ? text.slice(prefix.length + 2) : text,
         });
       }
     } else if (tag === MAKE_TAG) {
@@ -232,11 +227,8 @@ export function decodeUserComment(data: Uint8Array): string | null {
     data[7] === 0x00 // NULL
   ) {
     // UTF-16 encoded - detect byte order by looking at first character
-    // Standard says BE, but some tools (SwarmUI) use LE
     const textData = data.slice(8);
     if (textData.length >= 2) {
-      // If first byte is printable ASCII and second is 0x00, it's likely LE
-      // e.g., '{' (0x7B) followed by 0x00 = UTF-16LE
       const isLikelyLE = textData[0] !== 0x00 && textData[1] === 0x00;
       return isLikelyLE ? decodeUtf16LE(textData) : decodeUtf16BE(textData);
     }
@@ -261,7 +253,12 @@ export function decodeUserComment(data: Uint8Array): string | null {
   // Try UTF-8 (for ComfyUI JSON format without prefix)
   try {
     const decoder = new TextDecoder('utf-8', { fatal: true });
-    return decoder.decode(data);
+    let result = decoder.decode(data);
+    // Strip null terminator if present
+    if (result.endsWith('\0')) {
+      result = result.slice(0, -1);
+    }
+    return result;
   } catch {
     return null;
   }
@@ -275,7 +272,7 @@ function decodeUtf16BE(data: Uint8Array): string {
 
   for (let i = 0; i < data.length - 1; i += 2) {
     const code = ((data[i] ?? 0) << 8) | (data[i + 1] ?? 0);
-    if (code === 0) break; // Stop at null terminator
+    if (code === 0) break;
     chars.push(String.fromCharCode(code));
   }
 
@@ -290,7 +287,7 @@ function decodeUtf16LE(data: Uint8Array): string {
 
   for (let i = 0; i < data.length - 1; i += 2) {
     const code = (data[i] ?? 0) | ((data[i + 1] ?? 0) << 8);
-    if (code === 0) break; // Stop at null terminator
+    if (code === 0) break;
     chars.push(String.fromCharCode(code));
   }
 
@@ -304,7 +301,7 @@ function decodeAscii(data: Uint8Array): string {
   const chars: string[] = [];
 
   for (let i = 0; i < data.length; i++) {
-    if (data[i] === 0) break; // Stop at null terminator
+    if (data[i] === 0) break;
     chars.push(String.fromCharCode(data[i] ?? 0));
   }
 
@@ -325,7 +322,7 @@ export function detectSoftware(userComment: string): GenerationSoftware | null {
       return 'swarmui';
     }
 
-    // Check for Civitai JSON format (has civitai: URN or resource-stack)
+    // Check for Civitai JSON format
     if (
       userComment.includes('civitai:') ||
       userComment.includes('"resource-stack"')
@@ -334,8 +331,6 @@ export function detectSoftware(userComment: string): GenerationSoftware | null {
     }
 
     // Check for NovelAI JSON format
-    // - Direct keys: "v4_prompt", "noise_schedule", "uncond_scale"
-    // - WebP metadata format: "Software":"NovelAI" or escaped versions
     if (
       userComment.includes('"v4_prompt"') ||
       userComment.includes('"noise_schedule"') ||
@@ -347,14 +342,13 @@ export function detectSoftware(userComment: string): GenerationSoftware | null {
       return 'novelai';
     }
 
-    // Check for ComfyUI JSON format (has "prompt" or "nodes" key for workflow)
+    // Check for ComfyUI JSON format
     if (userComment.includes('"prompt"') || userComment.includes('"nodes"')) {
       return 'comfyui';
     }
   }
 
   // A1111-style format detection
-  // Check for Version field
   const versionMatch = userComment.match(/Version:\s*([^\s,]+)/);
   if (versionMatch) {
     const version = versionMatch[1];

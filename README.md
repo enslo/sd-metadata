@@ -67,10 +67,10 @@ const newImageData = writeMetadata(imageData, metadata);
 - [x] WebP reading (EXIF chunk)
 - [x] Segment tracking for round-trip preservation
 
-### Phase 3: JPEG/WebP Writing
+### Phase 3: JPEG/WebP Writing ✅
 
-- [ ] JPEG writing (Exif UserComment, COM segment)
-- [ ] WebP writing (EXIF chunk)
+- [x] JPEG writing (Exif UserComment, COM segment)
+- [x] WebP writing (EXIF chunk)
 
 ### Phase 4: Format Conversion
 

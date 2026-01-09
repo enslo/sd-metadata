@@ -130,3 +130,71 @@ export function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
   }
   return true;
 }
+
+/**
+ * Write 2-byte unsigned integer with endianness support
+ *
+ * @param data - Byte array to write to
+ * @param offset - Offset to start writing at
+ * @param value - 16-bit unsigned integer value
+ * @param isLittleEndian - If true, write as little-endian
+ */
+export function writeUint16(
+  data: Uint8Array,
+  offset: number,
+  value: number,
+  isLittleEndian: boolean,
+): void {
+  if (isLittleEndian) {
+    data[offset] = value & 0xff;
+    data[offset + 1] = (value >>> 8) & 0xff;
+  } else {
+    data[offset] = (value >>> 8) & 0xff;
+    data[offset + 1] = value & 0xff;
+  }
+}
+
+/**
+ * Write 4-byte unsigned integer with endianness support
+ *
+ * @param data - Byte array to write to
+ * @param offset - Offset to start writing at
+ * @param value - 32-bit unsigned integer value
+ * @param isLittleEndian - If true, write as little-endian
+ */
+export function writeUint32(
+  data: Uint8Array,
+  offset: number,
+  value: number,
+  isLittleEndian: boolean,
+): void {
+  if (isLittleEndian) {
+    data[offset] = value & 0xff;
+    data[offset + 1] = (value >>> 8) & 0xff;
+    data[offset + 2] = (value >>> 16) & 0xff;
+    data[offset + 3] = (value >>> 24) & 0xff;
+  } else {
+    data[offset] = (value >>> 24) & 0xff;
+    data[offset + 1] = (value >>> 16) & 0xff;
+    data[offset + 2] = (value >>> 8) & 0xff;
+    data[offset + 3] = value & 0xff;
+  }
+}
+
+/**
+ * Write 4-byte little-endian unsigned integer
+ *
+ * @param data - Byte array to write to
+ * @param offset - Offset to start writing at
+ * @param value - 32-bit unsigned integer value
+ */
+export function writeUint32LE(
+  data: Uint8Array,
+  offset: number,
+  value: number,
+): void {
+  data[offset] = value & 0xff;
+  data[offset + 1] = (value >>> 8) & 0xff;
+  data[offset + 2] = (value >>> 16) & 0xff;
+  data[offset + 3] = (value >>> 24) & 0xff;
+}

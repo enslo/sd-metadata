@@ -39,6 +39,38 @@ export type PngWriteError =
  */
 export type PngWriteResult = Result<Uint8Array, PngWriteError>;
 
+// ============================================================================
+// JPEG Writer Types
+// ============================================================================
+
+/**
+ * Error types for JPEG writing
+ */
+export type JpegWriteError =
+  | { type: 'invalidSignature' }
+  | { type: 'corruptedStructure'; message: string };
+
+/**
+ * Result type for JPEG metadata writing
+ */
+export type JpegWriteResult = Result<Uint8Array, JpegWriteError>;
+
+// ============================================================================
+// WebP Writer Types
+// ============================================================================
+
+/**
+ * Error types for WebP writing
+ */
+export type WebpWriteError =
+  | { type: 'invalidSignature' }
+  | { type: 'invalidRiffStructure'; message: string };
+
+/**
+ * Result type for WebP metadata writing
+ */
+export type WebpWriteResult = Result<Uint8Array, WebpWriteError>;
+
 /**
  * PNG text chunk (tEXt or iTXt)
  */
