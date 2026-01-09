@@ -1,4 +1,8 @@
-import type { ParseResult, PngTextChunk, SwarmUIMetadata } from '../types';
+import type {
+  InternalParseResult,
+  MetadataEntry,
+  SwarmUIMetadata,
+} from '../types';
 import { Result } from '../types';
 
 /**
@@ -24,30 +28,36 @@ interface SwarmUIParameters {
 }
 
 /**
- * Parse SwarmUI metadata from PNG chunks
+ * Parse SwarmUI metadata from entries
  *
- * SwarmUI stores metadata in tEXt chunks:
+ * SwarmUI stores metadata with:
  * - parameters: JSON containing sui_image_params
  * - prompt: ComfyUI-style node graph (fallback)
  *
- * @param chunks - PNG text chunks
+ * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseSwarmUI(chunks: PngTextChunk[]): ParseResult {
-  // Find parameters chunk
-  const parametersChunk = chunks.find((c) => c.keyword === 'parameters');
-  if (!parametersChunk) {
+export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
+  // Build entry map for easy access
+  const entryMap = new Map<string, string>();
+  for (const entry of entries) {
+    entryMap.set(entry.keyword, entry.text);
+  }
+
+  // Find parameters entry (PNG uses 'parameters', JPEG/WebP uses 'Comment')
+  const parametersText = entryMap.get('parameters') ?? entryMap.get('Comment');
+  if (!parametersText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   // Parse parameters JSON
   let data: SwarmUIParameters;
   try {
-    data = JSON.parse(parametersChunk.text);
+    data = JSON.parse(parametersText);
   } catch {
     return Result.error({
       type: 'parseError',
-      message: 'Invalid JSON in parameters chunk',
+      message: 'Invalid JSON in parameters entry',
     });
   }
 
@@ -62,14 +72,13 @@ export function parseSwarmUI(chunks: PngTextChunk[]): ParseResult {
   const height = params.height ?? 0;
 
   // Build metadata
-  const metadata: SwarmUIMetadata = {
+  const metadata: Omit<SwarmUIMetadata, 'raw'> = {
     type: 'swarmui',
     software: 'swarmui',
     prompt: params.prompt ?? '',
     negativePrompt: params.negativeprompt ?? '',
     width,
     height,
-    raw: chunks,
   };
 
   // Add model settings

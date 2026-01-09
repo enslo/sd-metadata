@@ -1,4 +1,4 @@
-import type { ParseResult, PngMetadata } from '../types';
+import type { InternalParseResult, MetadataEntries } from '../types';
 import { Result } from '../types';
 import { parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
@@ -18,73 +18,72 @@ export { parseSwarmUI } from './swarmui';
 export { parseTensorArt } from './tensorart';
 
 /**
- * Parse PNG metadata to unified format
+ * Parse metadata entries to unified format
  *
  * Automatically detects the generation software and applies the appropriate parser.
+ * This function returns metadata WITHOUT the `raw` field; callers should attach it.
  *
- * @param metadata - PNG metadata from readPngMetadata
+ * @param input - Format-agnostic metadata entries
  * @returns Parsed metadata or error
  */
-export function parseMetadata(metadata: PngMetadata): ParseResult {
-  const { software, chunks } = metadata;
+export function parseMetadata(input: MetadataEntries): InternalParseResult {
+  const { software, entries } = input;
 
   // Route to appropriate parser based on detected software
   switch (software) {
     case 'novelai':
-      return parseNovelAI(chunks);
+      return parseNovelAI(entries);
 
     case 'sd-webui':
     case 'forge':
     case 'forge-neo':
-      return parseA1111(chunks);
+    case 'civitai':
+    case 'animagine':
+      return parseA1111(entries);
 
     case 'comfyui':
-      return parseComfyUI(chunks);
+      return parseComfyUI(entries);
 
     case 'invokeai':
-      return parseInvokeAI(chunks);
+      return parseInvokeAI(entries);
 
     case 'swarmui':
-      return parseSwarmUI(chunks);
+      return parseSwarmUI(entries);
 
     case 'tensorart':
-      return parseTensorArt(chunks);
+      return parseTensorArt(entries);
 
     case 'stability-matrix':
-      return parseStabilityMatrix(chunks);
-
-    // Currently unsupported formats
-    case 'animagine':
-      return Result.error({ type: 'unsupportedFormat' });
+      return parseStabilityMatrix(entries);
 
     default: {
       // Try each parser in order
       // First try A1111 format (most common)
-      const a1111Result = parseA1111(chunks);
+      const a1111Result = parseA1111(entries);
       if (a1111Result.ok) return a1111Result;
 
       // Then try ComfyUI
-      const comfyResult = parseComfyUI(chunks);
+      const comfyResult = parseComfyUI(entries);
       if (comfyResult.ok) return comfyResult;
 
       // Then try InvokeAI
-      const invokeResult = parseInvokeAI(chunks);
+      const invokeResult = parseInvokeAI(entries);
       if (invokeResult.ok) return invokeResult;
 
       // Then try SwarmUI
-      const swarmResult = parseSwarmUI(chunks);
+      const swarmResult = parseSwarmUI(entries);
       if (swarmResult.ok) return swarmResult;
 
       // Then try TensorArt
-      const tensorResult = parseTensorArt(chunks);
+      const tensorResult = parseTensorArt(entries);
       if (tensorResult.ok) return tensorResult;
 
       // Then try Stability Matrix
-      const stabilityResult = parseStabilityMatrix(chunks);
+      const stabilityResult = parseStabilityMatrix(entries);
       if (stabilityResult.ok) return stabilityResult;
 
       // Finally try NovelAI
-      const novelaiResult = parseNovelAI(chunks);
+      const novelaiResult = parseNovelAI(entries);
       if (novelaiResult.ok) return novelaiResult;
 
       return Result.error({ type: 'unsupportedFormat' });

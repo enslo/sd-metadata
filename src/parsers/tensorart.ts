@@ -1,4 +1,8 @@
-import type { ComfyUIMetadata, ParseResult, PngTextChunk } from '../types';
+import type {
+  ComfyUIMetadata,
+  InternalParseResult,
+  MetadataEntry,
+} from '../types';
 import { Result } from '../types';
 
 /**
@@ -20,32 +24,37 @@ interface TensorArtGenerationData {
 }
 
 /**
- * Parse TensorArt metadata from PNG chunks
+ * Parse TensorArt metadata from entries
  *
- * TensorArt stores metadata in tEXt chunks:
+ * TensorArt stores metadata with:
  * - generation_data: JSON containing generation parameters
  * - prompt: ComfyUI-style node graph (workflow)
  *
- * @param chunks - PNG text chunks
+ * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
+export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
+  // Build entry map for easy access
+  const entryMap = new Map<string, string>();
+  for (const entry of entries) {
+    entryMap.set(entry.keyword, entry.text);
+  }
 
-export function parseTensorArt(chunks: PngTextChunk[]): ParseResult {
-  // Find generation_data chunk
-  const dataChunk = chunks.find((c) => c.keyword === 'generation_data');
-  if (!dataChunk) {
+  // Find generation_data entry
+  const dataText = entryMap.get('generation_data');
+  if (!dataText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   // Parse JSON (TensorArt appends NUL characters)
   let data: TensorArtGenerationData;
   try {
-    const text = dataChunk.text.replace(/\0+$/, '');
+    const text = dataText.replace(/\0+$/, '');
     data = JSON.parse(text);
   } catch {
     return Result.error({
       type: 'parseError',
-      message: 'Invalid JSON in generation_data chunk',
+      message: 'Invalid JSON in generation_data entry',
     });
   }
 
@@ -54,21 +63,20 @@ export function parseTensorArt(chunks: PngTextChunk[]): ParseResult {
   const height = data.height ?? 0;
 
   // Build metadata
-  const metadata: ComfyUIMetadata = {
+  const metadata: Omit<ComfyUIMetadata, 'raw'> = {
     type: 'comfyui',
     software: 'tensorart',
     prompt: data.prompt ?? '',
     negativePrompt: data.negativePrompt ?? '',
     width,
     height,
-    raw: chunks,
   };
 
-  // Extract ComfyUI-compatible workflow from prompt chunk
-  const promptChunk = chunks.find((c) => c.keyword === 'prompt');
-  if (promptChunk) {
+  // Extract ComfyUI-compatible workflow from prompt entry
+  const promptText = entryMap.get('prompt');
+  if (promptText) {
     try {
-      metadata.workflow = JSON.parse(promptChunk.text);
+      metadata.workflow = JSON.parse(promptText);
     } catch {
       // Ignore parse errors for workflow
     }

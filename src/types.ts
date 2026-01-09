@@ -78,6 +78,40 @@ export interface MetadataSegment {
   data: string;
 }
 
+// ============================================================================
+// Format-Agnostic Metadata Types
+// ============================================================================
+
+/**
+ * A single metadata entry (keyword + text)
+ *
+ * This is a format-agnostic representation used by parsers.
+ */
+export interface MetadataEntry {
+  /** Entry keyword (e.g., 'parameters', 'Comment', 'prompt') */
+  keyword: string;
+  /** Text content */
+  text: string;
+}
+
+/**
+ * Format-agnostic metadata container for parsers
+ */
+export interface MetadataEntries {
+  /** All metadata entries */
+  entries: MetadataEntry[];
+  /** Detected generation software */
+  software: GenerationSoftware | null;
+}
+
+/**
+ * Raw metadata for write-back (preserves original format)
+ */
+export type RawMetadata =
+  | { format: 'png'; chunks: PngTextChunk[] }
+  | { format: 'jpeg'; segments: MetadataSegment[] }
+  | { format: 'webp'; segments: MetadataSegment[] };
+
 /**
  * Unified metadata container for JPEG/WebP formats
  */
@@ -209,7 +243,7 @@ export interface BaseMetadata {
   /** Image height */
   height: number;
   /** Raw metadata (for write-back) */
-  raw: PngTextChunk[];
+  raw: RawMetadata;
 }
 
 /**
@@ -354,6 +388,18 @@ export type ParseError =
   | { type: 'parseError'; message: string };
 
 /**
- * Result type for metadata parsing
+ * Parsed metadata without raw data (returned by individual parsers)
+ *
+ * Parsers return this type; the API layer attaches the appropriate `raw` field.
+ */
+export type ParsedMetadata = Omit<GenerationMetadata, 'raw'>;
+
+/**
+ * Result type for internal parsers (without raw)
+ */
+export type InternalParseResult = Result<ParsedMetadata, ParseError>;
+
+/**
+ * Result type for metadata parsing (with raw)
  */
 export type ParseResult = Result<GenerationMetadata, ParseError>;

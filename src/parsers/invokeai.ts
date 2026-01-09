@@ -1,4 +1,8 @@
-import type { InvokeAIMetadata, ParseResult, PngTextChunk } from '../types';
+import type {
+  InternalParseResult,
+  InvokeAIMetadata,
+  MetadataEntry,
+} from '../types';
 import { Result } from '../types';
 
 /**
@@ -20,30 +24,36 @@ interface InvokeAIMetadataJson {
 }
 
 /**
- * Parse InvokeAI metadata from PNG chunks
+ * Parse InvokeAI metadata from entries
  *
- * InvokeAI stores metadata in tEXt/iTXt chunks:
+ * InvokeAI stores metadata with:
  * - invokeai_metadata: JSON containing generation parameters
  * - invokeai_graph: JSON containing the full node graph (not parsed here)
  *
- * @param chunks - PNG text chunks
+ * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseInvokeAI(chunks: PngTextChunk[]): ParseResult {
-  // Find invokeai_metadata chunk
-  const metadataChunk = chunks.find((c) => c.keyword === 'invokeai_metadata');
-  if (!metadataChunk) {
+export function parseInvokeAI(entries: MetadataEntry[]): InternalParseResult {
+  // Build entry map for easy access
+  const entryMap = new Map<string, string>();
+  for (const entry of entries) {
+    entryMap.set(entry.keyword, entry.text);
+  }
+
+  // Find invokeai_metadata entry
+  const metadataText = entryMap.get('invokeai_metadata');
+  if (!metadataText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   // Parse metadata JSON
   let data: InvokeAIMetadataJson;
   try {
-    data = JSON.parse(metadataChunk.text);
+    data = JSON.parse(metadataText);
   } catch {
     return Result.error({
       type: 'parseError',
-      message: 'Invalid JSON in invokeai_metadata chunk',
+      message: 'Invalid JSON in invokeai_metadata entry',
     });
   }
 
@@ -52,14 +62,13 @@ export function parseInvokeAI(chunks: PngTextChunk[]): ParseResult {
   const height = data.height ?? 0;
 
   // Build metadata
-  const metadata: InvokeAIMetadata = {
+  const metadata: Omit<InvokeAIMetadata, 'raw'> = {
     type: 'invokeai',
     software: 'invokeai',
     prompt: data.positive_prompt ?? '',
     negativePrompt: data.negative_prompt ?? '',
     width,
     height,
-    raw: chunks,
   };
 
   // Add model settings
