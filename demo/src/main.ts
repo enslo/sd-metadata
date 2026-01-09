@@ -14,11 +14,7 @@ import {
   readPngMetadata,
   readWebpMetadata,
 } from 'sd-metadata';
-import type {
-  GenerationMetadata,
-  MetadataSegment,
-  PngTextChunk,
-} from 'sd-metadata';
+import type { MetadataSegment, ParseResult, PngTextChunk } from 'sd-metadata';
 import {
   createError,
   createExifSegments,
@@ -184,11 +180,7 @@ function processPng(data: Uint8Array) {
   }
 
   const parseResult = parsePng(data);
-  if (parseResult.ok) {
-    showPngResults(readResult.value, parseResult.value);
-  } else {
-    showPngResults(readResult.value, null, parseResult.error.type);
-  }
+  showPngResults(readResult.value, parseResult);
 }
 
 /**
@@ -202,11 +194,7 @@ function processJpeg(data: Uint8Array) {
   }
 
   const parseResult = parseJpeg(data);
-  if (parseResult.ok) {
-    showExifResults(readResult.value, parseResult.value);
-  } else {
-    showExifResults(readResult.value, null, parseResult.error.type);
-  }
+  showExifResults(readResult.value, parseResult);
 }
 
 /**
@@ -220,11 +208,7 @@ function processWebp(data: Uint8Array) {
   }
 
   const parseResult = parseWebp(data);
-  if (parseResult.ok) {
-    showExifResults(readResult.value, parseResult.value);
-  } else {
-    showExifResults(readResult.value, null, parseResult.error.type);
-  }
+  showExifResults(readResult.value, parseResult);
 }
 
 // =============================================================================
@@ -260,21 +244,22 @@ function resetDropZone() {
 /**
  * Show results with PNG chunks
  */
-function showPngResults(
-  raw: PngTextChunk[],
-  parsed: GenerationMetadata | null,
-  error?: string,
-) {
+function showPngResults(raw: PngTextChunk[], parseResult: ParseResult) {
   const { imageInfo, parsedMetadata, rawData, results } = elements;
 
   // Update image info
-  imageInfo.replaceChildren(createImageInfo(parsed, error));
+  imageInfo.replaceChildren(
+    createImageInfo(
+      parseResult.ok ? parseResult.value : null,
+      parseResult.ok ? undefined : parseResult.error.type,
+    ),
+  );
 
   // Show parsed metadata or error
   parsedMetadata.replaceChildren(
-    parsed
-      ? createParsedMetadata(parsed)
-      : createError(error || 'Unknown format'),
+    parseResult.ok
+      ? createParsedMetadata(parseResult.value)
+      : createError(parseResult.error.type),
   );
 
   // Show raw data as individual chunks
@@ -288,21 +273,22 @@ function showPngResults(
 /**
  * Show results with Exif segments (JPEG/WebP)
  */
-function showExifResults(
-  raw: MetadataSegment[],
-  parsed: GenerationMetadata | null,
-  error?: string,
-) {
+function showExifResults(raw: MetadataSegment[], parseResult: ParseResult) {
   const { imageInfo, parsedMetadata, rawData, results } = elements;
 
   // Update image info
-  imageInfo.replaceChildren(createImageInfo(parsed, error));
+  imageInfo.replaceChildren(
+    createImageInfo(
+      parseResult.ok ? parseResult.value : null,
+      parseResult.ok ? undefined : parseResult.error.type,
+    ),
+  );
 
   // Show parsed metadata or error
   parsedMetadata.replaceChildren(
-    parsed
-      ? createParsedMetadata(parsed)
-      : createError(error || 'Unknown format'),
+    parseResult.ok
+      ? createParsedMetadata(parseResult.value)
+      : createError(parseResult.error.type),
   );
 
   // Show raw data as segments
