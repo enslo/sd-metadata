@@ -3,8 +3,7 @@ import { Result } from '../types';
 import { arraysEqual } from '../utils/binary';
 import { parseExifMetadataSegments } from './exif';
 
-/** JPEG file signature (magic bytes): FFD8 */
-const JPEG_SIGNATURE = new Uint8Array([0xff, 0xd8]);
+import { isJpeg } from '../utils/binary';
 
 /** APP1 marker */
 const APP1_MARKER = 0xe1;
@@ -26,7 +25,7 @@ const EXIF_HEADER = new Uint8Array([0x45, 0x78, 0x69, 0x66, 0x00, 0x00]);
  * @returns Result containing all metadata segments or error
  */
 export function readJpegMetadata(data: Uint8Array): JpegMetadataResult {
-  if (!isValidJpegSignature(data)) {
+  if (!isJpeg(data)) {
     return Result.error({ type: 'invalidSignature' });
   }
 
@@ -63,17 +62,6 @@ export function readJpegMetadata(data: Uint8Array): JpegMetadataResult {
   }
 
   return Result.ok(segments);
-}
-
-/**
- * Validate JPEG signature
- *
- * @param data - JPEG file data
- * @returns true if valid JPEG signature
- */
-export function isValidJpegSignature(data: Uint8Array): boolean {
-  if (data.length < 2) return false;
-  return data[0] === JPEG_SIGNATURE[0] && data[1] === JPEG_SIGNATURE[1];
 }
 
 /**

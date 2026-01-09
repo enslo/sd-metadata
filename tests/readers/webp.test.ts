@@ -1,11 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import {
-  findExifChunk,
-  isValidWebpSignature,
-  readWebpMetadata,
-} from '../../src/readers/webp';
+import { findExifChunk, readWebpMetadata } from '../../src/readers/webp';
+import { isWebp } from '../../src/utils/binary';
 
 const SAMPLES_DIR = join(__dirname, '../../samples/webp');
 
@@ -45,17 +42,17 @@ describe('readWebpMetadata', () => {
         0x42,
         0x50, // WEBP
       ]);
-      expect(isValidWebpSignature(data)).toBe(true);
+      expect(isWebp(data)).toBe(true);
     });
 
     it('should return false for invalid signature', () => {
       const data = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-      expect(isValidWebpSignature(data)).toBe(false);
+      expect(isWebp(data)).toBe(false);
     });
 
     it('should return false for empty data', () => {
       const data = new Uint8Array([]);
-      expect(isValidWebpSignature(data)).toBe(false);
+      expect(isWebp(data)).toBe(false);
     });
 
     it('should return error for invalid signature', () => {

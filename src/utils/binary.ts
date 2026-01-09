@@ -3,6 +3,21 @@
  */
 
 /**
+ * Read 3-byte little-endian unsigned integer
+ *
+ * @param data - Byte array
+ * @param offset - Offset to start reading from
+ * @returns 24-bit unsigned integer
+ */
+export function readUint24LE(data: Uint8Array, offset: number): number {
+  return (
+    (data[offset] ?? 0) |
+    ((data[offset + 1] ?? 0) << 8) |
+    ((data[offset + 2] ?? 0) << 16)
+  );
+}
+
+/**
  * Read 4-byte big-endian unsigned integer
  *
  * @param data - Byte array
@@ -197,4 +212,61 @@ export function writeUint32LE(
   data[offset + 1] = (value >>> 8) & 0xff;
   data[offset + 2] = (value >>> 16) & 0xff;
   data[offset + 3] = (value >>> 24) & 0xff;
+}
+
+/**
+ * Supported image formats
+ */
+export type ImageFormat = 'png' | 'jpeg' | 'webp';
+
+/**
+ * Validates if data starts with PNG signature
+ */
+export function isPng(data: Uint8Array): boolean {
+  if (data.length < 8) return false;
+  return (
+    data[0] === 0x89 &&
+    data[1] === 0x50 &&
+    data[2] === 0x4e &&
+    data[3] === 0x47 &&
+    data[4] === 0x0d &&
+    data[5] === 0x0a &&
+    data[6] === 0x1a &&
+    data[7] === 0x0a
+  );
+}
+
+/**
+ * Validates if data starts with JPEG signature
+ */
+export function isJpeg(data: Uint8Array): boolean {
+  if (data.length < 2) return false;
+  return data[0] === 0xff && data[1] === 0xd8;
+}
+
+/**
+ * Validates if data starts with WebP signature
+ */
+export function isWebp(data: Uint8Array): boolean {
+  if (data.length < 12) return false;
+  return (
+    data[0] === 0x52 && // R
+    data[1] === 0x49 && // I
+    data[2] === 0x46 && // F
+    data[3] === 0x46 && // F
+    data[8] === 0x57 && // W
+    data[9] === 0x45 && // E
+    data[10] === 0x42 && // B
+    data[11] === 0x50 // P
+  );
+}
+
+/**
+ * Detect image format from magic bytes
+ */
+export function detectFormat(data: Uint8Array): ImageFormat | null {
+  if (isPng(data)) return 'png';
+  if (isJpeg(data)) return 'jpeg';
+  if (isWebp(data)) return 'webp';
+  return null;
 }

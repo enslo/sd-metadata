@@ -8,8 +8,7 @@ import type {
 import { Result } from '../types';
 import { readChunkType, readUint32BE } from '../utils/binary';
 
-/** PNG file signature (magic bytes) */
-const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+import { isPng } from '../utils/binary';
 
 /**
  * Read PNG metadata from binary data
@@ -18,7 +17,7 @@ const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
  */
 export function readPngMetadata(data: Uint8Array): PngMetadataResult {
   // Validate PNG signature
-  if (!isValidPngSignature(data)) {
+  if (!isPng(data)) {
     return Result.error({ type: 'invalidSignature' });
   }
 
@@ -32,19 +31,10 @@ export function readPngMetadata(data: Uint8Array): PngMetadataResult {
 }
 
 /**
- * Validate PNG signature
+ * Extract tEXt and iTXt chunks from PNG data
  */
-function isValidPngSignature(data: Uint8Array): boolean {
-  if (data.length < PNG_SIGNATURE.length) {
-    return false;
-  }
-  for (let i = 0; i < PNG_SIGNATURE.length; i++) {
-    if (data[i] !== PNG_SIGNATURE[i]) {
-      return false;
-    }
-  }
-  return true;
-}
+// 8 bytes for PNG signature
+const PNG_SIGNATURE_LENGTH = 8;
 
 /**
  * Extract tEXt and iTXt chunks from PNG data
@@ -53,7 +43,7 @@ function extractTextChunks(
   data: Uint8Array,
 ): Result<PngTextChunk[], PngReadError> {
   const chunks: PngTextChunk[] = [];
-  let offset = PNG_SIGNATURE.length;
+  let offset = PNG_SIGNATURE_LENGTH;
 
   while (offset < data.length) {
     // Read chunk length (4 bytes, big-endian)

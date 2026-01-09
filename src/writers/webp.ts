@@ -3,6 +3,8 @@ import { Result } from '../types';
 import { arraysEqual, writeUint32LE } from '../utils/binary';
 import { buildExifTiffData } from './exif';
 
+import { isWebp } from '../utils/binary';
+
 /** WebP file signature: "RIFF" */
 const RIFF_SIGNATURE = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
 
@@ -27,7 +29,7 @@ export function writeWebpMetadata(
   segments: MetadataSegment[],
 ): WebpWriteResult {
   // Validate WebP signature
-  if (!isValidWebpSignature(data)) {
+  if (!isWebp(data)) {
     return Result.error({ type: 'invalidSignature' });
   }
 
@@ -102,25 +104,6 @@ function isImageChunk(chunk: Uint8Array): boolean {
     chunk[3] ?? 0,
   );
   return type === 'VP8 ' || type === 'VP8L' || type === 'VP8X';
-}
-
-/**
- * Validate WebP signature
- */
-function isValidWebpSignature(data: Uint8Array): boolean {
-  if (data.length < 12) return false;
-
-  // Check "RIFF" signature
-  for (let i = 0; i < 4; i++) {
-    if (data[i] !== RIFF_SIGNATURE[i]) return false;
-  }
-
-  // Check "WEBP" marker at offset 8
-  for (let i = 0; i < 4; i++) {
-    if (data[i + 8] !== WEBP_MARKER[i]) return false;
-  }
-
-  return true;
 }
 
 /**

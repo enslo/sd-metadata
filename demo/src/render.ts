@@ -5,13 +5,16 @@
  * for better type safety and XSS protection.
  */
 
-import type {
-  GenerationMetadata,
-  MetadataSegment,
-  PngTextChunk,
-} from 'sd-metadata';
+import type { GenerationMetadata, RawMetadata } from 'sd-metadata';
 import { fragment, h } from './dom';
 import { formatJson, getSoftwareLabel } from './utils';
+
+// Type aliases derived from RawMetadata (internal types are not exported)
+type PngTextChunk = Extract<RawMetadata, { format: 'png' }>['chunks'][number];
+type MetadataSegment = Extract<
+  RawMetadata,
+  { format: 'jpeg' }
+>['segments'][number];
 
 // =============================================================================
 // Image Info

@@ -6,7 +6,7 @@
  */
 
 import './style.css';
-import { parseJpeg, parsePng, parseWebp } from 'sd-metadata';
+import { read } from 'sd-metadata';
 import type { ParseResult } from 'sd-metadata';
 import {
   createError,
@@ -124,13 +124,6 @@ async function processFile(file: File) {
   results.hidden = true;
   resetDropZone();
 
-  // Validate file type
-  const format = getImageFormat(file.type);
-  if (!format) {
-    showError('Please upload a PNG, JPEG, or WebP file');
-    return;
-  }
-
   // Read file as ArrayBuffer
   const buffer = await file.arrayBuffer();
   const data = new Uint8Array(buffer);
@@ -138,28 +131,8 @@ async function processFile(file: File) {
   // Show preview
   showPreview(file);
 
-  // Process based on format
-  switch (format) {
-    case 'png':
-      showResults(parsePng(data), format);
-      break;
-    case 'jpeg':
-      showResults(parseJpeg(data), format);
-      break;
-    case 'webp':
-      showResults(parseWebp(data), format);
-      break;
-  }
-}
-
-/**
- * Get image format from MIME type
- */
-function getImageFormat(mimeType: string): 'png' | 'jpeg' | 'webp' | null {
-  if (mimeType === 'image/png') return 'png';
-  if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') return 'jpeg';
-  if (mimeType === 'image/webp') return 'webp';
-  return null;
+  // Parse metadata using unified API
+  showResults(read(data));
 }
 
 // =============================================================================
@@ -195,10 +168,7 @@ function resetDropZone() {
 /**
  * Show results based on parse result
  */
-function showResults(
-  parseResult: ParseResult,
-  format: 'png' | 'jpeg' | 'webp',
-) {
+function showResults(parseResult: ParseResult) {
   const { imageInfo, parsedMetadata, rawData, results } = elements;
 
   // Handle different statuses
@@ -234,7 +204,7 @@ function showResults(
       break;
 
     case 'invalid':
-      showError(parseResult.message ?? `Invalid ${format.toUpperCase()} file`);
+      showError(parseResult.message ?? 'Invalid image file');
       return;
   }
 
