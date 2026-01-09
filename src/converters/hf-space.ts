@@ -1,30 +1,30 @@
 /**
- * A1111-format metadata conversion utilities
+ * HuggingFace Space metadata conversion utilities
  *
- * Handles conversion for sd-webui, forge, forge-neo, and civitai.
- * A1111 format stores metadata as plain text in:
- * - PNG: `parameters` tEXt chunk
- * - JPEG/WebP: Exif UserComment
+ * HF-Space format stores metadata as JSON in the `parameters` chunk.
+ * This is different from A1111 which uses plain text.
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 
 /**
- * Convert A1111-format PNG chunks to JPEG/WebP segments
+ * Convert HF-Space PNG chunks to JPEG/WebP segments
+ *
+ * The parameters chunk contains JSON, which we preserve as-is.
  *
  * @param chunks - PNG text chunks
  * @returns Metadata segments for JPEG/WebP
  */
-export function convertA1111PngToSegments(
+export function convertHfSpacePngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  // Find parameters chunk
+  // Find parameters chunk (contains JSON)
   const parameters = chunks.find((c) => c.keyword === 'parameters');
   if (!parameters) {
     return [];
   }
 
-  // Simply copy to exifUserComment
+  // Copy JSON to exifUserComment
   return [
     {
       source: { type: 'exifUserComment' },
@@ -34,21 +34,21 @@ export function convertA1111PngToSegments(
 }
 
 /**
- * Convert JPEG/WebP segments to A1111-format PNG chunks
+ * Convert JPEG/WebP segments to HF-Space PNG chunks
  *
  * @param segments - Metadata segments from JPEG/WebP
  * @returns PNG text chunks
  */
-export function convertA1111SegmentsToPng(
+export function convertHfSpaceSegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  // Find exifUserComment segment
+  // Find exifUserComment segment (contains JSON)
   const userComment = segments.find((s) => s.source.type === 'exifUserComment');
   if (!userComment) {
     return [];
   }
 
-  // Simply copy to parameters chunk
+  // Copy JSON to parameters chunk
   return [
     {
       type: 'tEXt',

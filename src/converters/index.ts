@@ -17,6 +17,10 @@ import {
   convertComfyUISegmentsToPng,
 } from './comfyui';
 import {
+  convertHfSpacePngToSegments,
+  convertHfSpaceSegmentsToPng,
+} from './hf-space';
+import {
   convertInvokeAIPngToSegments,
   convertInvokeAISegmentsToPng,
 } from './invokeai';
@@ -96,15 +100,19 @@ function convertBySoftware(
     return convertNovelai(raw, targetFormat);
   }
 
-  // A1111-format conversion (sd-webui, forge, forge-neo, civitai, hf-space)
+  // A1111-format conversion (sd-webui, forge, forge-neo, civitai)
   if (
     software === 'sd-webui' ||
     software === 'forge' ||
     software === 'forge-neo' ||
-    software === 'civitai' ||
-    software === 'hf-space'
+    software === 'civitai'
   ) {
     return convertA1111(raw, targetFormat);
+  }
+
+  // HuggingFace Space conversion (uses JSON in parameters chunk)
+  if (software === 'hf-space') {
+    return convertHfSpace(raw, targetFormat);
   }
 
   // SwarmUI conversion
@@ -200,6 +208,43 @@ function convertA1111(
   }
 
   const chunks = convertA1111SegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert HuggingFace Space metadata between formats
+ *
+ * HF-Space uses JSON in the parameters chunk, unlike A1111's plain text.
+ */
+function convertHfSpace(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertHfSpacePngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertHfSpaceSegmentsToPng(raw.segments);
   return Result.ok({
     format: 'png',
     chunks,
