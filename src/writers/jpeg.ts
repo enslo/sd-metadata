@@ -2,8 +2,7 @@ import type { JpegWriteResult, MetadataSegment } from '../types';
 import { Result } from '../types';
 import { buildExifTiffData } from './exif';
 
-/** JPEG file signature (magic bytes): FFD8 */
-const JPEG_SIGNATURE = new Uint8Array([0xff, 0xd8]);
+import { isJpeg } from '../utils/binary';
 
 /** APP1 marker */
 const APP1_MARKER = 0xe1;
@@ -37,7 +36,7 @@ export function writeJpegMetadata(
   segments: MetadataSegment[],
 ): JpegWriteResult {
   // Validate JPEG signature
-  if (!isValidJpegSignature(data)) {
+  if (!isJpeg(data)) {
     return Result.error({ type: 'invalidSignature' });
   }
 
@@ -108,14 +107,6 @@ export function writeJpegMetadata(
   output.set(scanData, offset);
 
   return Result.ok(output);
-}
-
-/**
- * Validate JPEG signature
- */
-function isValidJpegSignature(data: Uint8Array): boolean {
-  if (data.length < 2) return false;
-  return data[0] === JPEG_SIGNATURE[0] && data[1] === JPEG_SIGNATURE[1];
 }
 
 /**

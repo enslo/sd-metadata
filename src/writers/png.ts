@@ -7,6 +7,8 @@ import type {
 import { Result } from '../types';
 import { readChunkType, readUint32BE, writeUint32BE } from '../utils/binary';
 
+import { isPng } from '../utils/binary';
+
 /** PNG file signature (magic bytes) */
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
 
@@ -25,7 +27,7 @@ export function writePngMetadata(
   chunks: PngTextChunk[],
 ): PngWriteResult {
   // Validate PNG signature
-  if (!isValidPngSignature(data)) {
+  if (!isPng(data)) {
     return Result.error({ type: 'invalidSignature' });
   }
 
@@ -77,21 +79,6 @@ export function writePngMetadata(
   }
 
   return Result.ok(output);
-}
-
-/**
- * Validate PNG signature
- */
-function isValidPngSignature(data: Uint8Array): boolean {
-  if (data.length < PNG_SIGNATURE.length) {
-    return false;
-  }
-  for (let i = 0; i < PNG_SIGNATURE.length; i++) {
-    if (data[i] !== PNG_SIGNATURE[i]) {
-      return false;
-    }
-  }
-  return true;
 }
 
 /**
