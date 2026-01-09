@@ -24,18 +24,20 @@ type MetadataSegment = Extract<
  * Create image info section element
  *
  * @param parsed - Parsed metadata or null
+ * @param filename - Name of the uploaded file
  * @param error - Error message if any
  * @returns HTML element
  */
 export function createImageInfo(
   parsed: GenerationMetadata | null,
+  filename: string,
   error?: string,
 ): DocumentFragment {
   const software = parsed?.software || 'Unknown';
   const softwareLabel = getSoftwareLabel(software);
 
   return fragment([
-    h('h3', {}, ['Detected Software']),
+    h('h3', { class: 'filename', title: filename }, [filename]),
     h('span', { class: 'software-badge' }, [softwareLabel]),
     error &&
       h('p', { style: 'color: var(--color-error); margin-top: 0.5rem;' }, [

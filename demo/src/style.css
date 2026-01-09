@@ -164,6 +164,10 @@ header a:hover {
 .image-info h3 {
   font-size: 1rem;
   margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .image-info p {

@@ -132,7 +132,7 @@ async function processFile(file: File) {
   showPreview(file);
 
   // Parse metadata using unified API
-  showResults(read(data));
+  showResults(read(data), file.name);
 }
 
 // =============================================================================
@@ -168,13 +168,15 @@ function resetDropZone() {
 /**
  * Show results based on parse result
  */
-function showResults(parseResult: ParseResult) {
+function showResults(parseResult: ParseResult, filename: string) {
   const { imageInfo, parsedMetadata, rawData, results } = elements;
 
   // Handle different statuses
   switch (parseResult.status) {
     case 'success':
-      imageInfo.replaceChildren(createImageInfo(parseResult.metadata));
+      imageInfo.replaceChildren(
+        createImageInfo(parseResult.metadata, filename),
+      );
       parsedMetadata.replaceChildren(
         createParsedMetadata(parseResult.metadata),
       );
@@ -187,7 +189,9 @@ function showResults(parseResult: ParseResult) {
       break;
 
     case 'unrecognized':
-      imageInfo.replaceChildren(createImageInfo(null, 'unrecognized'));
+      imageInfo.replaceChildren(
+        createImageInfo(null, filename, 'unrecognized'),
+      );
       parsedMetadata.replaceChildren(createError('unrecognized'));
       // Show raw data even when unrecognized
       if (parseResult.raw.format === 'png') {
@@ -198,7 +202,7 @@ function showResults(parseResult: ParseResult) {
       break;
 
     case 'empty':
-      imageInfo.replaceChildren(createImageInfo(null, 'empty'));
+      imageInfo.replaceChildren(createImageInfo(null, filename, 'empty'));
       parsedMetadata.replaceChildren(createError('empty'));
       rawData.replaceChildren(createError('empty'));
       break;
