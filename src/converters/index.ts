@@ -16,6 +16,10 @@ import {
   convertNovelaiPngToSegments,
   convertNovelaiSegmentsToPng,
 } from './novelai';
+import {
+  convertSwarmUIPngToSegments,
+  convertSwarmUISegmentsToPng,
+} from './swarmui';
 
 /**
  * Convert metadata from one format to another
@@ -95,6 +99,11 @@ function convertBySoftware(
     return convertA1111(raw, targetFormat);
   }
 
+  // SwarmUI conversion
+  if (software === 'swarmui') {
+    return convertSwarmUI(raw, targetFormat);
+  }
+
   // Unsupported software
   return Result.error({
     type: 'unsupportedSoftware',
@@ -169,6 +178,41 @@ function convertA1111(
   }
 
   const chunks = convertA1111SegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert SwarmUI metadata between formats
+ */
+function convertSwarmUI(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertSwarmUIPngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertSwarmUISegmentsToPng(raw.segments);
   return Result.ok({
     format: 'png',
     chunks,
