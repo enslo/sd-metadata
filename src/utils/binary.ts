@@ -115,3 +115,18 @@ export function readUint32(
     (data[offset + 3] ?? 0)
   );
 }
+
+/**
+ * Compare two Uint8Arrays for equality
+ *
+ * @param a - First array
+ * @param b - Second array
+ * @returns true if arrays have same length and all elements match
+ */
+export function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}

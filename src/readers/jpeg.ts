@@ -1,5 +1,6 @@
 import type { JpegMetadataResult, MetadataSegment } from '../types';
 import { Result } from '../types';
+import { arraysEqual } from '../utils/binary';
 import { parseExifMetadataSegments } from '../utils/exif';
 
 /** JPEG file signature (magic bytes): FFD8 */
@@ -197,17 +198,6 @@ function decodeComSegment(data: Uint8Array): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Compare two Uint8Arrays for equality
- */
-function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 }
 
 // Re-export shared utilities for test convenience

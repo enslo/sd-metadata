@@ -1,6 +1,6 @@
 import type { MetadataSegment, WebpMetadataResult } from '../types';
 import { Result } from '../types';
-import { readUint32LE } from '../utils/binary';
+import { arraysEqual, readUint32LE } from '../utils/binary';
 import { parseExifUserComment } from '../utils/exif';
 
 /** WebP file signature: "RIFF" */
@@ -116,15 +116,4 @@ export function findExifChunk(
   }
 
   return null;
-}
-
-/**
- * Compare two Uint8Arrays for equality
- */
-function arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 }
