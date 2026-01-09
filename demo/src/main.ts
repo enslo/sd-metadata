@@ -14,6 +14,7 @@ import {
   createImageInfo,
   createParsedMetadata,
   createRawChunks,
+  getSoftwareLabel,
 } from './render';
 
 // =============================================================================
@@ -27,6 +28,7 @@ const elements = {
   fileInput: document.getElementById('fileInput') as HTMLInputElement,
   previewImage: document.getElementById('previewImage') as HTMLImageElement,
   imageInfo: document.getElementById('imageInfo') as HTMLElement,
+  softwareBadge: document.getElementById('softwareBadge') as HTMLElement,
   results: document.getElementById('results') as HTMLElement,
   parsedMetadata: document.getElementById('parsedMetadata') as HTMLElement,
   rawData: document.getElementById('rawData') as HTMLElement,
@@ -169,14 +171,20 @@ function resetDropZone() {
  * Show results based on parse result
  */
 function showResults(parseResult: ParseResult, filename: string) {
-  const { imageInfo, parsedMetadata, rawData, results } = elements;
+  const { imageInfo, softwareBadge, parsedMetadata, rawData, results } =
+    elements;
+
+  // Helper to update software badge
+  const updateBadge = (software: string | null) => {
+    const label = getSoftwareLabel(software || 'Unknown');
+    softwareBadge.textContent = label;
+  };
 
   // Handle different statuses
   switch (parseResult.status) {
     case 'success':
-      imageInfo.replaceChildren(
-        createImageInfo(parseResult.metadata, filename),
-      );
+      imageInfo.replaceChildren(createImageInfo(filename));
+      updateBadge(parseResult.metadata.software);
       parsedMetadata.replaceChildren(
         createParsedMetadata(parseResult.metadata),
       );
@@ -189,9 +197,8 @@ function showResults(parseResult: ParseResult, filename: string) {
       break;
 
     case 'unrecognized':
-      imageInfo.replaceChildren(
-        createImageInfo(null, filename, 'unrecognized'),
-      );
+      imageInfo.replaceChildren(createImageInfo(filename, 'unrecognized'));
+      updateBadge(null);
       parsedMetadata.replaceChildren(createError('unrecognized'));
       // Show raw data even when unrecognized
       if (parseResult.raw.format === 'png') {
@@ -202,7 +209,8 @@ function showResults(parseResult: ParseResult, filename: string) {
       break;
 
     case 'empty':
-      imageInfo.replaceChildren(createImageInfo(null, filename, 'empty'));
+      imageInfo.replaceChildren(createImageInfo(filename, 'empty'));
+      updateBadge(null);
       parsedMetadata.replaceChildren(createError('empty'));
       rawData.replaceChildren(createError('empty'));
       break;
