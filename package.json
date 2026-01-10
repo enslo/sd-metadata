@@ -1,55 +1,55 @@
 {
-	"name": "sd-metadata",
-	"version": "0.0.0",
-	"description": "Read and write AI-generated image metadata",
-	"type": "module",
-	"main": "./dist/index.js",
-	"module": "./dist/index.js",
-	"types": "./dist/index.d.ts",
-	"exports": {
-		".": {
-			"import": "./dist/index.js",
-			"types": "./dist/index.d.ts"
-		}
-	},
-	"files": [
-		"dist"
-	],
-	"scripts": {
-		"build": "tsup",
-		"test": "vitest",
-		"test:run": "vitest run",
-		"lint": "biome check src tests",
-		"lint:fix": "biome check --write src tests",
-		"typecheck": "tsc --noEmit",
-		"prepare": "lefthook install"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/enslo/sd-metadata.git"
-	},
-	"keywords": [
-		"stable-diffusion",
-		"novelai",
-		"comfyui",
-		"metadata",
-		"png",
-		"jpeg",
-		"webp"
-	],
-	"author": "",
-	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/enslo/sd-metadata/issues"
-	},
-	"homepage": "https://github.com/enslo/sd-metadata#readme",
-	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
-		"@types/node": "^25.0.3",
-		"lefthook": "^1.10.10",
-		"markdownlint-cli": "^0.47.0",
-		"tsup": "^8.3.6",
-		"typescript": "^5.7.3",
-		"vitest": "^2.1.8"
-	}
+  "name": "sd-metadata",
+  "version": "0.0.0",
+  "description": "Read and write AI-generated image metadata",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check src tests",
+    "lint:fix": "biome check --write src tests",
+    "typecheck": "tsc --noEmit",
+    "prepare": "lefthook install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enslo/sd-metadata.git"
+  },
+  "keywords": [
+    "stable-diffusion",
+    "novelai",
+    "comfyui",
+    "metadata",
+    "png",
+    "jpeg",
+    "webp"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/enslo/sd-metadata/issues"
+  },
+  "homepage": "https://github.com/enslo/sd-metadata#readme",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^25.0.3",
+    "@vitest/coverage-v8": "^2.1.9",
+    "lefthook": "^1.10.10",
+    "markdownlint-cli": "^0.47.0",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
 }
