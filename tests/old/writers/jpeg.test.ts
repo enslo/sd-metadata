@@ -1,13 +1,13 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readWebpMetadata } from '../../src/readers/webp';
-import { writeWebpMetadata } from '../../src/writers/webp';
+import { readJpegMetadata } from '../../../src/readers/jpeg';
+import { writeJpegMetadata } from '../../../src/writers/jpeg';
 
-const SAMPLES_DIR = join(__dirname, '../../samples/webp');
+const SAMPLES_DIR = join(__dirname, '../../../samples/jpg');
 
 /**
- * Load sample WebP file
+ * Load sample JPEG file
  */
 function loadSample(filename: string): Uint8Array {
   const path = join(SAMPLES_DIR, filename);
@@ -15,17 +15,19 @@ function loadSample(filename: string): Uint8Array {
 }
 
 /**
- * Get all WebP sample filenames
+ * Get all JPEG sample filenames
  */
 function getAllSampleFilenames(): string[] {
-  return readdirSync(SAMPLES_DIR).filter((f) => f.endsWith('.webp'));
+  return readdirSync(SAMPLES_DIR).filter(
+    (f) => f.endsWith('.jpg') || f.endsWith('.jpeg'),
+  );
 }
 
-describe('writeWebpMetadata', () => {
+describe('writeJpegMetadata', () => {
   describe('error handling', () => {
     it('should return error for invalid signature', () => {
-      const data = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-      const result = writeWebpMetadata(data, []);
+      const data = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
+      const result = writeJpegMetadata(data, []);
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
@@ -35,7 +37,7 @@ describe('writeWebpMetadata', () => {
 
     it('should return error for empty data', () => {
       const data = new Uint8Array([]);
-      const result = writeWebpMetadata(data, []);
+      const result = writeJpegMetadata(data, []);
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
@@ -51,17 +53,17 @@ describe('writeWebpMetadata', () => {
       const sampleData = loadSample(filename);
 
       // Read original metadata
-      const originalRead = readWebpMetadata(sampleData);
+      const originalRead = readJpegMetadata(sampleData);
       expect(originalRead.ok).toBe(true);
       if (!originalRead.ok) return;
 
       // Write metadata back
-      const writeResult = writeWebpMetadata(sampleData, originalRead.value);
+      const writeResult = writeJpegMetadata(sampleData, originalRead.value);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
       // Read from new image
-      const readBack = readWebpMetadata(writeResult.value);
+      const readBack = readJpegMetadata(writeResult.value);
       expect(readBack.ok).toBe(true);
       if (!readBack.ok) return;
 
@@ -75,18 +77,18 @@ describe('writeWebpMetadata', () => {
 
   describe('empty segments', () => {
     it('should handle empty segment list', () => {
-      const sampleData = loadSample('novelai-curated.webp');
+      const sampleData = loadSample('civitai.jpeg');
 
-      const writeResult = writeWebpMetadata(sampleData, []);
+      const writeResult = writeJpegMetadata(sampleData, []);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
-      const readBack = readWebpMetadata(writeResult.value);
+      const readBack = readJpegMetadata(writeResult.value);
       // Should have no metadata (or error if no metadata found)
       if (readBack.ok) {
         expect(readBack.value.length).toBe(0);
       } else {
-        expect(readBack.error.type).toBe('noExifChunk');
+        expect(readBack.error.type).toBe('noMetadata');
       }
     });
   });

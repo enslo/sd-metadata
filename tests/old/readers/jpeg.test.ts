@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { detectSoftware } from '../../src/parsers/detect';
-import { findApp1Segment, readJpegMetadata } from '../../src/readers/jpeg';
-import { isJpeg } from '../../src/utils/binary';
-import { pngChunksToEntries } from '../../src/utils/convert';
+import { detectSoftware } from '../../../src/parsers/detect';
+import { findApp1Segment, readJpegMetadata } from '../../../src/readers/jpeg';
+import { isJpeg } from '../../../src/utils/binary';
+import { pngChunksToEntries } from '../../../src/utils/convert';
 
-const SAMPLES_DIR = join(__dirname, '../../samples/jpg');
+const SAMPLES_DIR = join(__dirname, '../../../samples/jpg');
 
 /**
  * Load sample JPEG file

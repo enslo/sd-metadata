@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseA1111 } from '../../src/parsers/a1111';
-import { readPngMetadata } from '../../src/readers/png';
-import { pngChunksToEntries } from '../../src/utils/convert';
+import { parseA1111 } from '../../../src/parsers/a1111';
+import { readPngMetadata } from '../../../src/readers/png';
+import { pngChunksToEntries } from '../../../src/utils/convert';
 
-const SAMPLES_DIR = join(__dirname, '../../samples/png');
+const SAMPLES_DIR = join(__dirname, '../../../samples/png');
 
 /**
  * Load sample and extract entries

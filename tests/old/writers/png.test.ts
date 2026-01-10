@@ -1,10 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readPngMetadata } from '../../src/readers/png';
-import { writePngMetadata } from '../../src/writers/png';
+import { readPngMetadata } from '../../../src/readers/png';
+import { writePngMetadata } from '../../../src/writers/png';
 
-const SAMPLES_DIR = join(__dirname, '../../samples/png');
+const SAMPLES_DIR = join(__dirname, '../../../samples/png');
 
 /**
  * Load sample PNG file

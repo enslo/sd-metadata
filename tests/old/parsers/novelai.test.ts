@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseNovelAI } from '../../src/parsers/novelai';
-import { readPngMetadata } from '../../src/readers/png';
+import { parseNovelAI } from '../../../src/parsers/novelai';
+import { readPngMetadata } from '../../../src/readers/png';
 
-const SAMPLES_DIR = join(__dirname, '../../samples/png');
+const SAMPLES_DIR = join(__dirname, '../../../samples/png');
 
 /**
  * Load sample and extract chunks

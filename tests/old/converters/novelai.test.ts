@@ -1,10 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { convertMetadata } from '../../src/converters';
-import { read } from '../../src/index';
+import { convertMetadata } from '../../../src/converters';
+import { read } from '../../../src/index';
 
-const SAMPLES_DIR = path.join(__dirname, '../../samples');
+const SAMPLES_DIR = path.join(__dirname, '../../../samples');
 
 describe('NovelAI metadata conversion', () => {
   describe('PNG → WebP conversion', () => {

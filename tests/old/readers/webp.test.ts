@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findExifChunk, readWebpMetadata } from '../../src/readers/webp';
-import { isWebp } from '../../src/utils/binary';
+import { findExifChunk, readWebpMetadata } from '../../../src/readers/webp';
+import { isWebp } from '../../../src/utils/binary';
 
-const SAMPLES_DIR = join(__dirname, '../../samples/webp');
+const SAMPLES_DIR = join(__dirname, '../../../samples/webp');
 
 /**
  * Load sample WebP file

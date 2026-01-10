@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseInvokeAI } from '../../src/parsers/invokeai';
-import { readPngMetadata } from '../../src/readers/png';
+import { parseTensorArt } from '../../../src/parsers/tensorart';
+import { readPngMetadata } from '../../../src/readers/png';
 
-const SAMPLES_DIR = join(__dirname, '../../samples/png');
+const SAMPLES_DIR = join(__dirname, '../../../samples/png');
 
 /**
  * Load sample and extract chunks
@@ -17,37 +17,36 @@ function loadChunks(filename: string) {
   return result.value;
 }
 
-describe('parseInvokeAI', () => {
-  it('should parse invokeai.png with Japanese text', () => {
-    const chunks = loadChunks('invokeai.png');
-    const result = parseInvokeAI(chunks);
+describe('parseTensorArt', () => {
+  it('should parse tensorart.png with Japanese text', () => {
+    const chunks = loadChunks('tensorart.png');
+    const result = parseTensorArt(chunks);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.value.software).toBe('invokeai');
+    expect(result.value.software).toBe('tensorart');
     expect(result.value.prompt).toContain('hatsune miku');
     expect(result.value.negativePrompt).toContain('bad quality');
     expect(result.value.width).toBe(1024);
     expect(result.value.height).toBe(1024);
 
-    // Verify Japanese text is correctly extracted
+    // Verify Japanese text is correctly extracted (Latin-1 → UTF-8 fixed)
     expect(result.value.prompt).toContain('#テスト');
 
     // Model settings
     expect(result.value.model).toBeDefined();
-    expect(result.value.model?.name).toContain('waiIllustrious');
 
     // Sampling settings
     expect(result.value.sampling).toBeDefined();
-    expect(result.value.sampling?.steps).toBe(24);
-    expect(result.value.sampling?.cfg).toBe(6.0);
-    expect(result.value.sampling?.sampler).toBe('euler_a');
+    expect(result.value.sampling?.steps).toBe(25);
+    expect(result.value.sampling?.cfg).toBe(7);
+    expect(result.value.sampling?.clipSkip).toBe(2);
   });
 
-  it('should return error for non-InvokeAI format', () => {
+  it('should return error for non-TensorArt format', () => {
     const chunks = loadChunks('novelai-full.png');
-    const result = parseInvokeAI(chunks);
+    const result = parseTensorArt(chunks);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;

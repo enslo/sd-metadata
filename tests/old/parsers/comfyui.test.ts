@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseComfyUI } from '../../src/parsers/comfyui';
-import { readPngMetadata } from '../../src/readers/png';
+import { parseComfyUI } from '../../../src/parsers/comfyui';
+import { readPngMetadata } from '../../../src/readers/png';
 
-const SAMPLES_DIR = join(__dirname, '../../samples/png');
+const SAMPLES_DIR = join(__dirname, '../../../samples/png');
 
 /**
  * Load sample and extract chunks

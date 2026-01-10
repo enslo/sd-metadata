@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeUserComment } from '../../src/readers/exif';
+import { decodeUserComment } from '../../../src/readers/exif';
 
 describe('decodeUserComment', () => {
   it('should decode UNICODE prefixed data', () => {

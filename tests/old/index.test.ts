@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { read, write } from '../src/index';
+import { read, write } from '../../src/index';
 
-const SAMPLE_DIR = join(__dirname, '../samples');
+const SAMPLE_DIR = join(__dirname, '../../samples');
 
 // Helper to read sample
 const readSample = (filename: string) =>
