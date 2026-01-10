@@ -8,6 +8,7 @@ import { parseFooocus } from './fooocus';
 import { parseHfSpace } from './hf-space';
 import { parseInvokeAI } from './invokeai';
 import { parseNovelAI } from './novelai';
+import { parseRuinedFooocus } from './ruined-fooocus';
 import { parseStabilityMatrix } from './stability-matrix';
 import { parseSwarmUI } from './swarmui';
 import { parseTensorArt } from './tensorart';
@@ -21,6 +22,7 @@ export { parseComfyUI } from './comfyui';
 export { detectSoftware } from './detect';
 export { parseInvokeAI } from './invokeai';
 export { parseNovelAI } from './novelai';
+export { parseRuinedFooocus } from './ruined-fooocus';
 export { parseStabilityMatrix } from './stability-matrix';
 export { parseSwarmUI } from './swarmui';
 export { parseTensorArt } from './tensorart';
@@ -82,6 +84,9 @@ export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
 
     case 'fooocus':
       return parseFooocus(entries);
+
+    case 'ruined-fooocus':
+      return parseRuinedFooocus(entries);
 
     default: {
       // Try each parser in order

@@ -37,6 +37,10 @@ import {
   convertNovelaiSegmentsToPng,
 } from './novelai';
 import {
+  convertRuinedFooocusPngToSegments,
+  convertRuinedFooocusSegmentsToPng,
+} from './ruined-fooocus';
+import {
   convertSwarmUIPngToSegments,
   convertSwarmUISegmentsToPng,
 } from './swarmui';
@@ -131,6 +135,11 @@ function convertBySoftware(
   // Fooocus conversion (uses JSON in Comment chunk)
   if (software === 'fooocus') {
     return convertFooocus(raw, targetFormat);
+  }
+
+  // Ruined Fooocus conversion (uses JSON in parameters chunk)
+  if (software === 'ruined-fooocus') {
+    return convertRuinedFooocus(raw, targetFormat);
   }
 
   // SwarmUI conversion
@@ -337,6 +346,43 @@ function convertFooocus(
   }
 
   const chunks = convertFooocusSegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert Ruined Fooocus metadata between formats
+ *
+ * Ruined Fooocus uses JSON in the parameters chunk.
+ */
+function convertRuinedFooocus(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertRuinedFooocusPngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertRuinedFooocusSegmentsToPng(raw.segments);
   return Result.ok({
     format: 'png',
     chunks,

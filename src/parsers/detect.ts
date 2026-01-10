@@ -133,6 +133,14 @@ function detectFromJson(json: string): GenerationSoftware | null {
     return 'easydiffusion';
   }
 
+  // Ruined Fooocus: has software = "RuinedFooocus"
+  if (
+    json.includes('"software":"RuinedFooocus"') ||
+    json.includes('"software": "RuinedFooocus"')
+  ) {
+    return 'ruined-fooocus';
+  }
+
   // Fooocus: has prompt + base_model
   if (json.includes('"prompt"') && json.includes('"base_model"')) {
     return 'fooocus';

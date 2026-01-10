@@ -201,7 +201,8 @@ export type GenerationSoftware =
   | 'civitai'
   | 'hf-space'
   | 'easydiffusion'
-  | 'fooocus';
+  | 'fooocus'
+  | 'ruined-fooocus';
 
 /**
  * Metadata format classification
@@ -292,7 +293,8 @@ export interface A1111Metadata extends BaseMetadata {
     | 'civitai'
     | 'hf-space'
     | 'easydiffusion'
-    | 'fooocus';
+    | 'fooocus'
+    | 'ruined-fooocus';
 }
 
 /**
