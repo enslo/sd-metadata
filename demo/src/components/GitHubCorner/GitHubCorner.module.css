@@ -1,0 +1,67 @@
+.corner {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.corner a {
+  display: block;
+  color: white;
+}
+
+.corner svg {
+  fill: var(--color-primary);
+  color: var(--color-bg);
+  width: 80px;
+  height: 80px;
+  transition: fill 0.2s ease;
+}
+
+.corner a:hover svg {
+  fill: var(--color-primary-hover);
+}
+
+/* Animate the octocat arm */
+.corner .arm {
+  transform-origin: 130px 106px;
+}
+
+.corner a:hover .arm {
+  animation: wave 0.56s ease-in-out;
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20%,
+  60% {
+    transform: rotate(-25deg);
+  }
+  40%,
+  80% {
+    transform: rotate(10deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .corner svg {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+/* Screen reader only - visually hidden */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
