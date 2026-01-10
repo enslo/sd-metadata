@@ -187,7 +187,7 @@ function writeIfdEntry(
  * @param text - Text to encode
  * @returns Encoded UserComment data (8-byte prefix + UTF-16LE text)
  */
-export function encodeUserComment(text: string): Uint8Array {
+function encodeUserComment(text: string): Uint8Array {
   const utf16Data: number[] = [];
   for (let i = 0; i < text.length; i++) {
     const code = text.charCodeAt(i);
@@ -218,7 +218,7 @@ export function encodeUserComment(text: string): Uint8Array {
  * @param prefix - Optional prefix (e.g., "Workflow")
  * @returns Null-terminated ASCII bytes
  */
-export function encodeAsciiTag(text: string, prefix?: string): Uint8Array {
+function encodeAsciiTag(text: string, prefix?: string): Uint8Array {
   const fullText = prefix ? `${prefix}: ${text}` : text;
   const textBytes = new TextEncoder().encode(fullText);
   const result = new Uint8Array(textBytes.length + 1);

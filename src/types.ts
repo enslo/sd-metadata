@@ -30,9 +30,7 @@ export type PngMetadataResult = Result<PngTextChunk[], PngReadError>;
 /**
  * Error types for PNG writing
  */
-export type PngWriteError =
-  | { type: 'invalidSignature' }
-  | { type: 'noIhdrChunk' };
+type PngWriteError = { type: 'invalidSignature' } | { type: 'noIhdrChunk' };
 
 /**
  * Result type for PNG metadata writing
@@ -46,7 +44,7 @@ export type PngWriteResult = Result<Uint8Array, PngWriteError>;
 /**
  * Error types for JPEG writing
  */
-export type JpegWriteError =
+type JpegWriteError =
   | { type: 'invalidSignature' }
   | { type: 'corruptedStructure'; message: string };
 
@@ -62,7 +60,7 @@ export type JpegWriteResult = Result<Uint8Array, JpegWriteError>;
 /**
  * Error types for WebP writing
  */
-export type WebpWriteError =
+type WebpWriteError =
   | { type: 'invalidSignature' }
   | { type: 'invalidRiffStructure'; message: string };
 
@@ -127,7 +125,7 @@ export type RawMetadata =
 /**
  * Error types for JPEG reading
  */
-export type JpegReadError =
+type JpegReadError =
   | { type: 'invalidSignature' }
   | { type: 'noMetadata' }
   | { type: 'parseError'; message: string };
@@ -144,7 +142,7 @@ export type JpegMetadataResult = Result<MetadataSegment[], JpegReadError>;
 /**
  * Error types for WebP reading
  */
-export type WebpReadError =
+type WebpReadError =
   | { type: 'invalidSignature' }
   | { type: 'noExifChunk' }
   | { type: 'noMetadata' }
@@ -225,7 +223,7 @@ export type MetadataFormat =
 /**
  * Base metadata fields shared by all tools
  */
-export interface BaseMetadata {
+interface BaseMetadata {
   /** Format classification (for type narrowing) */
   type: MetadataFormat;
   /** Positive prompt */
@@ -338,7 +336,7 @@ export type GenerationMetadata =
 /**
  * Model settings
  */
-export interface ModelSettings {
+interface ModelSettings {
   /** Model name */
   name?: string;
   /** Model hash */
@@ -350,7 +348,7 @@ export interface ModelSettings {
 /**
  * Sampling settings
  */
-export interface SamplingSettings {
+interface SamplingSettings {
   /** Sampler name */
   sampler?: string;
   /** Scheduler (sometimes included in sampler, sometimes separate) */
@@ -368,7 +366,7 @@ export interface SamplingSettings {
 /**
  * Hires.fix settings
  */
-export interface HiresSettings {
+interface HiresSettings {
   /** Upscale factor */
   scale?: number;
   /** Upscaler name */
@@ -382,7 +380,7 @@ export interface HiresSettings {
 /**
  * Upscale settings (post-generation)
  */
-export interface UpscaleSettings {
+interface UpscaleSettings {
   /** Upscaler name */
   upscaler?: string;
   /** Scale factor */
@@ -392,7 +390,7 @@ export interface UpscaleSettings {
 /**
  * Parse error types
  */
-export type ParseError =
+type ParseError =
   | { type: 'unsupportedFormat' }
   | { type: 'parseError'; message: string };
 
@@ -427,7 +425,7 @@ export type ConversionTargetFormat = 'png' | 'jpeg' | 'webp';
 /**
  * Conversion error types
  */
-export type ConversionError =
+type ConversionError =
   | { type: 'unsupportedSoftware'; software: string }
   | { type: 'invalidParseResult'; status: string }
   | { type: 'missingRawData' }

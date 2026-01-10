@@ -4,7 +4,7 @@
  * Functions for parsing Exif/TIFF structures and extracting metadata segments.
  */
 
-import type { GenerationSoftware, MetadataSegment } from '../types';
+import type { MetadataSegment } from '../types';
 import { readUint16, readUint32 } from '../utils/binary';
 import {
   EXIF_IFD_POINTER_TAG,
@@ -306,77 +306,4 @@ function decodeAscii(data: Uint8Array): string {
   }
 
   return chars.join('');
-}
-
-/**
- * Detect generation software from UserComment or COM segment content
- *
- * @param userComment - Decoded UserComment/comment string
- * @returns Detected software or null
- */
-export function detectSoftware(userComment: string): GenerationSoftware | null {
-  // Check for JSON format (starts with {)
-  if (userComment.startsWith('{')) {
-    // Check for SwarmUI first (has sui_image_params)
-    if (userComment.includes('sui_image_params')) {
-      return 'swarmui';
-    }
-
-    // Check for Civitai JSON format
-    if (
-      userComment.includes('civitai:') ||
-      userComment.includes('"resource-stack"')
-    ) {
-      return 'civitai';
-    }
-
-    // Check for NovelAI JSON format
-    if (
-      userComment.includes('"v4_prompt"') ||
-      userComment.includes('"noise_schedule"') ||
-      userComment.includes('"uncond_scale"') ||
-      userComment.includes('"Software":"NovelAI"') ||
-      userComment.includes('\\"noise_schedule\\"') ||
-      userComment.includes('\\"v4_prompt\\"')
-    ) {
-      return 'novelai';
-    }
-
-    // Check for ComfyUI JSON format
-    if (userComment.includes('"prompt"') || userComment.includes('"nodes"')) {
-      return 'comfyui';
-    }
-  }
-
-  // A1111-style format detection
-  const versionMatch = userComment.match(/Version:\s*([^\s,]+)/);
-  if (versionMatch) {
-    const version = versionMatch[1];
-    if (version === 'neo' || version?.startsWith('neo')) {
-      return 'forge-neo';
-    }
-    if (version?.startsWith('f') && /^f\d/.test(version)) {
-      return 'forge';
-    }
-    if (version === 'ComfyUI') {
-      return 'comfyui';
-    }
-  }
-
-  // Check for Civitai resources
-  if (userComment.includes('Civitai resources:')) {
-    return 'civitai';
-  }
-
-  // Check for swarm_version in JSON params
-  if (userComment.includes('swarm_version')) {
-    return 'swarmui';
-  }
-
-  // Default to A1111 format if it has typical parameters
-  if (userComment.includes('Steps:') && userComment.includes('Sampler:')) {
-    return 'sd-webui';
-  }
-
-  return null;
 }

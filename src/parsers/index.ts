@@ -13,20 +13,6 @@ import { parseStabilityMatrix } from './stability-matrix';
 import { parseSwarmUI } from './swarmui';
 import { parseTensorArt } from './tensorart';
 
-// Re-export individual parsers
-export { parseA1111 } from './a1111';
-export { parseEasyDiffusion } from './easydiffusion';
-export { parseFooocus } from './fooocus';
-export { parseHfSpace } from './hf-space';
-export { parseComfyUI } from './comfyui';
-export { detectSoftware } from './detect';
-export { parseInvokeAI } from './invokeai';
-export { parseNovelAI } from './novelai';
-export { parseRuinedFooocus } from './ruined-fooocus';
-export { parseStabilityMatrix } from './stability-matrix';
-export { parseSwarmUI } from './swarmui';
-export { parseTensorArt } from './tensorart';
-
 /**
  * Parse metadata entries to unified format
  *

@@ -129,7 +129,7 @@ export function findApp1Segment(
  * @param data - JPEG file data
  * @returns Offset and length of COM segment data, or null if not found
  */
-export function findComSegment(
+function findComSegment(
   data: Uint8Array,
 ): { offset: number; length: number } | null {
   let offset = 2; // Skip SOI marker
