@@ -112,9 +112,10 @@ function convertBySoftware(
     return convertNovelai(raw, targetFormat);
   }
 
-  // A1111-format conversion (sd-webui, forge, forge-neo, civitai)
+  // A1111-format conversion (sd-webui, sd-next, forge, forge-neo, civitai)
   if (
     software === 'sd-webui' ||
+    software === 'sd-next' ||
     software === 'forge' ||
     software === 'forge-neo' ||
     software === 'civitai'

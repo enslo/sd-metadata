@@ -183,6 +183,11 @@ function detectFromA1111Text(text: string): GenerationSoftware | null {
     }
   }
 
+  // SD.Next: has App: SD.Next
+  if (text.includes('App: SD.Next') || text.includes('App:SD.Next')) {
+    return 'sd-next';
+  }
+
   // Civitai resources
   if (text.includes('Civitai resources:')) {
     return 'civitai';

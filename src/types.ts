@@ -198,6 +198,7 @@ export type GenerationSoftware =
   | 'forge-neo'
   | 'forge'
   | 'sd-webui'
+  | 'sd-next'
   | 'civitai'
   | 'hf-space'
   | 'easydiffusion'
@@ -288,6 +289,7 @@ export interface A1111Metadata extends BaseMetadata {
   type: 'a1111';
   software:
     | 'sd-webui'
+    | 'sd-next'
     | 'forge'
     | 'forge-neo'
     | 'civitai'

@@ -46,6 +46,7 @@ export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
       return parseNovelAI(entries);
 
     case 'sd-webui':
+    case 'sd-next':
     case 'forge':
     case 'forge-neo':
       return parseA1111(entries);
