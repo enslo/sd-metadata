@@ -9,6 +9,7 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
+import { createTextChunk, findSegment } from './utils';
 
 /**
  * Convert ComfyUI PNG chunks to JPEG/WebP segments
@@ -21,23 +22,10 @@ import type { MetadataSegment, PngTextChunk } from '../types';
 export function convertComfyUIPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  // Build a JSON object with chunk keywords as keys
-  const data: Record<string, unknown> = {};
-
-  for (const chunk of chunks) {
-    // Try to parse JSON chunks
-    if (chunk.keyword === 'prompt' || chunk.keyword === 'workflow') {
-      try {
-        data[chunk.keyword] = JSON.parse(chunk.text);
-      } catch {
-        // If not valid JSON, store as string
-        data[chunk.keyword] = chunk.text;
-      }
-    } else {
-      // Other chunks stored as-is
-      data[chunk.keyword] = chunk.text;
-    }
-  }
+  // Store all chunks as strings to ensure lossless round-trip
+  const data = Object.fromEntries(
+    chunks.map((chunk) => [chunk.keyword, chunk.text]),
+  );
 
   return [
     {
@@ -48,11 +36,61 @@ export function convertComfyUIPngToSegments(
 }
 
 /**
+ * Try save-image-extended format (exifImageDescription + exifMake)
+ *
+ * @returns PNG chunks if format matches, null otherwise
+ */
+const tryParseExtendedFormat = (
+  segments: MetadataSegment[],
+): PngTextChunk[] | null => {
+  const imageDescription = findSegment(segments, 'exifImageDescription');
+  const make = findSegment(segments, 'exifMake');
+
+  if (!imageDescription && !make) {
+    return null;
+  }
+
+  return [
+    createTextChunk('prompt', make?.data),
+    createTextChunk('workflow', imageDescription?.data),
+  ].flat();
+};
+
+/**
+ * Try saveimage-plus format (exifUserComment with JSON)
+ *
+ * @returns PNG chunks if format matches, null otherwise
+ */
+const tryParseSaveImagePlusFormat = (
+  segments: MetadataSegment[],
+): PngTextChunk[] | null => {
+  const userComment = findSegment(segments, 'exifUserComment');
+  if (!userComment) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(userComment.data) as Record<string, unknown>;
+
+    // Convert all keys to PNG chunks
+    return Object.entries(parsed).flatMap(([keyword, value]) =>
+      createTextChunk(
+        keyword,
+        typeof value === 'string' ? value : JSON.stringify(value),
+      ),
+    );
+  } catch {
+    // Not valid JSON, return as prompt fallback
+    return createTextChunk('prompt', userComment.data);
+  }
+};
+
+/**
  * Convert JPEG/WebP segments to ComfyUI PNG chunks
  *
  * Supports:
- * - saveimage-plus format: exifUserComment with {"prompt": {...}, "workflow": {...}}
  * - save-image-extended format: exifImageDescription (workflow) + exifMake (prompt)
+ * - saveimage-plus format: exifUserComment with {"prompt": {...}, "workflow": {...}}
  *
  * @param segments - Metadata segments from JPEG/WebP
  * @returns PNG text chunks
@@ -60,84 +98,10 @@ export function convertComfyUIPngToSegments(
 export function convertComfyUISegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  const chunks: PngTextChunk[] = [];
-
-  // Try save-image-extended format first (exifImageDescription + exifMake)
-  const imageDescription = segments.find(
-    (s) => s.source.type === 'exifImageDescription',
+  // Try each format in order of priority
+  return (
+    tryParseExtendedFormat(segments) ??
+    tryParseSaveImagePlusFormat(segments) ??
+    []
   );
-  const make = segments.find((s) => s.source.type === 'exifMake');
-
-  if (imageDescription || make) {
-    // save-image-extended format
-    if (make) {
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'prompt',
-        text: make.data,
-      });
-    }
-    if (imageDescription) {
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'workflow',
-        text: imageDescription.data,
-      });
-    }
-    if (chunks.length > 0) {
-      return chunks;
-    }
-  }
-
-  // Try saveimage-plus format (exifUserComment)
-  const userComment = segments.find((s) => s.source.type === 'exifUserComment');
-  if (!userComment) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(userComment.data) as Record<string, unknown>;
-
-    // Extract prompt chunk
-    if (parsed.prompt !== undefined) {
-      const promptText =
-        typeof parsed.prompt === 'string'
-          ? parsed.prompt
-          : JSON.stringify(parsed.prompt);
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'prompt',
-        text: promptText,
-      });
-    }
-
-    // Extract workflow chunk
-    if (parsed.workflow !== undefined) {
-      const workflowText =
-        typeof parsed.workflow === 'string'
-          ? parsed.workflow
-          : JSON.stringify(parsed.workflow);
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'workflow',
-        text: workflowText,
-      });
-    }
-
-    // If we found chunks, return them
-    if (chunks.length > 0) {
-      return chunks;
-    }
-  } catch {
-    // Not valid JSON
-  }
-
-  // Fallback: store whole content as prompt
-  return [
-    {
-      type: 'tEXt',
-      keyword: 'prompt',
-      text: userComment.data,
-    },
-  ];
 }

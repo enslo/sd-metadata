@@ -5,6 +5,7 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
+import { createTextChunk, findSegment } from './utils';
 
 /** Fixed values for NovelAI PNG chunks */
 const NOVELAI_TITLE = 'NovelAI generated image';
@@ -31,38 +32,94 @@ const NOVELAI_SOFTWARE = 'NovelAI';
 export function convertNovelaiPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  // Extract chunks by keyword
-  const chunkMap = new Map<string, string>();
-  for (const chunk of chunks) {
-    chunkMap.set(chunk.keyword, chunk.text);
-  }
+  const chunkMap = Object.fromEntries(
+    chunks.map((chunk) => [chunk.keyword, chunk.text]),
+  );
 
-  const segments: MetadataSegment[] = [];
-
-  // Get Description for exifImageDescription
-  const description = chunkMap.get('Description');
-  if (description) {
-    segments.push({
-      source: { type: 'exifImageDescription' },
-      data: description,
-    });
-  }
-
-  // Build nested JSON for exifUserComment
-  // Store all chunks as a JSON object (same format for JPEG and WebP)
-  const userCommentObj: Record<string, string> = {};
-  for (const chunk of chunks) {
-    userCommentObj[chunk.keyword] = chunk.text;
-  }
-
-  // Use exifUserComment for both JPEG and WebP
-  segments.push({
-    source: { type: 'exifUserComment' },
-    data: JSON.stringify(userCommentObj),
-  });
-
-  return segments;
+  return [
+    ...(chunkMap.Description
+      ? [
+          {
+            source: { type: 'exifImageDescription' as const },
+            data: chunkMap.Description,
+          },
+        ]
+      : []),
+    {
+      source: { type: 'exifUserComment' as const },
+      data: JSON.stringify(chunkMap),
+    },
+  ];
 }
+
+/**
+ * Parse from exifUserComment format
+ */
+const parseFromUserComment = (
+  userCommentSeg: MetadataSegment,
+  descriptionSeg: MetadataSegment | undefined,
+): PngTextChunk[] | null => {
+  try {
+    const parsed = JSON.parse(userCommentSeg.data) as Record<string, unknown>;
+
+    return [
+      // Title (required, use default if missing)
+      createTextChunk(
+        'Title',
+        typeof parsed.Title === 'string' ? parsed.Title : NOVELAI_TITLE,
+      ),
+      // Description (optional, fallback to segment)
+      createTextChunk(
+        'Description',
+        typeof parsed.Description === 'string'
+          ? parsed.Description
+          : descriptionSeg?.data,
+      ),
+      // Software (required, use default if missing)
+      createTextChunk(
+        'Software',
+        typeof parsed.Software === 'string'
+          ? parsed.Software
+          : NOVELAI_SOFTWARE,
+      ),
+      // Source (optional)
+      createTextChunk(
+        'Source',
+        typeof parsed.Source === 'string' ? parsed.Source : undefined,
+      ),
+      // Generation time (optional)
+      createTextChunk(
+        'Generation time',
+        typeof parsed['Generation time'] === 'string'
+          ? parsed['Generation time']
+          : undefined,
+      ),
+      // Comment (optional)
+      createTextChunk(
+        'Comment',
+        typeof parsed.Comment === 'string' ? parsed.Comment : undefined,
+      ),
+    ].flat();
+  } catch {
+    // If parsing fails, treat the whole thing as Comment
+    return createTextChunk('Comment', userCommentSeg.data);
+  }
+};
+
+/**
+ * Parse from JPEG COM segment format
+ */
+const parseFromComSegment = (
+  comSeg: MetadataSegment,
+  descriptionSeg: MetadataSegment | undefined,
+): PngTextChunk[] => {
+  return [
+    createTextChunk('Title', NOVELAI_TITLE),
+    createTextChunk('Description', descriptionSeg?.data),
+    createTextChunk('Software', NOVELAI_SOFTWARE),
+    createTextChunk('Comment', comSeg.data),
+  ].flat();
+};
 
 /**
  * Convert JPEG/WebP segments to NovelAI PNG chunks
@@ -73,118 +130,17 @@ export function convertNovelaiPngToSegments(
 export function convertNovelaiSegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  const chunks: PngTextChunk[] = [];
+  const userCommentSeg = findSegment(segments, 'exifUserComment');
+  const comSeg = findSegment(segments, 'jpegCom');
+  const descriptionSeg = findSegment(segments, 'exifImageDescription');
 
-  // Find exifUserComment or jpegCom segment
-  const userCommentSeg = segments.find(
-    (s) => s.source.type === 'exifUserComment',
-  );
-  const comSeg = segments.find((s) => s.source.type === 'jpegCom');
-  const descriptionSeg = segments.find(
-    (s) => s.source.type === 'exifImageDescription',
-  );
-
-  // Try to parse the nested JSON from exifUserComment
   if (userCommentSeg) {
-    try {
-      const parsed = JSON.parse(userCommentSeg.data) as Record<string, unknown>;
-
-      // Extract known NovelAI chunks
-      if (typeof parsed.Title === 'string') {
-        chunks.push({ type: 'tEXt', keyword: 'Title', text: parsed.Title });
-      } else {
-        // Use fixed value if not present
-        chunks.push({ type: 'tEXt', keyword: 'Title', text: NOVELAI_TITLE });
-      }
-
-      if (typeof parsed.Description === 'string') {
-        chunks.push({
-          type: 'tEXt',
-          keyword: 'Description',
-          text: parsed.Description,
-        });
-      } else if (descriptionSeg) {
-        chunks.push({
-          type: 'tEXt',
-          keyword: 'Description',
-          text: descriptionSeg.data,
-        });
-      }
-
-      if (typeof parsed.Software === 'string') {
-        chunks.push({
-          type: 'tEXt',
-          keyword: 'Software',
-          text: parsed.Software,
-        });
-      } else {
-        chunks.push({
-          type: 'tEXt',
-          keyword: 'Software',
-          text: NOVELAI_SOFTWARE,
-        });
-      }
-
-      if (typeof parsed.Source === 'string') {
-        chunks.push({
-          type: 'tEXt',
-          keyword: 'Source',
-          text: parsed.Source,
-        });
-      }
-
-      if (typeof parsed['Generation time'] === 'string') {
-        chunks.push({
-          type: 'tEXt',
-          keyword: 'Generation time',
-          text: parsed['Generation time'],
-        });
-      }
-
-      // Comment is the main JSON (may be escaped string or object)
-      if (typeof parsed.Comment === 'string') {
-        chunks.push({
-          type: 'tEXt',
-          keyword: 'Comment',
-          text: parsed.Comment,
-        });
-      }
-    } catch {
-      // If parsing fails, treat the whole thing as Comment
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'Comment',
-        text: userCommentSeg.data,
-      });
-    }
-  } else if (comSeg) {
-    // JPEG COM segment - this is the main JSON
-    chunks.push({
-      type: 'tEXt',
-      keyword: 'Title',
-      text: NOVELAI_TITLE,
-    });
-
-    if (descriptionSeg) {
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'Description',
-        text: descriptionSeg.data,
-      });
-    }
-
-    chunks.push({
-      type: 'tEXt',
-      keyword: 'Software',
-      text: NOVELAI_SOFTWARE,
-    });
-
-    chunks.push({
-      type: 'tEXt',
-      keyword: 'Comment',
-      text: comSeg.data,
-    });
+    return parseFromUserComment(userCommentSeg, descriptionSeg) ?? [];
   }
 
-  return chunks;
+  if (comSeg) {
+    return parseFromComSegment(comSeg, descriptionSeg);
+  }
+
+  return [];
 }

@@ -9,6 +9,7 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
+import { createTextChunk, findSegment } from './utils';
 
 /**
  * Convert SwarmUI PNG chunks to JPEG/WebP segments
@@ -19,11 +20,9 @@ import type { MetadataSegment, PngTextChunk } from '../types';
 export function convertSwarmUIPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  // Build a JSON object containing both chunks for round-trip
-  const data: Record<string, string> = {};
-  for (const chunk of chunks) {
-    data[chunk.keyword] = chunk.text;
-  }
+  const data = Object.fromEntries(
+    chunks.map((chunk) => [chunk.keyword, chunk.text]),
+  );
 
   return [
     {
@@ -42,59 +41,38 @@ export function convertSwarmUIPngToSegments(
 export function convertSwarmUISegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  const userComment = segments.find((s) => s.source.type === 'exifUserComment');
+  const userComment = findSegment(segments, 'exifUserComment');
   if (!userComment) {
     return [];
   }
 
-  // Try to parse as JSON with chunk keys
   try {
     const parsed = JSON.parse(userComment.data) as Record<string, unknown>;
-    const chunks: PngTextChunk[] = [];
 
-    // Check if it has our round-trip format (prompt and/or parameters keys)
-    if (typeof parsed.prompt === 'string') {
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'prompt',
-        text: parsed.prompt,
-      });
-    }
+    // Check for round-trip format (prompt and/or parameters keys)
+    const chunks = [
+      createTextChunk(
+        'prompt',
+        typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
+      ),
+      createTextChunk(
+        'parameters',
+        typeof parsed.parameters === 'string' ? parsed.parameters : undefined,
+      ),
+    ].flat();
 
-    if (typeof parsed.parameters === 'string') {
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'parameters',
-        text: parsed.parameters,
-      });
-    }
-
-    // If we found chunks, return them
     if (chunks.length > 0) {
       return chunks;
     }
 
-    // Otherwise, if it has sui_image_params, it's the original SwarmUI format
-    // Store the whole thing as parameters
+    // If it has sui_image_params, it's the original SwarmUI format
     if (parsed.sui_image_params) {
-      return [
-        {
-          type: 'tEXt',
-          keyword: 'parameters',
-          text: userComment.data,
-        },
-      ];
+      return createTextChunk('parameters', userComment.data);
     }
   } catch {
-    // Not JSON, store as parameters
+    // Not JSON
   }
 
-  // Fallback: store as parameters
-  return [
-    {
-      type: 'tEXt',
-      keyword: 'parameters',
-      text: userComment.data,
-    },
-  ];
+  // Fallback
+  return createTextChunk('parameters', userComment.data);
 }

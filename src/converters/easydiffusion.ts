@@ -7,6 +7,7 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
+import { createTextChunk, findSegment } from './utils';
 
 /**
  * Convert Easy Diffusion PNG chunks to JPEG/WebP segments
@@ -20,13 +21,10 @@ import type { MetadataSegment, PngTextChunk } from '../types';
 export function convertEasyDiffusionPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  // Build JSON object from individual chunks
-  const json: Record<string, string> = {};
-  for (const chunk of chunks) {
-    json[chunk.keyword] = chunk.text;
-  }
+  const json = Object.fromEntries(
+    chunks.map((chunk) => [chunk.keyword, chunk.text]),
+  );
 
-  // Store as JSON in exifUserComment
   return [
     {
       source: { type: 'exifUserComment' },
@@ -44,37 +42,25 @@ export function convertEasyDiffusionPngToSegments(
 export function convertEasyDiffusionSegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  // Find exifUserComment segment (contains JSON)
-  const userComment = segments.find((s) => s.source.type === 'exifUserComment');
+  const userComment = findSegment(segments, 'exifUserComment');
   if (!userComment) {
     return [];
   }
 
-  // Parse JSON and convert to individual chunks
   try {
     const json = JSON.parse(userComment.data) as Record<string, unknown>;
-    const chunks: PngTextChunk[] = [];
 
-    for (const [keyword, value] of Object.entries(json)) {
-      if (typeof value === 'string') {
-        chunks.push({
-          type: 'tEXt',
-          keyword,
-          text: value,
-        });
-      } else if (value !== null && value !== undefined) {
-        // Convert non-string values to string
-        chunks.push({
-          type: 'tEXt',
-          keyword,
-          text: String(value),
-        });
-      }
-    }
-
-    return chunks;
+    return Object.entries(json).flatMap(([keyword, value]) =>
+      createTextChunk(
+        keyword,
+        value != null
+          ? typeof value === 'string'
+            ? value
+            : String(value)
+          : undefined,
+      ),
+    );
   } catch {
-    // If JSON parsing fails, return empty
     return [];
   }
 }
