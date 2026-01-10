@@ -6,6 +6,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * NovelAI Comment JSON structure
@@ -69,15 +70,14 @@ export function parseNovelAI(entries: MetadataEntry[]): InternalParseResult {
     });
   }
 
-  let comment: NovelAIComment;
-  try {
-    comment = JSON.parse(commentText);
-  } catch {
+  const parsed = parseJson<NovelAIComment>(commentText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Comment entry',
     });
   }
+  const comment = parsed.value;
 
   // Extract dimensions (fallback to 0 for IHDR extraction)
   const width = comment.width ?? 0;

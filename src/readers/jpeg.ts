@@ -56,11 +56,6 @@ export function readJpegMetadata(data: Uint8Array): JpegMetadataResult {
     }
   }
 
-  // No metadata found
-  if (segments.length === 0) {
-    return Result.error({ type: 'noMetadata' });
-  }
-
   return Result.ok(segments);
 }
 
@@ -129,7 +124,7 @@ export function findApp1Segment(
  * @param data - JPEG file data
  * @returns Offset and length of COM segment data, or null if not found
  */
-export function findComSegment(
+function findComSegment(
   data: Uint8Array,
 ): { offset: number; length: number } | null {
   let offset = 2; // Skip SOI marker

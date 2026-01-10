@@ -9,6 +9,8 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
+import { parseJson } from '../utils/json';
+import { createTextChunk, findSegment, stringify } from './utils';
 
 /**
  * Convert SwarmUI PNG chunks to JPEG/WebP segments
@@ -19,11 +21,9 @@ import type { MetadataSegment, PngTextChunk } from '../types';
 export function convertSwarmUIPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  // Build a JSON object containing both chunks for round-trip
-  const data: Record<string, string> = {};
-  for (const chunk of chunks) {
-    data[chunk.keyword] = chunk.text;
-  }
+  const data = Object.fromEntries(
+    chunks.map((chunk) => [chunk.keyword, chunk.text]),
+  );
 
   return [
     {
@@ -42,59 +42,27 @@ export function convertSwarmUIPngToSegments(
 export function convertSwarmUISegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  const userComment = segments.find((s) => s.source.type === 'exifUserComment');
+  const userComment = findSegment(segments, 'exifUserComment');
   if (!userComment) {
     return [];
   }
 
-  // Try to parse as JSON with chunk keys
-  try {
-    const parsed = JSON.parse(userComment.data) as Record<string, unknown>;
-    const chunks: PngTextChunk[] = [];
-
-    // Check if it has our round-trip format (prompt and/or parameters keys)
-    if (typeof parsed.prompt === 'string') {
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'prompt',
-        text: parsed.prompt,
-      });
-    }
-
-    if (typeof parsed.parameters === 'string') {
-      chunks.push({
-        type: 'tEXt',
-        keyword: 'parameters',
-        text: parsed.parameters,
-      });
-    }
-
-    // If we found chunks, return them
-    if (chunks.length > 0) {
-      return chunks;
-    }
-
-    // Otherwise, if it has sui_image_params, it's the original SwarmUI format
-    // Store the whole thing as parameters
-    if (parsed.sui_image_params) {
-      return [
-        {
-          type: 'tEXt',
-          keyword: 'parameters',
-          text: userComment.data,
-        },
-      ];
-    }
-  } catch {
-    // Not JSON, store as parameters
+  const parsed = parseJson<Record<string, unknown>>(userComment.data);
+  if (!parsed.ok) {
+    // Fallback for non-JSON
+    return createTextChunk('parameters', userComment.data);
   }
 
-  // Fallback: store as parameters
-  return [
-    {
-      type: 'tEXt',
-      keyword: 'parameters',
-      text: userComment.data,
-    },
-  ];
+  // Check for round-trip format (prompt and/or parameters keys)
+  const chunks = [
+    createTextChunk('prompt', stringify(parsed.value.prompt)),
+    createTextChunk('parameters', stringify(parsed.value.parameters)),
+  ].flat();
+
+  if (chunks.length > 0) {
+    return chunks;
+  }
+
+  // Fallback: return as parameters chunk
+  return createTextChunk('parameters', userComment.data);
 }

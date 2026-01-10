@@ -4,6 +4,7 @@ import type {
   MetadataSegmentSource,
   PngTextChunk,
 } from '../types';
+import { parseJson } from './json';
 
 /**
  * Convert PNG text chunks to format-agnostic metadata entries
@@ -69,41 +70,34 @@ export function segmentsToEntries(
  * @returns Array of entries if NovelAI format, null otherwise
  */
 function tryExpandNovelAIWebpFormat(text: string): MetadataEntry[] | null {
-  try {
-    const outer = JSON.parse(text);
-
-    // Check if this is NovelAI WebP format
-    if (
-      typeof outer === 'object' &&
-      outer !== null &&
-      outer.Software === 'NovelAI' &&
-      typeof outer.Comment === 'string'
-    ) {
-      const entries: MetadataEntry[] = [];
-
-      // Add Software entry
-      entries.push({ keyword: 'Software', text: 'NovelAI' });
-
-      // Parse and add inner Comment as Comment entry
-      try {
-        // The inner Comment is itself a JSON string
-        const innerComment = JSON.parse(outer.Comment);
-        entries.push({
-          keyword: 'Comment',
-          text: JSON.stringify(innerComment),
-        });
-      } catch {
-        // If inner parse fails, use as-is
-        entries.push({ keyword: 'Comment', text: outer.Comment });
-      }
-
-      return entries;
-    }
-  } catch {
-    // Not JSON, return null
+  const outerParsed = parseJson<Record<string, unknown>>(text);
+  if (!outerParsed.ok) {
+    return null;
   }
 
-  return null;
+  const outer = outerParsed.value;
+
+  // Check if this is NovelAI WebP format
+  if (
+    typeof outer !== 'object' ||
+    outer === null ||
+    outer.Software !== 'NovelAI' ||
+    typeof outer.Comment !== 'string'
+  ) {
+    return null;
+  }
+
+  const entries: MetadataEntry[] = [{ keyword: 'Software', text: 'NovelAI' }];
+
+  // Parse and add inner Comment as Comment entry
+  const innerParsed = parseJson<unknown>(outer.Comment);
+
+  return [
+    ...entries,
+    innerParsed.ok
+      ? { keyword: 'Comment', text: JSON.stringify(innerParsed.value) }
+      : { keyword: 'Comment', text: outer.Comment },
+  ];
 }
 
 /**

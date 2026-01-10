@@ -7,14 +7,21 @@ import { parseMetadata } from './parsers';
 import { readJpegMetadata } from './readers/jpeg';
 import { readPngMetadata } from './readers/png';
 import { readWebpMetadata } from './readers/webp';
-import { type ParseResult, type RawMetadata, Result } from './types';
 import {
+  type MetadataSegment,
+  type ParseResult,
+  type PngTextChunk,
+  type RawMetadata,
+  Result,
+} from './types';
+import {
+  type ImageFormat,
+  detectFormat,
   readChunkType,
   readUint24LE,
   readUint32BE,
   readUint32LE,
 } from './utils/binary';
-import { detectFormat } from './utils/binary';
 import { pngChunksToEntries, segmentsToEntries } from './utils/convert';
 import { writeJpegMetadata } from './writers/jpeg';
 import { writePngMetadata } from './writers/png';
@@ -28,6 +35,38 @@ export type {
   ParseResult,
   RawMetadata,
 } from './types';
+
+// ============================================================================
+// Format Helpers
+// ============================================================================
+
+/** Format-specific helper functions */
+const HELPERS = {
+  png: {
+    readMetadata: readPngMetadata,
+    readDimensions: readPngDimensions,
+    writeEmpty: writePngMetadata,
+    createRaw: (chunks: PngTextChunk[]) => ({ format: 'png' as const, chunks }),
+  },
+  jpeg: {
+    readMetadata: readJpegMetadata,
+    readDimensions: readJpegDimensions,
+    writeEmpty: writeJpegMetadata,
+    createRaw: (segments: MetadataSegment[]) => ({
+      format: 'jpeg' as const,
+      segments,
+    }),
+  },
+  webp: {
+    readMetadata: readWebpMetadata,
+    readDimensions: readWebpDimensions,
+    writeEmpty: writeWebpMetadata,
+    createRaw: (segments: MetadataSegment[]) => ({
+      format: 'webp' as const,
+      segments,
+    }),
+  },
+} as const satisfies Record<ImageFormat, unknown>;
 
 // ============================================================================
 // Unified API
@@ -60,49 +99,11 @@ export function read(data: Uint8Array): ParseResult {
   }
 
   // 1. Read raw metadata based on format
-  let raw: RawMetadata;
-
-  if (format === 'png') {
-    const result = readPngMetadata(data);
-    if (!result.ok) {
-      const message =
-        result.error.type === 'invalidSignature'
-          ? 'Invalid PNG signature'
-          : result.error.message;
-      return { status: 'invalid', message };
-    }
-    if (result.value.length === 0) return { status: 'empty' };
-    raw = { format: 'png', chunks: result.value };
-  } else if (format === 'jpeg') {
-    const result = readJpegMetadata(data);
-    if (!result.ok) {
-      if (result.error.type === 'noMetadata') return { status: 'empty' };
-      const message =
-        result.error.type === 'invalidSignature'
-          ? 'Invalid JPEG signature'
-          : result.error.message;
-      return { status: 'invalid', message };
-    }
-    raw = { format: 'jpeg', segments: result.value };
-  } else {
-    // webp
-    const result = readWebpMetadata(data);
-    if (!result.ok) {
-      if (
-        result.error.type === 'noMetadata' ||
-        result.error.type === 'noExifChunk'
-      ) {
-        return { status: 'empty' };
-      }
-      const message =
-        result.error.type === 'invalidSignature'
-          ? 'Invalid WebP signature'
-          : result.error.message;
-      return { status: 'invalid', message };
-    }
-    if (result.value.length === 0) return { status: 'empty' };
-    raw = { format: 'webp', segments: result.value };
+  const rawResult = readRawMetadata(data, format);
+  if (rawResult.status !== 'success') {
+    return rawResult;
   }
+  const raw = rawResult.raw;
 
   // 2. Convert to agnostic entries
   const entries =
@@ -120,14 +121,7 @@ export function read(data: Uint8Array): ParseResult {
 
   // 4. Fallback for dimensions if missing
   if (metadata.width === 0 || metadata.height === 0) {
-    let dims: { width: number; height: number } | null = null;
-    if (format === 'png') {
-      dims = readPngDimensions(data);
-    } else if (format === 'jpeg') {
-      dims = readJpegDimensions(data);
-    } else if (format === 'webp') {
-      dims = readWebpDimensions(data);
-    }
+    const dims = HELPERS[format].readDimensions(data);
 
     if (dims) {
       metadata.width = metadata.width || dims.width;
@@ -157,16 +151,7 @@ export function write(data: Uint8Array, metadata: ParseResult): WriteResult {
   // Handle empty or invalid metadata
   if (metadata.status === 'empty') {
     // Strip metadata (write empty segments/chunks)
-    const result =
-      targetFormat === 'png'
-        ? writePngMetadata(data, [])
-        : targetFormat === 'jpeg'
-          ? writeJpegMetadata(data, [])
-          : targetFormat === 'webp'
-            ? writeWebpMetadata(data, [])
-            : null;
-
-    if (!result) return Result.ok(data);
+    const result = HELPERS[targetFormat].writeEmpty(data, []);
     if (!result.ok) {
       return Result.error({ type: 'writeFailed', message: result.error.type });
     }
@@ -225,6 +210,41 @@ export function write(data: Uint8Array, metadata: ParseResult): WriteResult {
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/** Result type for readRawMetadata */
+type RawReadResult =
+  | { status: 'success'; raw: RawMetadata }
+  | { status: 'empty' }
+  | { status: 'invalid'; message: string };
+
+/**
+ * Read raw metadata from image data
+ */
+function readRawMetadata(data: Uint8Array, format: ImageFormat): RawReadResult {
+  const result = HELPERS[format].readMetadata(data);
+
+  if (!result.ok) {
+    const message =
+      result.error.type === 'invalidSignature'
+        ? `Invalid ${format.toUpperCase()} signature`
+        : result.error.message;
+    return { status: 'invalid', message };
+  }
+
+  if (result.value.length === 0) return { status: 'empty' };
+
+  // PNG uses PngTextChunk[], JPEG/WebP use MetadataSegment[]
+  if (format === 'png') {
+    return {
+      status: 'success',
+      raw: HELPERS.png.createRaw(result.value as PngTextChunk[]),
+    };
+  }
+  return {
+    status: 'success',
+    raw: HELPERS[format].createRaw(result.value as MetadataSegment[]),
+  };
+}
 
 /**
  * Read width and height from PNG IHDR chunk

@@ -24,7 +24,7 @@ export function readWebpMetadata(data: Uint8Array): WebpMetadataResult {
 
   const exifChunk = findExifChunk(data);
   if (!exifChunk) {
-    return Result.error({ type: 'noExifChunk' });
+    return Result.ok([]);
   }
 
   const exifData = data.slice(
@@ -34,11 +34,6 @@ export function readWebpMetadata(data: Uint8Array): WebpMetadataResult {
 
   // Parse all EXIF metadata segments (UserComment, ImageDescription, Make)
   const segments = parseExifMetadataSegments(exifData);
-
-  // No metadata found
-  if (segments.length === 0) {
-    return Result.error({ type: 'noMetadata' });
-  }
 
   return Result.ok(segments);
 }

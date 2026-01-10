@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * Easy Diffusion JSON metadata structure
@@ -80,9 +81,6 @@ export function parseEasyDiffusion(
 ): InternalParseResult {
   const entryRecord = buildEntryRecord(entries);
 
-  // Find JSON in various possible locations
-  let jsonText: string | undefined;
-
   // Check for standalone entries (PNG format)
   if (entryRecord.negative_prompt || entryRecord['Negative Prompt']) {
     // The entire info dict is what we need to process
@@ -91,32 +89,27 @@ export function parseEasyDiffusion(
     return parseFromEntries(entryRecord);
   }
 
-  // Check parameters entry (may contain JSON)
-  if (entryRecord.parameters?.startsWith('{')) {
-    jsonText = entryRecord.parameters;
-  }
-
-  // Check Comment entry (JPEG/WebP format)
-  if (!jsonText && entryRecord.Comment?.startsWith('{')) {
-    jsonText = entryRecord.Comment;
-  }
+  // Find JSON in various possible locations
+  const jsonText =
+    (entryRecord.parameters?.startsWith('{')
+      ? entryRecord.parameters
+      : undefined) ??
+    (entryRecord.Comment?.startsWith('{') ? entryRecord.Comment : undefined);
 
   if (!jsonText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   // Parse JSON
-  let json: EasyDiffusionJsonMetadata;
-  try {
-    json = JSON.parse(jsonText);
-  } catch {
+  const parsed = parseJson<EasyDiffusionJsonMetadata>(jsonText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Easy Diffusion metadata',
     });
   }
 
-  return parseFromJson(json);
+  return parseFromJson(parsed.value);
 }
 
 /**

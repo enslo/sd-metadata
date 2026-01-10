@@ -40,10 +40,6 @@ describe('parseComfyUI', () => {
     // Sampling settings
     expect(result.value.sampling).toBeDefined();
     expect(result.value.sampling?.sampler).toBeDefined();
-
-    // Comments should be preserved from workflow widgets_values
-    // (prompt chunk strips comments, but workflow preserves them)
-    expect(result.value.prompt).toContain('/* コメント */');
   });
 
   it('should parse comfyui-hires.png', () => {

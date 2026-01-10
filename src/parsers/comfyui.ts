@@ -1,3 +1,10 @@
+/**
+ * ComfyUI metadata parser
+ *
+ * Parses ComfyUI-format prompt data from node graphs.
+ * Also handles Civitai extraMetadata fallbacks for upscale workflows.
+ */
+
 import type {
   ComfyUIMetadata,
   InternalParseResult,
@@ -5,6 +12,11 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { type EntryRecord, buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
+
+// =============================================================================
+// Types
+// =============================================================================
 
 /**
  * ComfyUI node structure
@@ -19,125 +31,6 @@ interface ComfyNode {
  * ComfyUI prompt structure (node ID -> node)
  */
 type ComfyPrompt = Record<string, ComfyNode>;
-
-/**
- * ComfyUI workflow node structure (from workflow entry)
- * Contains widgets_values which preserves original user input including comments
- */
-interface ComfyWorkflowNode {
-  id: string | number;
-  type: string;
-  widgets_values?: unknown[];
-  inputs?: Array<{ name: string; type: string; link?: number | null }>;
-  outputs?: Array<{ name: string; type: string; links?: number[] }>;
-}
-
-/**
- * ComfyUI workflow structure (from workflow entry)
- */
-interface ComfyWorkflow {
-  nodes: ComfyWorkflowNode[];
-  links?: unknown[];
-}
-
-/**
- * Build a map from node ID to workflow node
- *
- * @param workflow - Parsed workflow object
- * @returns Map of node ID (as string) to workflow node
- */
-function buildWorkflowNodeMap(
-  workflow: ComfyWorkflow,
-): Map<string, ComfyWorkflowNode> {
-  const map = new Map<string, ComfyWorkflowNode>();
-  for (const node of workflow.nodes) {
-    map.set(String(node.id), node);
-  }
-  return map;
-}
-
-/**
- * Extract text from workflow node's widgets_values
- * CLIPTextEncode nodes typically have text as the first widget value
- *
- * @param workflowNode - Workflow node to extract text from
- * @returns Extracted text or empty string
- */
-function extractTextFromWorkflowNode(
-  workflowNode: ComfyWorkflowNode | undefined,
-): string {
-  if (!workflowNode?.widgets_values) return '';
-
-  // CLIPTextEncode: first widget is the text
-  const firstWidget = workflowNode.widgets_values[0];
-  if (typeof firstWidget === 'string') {
-    return firstWidget;
-  }
-
-  return '';
-}
-
-/**
- * Find ComfyUI prompt JSON from entry record
- *
- * PNG uses 'prompt', JPEG/WebP may use Comment, Description, or Make.
- * This function returns the first valid ComfyUI prompt JSON found.
- *
- * @param entryRecord - Entry record to search
- * @returns Prompt JSON string or undefined
- */
-function findPromptJson(entryRecord: EntryRecord): string | undefined {
-  // PNG format: prompt entry
-  if (entryRecord.prompt) {
-    return entryRecord.prompt;
-  }
-
-  // JPEG/WebP format: may be in various entries
-  // - Comment: from jpegCom or exifUserComment
-  // - Description/Make: from exifImageDescription/exifMake (no prefix)
-  // - Prompt: from exifMake with "Prompt:" prefix (save-image-extended)
-  // - Workflow: from exifImageDescription with "Workflow:" prefix
-  const candidates = [
-    entryRecord.Comment,
-    entryRecord.Description,
-    entryRecord.Make,
-    entryRecord.Prompt, // save-image-extended uses this
-    entryRecord.Workflow, // Not a prompt, but may contain nodes info
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-
-    // Check if it's JSON that looks like ComfyUI prompt
-    if (candidate.startsWith('{')) {
-      try {
-        // Remove null terminators that some tools append
-        const cleaned = candidate.replace(/\0+$/, '');
-        const parsed = JSON.parse(cleaned);
-        // Check if it's a prompt object (has nodes with class_type)
-        // or wrapped in {"prompt": {...}} format
-        if (parsed.prompt && typeof parsed.prompt === 'object') {
-          // Wrapped format: {"prompt": {...}}
-          return JSON.stringify(parsed.prompt);
-        }
-        // Check for nodes with class_type
-        const values = Object.values(parsed);
-        if (
-          values.some(
-            (v: unknown) =>
-              v && typeof v === 'object' && 'class_type' in (v as object),
-          )
-        ) {
-          return candidate;
-        }
-      } catch {
-        // Not valid JSON, skip
-      }
-    }
-  }
-
-  return undefined;
-}
 
 /**
  * Civitai extraMetadata structure (nested JSON in prompt)
@@ -160,59 +53,38 @@ interface CivitaiExtraMetadata {
   }>;
 }
 
-/**
- * Extract extraMetadata from ComfyUI prompt
- *
- * Civitai upscale workflows embed original generation params in extraMetadata field
- *
- * @param prompt - ComfyUI prompt object
- * @returns Parsed extraMetadata or undefined
- */
-function extractExtraMetadata(
-  prompt: ComfyPrompt,
-): CivitaiExtraMetadata | undefined {
-  // extraMetadata is stored as a JSON string in the prompt object
-  const extraMetaField = (prompt as Record<string, unknown>).extraMetadata;
-  if (typeof extraMetaField !== 'string') return undefined;
-
-  try {
-    return JSON.parse(extraMetaField);
-  } catch {
-    return undefined;
-  }
-}
+// =============================================================================
+// Main Parser
+// =============================================================================
 
 /**
  * Parse ComfyUI metadata from entries
  *
  * ComfyUI stores metadata with:
  * - prompt: JSON containing node graph with inputs
- * - workflow: JSON containing the full workflow (not parsed here)
+ * - workflow: JSON containing the full workflow (stored in raw, not parsed)
  *
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
 export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry record for easy access
   const entryRecord = buildEntryRecord(entries);
 
-  // Find prompt entry from various possible keywords
-  // PNG uses 'prompt', JPEG/WebP may use Comment, Description, or Make
+  // Find prompt JSON from various possible locations
   const promptText = findPromptJson(entryRecord);
   if (!promptText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   // Parse prompt JSON
-  let prompt: ComfyPrompt;
-  try {
-    prompt = JSON.parse(promptText);
-  } catch {
+  const parsed = parseJson<ComfyPrompt>(promptText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in prompt entry',
     });
   }
+  const prompt = parsed.value;
 
   // Verify it's ComfyUI format (has class_type)
   const nodes = Object.values(prompt);
@@ -227,8 +99,8 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
     'SamplerCustom',
     'KSampler (Efficient)',
   ]);
-  const positiveClip = findPositiveClipNode(prompt, ksampler);
-  const negativeClip = findNegativeClipNode(prompt, ksampler);
+  const positiveClip = findClipNode(prompt, ksampler, 'positive');
+  const negativeClip = findClipNode(prompt, ksampler, 'negative');
   const checkpoint = findNodeByClass(prompt, [
     'CheckpointLoaderSimple',
     'CheckpointLoader',
@@ -240,77 +112,20 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
     'EmptySD3LatentImage',
   ]);
 
-  // Extract dimensions (fallback to 0 for IHDR extraction)
-  let width = 0;
-  let height = 0;
+  // Extract dimensions
+  const latentWidth = latentImage ? Number(latentImage.inputs.width) || 0 : 0;
+  const latentHeight = latentImage ? Number(latentImage.inputs.height) || 0 : 0;
 
-  if (latentImage) {
-    width = Number(latentImage.inputs.width) || 0;
-    height = Number(latentImage.inputs.height) || 0;
-  }
+  // Extract prompts from CLIP nodes
+  const clipPositiveText = extractText(positiveClip);
+  const clipNegativeText = extractText(negativeClip);
 
-  // Find workflow entry and parse it
-  const workflowText = entryRecord.workflow;
-  let workflow: ComfyWorkflow | undefined;
-  let workflowNodeMap: Map<string, ComfyWorkflowNode> | undefined;
-
-  if (workflowText) {
-    try {
-      const parsed = JSON.parse(workflowText);
-      // Validate workflow structure
-      if (parsed && Array.isArray(parsed.nodes)) {
-        workflow = parsed as ComfyWorkflow;
-        workflowNodeMap = buildWorkflowNodeMap(workflow);
-      }
-    } catch {
-      // Ignore invalid workflow JSON
-    }
-  }
-
-  // Extract prompts: prefer workflow widgets_values, fallback to prompt inputs
-  const positiveNodeId = findNodeIdByLink(prompt, ksampler, 'positive');
-  const negativeNodeId = findNodeIdByLink(prompt, ksampler, 'negative');
-
-  let positiveText = '';
-  let negativeText = '';
-
-  // Try to get text from workflow (preserves comments)
-  if (workflowNodeMap) {
-    const positiveWorkflowNode = positiveNodeId
-      ? workflowNodeMap.get(positiveNodeId)
-      : undefined;
-    const negativeWorkflowNode = negativeNodeId
-      ? workflowNodeMap.get(negativeNodeId)
-      : undefined;
-
-    positiveText = extractTextFromWorkflowNode(positiveWorkflowNode);
-    negativeText = extractTextFromWorkflowNode(negativeWorkflowNode);
-  }
-
-  // Fallback to prompt entry if workflow extraction failed
-  if (!positiveText) {
-    positiveText = extractText(positiveClip);
-  }
-  if (!negativeText) {
-    negativeText = extractText(negativeClip);
-  }
-
-  // Try extraMetadata as last fallback (Civitai upscale workflows)
+  // Apply Civitai extraMetadata fallbacks
   const extraMeta = extractExtraMetadata(prompt);
-  if (extraMeta) {
-    if (!positiveText && extraMeta.prompt) {
-      positiveText = extraMeta.prompt;
-    }
-    if (!negativeText && extraMeta.negativePrompt) {
-      negativeText = extraMeta.negativePrompt;
-    }
-    if (width === 0 && extraMeta.width) {
-      width = extraMeta.width;
-    }
-    if (height === 0 && extraMeta.height) {
-      height = extraMeta.height;
-    }
-  }
+  const positiveText = clipPositiveText || extraMeta?.prompt || '';
+  const negativeText = clipNegativeText || extraMeta?.negativePrompt || '';
+  const width = latentWidth || extraMeta?.width || 0;
+  const height = latentHeight || extraMeta?.height || 0;
 
   // Build metadata
   const metadata: Omit<ComfyUIMetadata, 'raw'> = {
@@ -320,22 +135,16 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
     negativePrompt: negativeText,
     width,
     height,
-    workflow,
   };
 
   // Add model settings
   if (checkpoint) {
     const ckptName = checkpoint.inputs.ckpt_name;
     if (typeof ckptName === 'string') {
-      metadata.model = {
-        name: ckptName,
-      };
+      metadata.model = { name: ckptName };
     }
   } else if (extraMeta?.baseModel) {
-    // Fallback to extraMetadata for model settings (Civitai upscale workflows)
-    metadata.model = {
-      name: extraMeta.baseModel,
-    };
+    metadata.model = { name: extraMeta.baseModel };
   }
 
   // Add sampling settings
@@ -353,28 +162,25 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
         typeof inputs.scheduler === 'string' ? inputs.scheduler : undefined,
     };
   } else if (extraMeta) {
-    // Fallback to extraMetadata for sampling settings (Civitai upscale workflows)
     metadata.sampling = {
       seed: extraMeta.seed,
       steps: extraMeta.steps,
       cfg: extraMeta.cfgScale,
       sampler: extraMeta.sampler,
-      clipSkip: extraMeta.clipSkip,
     };
   }
 
-  // Add upscale settings from extraMetadata (Civitai upscale workflows)
+  // Add upscale settings from Civitai extraMetadata
   if (extraMeta?.transformations) {
     const upscaleTransform = extraMeta.transformations.find(
       (t) => t.type === 'upscale',
     );
     if (upscaleTransform) {
-      // Calculate scale factor from original and upscaled dimensions
       const originalWidth = extraMeta.width ?? width;
       if (originalWidth > 0 && upscaleTransform.upscaleWidth) {
         const scale = upscaleTransform.upscaleWidth / originalWidth;
         metadata.upscale = {
-          scale: Math.round(scale * 100) / 100, // Round to 2 decimal places
+          scale: Math.round(scale * 100) / 100,
         };
       }
     }
@@ -383,28 +189,58 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   return Result.ok(metadata);
 }
 
-/**
- * Find node ID from KSampler input link
- *
- * @param prompt - Prompt data (not directly used, kept for consistency)
- * @param ksampler - KSampler node
- * @param inputName - Name of the input ('positive' or 'negative')
- * @returns Node ID as string, or undefined if not found
- */
-function findNodeIdByLink(
-  _prompt: ComfyPrompt,
-  ksampler: ComfyNode | undefined,
-  inputName: string,
-): string | undefined {
-  if (!ksampler) return undefined;
+// =============================================================================
+// Prompt Finding
+// =============================================================================
 
-  const link = ksampler.inputs[inputName];
-  if (Array.isArray(link) && link.length >= 1) {
-    return String(link[0]);
+/**
+ * Find ComfyUI prompt JSON from entry record
+ *
+ * PNG uses 'prompt', JPEG/WebP may use Comment, Description, or Make.
+ */
+function findPromptJson(entryRecord: EntryRecord): string | undefined {
+  // PNG format: prompt entry
+  if (entryRecord.prompt) {
+    return entryRecord.prompt;
+  }
+
+  // JPEG/WebP format: may be in various entries
+  const candidates = [
+    entryRecord.Comment,
+    entryRecord.Description,
+    entryRecord.Make,
+    entryRecord.Prompt, // save-image-extended uses this
+    entryRecord.Workflow, // Not a prompt, but may contain nodes info
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+
+    // Check if it's JSON that looks like ComfyUI prompt
+    if (candidate.startsWith('{')) {
+      // Remove null terminators that some tools append
+      const cleaned = candidate.replace(/\0+$/, '');
+      const parsed = parseJson<Record<string, unknown>>(cleaned);
+      if (!parsed.ok) continue;
+
+      // Check if it's wrapped in {"prompt": {...}} format
+      if (parsed.value.prompt && typeof parsed.value.prompt === 'object') {
+        return JSON.stringify(parsed.value.prompt);
+      }
+      // Check for nodes with class_type
+      const values = Object.values(parsed.value);
+      if (values.some((v) => v && typeof v === 'object' && 'class_type' in v)) {
+        return candidate;
+      }
+    }
   }
 
   return undefined;
 }
+
+// =============================================================================
+// Node Finding
+// =============================================================================
 
 /**
  * Find a node by class type (first match)
@@ -413,50 +249,33 @@ function findNodeByClass(
   prompt: ComfyPrompt,
   classTypes: string[],
 ): ComfyNode | undefined {
-  for (const node of Object.values(prompt)) {
-    if (classTypes.includes(node.class_type)) {
-      return node;
-    }
-  }
-  return undefined;
+  return Object.values(prompt).find((node) =>
+    classTypes.includes(node.class_type),
+  );
 }
 
 /**
- * Find positive CLIP text encode node (connected to KSampler positive input)
+ * Find CLIP text encode node connected to KSampler input
  */
-function findPositiveClipNode(
+function findClipNode(
   prompt: ComfyPrompt,
   ksampler: ComfyNode | undefined,
+  inputName: string,
 ): ComfyNode | undefined {
   if (!ksampler) return undefined;
 
-  // KSampler has 'positive' input which is a link [nodeId, outputIndex]
-  const positiveLink = ksampler.inputs.positive;
-  if (Array.isArray(positiveLink) && positiveLink.length >= 1) {
-    const nodeId = String(positiveLink[0]);
+  const link = ksampler.inputs[inputName];
+  if (Array.isArray(link) && link.length >= 1) {
+    const nodeId = String(link[0]);
     return prompt[nodeId];
   }
 
   return undefined;
 }
 
-/**
- * Find negative CLIP text encode node (connected to KSampler negative input)
- */
-function findNegativeClipNode(
-  prompt: ComfyPrompt,
-  ksampler: ComfyNode | undefined,
-): ComfyNode | undefined {
-  if (!ksampler) return undefined;
-
-  const negativeLink = ksampler.inputs.negative;
-  if (Array.isArray(negativeLink) && negativeLink.length >= 1) {
-    const nodeId = String(negativeLink[0]);
-    return prompt[nodeId];
-  }
-
-  return undefined;
-}
+// =============================================================================
+// Text Extraction
+// =============================================================================
 
 /**
  * Extract text from CLIP text encode node
@@ -494,4 +313,23 @@ function extractText(node: ComfyNode | undefined): string {
   }
 
   return '';
+}
+
+// =============================================================================
+// Civitai Extra Metadata
+// =============================================================================
+
+/**
+ * Extract extraMetadata from ComfyUI prompt
+ *
+ * Civitai upscale workflows embed original generation params in extraMetadata field
+ */
+function extractExtraMetadata(
+  prompt: ComfyPrompt,
+): CivitaiExtraMetadata | undefined {
+  const extraMetaField = (prompt as Record<string, unknown>).extraMetadata;
+  if (typeof extraMetaField !== 'string') return undefined;
+
+  const parsed = parseJson<CivitaiExtraMetadata>(extraMetaField);
+  return parsed.ok ? parsed.value : undefined;
 }

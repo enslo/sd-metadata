@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * Fooocus JSON metadata structure
@@ -50,15 +51,14 @@ export function parseFooocus(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Parse JSON
-  let json: FooocusJsonMetadata;
-  try {
-    json = JSON.parse(jsonText);
-  } catch {
+  const parsed = parseJson<FooocusJsonMetadata>(jsonText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Fooocus metadata',
     });
   }
+  const json = parsed.value;
 
   // Verify it's Fooocus format (has base_model)
   if (!json.base_model && !json.prompt) {

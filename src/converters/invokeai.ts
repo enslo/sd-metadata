@@ -10,6 +10,8 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
+import { parseJson } from '../utils/json';
+import { createITxtChunk, findSegment, stringify } from './utils';
 
 /**
  * Convert InvokeAI PNG chunks to JPEG/WebP segments
@@ -20,23 +22,9 @@ import type { MetadataSegment, PngTextChunk } from '../types';
 export function convertInvokeAIPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  // Build a JSON object with chunk keywords as keys
-  const data: Record<string, unknown> = {};
-
-  for (const chunk of chunks) {
-    if (
-      chunk.keyword === 'invokeai_metadata' ||
-      chunk.keyword === 'invokeai_graph'
-    ) {
-      try {
-        data[chunk.keyword] = JSON.parse(chunk.text);
-      } catch {
-        data[chunk.keyword] = chunk.text;
-      }
-    } else {
-      data[chunk.keyword] = chunk.text;
-    }
-  }
+  const data = Object.fromEntries(
+    chunks.map((chunk) => [chunk.keyword, chunk.text]),
+  );
 
   return [
     {
@@ -55,67 +43,29 @@ export function convertInvokeAIPngToSegments(
 export function convertInvokeAISegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  const userComment = segments.find((s) => s.source.type === 'exifUserComment');
+  const userComment = findSegment(segments, 'exifUserComment');
   if (!userComment) {
     return [];
   }
 
-  const chunks: PngTextChunk[] = [];
+  const parsed = parseJson<Record<string, unknown>>(userComment.data);
+  if (!parsed.ok) {
+    // Fallback for non-JSON
+    return createITxtChunk('invokeai_metadata', userComment.data);
+  }
 
-  try {
-    const parsed = JSON.parse(userComment.data) as Record<string, unknown>;
+  const chunks = [
+    createITxtChunk(
+      'invokeai_metadata',
+      stringify(parsed.value.invokeai_metadata),
+    ),
+    createITxtChunk('invokeai_graph', stringify(parsed.value.invokeai_graph)),
+  ].flat();
 
-    // Extract invokeai_metadata chunk
-    if (parsed.invokeai_metadata !== undefined) {
-      const text =
-        typeof parsed.invokeai_metadata === 'string'
-          ? parsed.invokeai_metadata
-          : JSON.stringify(parsed.invokeai_metadata);
-      chunks.push({
-        type: 'iTXt',
-        keyword: 'invokeai_metadata',
-        compressionFlag: 0,
-        compressionMethod: 0,
-        languageTag: '',
-        translatedKeyword: '',
-        text,
-      });
-    }
-
-    // Extract invokeai_graph chunk
-    if (parsed.invokeai_graph !== undefined) {
-      const text =
-        typeof parsed.invokeai_graph === 'string'
-          ? parsed.invokeai_graph
-          : JSON.stringify(parsed.invokeai_graph);
-      chunks.push({
-        type: 'iTXt',
-        keyword: 'invokeai_graph',
-        compressionFlag: 0,
-        compressionMethod: 0,
-        languageTag: '',
-        translatedKeyword: '',
-        text,
-      });
-    }
-
-    if (chunks.length > 0) {
-      return chunks;
-    }
-  } catch {
-    // Not valid JSON
+  if (chunks.length > 0) {
+    return chunks;
   }
 
   // Fallback
-  return [
-    {
-      type: 'iTXt',
-      keyword: 'invokeai_metadata',
-      compressionFlag: 0,
-      compressionMethod: 0,
-      languageTag: '',
-      translatedKeyword: '',
-      text: userComment.data,
-    },
-  ];
+  return createITxtChunk('invokeai_metadata', userComment.data);
 }
