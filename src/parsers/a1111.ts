@@ -235,6 +235,8 @@ function detectSoftwareVariant(
   // Check Version field
   if (!version) return 'sd-webui';
   if (version === 'neo') return 'forge-neo';
-  if (version.startsWith('f')) return 'forge';
+  // Forge uses 'classic' or 'fX.Y.Z' versions (semantic version format)
+  if (version === 'classic') return 'forge';
+  if (/^f\d+\.\d+/.test(version)) return 'forge';
   return 'sd-webui';
 }
