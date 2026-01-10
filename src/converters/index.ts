@@ -17,6 +17,14 @@ import {
   convertComfyUISegmentsToPng,
 } from './comfyui';
 import {
+  convertEasyDiffusionPngToSegments,
+  convertEasyDiffusionSegmentsToPng,
+} from './easydiffusion';
+import {
+  convertFooocusPngToSegments,
+  convertFooocusSegmentsToPng,
+} from './fooocus';
+import {
   convertHfSpacePngToSegments,
   convertHfSpaceSegmentsToPng,
 } from './hf-space';
@@ -28,6 +36,10 @@ import {
   convertNovelaiPngToSegments,
   convertNovelaiSegmentsToPng,
 } from './novelai';
+import {
+  convertRuinedFooocusPngToSegments,
+  convertRuinedFooocusSegmentsToPng,
+} from './ruined-fooocus';
 import {
   convertSwarmUIPngToSegments,
   convertSwarmUISegmentsToPng,
@@ -100,9 +112,10 @@ function convertBySoftware(
     return convertNovelai(raw, targetFormat);
   }
 
-  // A1111-format conversion (sd-webui, forge, forge-neo, civitai)
+  // A1111-format conversion (sd-webui, sd-next, forge, forge-neo, civitai)
   if (
     software === 'sd-webui' ||
+    software === 'sd-next' ||
     software === 'forge' ||
     software === 'forge-neo' ||
     software === 'civitai'
@@ -113,6 +126,21 @@ function convertBySoftware(
   // HuggingFace Space conversion (uses JSON in parameters chunk)
   if (software === 'hf-space') {
     return convertHfSpace(raw, targetFormat);
+  }
+
+  // Easy Diffusion conversion (uses JSON in individual chunks)
+  if (software === 'easydiffusion') {
+    return convertEasyDiffusion(raw, targetFormat);
+  }
+
+  // Fooocus conversion (uses JSON in Comment chunk)
+  if (software === 'fooocus') {
+    return convertFooocus(raw, targetFormat);
+  }
+
+  // Ruined Fooocus conversion (uses JSON in parameters chunk)
+  if (software === 'ruined-fooocus') {
+    return convertRuinedFooocus(raw, targetFormat);
   }
 
   // SwarmUI conversion
@@ -245,6 +273,117 @@ function convertHfSpace(
   }
 
   const chunks = convertHfSpaceSegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert Easy Diffusion metadata between formats
+ *
+ * Easy Diffusion uses JSON-like storage with individual chunks in PNG.
+ */
+function convertEasyDiffusion(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertEasyDiffusionPngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertEasyDiffusionSegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert Fooocus metadata between formats
+ *
+ * Fooocus uses JSON in the Comment chunk.
+ */
+function convertFooocus(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertFooocusPngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertFooocusSegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert Ruined Fooocus metadata between formats
+ *
+ * Ruined Fooocus uses JSON in the parameters chunk.
+ */
+function convertRuinedFooocus(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertRuinedFooocusPngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertRuinedFooocusSegmentsToPng(raw.segments);
   return Result.ok({
     format: 'png',
     chunks,

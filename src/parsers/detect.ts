@@ -53,6 +53,11 @@ function detectFromKeywords(
     return 'stability-matrix';
   }
 
+  // Easy Diffusion: has negative_prompt or Negative Prompt entry
+  if ('negative_prompt' in entryRecord || 'Negative Prompt' in entryRecord) {
+    return 'easydiffusion';
+  }
+
   return null;
 }
 
@@ -123,6 +128,24 @@ function detectFromJson(json: string): GenerationSoftware | null {
     return 'hf-space';
   }
 
+  // Easy Diffusion: has use_stable_diffusion_model
+  if (json.includes('"use_stable_diffusion_model"')) {
+    return 'easydiffusion';
+  }
+
+  // Ruined Fooocus: has software = "RuinedFooocus"
+  if (
+    json.includes('"software":"RuinedFooocus"') ||
+    json.includes('"software": "RuinedFooocus"')
+  ) {
+    return 'ruined-fooocus';
+  }
+
+  // Fooocus: has prompt + base_model
+  if (json.includes('"prompt"') && json.includes('"base_model"')) {
+    return 'fooocus';
+  }
+
   // ComfyUI JSON format
   if (json.includes('"prompt"') || json.includes('"nodes"')) {
     return 'comfyui';
@@ -158,6 +181,11 @@ function detectFromA1111Text(text: string): GenerationSoftware | null {
     if (version === 'ComfyUI') {
       return 'comfyui';
     }
+  }
+
+  // SD.Next: has App: SD.Next
+  if (text.includes('App: SD.Next') || text.includes('App:SD.Next')) {
+    return 'sd-next';
   }
 
   // Civitai resources

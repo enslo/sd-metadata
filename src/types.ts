@@ -198,8 +198,12 @@ export type GenerationSoftware =
   | 'forge-neo'
   | 'forge'
   | 'sd-webui'
+  | 'sd-next'
   | 'civitai'
-  | 'hf-space';
+  | 'hf-space'
+  | 'easydiffusion'
+  | 'fooocus'
+  | 'ruined-fooocus';
 
 /**
  * Metadata format classification
@@ -283,7 +287,16 @@ export interface ComfyUIMetadata extends BaseMetadata {
  */
 export interface A1111Metadata extends BaseMetadata {
   type: 'a1111';
-  software: 'sd-webui' | 'forge' | 'forge-neo' | 'civitai' | 'hf-space';
+  software:
+    | 'sd-webui'
+    | 'sd-next'
+    | 'forge'
+    | 'forge-neo'
+    | 'civitai'
+    | 'hf-space'
+    | 'easydiffusion'
+    | 'fooocus'
+    | 'ruined-fooocus';
 }
 
 /**

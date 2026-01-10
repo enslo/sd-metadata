@@ -54,7 +54,8 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
 
   // Determine software variant
   const version = settingsMap.get('Version');
-  const software = detectSoftwareVariant(version);
+  const app = settingsMap.get('App');
+  const software = detectSoftwareVariant(version, app);
 
   // Build metadata
   const metadata: Omit<A1111Metadata, 'raw'> = {
@@ -222,13 +223,20 @@ function parseNumber(value: string | undefined): number | undefined {
 }
 
 /**
- * Detect software variant from Version string
+ * Detect software variant from Version and App strings
  */
 function detectSoftwareVariant(
   version: string | undefined,
-): 'sd-webui' | 'forge' | 'forge-neo' {
+  app: string | undefined,
+): 'sd-webui' | 'sd-next' | 'forge' | 'forge-neo' {
+  // Check App field first (SD.Next uses this)
+  if (app === 'SD.Next') return 'sd-next';
+
+  // Check Version field
   if (!version) return 'sd-webui';
   if (version === 'neo') return 'forge-neo';
-  if (version.startsWith('f')) return 'forge';
+  // Forge uses 'classic' or 'fX.Y.Z' versions (semantic version format)
+  if (version === 'classic') return 'forge';
+  if (/^f\d+\.\d+/.test(version)) return 'forge';
   return 'sd-webui';
 }

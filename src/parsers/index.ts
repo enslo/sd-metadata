@@ -3,20 +3,26 @@ import { Result } from '../types';
 import { parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
 import { detectSoftware } from './detect';
+import { parseEasyDiffusion } from './easydiffusion';
+import { parseFooocus } from './fooocus';
 import { parseHfSpace } from './hf-space';
 import { parseInvokeAI } from './invokeai';
 import { parseNovelAI } from './novelai';
+import { parseRuinedFooocus } from './ruined-fooocus';
 import { parseStabilityMatrix } from './stability-matrix';
 import { parseSwarmUI } from './swarmui';
 import { parseTensorArt } from './tensorart';
 
 // Re-export individual parsers
 export { parseA1111 } from './a1111';
+export { parseEasyDiffusion } from './easydiffusion';
+export { parseFooocus } from './fooocus';
 export { parseHfSpace } from './hf-space';
 export { parseComfyUI } from './comfyui';
 export { detectSoftware } from './detect';
 export { parseInvokeAI } from './invokeai';
 export { parseNovelAI } from './novelai';
+export { parseRuinedFooocus } from './ruined-fooocus';
 export { parseStabilityMatrix } from './stability-matrix';
 export { parseSwarmUI } from './swarmui';
 export { parseTensorArt } from './tensorart';
@@ -40,6 +46,7 @@ export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
       return parseNovelAI(entries);
 
     case 'sd-webui':
+    case 'sd-next':
     case 'forge':
     case 'forge-neo':
       return parseA1111(entries);
@@ -72,6 +79,15 @@ export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
 
     case 'stability-matrix':
       return parseStabilityMatrix(entries);
+
+    case 'easydiffusion':
+      return parseEasyDiffusion(entries);
+
+    case 'fooocus':
+      return parseFooocus(entries);
+
+    case 'ruined-fooocus':
+      return parseRuinedFooocus(entries);
 
     default: {
       // Try each parser in order
