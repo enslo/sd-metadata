@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * InvokeAI metadata JSON structure
@@ -45,15 +46,14 @@ export function parseInvokeAI(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Parse metadata JSON
-  let data: InvokeAIMetadataJson;
-  try {
-    data = JSON.parse(metadataText);
-  } catch {
+  const parsed = parseJson<InvokeAIMetadataJson>(metadataText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in invokeai_metadata entry',
     });
   }
+  const data = parsed.value;
 
   // Extract dimensions (fallback to 0 for IHDR extraction)
   const width = data.width ?? 0;

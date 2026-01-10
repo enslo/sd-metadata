@@ -9,7 +9,8 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
-import { createTextChunk, findSegment } from './utils';
+import { parseJson } from '../utils/json';
+import { createTextChunk, findSegment, stringify } from './utils';
 
 /**
  * Convert SwarmUI PNG chunks to JPEG/WebP segments
@@ -46,33 +47,22 @@ export function convertSwarmUISegmentsToPng(
     return [];
   }
 
-  try {
-    const parsed = JSON.parse(userComment.data) as Record<string, unknown>;
-
-    // Check for round-trip format (prompt and/or parameters keys)
-    const chunks = [
-      createTextChunk(
-        'prompt',
-        typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
-      ),
-      createTextChunk(
-        'parameters',
-        typeof parsed.parameters === 'string' ? parsed.parameters : undefined,
-      ),
-    ].flat();
-
-    if (chunks.length > 0) {
-      return chunks;
-    }
-
-    // If it has sui_image_params, it's the original SwarmUI format
-    if (parsed.sui_image_params) {
-      return createTextChunk('parameters', userComment.data);
-    }
-  } catch {
-    // Not JSON
+  const parsed = parseJson<Record<string, unknown>>(userComment.data);
+  if (!parsed.ok) {
+    // Fallback for non-JSON
+    return createTextChunk('parameters', userComment.data);
   }
 
-  // Fallback
+  // Check for round-trip format (prompt and/or parameters keys)
+  const chunks = [
+    createTextChunk('prompt', stringify(parsed.value.prompt)),
+    createTextChunk('parameters', stringify(parsed.value.parameters)),
+  ].flat();
+
+  if (chunks.length > 0) {
+    return chunks;
+  }
+
+  // Fallback: return as parameters chunk
   return createTextChunk('parameters', userComment.data);
 }

@@ -60,7 +60,7 @@ export const findSegment = (
  * @param value - Value to stringify
  * @returns Stringified value or undefined
  */
-export const stringifyValue = (value: unknown): string | undefined => {
+export const stringify = (value: unknown): string | undefined => {
   if (value === undefined) return undefined;
   return typeof value === 'string' ? value : JSON.stringify(value);
 };

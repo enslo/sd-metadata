@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * TensorArt generation_data JSON structure
@@ -45,16 +46,15 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Parse JSON (TensorArt appends NUL characters)
-  let data: TensorArtGenerationData;
-  try {
-    const text = dataText.replace(/\0+$/, '');
-    data = JSON.parse(text);
-  } catch {
+  const cleanedText = dataText.replace(/\0+$/, '');
+  const parsed = parseJson<TensorArtGenerationData>(cleanedText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in generation_data entry',
     });
   }
+  const data = parsed.value;
 
   // Extract dimensions (fallback to 0 for IHDR extraction)
   const width = data.width ?? 0;
@@ -73,10 +73,9 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   // Extract ComfyUI-compatible workflow from prompt entry
   const promptText = entryRecord.prompt;
   if (promptText) {
-    try {
-      metadata.workflow = JSON.parse(promptText);
-    } catch {
-      // Ignore parse errors for workflow
+    const workflowParsed = parseJson<unknown>(promptText);
+    if (workflowParsed.ok) {
+      metadata.workflow = workflowParsed.value;
     }
   }
 

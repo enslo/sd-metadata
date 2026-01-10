@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * SwarmUI parameters JSON structure
@@ -49,10 +50,8 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Parse parameters JSON
-  let data: SwarmUIParameters;
-  try {
-    data = JSON.parse(parametersText);
-  } catch {
+  const parsed = parseJson<SwarmUIParameters>(parametersText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in parameters entry',
@@ -60,7 +59,7 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Verify SwarmUI format (has sui_image_params)
-  const params = data.sui_image_params;
+  const params = parsed.value.sui_image_params;
   if (!params) {
     return Result.error({ type: 'unsupportedFormat' });
   }

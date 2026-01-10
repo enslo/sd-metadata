@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * Stability Matrix parameters-json structure
@@ -46,15 +47,14 @@ export function parseStabilityMatrix(
   }
 
   // Parse JSON
-  let data: StabilityMatrixJson;
-  try {
-    data = JSON.parse(jsonText);
-  } catch {
+  const parsed = parseJson<StabilityMatrixJson>(jsonText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in parameters-json entry',
     });
   }
+  const data = parsed.value;
 
   // Extract dimensions (fallback to 0 for IHDR extraction)
   const width = data.Width ?? 0;
@@ -71,12 +71,10 @@ export function parseStabilityMatrix(
   };
 
   // Extract ComfyUI-compatible workflow from prompt entry
-  const promptText = entryRecord.prompt;
-  if (promptText) {
-    try {
-      metadata.workflow = JSON.parse(promptText);
-    } catch {
-      // Ignore parse errors for workflow
+  if (entryRecord.prompt) {
+    const workflowParsed = parseJson<unknown>(entryRecord.prompt);
+    if (workflowParsed.ok) {
+      metadata.workflow = workflowParsed.value;
     }
   }
 

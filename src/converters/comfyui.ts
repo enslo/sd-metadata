@@ -9,7 +9,8 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
-import { createTextChunk, findSegment } from './utils';
+import { parseJson } from '../utils/json';
+import { createTextChunk, findSegment, stringify } from './utils';
 
 /**
  * Convert ComfyUI PNG chunks to JPEG/WebP segments
@@ -69,20 +70,16 @@ const tryParseSaveImagePlusFormat = (
     return null;
   }
 
-  try {
-    const parsed = JSON.parse(userComment.data) as Record<string, unknown>;
-
-    // Convert all keys to PNG chunks
-    return Object.entries(parsed).flatMap(([keyword, value]) =>
-      createTextChunk(
-        keyword,
-        typeof value === 'string' ? value : JSON.stringify(value),
-      ),
-    );
-  } catch {
+  const parsed = parseJson<Record<string, unknown>>(userComment.data);
+  if (!parsed.ok) {
     // Not valid JSON, return as prompt fallback
     return createTextChunk('prompt', userComment.data);
   }
+
+  // Convert all keys to PNG chunks
+  return Object.entries(parsed.value).flatMap(([keyword, value]) =>
+    createTextChunk(keyword, stringify(value)),
+  );
 };
 
 /**

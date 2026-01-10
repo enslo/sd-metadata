@@ -10,7 +10,8 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
-import { createITxtChunk, findSegment, stringifyValue } from './utils';
+import { parseJson } from '../utils/json';
+import { createITxtChunk, findSegment, stringify } from './utils';
 
 /**
  * Convert InvokeAI PNG chunks to JPEG/WebP segments
@@ -47,22 +48,22 @@ export function convertInvokeAISegmentsToPng(
     return [];
   }
 
-  try {
-    const parsed = JSON.parse(userComment.data) as Record<string, unknown>;
+  const parsed = parseJson<Record<string, unknown>>(userComment.data);
+  if (!parsed.ok) {
+    // Fallback for non-JSON
+    return createITxtChunk('invokeai_metadata', userComment.data);
+  }
 
-    const chunks = [
-      createITxtChunk(
-        'invokeai_metadata',
-        stringifyValue(parsed.invokeai_metadata),
-      ),
-      createITxtChunk('invokeai_graph', stringifyValue(parsed.invokeai_graph)),
-    ].flat();
+  const chunks = [
+    createITxtChunk(
+      'invokeai_metadata',
+      stringify(parsed.value.invokeai_metadata),
+    ),
+    createITxtChunk('invokeai_graph', stringify(parsed.value.invokeai_graph)),
+  ].flat();
 
-    if (chunks.length > 0) {
-      return chunks;
-    }
-  } catch {
-    // Not valid JSON
+  if (chunks.length > 0) {
+    return chunks;
   }
 
   // Fallback

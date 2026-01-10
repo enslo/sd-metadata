@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * Easy Diffusion JSON metadata structure
@@ -106,17 +107,15 @@ export function parseEasyDiffusion(
   }
 
   // Parse JSON
-  let json: EasyDiffusionJsonMetadata;
-  try {
-    json = JSON.parse(jsonText);
-  } catch {
+  const parsed = parseJson<EasyDiffusionJsonMetadata>(jsonText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Easy Diffusion metadata',
     });
   }
 
-  return parseFromJson(json);
+  return parseFromJson(parsed.value);
 }
 
 /**

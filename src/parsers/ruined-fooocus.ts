@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * Ruined Fooocus JSON metadata structure
@@ -51,15 +52,14 @@ export function parseRuinedFooocus(
   }
 
   // Parse JSON
-  let json: RuinedFooocusJsonMetadata;
-  try {
-    json = JSON.parse(jsonText);
-  } catch {
+  const parsed = parseJson<RuinedFooocusJsonMetadata>(jsonText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Ruined Fooocus metadata',
     });
   }
+  const json = parsed.value;
 
   // Verify it's Ruined Fooocus format
   if (json.software !== 'RuinedFooocus') {

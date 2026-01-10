@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { type EntryRecord, buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 // =============================================================================
 // Types
@@ -76,15 +77,14 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Parse prompt JSON
-  let prompt: ComfyPrompt;
-  try {
-    prompt = JSON.parse(promptText);
-  } catch {
+  const parsed = parseJson<ComfyPrompt>(promptText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in prompt entry',
     });
   }
+  const prompt = parsed.value;
 
   // Verify it's ComfyUI format (has class_type)
   const nodes = Object.values(prompt);
@@ -228,26 +228,19 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
 
     // Check if it's JSON that looks like ComfyUI prompt
     if (candidate.startsWith('{')) {
-      try {
-        // Remove null terminators that some tools append
-        const cleaned = candidate.replace(/\0+$/, '');
-        const parsed = JSON.parse(cleaned);
-        // Check if it's wrapped in {"prompt": {...}} format
-        if (parsed.prompt && typeof parsed.prompt === 'object') {
-          return JSON.stringify(parsed.prompt);
-        }
-        // Check for nodes with class_type
-        const values = Object.values(parsed);
-        if (
-          values.some(
-            (v: unknown) =>
-              v && typeof v === 'object' && 'class_type' in (v as object),
-          )
-        ) {
-          return candidate;
-        }
-      } catch {
-        // Not valid JSON, skip
+      // Remove null terminators that some tools append
+      const cleaned = candidate.replace(/\0+$/, '');
+      const parsed = parseJson<Record<string, unknown>>(cleaned);
+      if (!parsed.ok) continue;
+
+      // Check if it's wrapped in {"prompt": {...}} format
+      if (parsed.value.prompt && typeof parsed.value.prompt === 'object') {
+        return JSON.stringify(parsed.value.prompt);
+      }
+      // Check for nodes with class_type
+      const values = Object.values(parsed.value);
+      if (values.some((v) => v && typeof v === 'object' && 'class_type' in v)) {
+        return candidate;
       }
     }
   }
@@ -347,9 +340,6 @@ function extractExtraMetadata(
   const extraMetaField = (prompt as Record<string, unknown>).extraMetadata;
   if (typeof extraMetaField !== 'string') return undefined;
 
-  try {
-    return JSON.parse(extraMetaField);
-  } catch {
-    return undefined;
-  }
+  const parsed = parseJson<CivitaiExtraMetadata>(extraMetaField);
+  return parsed.ok ? parsed.value : undefined;
 }

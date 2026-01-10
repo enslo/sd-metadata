@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 /**
  * HuggingFace Space JSON metadata structure
@@ -42,15 +43,14 @@ export function parseHfSpace(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Parse JSON
-  let json: HfSpaceJsonMetadata;
-  try {
-    json = JSON.parse(parametersText);
-  } catch {
+  const parsed = parseJson<HfSpaceJsonMetadata>(parametersText);
+  if (!parsed.ok) {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in parameters entry',
     });
   }
+  const json = parsed.value;
 
   // Parse resolution (format: "832 x 1216")
   let width = 0;

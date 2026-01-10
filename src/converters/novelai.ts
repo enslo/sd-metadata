@@ -5,7 +5,8 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
-import { createTextChunk, findSegment } from './utils';
+import { parseJson } from '../utils/json';
+import { createTextChunk, findSegment, stringify } from './utils';
 
 /** Fixed values for NovelAI PNG chunks */
 const NOVELAI_TITLE = 'NovelAI generated image';
@@ -59,51 +60,35 @@ const parseFromUserComment = (
   userCommentSeg: MetadataSegment,
   descriptionSeg: MetadataSegment | undefined,
 ): PngTextChunk[] | null => {
-  try {
-    const parsed = JSON.parse(userCommentSeg.data) as Record<string, unknown>;
-
-    return [
-      // Title (required, use default if missing)
-      createTextChunk(
-        'Title',
-        typeof parsed.Title === 'string' ? parsed.Title : NOVELAI_TITLE,
-      ),
-      // Description (optional, fallback to segment)
-      createTextChunk(
-        'Description',
-        typeof parsed.Description === 'string'
-          ? parsed.Description
-          : descriptionSeg?.data,
-      ),
-      // Software (required, use default if missing)
-      createTextChunk(
-        'Software',
-        typeof parsed.Software === 'string'
-          ? parsed.Software
-          : NOVELAI_SOFTWARE,
-      ),
-      // Source (optional)
-      createTextChunk(
-        'Source',
-        typeof parsed.Source === 'string' ? parsed.Source : undefined,
-      ),
-      // Generation time (optional)
-      createTextChunk(
-        'Generation time',
-        typeof parsed['Generation time'] === 'string'
-          ? parsed['Generation time']
-          : undefined,
-      ),
-      // Comment (optional)
-      createTextChunk(
-        'Comment',
-        typeof parsed.Comment === 'string' ? parsed.Comment : undefined,
-      ),
-    ].flat();
-  } catch {
+  const parsed = parseJson<Record<string, unknown>>(userCommentSeg.data);
+  if (!parsed.ok) {
     // If parsing fails, treat the whole thing as Comment
     return createTextChunk('Comment', userCommentSeg.data);
   }
+
+  return [
+    // Title (required, use default if missing)
+    createTextChunk('Title', stringify(parsed.value.Title) ?? NOVELAI_TITLE),
+    // Description (optional, fallback to segment)
+    createTextChunk(
+      'Description',
+      stringify(parsed.value.Description) ?? descriptionSeg?.data,
+    ),
+    // Software (required, use default if missing)
+    createTextChunk(
+      'Software',
+      stringify(parsed.value.Software) ?? NOVELAI_SOFTWARE,
+    ),
+    // Source (optional)
+    createTextChunk('Source', stringify(parsed.value.Source)),
+    // Generation time (optional)
+    createTextChunk(
+      'Generation time',
+      stringify(parsed.value['Generation time']),
+    ),
+    // Comment (optional)
+    createTextChunk('Comment', stringify(parsed.value.Comment)),
+  ].flat();
 };
 
 /**

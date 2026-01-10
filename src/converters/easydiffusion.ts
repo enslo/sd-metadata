@@ -7,6 +7,7 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
+import { parseJson } from '../utils/json';
 import { createTextChunk, findSegment } from './utils';
 
 /**
@@ -47,20 +48,19 @@ export function convertEasyDiffusionSegmentsToPng(
     return [];
   }
 
-  try {
-    const json = JSON.parse(userComment.data) as Record<string, unknown>;
-
-    return Object.entries(json).flatMap(([keyword, value]) =>
-      createTextChunk(
-        keyword,
-        value != null
-          ? typeof value === 'string'
-            ? value
-            : String(value)
-          : undefined,
-      ),
-    );
-  } catch {
+  const parsed = parseJson<Record<string, unknown>>(userComment.data);
+  if (!parsed.ok) {
     return [];
   }
+
+  return Object.entries(parsed.value).flatMap(([keyword, value]) =>
+    createTextChunk(
+      keyword,
+      value != null
+        ? typeof value === 'string'
+          ? value
+          : String(value)
+        : undefined,
+    ),
+  );
 }
