@@ -457,13 +457,37 @@ function findNegativeClipNode(
 
 /**
  * Extract text from CLIP text encode node
+ *
+ * Supports both standard CLIPTextEncode (text input) and
+ * CLIPTextEncodeSDXL (text_g / text_l inputs).
+ *
+ * For SDXL:
+ * - If text_g and text_l are identical, returns one of them
+ * - If different, combines them as "text_g,\ntext_l"
  */
 function extractText(node: ComfyNode | undefined): string {
   if (!node) return '';
 
+  // Standard CLIPTextEncode: single text input
   const text = node.inputs.text;
   if (typeof text === 'string') {
     return text;
+  }
+
+  // CLIPTextEncodeSDXL: text_g and text_l inputs
+  const textG = node.inputs.text_g;
+  const textL = node.inputs.text_l;
+
+  if (typeof textG === 'string' || typeof textL === 'string') {
+    const g = typeof textG === 'string' ? textG : '';
+    const l = typeof textL === 'string' ? textL : '';
+
+    // If both are the same (or one is empty), return just one
+    if (g === l || !g) return l;
+    if (!l) return g;
+
+    // If different, combine with comma and newline (matching SD Prompt Reader)
+    return `${g},\n${l}`;
   }
 
   return '';
