@@ -9,6 +9,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -28,7 +31,11 @@ jobs:
         run: npm run typecheck
 
       - name: Test
-        run: npm run test:run
+        run: npm run test:coverage
+
+      - name: Report Coverage
+        if: github.event_name == 'pull_request'
+        uses: davelosert/vitest-coverage-report-action@v2
 
       - name: Build
         run: npm run build
