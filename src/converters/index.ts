@@ -17,6 +17,10 @@ import {
   convertComfyUISegmentsToPng,
 } from './comfyui';
 import {
+  convertEasyDiffusionPngToSegments,
+  convertEasyDiffusionSegmentsToPng,
+} from './easydiffusion';
+import {
   convertHfSpacePngToSegments,
   convertHfSpaceSegmentsToPng,
 } from './hf-space';
@@ -113,6 +117,11 @@ function convertBySoftware(
   // HuggingFace Space conversion (uses JSON in parameters chunk)
   if (software === 'hf-space') {
     return convertHfSpace(raw, targetFormat);
+  }
+
+  // Easy Diffusion conversion (uses JSON in individual chunks)
+  if (software === 'easydiffusion') {
+    return convertEasyDiffusion(raw, targetFormat);
   }
 
   // SwarmUI conversion
@@ -245,6 +254,43 @@ function convertHfSpace(
   }
 
   const chunks = convertHfSpaceSegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert Easy Diffusion metadata between formats
+ *
+ * Easy Diffusion uses JSON-like storage with individual chunks in PNG.
+ */
+function convertEasyDiffusion(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertEasyDiffusionPngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertEasyDiffusionSegmentsToPng(raw.segments);
   return Result.ok({
     format: 'png',
     chunks,

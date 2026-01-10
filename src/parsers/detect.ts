@@ -53,6 +53,11 @@ function detectFromKeywords(
     return 'stability-matrix';
   }
 
+  // Easy Diffusion: has negative_prompt or Negative Prompt entry
+  if ('negative_prompt' in entryRecord || 'Negative Prompt' in entryRecord) {
+    return 'easydiffusion';
+  }
+
   return null;
 }
 
@@ -121,6 +126,11 @@ function detectFromJson(json: string): GenerationSoftware | null {
   // HuggingFace Space JSON format (Gradio + Diffusers)
   if (json.includes('"Model"') && json.includes('"resolution"')) {
     return 'hf-space';
+  }
+
+  // Easy Diffusion: has use_stable_diffusion_model
+  if (json.includes('"use_stable_diffusion_model"')) {
+    return 'easydiffusion';
   }
 
   // ComfyUI JSON format
