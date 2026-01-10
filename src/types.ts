@@ -200,7 +200,8 @@ export type GenerationSoftware =
   | 'sd-webui'
   | 'civitai'
   | 'hf-space'
-  | 'easydiffusion';
+  | 'easydiffusion'
+  | 'fooocus';
 
 /**
  * Metadata format classification
@@ -290,7 +291,8 @@ export interface A1111Metadata extends BaseMetadata {
     | 'forge-neo'
     | 'civitai'
     | 'hf-space'
-    | 'easydiffusion';
+    | 'easydiffusion'
+    | 'fooocus';
 }
 
 /**

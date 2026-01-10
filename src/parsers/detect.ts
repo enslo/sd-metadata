@@ -133,6 +133,11 @@ function detectFromJson(json: string): GenerationSoftware | null {
     return 'easydiffusion';
   }
 
+  // Fooocus: has prompt + base_model
+  if (json.includes('"prompt"') && json.includes('"base_model"')) {
+    return 'fooocus';
+  }
+
   // ComfyUI JSON format
   if (json.includes('"prompt"') || json.includes('"nodes"')) {
     return 'comfyui';

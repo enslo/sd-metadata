@@ -4,6 +4,7 @@ import { parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
 import { detectSoftware } from './detect';
 import { parseEasyDiffusion } from './easydiffusion';
+import { parseFooocus } from './fooocus';
 import { parseHfSpace } from './hf-space';
 import { parseInvokeAI } from './invokeai';
 import { parseNovelAI } from './novelai';
@@ -14,6 +15,7 @@ import { parseTensorArt } from './tensorart';
 // Re-export individual parsers
 export { parseA1111 } from './a1111';
 export { parseEasyDiffusion } from './easydiffusion';
+export { parseFooocus } from './fooocus';
 export { parseHfSpace } from './hf-space';
 export { parseComfyUI } from './comfyui';
 export { detectSoftware } from './detect';
@@ -77,6 +79,9 @@ export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
 
     case 'easydiffusion':
       return parseEasyDiffusion(entries);
+
+    case 'fooocus':
+      return parseFooocus(entries);
 
     default: {
       // Try each parser in order

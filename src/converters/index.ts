@@ -21,6 +21,10 @@ import {
   convertEasyDiffusionSegmentsToPng,
 } from './easydiffusion';
 import {
+  convertFooocusPngToSegments,
+  convertFooocusSegmentsToPng,
+} from './fooocus';
+import {
   convertHfSpacePngToSegments,
   convertHfSpaceSegmentsToPng,
 } from './hf-space';
@@ -122,6 +126,11 @@ function convertBySoftware(
   // Easy Diffusion conversion (uses JSON in individual chunks)
   if (software === 'easydiffusion') {
     return convertEasyDiffusion(raw, targetFormat);
+  }
+
+  // Fooocus conversion (uses JSON in Comment chunk)
+  if (software === 'fooocus') {
+    return convertFooocus(raw, targetFormat);
   }
 
   // SwarmUI conversion
@@ -291,6 +300,43 @@ function convertEasyDiffusion(
   }
 
   const chunks = convertEasyDiffusionSegmentsToPng(raw.segments);
+  return Result.ok({
+    format: 'png',
+    chunks,
+  });
+}
+
+/**
+ * Convert Fooocus metadata between formats
+ *
+ * Fooocus uses JSON in the Comment chunk.
+ */
+function convertFooocus(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → JPEG/WebP
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
+    }
+
+    const segments = convertFooocusPngToSegments(raw.chunks);
+    return Result.ok({
+      format: targetFormat,
+      segments,
+    });
+  }
+
+  // JPEG/WebP → PNG or other
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({
+      format: targetFormat,
+      segments: raw.segments,
+    });
+  }
+
+  const chunks = convertFooocusSegmentsToPng(raw.segments);
   return Result.ok({
     format: 'png',
     chunks,
