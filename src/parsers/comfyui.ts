@@ -225,12 +225,15 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
     'KSampler',
     'KSamplerAdvanced',
     'SamplerCustom',
+    'KSampler (Efficient)',
   ]);
   const positiveClip = findPositiveClipNode(prompt, ksampler);
   const negativeClip = findNegativeClipNode(prompt, ksampler);
   const checkpoint = findNodeByClass(prompt, [
     'CheckpointLoaderSimple',
     'CheckpointLoader',
+    'Checkpoint Loader (Simple)',
+    'unCLIPCheckpointLoader',
   ]);
   const latentImage = findNodeByClass(prompt, [
     'EmptyLatentImage',
