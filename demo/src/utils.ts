@@ -45,9 +45,14 @@ export function getSoftwareLabel(software: string): string {
     invokeai: 'InvokeAI',
     swarmui: 'SwarmUI',
     'sd-webui': 'SD WebUI',
+    'sd-next': 'SD.Next',
     forge: 'Forge',
     'forge-neo': 'Forge Neo',
     'hf-space': 'HuggingFace Space',
+    civitai: 'Civitai',
+    easydiffusion: 'Easy Diffusion',
+    fooocus: 'Fooocus',
+    'ruined-fooocus': 'Ruined Fooocus',
   };
   return labels[software] || software;
 }
