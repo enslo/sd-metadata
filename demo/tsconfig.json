@@ -7,6 +7,10 @@
     "types": ["vite/client"],
     "skipLibCheck": true,
 
+    /* JSX for Preact */
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
