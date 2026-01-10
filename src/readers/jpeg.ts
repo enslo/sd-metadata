@@ -56,11 +56,6 @@ export function readJpegMetadata(data: Uint8Array): JpegMetadataResult {
     }
   }
 
-  // No metadata found
-  if (segments.length === 0) {
-    return Result.error({ type: 'noMetadata' });
-  }
-
   return Result.ok(segments);
 }
 

@@ -113,29 +113,19 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   ]);
 
   // Extract dimensions
-  let width = latentImage ? Number(latentImage.inputs.width) || 0 : 0;
-  let height = latentImage ? Number(latentImage.inputs.height) || 0 : 0;
+  const latentWidth = latentImage ? Number(latentImage.inputs.width) || 0 : 0;
+  const latentHeight = latentImage ? Number(latentImage.inputs.height) || 0 : 0;
 
   // Extract prompts from CLIP nodes
-  let positiveText = extractText(positiveClip);
-  let negativeText = extractText(negativeClip);
+  const clipPositiveText = extractText(positiveClip);
+  const clipNegativeText = extractText(negativeClip);
 
   // Apply Civitai extraMetadata fallbacks
   const extraMeta = extractExtraMetadata(prompt);
-  if (extraMeta) {
-    if (!positiveText && extraMeta.prompt) {
-      positiveText = extraMeta.prompt;
-    }
-    if (!negativeText && extraMeta.negativePrompt) {
-      negativeText = extraMeta.negativePrompt;
-    }
-    if (width === 0 && extraMeta.width) {
-      width = extraMeta.width;
-    }
-    if (height === 0 && extraMeta.height) {
-      height = extraMeta.height;
-    }
-  }
+  const positiveText = clipPositiveText || extraMeta?.prompt || '';
+  const negativeText = clipNegativeText || extraMeta?.negativePrompt || '';
+  const width = latentWidth || extraMeta?.width || 0;
+  const height = latentHeight || extraMeta?.height || 0;
 
   // Build metadata
   const metadata: Omit<ComfyUIMetadata, 'raw'> = {

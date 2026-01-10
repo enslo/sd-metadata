@@ -81,9 +81,6 @@ export function parseEasyDiffusion(
 ): InternalParseResult {
   const entryRecord = buildEntryRecord(entries);
 
-  // Find JSON in various possible locations
-  let jsonText: string | undefined;
-
   // Check for standalone entries (PNG format)
   if (entryRecord.negative_prompt || entryRecord['Negative Prompt']) {
     // The entire info dict is what we need to process
@@ -92,15 +89,12 @@ export function parseEasyDiffusion(
     return parseFromEntries(entryRecord);
   }
 
-  // Check parameters entry (may contain JSON)
-  if (entryRecord.parameters?.startsWith('{')) {
-    jsonText = entryRecord.parameters;
-  }
-
-  // Check Comment entry (JPEG/WebP format)
-  if (!jsonText && entryRecord.Comment?.startsWith('{')) {
-    jsonText = entryRecord.Comment;
-  }
+  // Find JSON in various possible locations
+  const jsonText =
+    (entryRecord.parameters?.startsWith('{')
+      ? entryRecord.parameters
+      : undefined) ??
+    (entryRecord.Comment?.startsWith('{') ? entryRecord.Comment : undefined);
 
   if (!jsonText) {
     return Result.error({ type: 'unsupportedFormat' });

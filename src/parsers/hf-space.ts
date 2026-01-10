@@ -53,15 +53,16 @@ export function parseHfSpace(entries: MetadataEntry[]): InternalParseResult {
   const json = parsed.value;
 
   // Parse resolution (format: "832 x 1216")
-  let width = 0;
-  let height = 0;
-  if (json.resolution) {
-    const match = json.resolution.match(/(\d+)\s*x\s*(\d+)/);
-    if (match?.[1] && match?.[2]) {
-      width = Number.parseInt(match[1], 10);
-      height = Number.parseInt(match[2], 10);
-    }
-  }
+  const parseResolution = (res?: string) => {
+    const match = res?.match(/(\d+)\s*x\s*(\d+)/);
+    return match?.[1] && match?.[2]
+      ? {
+          width: Number.parseInt(match[1], 10),
+          height: Number.parseInt(match[2], 10),
+        }
+      : { width: 0, height: 0 };
+  };
+  const { width, height } = parseResolution(json.resolution);
 
   // Build metadata
   const metadata: Omit<A1111Metadata, 'raw'> = {

@@ -127,7 +127,6 @@ export type RawMetadata =
  */
 type JpegReadError =
   | { type: 'invalidSignature' }
-  | { type: 'noMetadata' }
   | { type: 'parseError'; message: string };
 
 /**
@@ -144,8 +143,6 @@ export type JpegMetadataResult = Result<MetadataSegment[], JpegReadError>;
  */
 type WebpReadError =
   | { type: 'invalidSignature' }
-  | { type: 'noExifChunk' }
-  | { type: 'noMetadata' }
   | { type: 'parseError'; message: string };
 
 /**
