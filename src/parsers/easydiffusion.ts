@@ -10,6 +10,11 @@ import { parseJson } from '../utils/json';
 /**
  * Easy Diffusion JSON metadata structure
  *
+ * ⚠️ UNVERIFIED: This parser has not been verified with actual Easy Diffusion samples.
+ * The implementation is based on reference code from other libraries but may not be
+ * fully accurate. Please report any issues if you encounter problems with Easy Diffusion
+ * metadata parsing.
+ *
  * Easy Diffusion stores metadata as JSON in various entries:
  * - PNG: negative_prompt or Negative Prompt entry
  * - JPEG/WebP: Exif UserComment
