@@ -70,15 +70,6 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
     height,
   };
 
-  // Extract ComfyUI-compatible workflow from prompt entry
-  const promptText = entryRecord.prompt;
-  if (promptText) {
-    const workflowParsed = parseJson<unknown>(promptText);
-    if (workflowParsed.ok) {
-      metadata.workflow = workflowParsed.value;
-    }
-  }
-
   // Add model settings
   if (data.baseModel?.modelFileName || data.baseModel?.hash) {
     metadata.model = {
