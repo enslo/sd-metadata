@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { convertA1111PngToSegments, convertA1111SegmentsToPng } from './a1111';
+import { blindPngToSegments, blindSegmentsToPng } from './blind';
 import {
   convertComfyUIPngToSegments,
   convertComfyUISegmentsToPng,
@@ -42,6 +43,7 @@ import {
  *
  * @param parseResult - Result from parsePng, parseJpeg, or parseWebp
  * @param targetFormat - Target format ('png', 'jpeg', or 'webp')
+ * @param force - Force blind conversion for unrecognized formats (default: false)
  * @returns Converted RawMetadata or error
  *
  * @example
@@ -56,6 +58,7 @@ import {
 export function convertMetadata(
   parseResult: ParseResult,
   targetFormat: ConversionTargetFormat,
+  force = false,
 ): ConversionResult {
   // Handle non-success statuses
   if (parseResult.status === 'empty') {
@@ -69,11 +72,7 @@ export function convertMetadata(
     });
   }
 
-  // For 'unrecognized', we have raw data but no metadata
-  // We can still try to convert the raw data
   const raw = parseResult.raw;
-  const software =
-    parseResult.status === 'success' ? parseResult.metadata.software : null;
 
   // If source and target are the same format, return as-is
   if (
@@ -84,27 +83,23 @@ export function convertMetadata(
     return Result.ok(raw);
   }
 
-  // Convert based on detected software
-  return convertBySoftware(raw, targetFormat, software);
-}
+  const software =
+    parseResult.status === 'success' ? parseResult.metadata.software : null;
 
-/**
- * Convert metadata based on detected software
- */
-function convertBySoftware(
-  raw: RawMetadata,
-  targetFormat: ConversionTargetFormat,
-  software: string | null,
-): ConversionResult {
+  // If software is unknown, use blind conversion if force is enabled
   if (!software) {
-    return Result.error({
-      type: 'unsupportedSoftware',
-      software: 'unknown',
-    });
+    return force
+      ? convertBlind(raw, targetFormat)
+      : Result.error({
+          type: 'unsupportedSoftware',
+          software: 'unknown',
+        });
   }
 
+  // Get converter for detected software
   const converter = softwareConverters[software];
   if (!converter) {
+    // This should never happen if software is a valid GenerationSoftware
     return Result.error({
       type: 'unsupportedSoftware',
       software,
@@ -208,10 +203,15 @@ const convertHfSpace = createFormatConverter(
   createSegmentsToPng('parameters'),
 );
 
+const convertBlind = createFormatConverter(
+  blindPngToSegments,
+  blindSegmentsToPng,
+);
+
 /**
  * Lookup table: software name → converter function
  */
-const softwareConverters: Record<string, ConverterFn> = {
+const softwareConverters = {
   // NovelAI
   novelai: convertNovelai,
   // A1111-format (sd-webui, forge, forge-neo, civitai, sd-next)
@@ -235,4 +235,4 @@ const softwareConverters: Record<string, ConverterFn> = {
   invokeai: convertInvokeAI,
   // HuggingFace Space
   'hf-space': convertHfSpace,
-};
+} as const;

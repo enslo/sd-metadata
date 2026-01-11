@@ -82,18 +82,29 @@ const newImageData = writeMetadata(imageData, metadata);
 
 ### Known Limitations
 
-- **A1111 Size Field Requirement**: The current A1111 parser treats the `Size` field as mandatory, returning a parse error if missing. This deviates from SD Prompt Reader's behavior:
-  - SD Prompt Reader: Falls back to `"0x0"` (width=0, height=0) when `Size` is absent
-  - Current implementation: Returns `parseError` when `Size` is missing
-  - This overly strict validation may reject valid A1111 metadata that lacks `Size` (e.g., some img2img workflows)
-  - Future: Align with SD Prompt Reader by making `Size` optional with `"0x0"` fallback
-  - Reference: [SD Prompt Reader a1111.py](https://github.com/receyuki/stable-diffusion-prompt-reader/blob/master/sd_prompt_reader/format/a1111.py)
+Currently, there are no known significant limitations.
 
-- **Raw Metadata Conversion for Unrecognized Formats**: Currently, `convertMetadata()` returns an error when encountering unrecognized formats (`status: 'unrecognized'`). Future enhancement would support "blind" conversion of raw chunks/segments between formats without understanding the content:
-  - Convert PNG `tEXt`/`iTXt` chunks → JPEG/WebP Exif/COM segments
-  - Convert JPEG/WebP segments → PNG chunks
-  - Enable format conversion for unknown/future tools without parser implementation
-  - Preserves metadata even when we don't understand its structure
+### Advanced Features
+
+#### Unrecognized Format Conversion
+
+When encountering unrecognized metadata formats (`status: 'unrecognized'`), you can force blind conversion using the `force` option:
+
+```typescript
+import { read, write } from '@repo/sd-metadata';
+
+// Read unrecognized format
+const source = read(unknownImage);
+// source.status === 'unrecognized'
+
+// Force blind conversion (preserves all metadata chunks/segments)
+const result = write(targetImage, source, { force: true });
+```
+
+This enables format conversion for unknown/future tools without parser implementation by:
+
+- Combining all PNG chunks into single JSON in exifUserComment
+- Converting between formats while preserving all metadata
 
 ## Development
 
