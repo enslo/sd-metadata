@@ -476,5 +476,66 @@ describe('ComfyUI Parsers - Samples', () => {
         workflow: undefined,
       });
     });
+
+    it('should parse civitai-hires.jpg', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'jpeg',
+        'civitai-hires.jpg',
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1536,
+        height: 1536,
+        model: undefined,
+        sampling: {
+          sampler: 'euler_ancestral',
+          seed: 1311178179,
+          steps: 25,
+          cfg: 5,
+        },
+        // Note: Hires scale information is not enough in the metadata (CivitAI limitation)
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse civitai-upscale.jpg', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'jpeg',
+        'civitai-upscale.jpg',
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'Illustrious',
+        },
+        sampling: {
+          sampler: 'Euler a',
+          seed: 1311178179,
+          steps: 25,
+          cfg: 5,
+        },
+        hires: undefined,
+        upscale: {
+          scale: 1.5,
+        },
+        workflow: undefined,
+      });
+    });
   });
 });
