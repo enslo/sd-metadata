@@ -126,6 +126,85 @@ describe('readPngMetadata - Unit Tests', () => {
         expect(result.error.type).toBe('invalidSignature');
       }
     });
+
+    it('should return error for truncated chunk length', () => {
+      // PNG signature + partial chunk (only 2 bytes of length instead of 4)
+      const data = new Uint8Array([
+        0x89,
+        0x50,
+        0x4e,
+        0x47,
+        0x0d,
+        0x0a,
+        0x1a,
+        0x0a, // PNG signature
+        0x00,
+        0x00, // Truncated length
+      ]);
+      const result = readPngMetadata(data);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe('corruptedChunk');
+      }
+    });
+
+    it('should return error for truncated chunk type', () => {
+      // PNG signature + length + partial type (only 2 bytes instead of 4)
+      const data = new Uint8Array([
+        0x89,
+        0x50,
+        0x4e,
+        0x47,
+        0x0d,
+        0x0a,
+        0x1a,
+        0x0a, // PNG signature
+        0x00,
+        0x00,
+        0x00,
+        0x05, // Length = 5
+        0x74,
+        0x45, // Partial type "tE"
+      ]);
+      const result = readPngMetadata(data);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe('corruptedChunk');
+      }
+    });
+
+    it('should return error for truncated chunk data', () => {
+      // PNG signature + valid header but data is shorter than declared length
+      const data = new Uint8Array([
+        0x89,
+        0x50,
+        0x4e,
+        0x47,
+        0x0d,
+        0x0a,
+        0x1a,
+        0x0a, // PNG signature
+        0x00,
+        0x00,
+        0x00,
+        0x10, // Length = 16 bytes
+        0x74,
+        0x45,
+        0x58,
+        0x74, // Type = "tEXt"
+        0x41,
+        0x00,
+        0x42, // Only 3 bytes of data (should be 16)
+      ]);
+      const result = readPngMetadata(data);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe('corruptedChunk');
+      }
+    });
   });
 
   describe('chunk reading', () => {
@@ -237,6 +316,181 @@ describe('readPngMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.at(0)?.text).toBe(unicodeText);
+      }
+    });
+
+    it('should handle tEXt chunk with no null separator', () => {
+      // Create malformed tEXt chunk (no null separator between keyword and text)
+      const data = new Uint8Array([
+        0x89,
+        0x50,
+        0x4e,
+        0x47,
+        0x0d,
+        0x0a,
+        0x1a,
+        0x0a, // PNG signature
+        0x00,
+        0x00,
+        0x00,
+        0x08, // Length = 8
+        0x74,
+        0x45,
+        0x58,
+        0x74, // Type = "tEXt"
+        0x4b,
+        0x65,
+        0x79,
+        0x56,
+        0x61,
+        0x6c,
+        0x75,
+        0x65, // "KeyValue" (no null)
+        0x00,
+        0x00,
+        0x00,
+        0x00, // CRC (placeholder)
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45,
+        0x4e,
+        0x44,
+        0xae,
+        0x42,
+        0x60,
+        0x82, // IEND
+      ]);
+      const result = readPngMetadata(data);
+
+      // Should handle gracefully (parseTExtChunk returns null for malformed chunks)
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toHaveLength(0);
+      }
+    });
+
+    it('should handle iTXt chunk with missing null terminators', () => {
+      // Create malformed iTXt chunk
+      const data = new Uint8Array([
+        0x89,
+        0x50,
+        0x4e,
+        0x47,
+        0x0d,
+        0x0a,
+        0x1a,
+        0x0a, // PNG signature
+        0x00,
+        0x00,
+        0x00,
+        0x05, // Length = 5
+        0x69,
+        0x54,
+        0x58,
+        0x74, // Type = "iTXt"
+        0x4b,
+        0x65,
+        0x79,
+        0x00,
+        0x00, // "Key" + null + compression_flag (incomplete)
+        0x00,
+        0x00,
+        0x00,
+        0x00, // CRC
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45,
+        0x4e,
+        0x44,
+        0xae,
+        0x42,
+        0x60,
+        0x82, // IEND
+      ]);
+      const result = readPngMetadata(data);
+
+      // Should handle gracefully
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // Malformed iTXt should be skipped
+        expect(result.value).toHaveLength(0);
+      }
+    });
+
+    it('should skip non-text chunks', () => {
+      // Create PNG with IHDR chunk (non-text chunk)
+      const data = new Uint8Array([
+        0x89,
+        0x50,
+        0x4e,
+        0x47,
+        0x0d,
+        0x0a,
+        0x1a,
+        0x0a, // PNG signature
+        0x00,
+        0x00,
+        0x00,
+        0x0d, // Length = 13
+        0x49,
+        0x48,
+        0x44,
+        0x52, // Type = "IHDR"
+        // IHDR data (width, height, etc.)
+        0x00,
+        0x00,
+        0x02,
+        0x00, // Width = 512
+        0x00,
+        0x00,
+        0x02,
+        0x00, // Height = 512
+        0x08,
+        0x02,
+        0x00,
+        0x00,
+        0x00, // bit depth, color type, etc.
+        0x00,
+        0x00,
+        0x00,
+        0x00, // CRC
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45,
+        0x4e,
+        0x44,
+        0xae,
+        0x42,
+        0x60,
+        0x82, // IEND
+      ]);
+      const result = readPngMetadata(data);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toHaveLength(0);
+      }
+    });
+
+    it('should handle very long text content', () => {
+      const longText = 'x'.repeat(10000);
+      const textChunk = createTextChunk('Comment', longText);
+      const data = createPngWithChunks(textChunk);
+      const result = readPngMetadata(data);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toHaveLength(1);
+        expect(result.value.at(0)?.text).toBe(longText);
       }
     });
   });
