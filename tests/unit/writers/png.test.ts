@@ -108,7 +108,7 @@ describe('writePngMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
-          expect(readResult.value[0]).toMatchObject({
+          expect(readResult.value.at(0)).toMatchObject({
             type: 'tEXt',
             keyword: 'Software',
             text: 'TestApp',
@@ -139,7 +139,7 @@ describe('writePngMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
-          expect(readResult.value[0]).toMatchObject({
+          expect(readResult.value.at(0)).toMatchObject({
             type: 'iTXt',
             keyword: 'Comment',
             text: 'Test comment',
@@ -180,9 +180,9 @@ describe('writePngMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(3);
-          expect(readResult.value[0].keyword).toBe('Software');
-          expect(readResult.value[1].keyword).toBe('Comment');
-          expect(readResult.value[2].keyword).toBe('parameters');
+          expect(readResult.value.at(0)?.keyword).toBe('Software');
+          expect(readResult.value.at(1)?.keyword).toBe('Comment');
+          expect(readResult.value.at(2)?.keyword).toBe('parameters');
         }
       }
     });
@@ -251,8 +251,8 @@ describe('writePngMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
-          expect(readResult.value[0].keyword).toBe('');
-          expect(readResult.value[0].text).toBe('');
+          expect(readResult.value.at(0)?.keyword).toBe('');
+          expect(readResult.value.at(0)?.text).toBe('');
         }
       }
     });
@@ -275,7 +275,7 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value[0].text).toBe(specialText);
+          expect(readResult.value.at(0)?.text).toBe(specialText);
         }
       }
     });
@@ -301,7 +301,7 @@ describe('writePngMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           // Verify Unicode survives the round-trip
-          expect(readResult.value[0].text).toBe(unicodeText);
+          expect(readResult.value.at(0)?.text).toBe(unicodeText);
         }
       }
     });
@@ -328,7 +328,7 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value[0].text).toBe(unicodeText);
+          expect(readResult.value.at(0)?.text).toBe(unicodeText);
         }
       }
     });
@@ -357,12 +357,14 @@ describe('writePngMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
-          const chunk = readResult.value[0] as ITXtChunk;
-          expect(chunk.type).toBe('iTXt');
-          expect(chunk.keyword).toBe('Description');
-          expect(chunk.languageTag).toBe('en-US');
-          expect(chunk.translatedKeyword).toBe('Description');
-          expect(chunk.text).toBe('Test description');
+          const chunk = readResult.value.at(0);
+          expect(chunk?.type).toBe('iTXt');
+          if (chunk?.type === 'iTXt') {
+            expect(chunk.keyword).toBe('Description');
+            expect(chunk.languageTag).toBe('en-US');
+            expect(chunk.translatedKeyword).toBe('Description');
+            expect(chunk.text).toBe('Test description');
+          }
         }
       }
     });

@@ -99,7 +99,7 @@ describe('readJpegMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value).toHaveLength(1);
-        expect(result.value[0]).toMatchObject({
+        expect(result.value.at(0)).toMatchObject({
           data: 'Test comment',
           source: { type: 'jpegCom' },
         } satisfies Partial<MetadataSegment>);
@@ -117,8 +117,8 @@ describe('readJpegMetadata - Unit Tests', () => {
       if (result.ok) {
         expect(result.value.length).toBeGreaterThanOrEqual(1);
         // At least the first COM segment should be read
-        expect(result.value[0].source.type).toBe('jpegCom');
-        expect(result.value[0].data).toBe('COM data 1');
+        expect(result.value.at(0)?.source.type).toBe('jpegCom');
+        expect(result.value.at(0)?.data).toBe('COM data 1');
       }
     });
   });
@@ -132,7 +132,7 @@ describe('readJpegMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value).toHaveLength(1);
-        expect(result.value[0].data).toBe('');
+        expect(result.value.at(0)?.data).toBe('');
       }
     });
 
@@ -144,7 +144,7 @@ describe('readJpegMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value[0].data).toBe(specialData);
+        expect(result.value.at(0)?.data).toBe(specialData);
       }
     });
 
@@ -156,7 +156,7 @@ describe('readJpegMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value[0].data).toBe(unicodeData);
+        expect(result.value.at(0)?.data).toBe(unicodeData);
       }
     });
   });

@@ -147,7 +147,7 @@ describe('readPngMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value).toHaveLength(1);
-        expect(result.value[0]).toMatchObject({
+        expect(result.value.at(0)).toMatchObject({
           type: 'tEXt',
           keyword: 'Software',
           text: 'TestApp',
@@ -163,7 +163,7 @@ describe('readPngMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value).toHaveLength(1);
-        expect(result.value[0]).toMatchObject({
+        expect(result.value.at(0)).toMatchObject({
           type: 'iTXt',
           keyword: 'Comment',
           text: 'Test comment',
@@ -182,9 +182,9 @@ describe('readPngMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value).toHaveLength(3);
-        expect(result.value[0].keyword).toBe('Software');
-        expect(result.value[1].keyword).toBe('Comment');
-        expect(result.value[2].keyword).toBe('parameters');
+        expect(result.value.at(0)?.keyword).toBe('Software');
+        expect(result.value.at(1)?.keyword).toBe('Comment');
+        expect(result.value.at(2)?.keyword).toBe('parameters');
       }
     });
   });
@@ -198,8 +198,8 @@ describe('readPngMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value).toHaveLength(1);
-        expect(result.value[0].keyword).toBe('');
-        expect(result.value[0].text).toBe('text content');
+        expect(result.value.at(0)?.keyword).toBe('');
+        expect(result.value.at(0)?.text).toBe('text content');
       }
     });
 
@@ -211,8 +211,8 @@ describe('readPngMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value).toHaveLength(1);
-        expect(result.value[0].keyword).toBe('Software');
-        expect(result.value[0].text).toBe('');
+        expect(result.value.at(0)?.keyword).toBe('Software');
+        expect(result.value.at(0)?.text).toBe('');
       }
     });
 
@@ -224,7 +224,7 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value[0].text).toBe(specialText);
+        expect(result.value.at(0)?.text).toBe(specialText);
       }
     });
 
@@ -236,7 +236,7 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value[0].text).toBe(unicodeText);
+        expect(result.value.at(0)?.text).toBe(unicodeText);
       }
     });
   });

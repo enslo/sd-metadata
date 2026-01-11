@@ -74,7 +74,7 @@ describe('writeWebpMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
-          expect(readResult.value[0]).toMatchObject({
+          expect(readResult.value.at(0)).toMatchObject({
             source: { type: 'exifUserComment' },
             data: 'Test comment',
           });
@@ -166,7 +166,7 @@ describe('writeWebpMetadata - Unit Tests', () => {
         const readResult = readWebpMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value[0].data).toBe(specialData);
+          expect(readResult.value.at(0)?.data).toBe(specialData);
         }
       }
     });

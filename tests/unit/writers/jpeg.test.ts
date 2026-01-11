@@ -84,7 +84,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
-          expect(readResult.value[0]).toMatchObject({
+          expect(readResult.value.at(0)).toMatchObject({
             source: { type: 'jpegCom' },
             data: 'Test comment',
           });
@@ -109,8 +109,8 @@ describe('writeJpegMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
-          expect(readResult.value[0].source.type).toBe('exifUserComment');
-          expect(readResult.value[0].data).toBe('Exif comment');
+          expect(readResult.value.at(0)?.source.type).toBe('exifUserComment');
+          expect(readResult.value.at(0)?.data).toBe('Exif comment');
         }
       }
     });
@@ -204,7 +204,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
-          expect(readResult.value[0].data).toBe('');
+          expect(readResult.value.at(0)?.data).toBe('');
         }
       }
     });
@@ -226,7 +226,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
         const readResult = readJpegMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value[0].data).toBe(specialData);
+          expect(readResult.value.at(0)?.data).toBe(specialData);
         }
       }
     });
@@ -248,7 +248,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
         const readResult = readJpegMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value[0].data).toBe(unicodeData);
+          expect(readResult.value.at(0)?.data).toBe(unicodeData);
         }
       }
     });

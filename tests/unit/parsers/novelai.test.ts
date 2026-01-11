@@ -233,7 +233,7 @@ describe('parseNovelAI - Unit Tests', () => {
       if (result.ok && result.value.type === 'novelai') {
         // Should filter out invalid character captions
         expect(result.value.characterPrompts).toHaveLength(1);
-        expect(result.value.characterPrompts?.[0].prompt).toBe('valid');
+        expect(result.value.characterPrompts?.at(0)?.prompt).toBe('valid');
       }
     });
   });
