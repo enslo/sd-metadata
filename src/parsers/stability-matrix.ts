@@ -6,6 +6,7 @@ import type {
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { parseComfyUI } from './comfyui';
 
 /**
  * Stability Matrix parameters-json structure
@@ -27,9 +28,15 @@ interface StabilityMatrixJson {
  * Parse Stability Matrix metadata from entries
  *
  * Stability Matrix stores metadata with:
+ * - prompt: ComfyUI-compatible workflow JSON (primary source)
  * - parameters-json: JSON containing generation parameters
+ *   - Used to override prompts (more complete than workflow)
  * - parameters: A1111-style text (fallback)
  * - smproj: Project data (not parsed here)
+ *
+ * Strategy:
+ * 1. Parse as ComfyUI workflow (workflow, model, sampling, etc.)
+ * 2. Override prompts from parameters-json (more complete)
  *
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
@@ -40,65 +47,42 @@ export function parseStabilityMatrix(
   // Build entry record for easy access
   const entryRecord = buildEntryRecord(entries);
 
-  // Find parameters-json entry (preferred)
-  const jsonText = entryRecord['parameters-json'];
-  if (!jsonText) {
+  // First, parse as ComfyUI workflow to get base metadata
+  const comfyResult = parseComfyUI(entries);
+  if (!comfyResult.ok) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  // Parse JSON
-  const parsed = parseJson<StabilityMatrixJson>(jsonText);
-  if (!parsed.ok) {
-    return Result.error({
-      type: 'parseError',
-      message: 'Invalid JSON in parameters-json entry',
-    });
-  }
-  const data = parsed.value;
-
-  // Extract dimensions (fallback to 0 for IHDR extraction)
-  const width = data.Width ?? 0;
-  const height = data.Height ?? 0;
-
-  // Build metadata
+  // Override software to stability-matrix
   const metadata: Omit<ComfyUIMetadata, 'raw'> = {
+    ...comfyResult.value,
     type: 'comfyui',
     software: 'stability-matrix',
-    prompt: data.PositivePrompt ?? '',
-    negativePrompt: data.NegativePrompt ?? '',
-    width,
-    height,
   };
 
-  // Extract ComfyUI-compatible workflow from prompt entry
-  if (entryRecord.prompt) {
-    const workflowParsed = parseJson<unknown>(entryRecord.prompt);
-    if (workflowParsed.ok) {
-      metadata.workflow = workflowParsed.value;
+  // Find parameters-json entry for prompt override
+  const jsonText = entryRecord['parameters-json'];
+  if (jsonText) {
+    const parsed = parseJson<StabilityMatrixJson>(jsonText);
+    if (parsed.ok) {
+      const data = parsed.value;
+
+      // Override prompts from parameters-json (more complete than workflow)
+      if (data.PositivePrompt !== undefined) {
+        metadata.prompt = data.PositivePrompt;
+      }
+      if (data.NegativePrompt !== undefined) {
+        metadata.negativePrompt = data.NegativePrompt;
+      }
+
+      // Override model information from parameters-json
+      if (data.ModelName !== undefined || data.ModelHash !== undefined) {
+        metadata.model = {
+          name: data.ModelName,
+          hash: data.ModelHash,
+        };
+      }
     }
-  }
-
-  // Add model settings
-  if (data.ModelName || data.ModelHash) {
-    metadata.model = {
-      name: data.ModelName,
-      hash: data.ModelHash,
-    };
-  }
-
-  // Add sampling settings
-  if (
-    data.Seed !== undefined ||
-    data.Steps !== undefined ||
-    data.CfgScale !== undefined ||
-    data.Sampler !== undefined
-  ) {
-    metadata.sampling = {
-      seed: data.Seed,
-      steps: data.Steps,
-      cfg: data.CfgScale,
-      sampler: data.Sampler,
-    };
   }
 
   return Result.ok(metadata);

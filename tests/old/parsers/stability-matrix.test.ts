@@ -42,7 +42,8 @@ describe('parseStabilityMatrix', () => {
     expect(result.value.sampling).toBeDefined();
     expect(result.value.sampling?.steps).toBe(20);
     expect(result.value.sampling?.cfg).toBe(5);
-    expect(result.value.sampling?.sampler).toBe('Euler Ancestral Karras');
+    expect(result.value.sampling?.sampler).toBe('euler_ancestral');
+    expect(result.value.sampling?.scheduler).toBe('karras');
   });
 
   it('should return error for non-StabilityMatrix format', () => {
