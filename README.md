@@ -80,6 +80,28 @@ const newImageData = writeMetadata(imageData, metadata);
 - [x] HuggingFace Space converter (separate from A1111, uses JSON format)
 - [x] ComfyUI detection priority (prioritize when prompt + workflow exist)
 
+### Known Limitations
+
+- **Exif UserComment UTF-16LE Encoding**: The current implementation uses `charCodeAt()` for UTF-16LE encoding, which does not properly handle:
+  - Multibyte characters (e.g., Japanese, Chinese, Korean)
+  - Surrogate pairs (emoji and other Unicode characters beyond BMP)
+  - This affects JPEG and WebP formats when writing Exif UserComment
+  - Workaround: Use PNG format for full Unicode support
+  - Future: Implement proper UTF-16LE encoding with `TextEncoder`/`codePointAt()`
+
+- **A1111 Size Field Requirement**: The current A1111 parser treats the `Size` field as mandatory, returning a parse error if missing. This deviates from SD Prompt Reader's behavior:
+  - SD Prompt Reader: Falls back to `"0x0"` (width=0, height=0) when `Size` is absent
+  - Current implementation: Returns `parseError` when `Size` is missing
+  - This overly strict validation may reject valid A1111 metadata that lacks `Size` (e.g., some img2img workflows)
+  - Future: Align with SD Prompt Reader by making `Size` optional with `"0x0"` fallback
+  - Reference: [SD Prompt Reader a1111.py](https://github.com/receyuki/stable-diffusion-prompt-reader/blob/master/sd_prompt_reader/format/a1111.py)
+
+- **Raw Metadata Conversion for Unrecognized Formats**: Currently, `convertMetadata()` returns an error when encountering unrecognized formats (`status: 'unrecognized'`). Future enhancement would support "blind" conversion of raw chunks/segments between formats without understanding the content:
+  - Convert PNG `tEXt`/`iTXt` chunks → JPEG/WebP Exif/COM segments
+  - Convert JPEG/WebP segments → PNG chunks
+  - Enable format conversion for unknown/future tools without parser implementation
+  - Preserves metadata even when we don't understand its structure
+
 ## Development
 
 ```bash
