@@ -22,20 +22,19 @@ describe('parseA1111 - Unit Tests', () => {
       }
     });
 
-    it('should return error for missing Size', () => {
-      // NOTE: This behavior differs from SD Prompt Reader, which falls back to "0x0"
-      // when Size is missing. Future improvement: align with SD Prompt Reader by
-      // making Size optional, returning width=0, height=0 instead of error.
-      // See: https://github.com/receyuki/stable-diffusion-prompt-reader/blob/master/sd_prompt_reader/format/a1111.py
+    it('should handle missing Size with 0x0 fallback', () => {
+      // Aligned with SD Prompt Reader: Size is optional, defaults to "0x0"
       const parameters = `test prompt
 Steps: 20`;
       const entries = createA1111Entry(parameters);
 
       const result = parseA1111(entries);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe('parseError');
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.prompt).toBe('test prompt');
+        expect(result.value.width).toBe(0);
+        expect(result.value.height).toBe(0);
       }
     });
   });
@@ -224,6 +223,38 @@ Steps: 20, Size: 512x512`;
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.prompt).toBe('test');
+      }
+    });
+
+    it('should handle parameters with no settings section', () => {
+      // No "Steps:" → no settings section
+      const parameters = 'just a prompt';
+      const entries = createA1111Entry(parameters);
+
+      const result = parseA1111(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.prompt).toBe('just a prompt');
+        expect(result.value.width).toBe(0);
+        expect(result.value.height).toBe(0);
+      }
+    });
+
+    it('should handle negative prompt without settings section', () => {
+      // Has negative prompt but no "Steps:"
+      const parameters = `positive
+Negative prompt: negative`;
+      const entries = createA1111Entry(parameters);
+
+      const result = parseA1111(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.prompt).toBe('positive');
+        expect(result.value.negativePrompt).toBe('negative');
+        expect(result.value.width).toBe(0);
+        expect(result.value.height).toBe(0);
       }
     });
   });

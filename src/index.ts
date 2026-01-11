@@ -83,6 +83,24 @@ export type WriteResult = Result<
 >;
 
 /**
+ * Options for write operation
+ */
+export interface WriteOptions {
+  /**
+   * Force blind conversion for unrecognized formats
+   *
+   * When true, converts raw chunks/segments between formats even when
+   * the generating software is unknown. Enables format conversion for
+   * unknown/future tools without parser implementation.
+   *
+   * When false (default), returns error for unrecognized formats.
+   *
+   * @default false
+   */
+  force?: boolean;
+}
+
+/**
  * Read and parse metadata from an image
  *
  * Automatically detects the image format (PNG, JPEG, WebP) and parses
@@ -140,9 +158,14 @@ export function read(data: Uint8Array): ParseResult {
  *
  * @param data - Target image file data
  * @param metadata - ParseResult from `read()` (must be 'success' or contain raw data)
+ * @param options - Write options (e.g., { force: true } for blind conversion)
  * @returns New image data with embedded metadata
  */
-export function write(data: Uint8Array, metadata: ParseResult): WriteResult {
+export function write(
+  data: Uint8Array,
+  metadata: ParseResult,
+  options?: WriteOptions,
+): WriteResult {
   const targetFormat = detectFormat(data);
   if (!targetFormat) {
     return Result.error({ type: 'unsupportedFormat' });
@@ -168,7 +191,12 @@ export function write(data: Uint8Array, metadata: ParseResult): WriteResult {
   // Conversion logic handled by convertMetadata
   // If source == target, convertMetadata returns raw as-is.
   // If source != target, it tries to convert.
-  const conversionResult = convertMetadata(metadata, targetFormat);
+  // If force option is set, enables blind conversion for unrecognized formats.
+  const conversionResult = convertMetadata(
+    metadata,
+    targetFormat,
+    options?.force ?? false,
+  );
 
   if (!conversionResult.ok) {
     return Result.error({

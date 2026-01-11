@@ -42,14 +42,8 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
   // Parse settings key-value pairs
   const settingsMap = parseSettings(settings);
 
-  // Extract dimensions (required)
-  const size = settingsMap.get('Size');
-  if (!size) {
-    return Result.error({
-      type: 'parseError',
-      message: 'Missing Size in parameters',
-    });
-  }
+  // Extract dimensions (optional, defaults to "0x0" like SD Prompt Reader)
+  const size = settingsMap.get('Size') ?? '0x0';
   const [width, height] = parseSize(size);
 
   // Determine software variant
