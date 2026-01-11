@@ -80,6 +80,15 @@ const newImageData = writeMetadata(imageData, metadata);
 - [x] HuggingFace Space converter (separate from A1111, uses JSON format)
 - [x] ComfyUI detection priority (prioritize when prompt + workflow exist)
 
+### Known Limitations
+
+- **Exif UserComment UTF-16LE Encoding**: The current implementation uses `charCodeAt()` for UTF-16LE encoding, which does not properly handle:
+  - Multibyte characters (e.g., Japanese, Chinese, Korean)
+  - Surrogate pairs (emoji and other Unicode characters beyond BMP)
+  - This affects JPEG and WebP formats when writing Exif UserComment
+  - Workaround: Use PNG format for full Unicode support
+  - Future: Implement proper UTF-16LE encoding with `TextEncoder`/`codePointAt()`
+
 ## Development
 
 ```bash
