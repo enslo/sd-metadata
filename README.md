@@ -82,13 +82,6 @@ const newImageData = writeMetadata(imageData, metadata);
 
 ### Known Limitations
 
-- **Exif UserComment UTF-16LE Encoding**: The current implementation uses `charCodeAt()` for UTF-16LE encoding, which does not properly handle:
-  - Multibyte characters (e.g., Japanese, Chinese, Korean)
-  - Surrogate pairs (emoji and other Unicode characters beyond BMP)
-  - This affects JPEG and WebP formats when writing Exif UserComment
-  - Workaround: Use PNG format for full Unicode support
-  - Future: Implement proper UTF-16LE encoding with `TextEncoder`/`codePointAt()`
-
 - **A1111 Size Field Requirement**: The current A1111 parser treats the `Size` field as mandatory, returning a parse error if missing. This deviates from SD Prompt Reader's behavior:
   - SD Prompt Reader: Falls back to `"0x0"` (width=0, height=0) when `Size` is absent
   - Current implementation: Returns `parseError` when `Size` is missing
