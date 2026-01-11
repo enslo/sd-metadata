@@ -96,6 +96,12 @@ const newImageData = writeMetadata(imageData, metadata);
   - Future: Align with SD Prompt Reader by making `Size` optional with `"0x0"` fallback
   - Reference: [SD Prompt Reader a1111.py](https://github.com/receyuki/stable-diffusion-prompt-reader/blob/master/sd_prompt_reader/format/a1111.py)
 
+- **Raw Metadata Conversion for Unrecognized Formats**: Currently, `convertMetadata()` returns an error when encountering unrecognized formats (`status: 'unrecognized'`). Future enhancement would support "blind" conversion of raw chunks/segments between formats without understanding the content:
+  - Convert PNG `tEXt`/`iTXt` chunks → JPEG/WebP Exif/COM segments
+  - Convert JPEG/WebP segments → PNG chunks
+  - Enable format conversion for unknown/future tools without parser implementation
+  - Preserves metadata even when we don't understand its structure
+
 ## Development
 
 ```bash
