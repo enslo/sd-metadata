@@ -89,6 +89,13 @@ const newImageData = writeMetadata(imageData, metadata);
   - Workaround: Use PNG format for full Unicode support
   - Future: Implement proper UTF-16LE encoding with `TextEncoder`/`codePointAt()`
 
+- **A1111 Size Field Requirement**: The current A1111 parser treats the `Size` field as mandatory, returning a parse error if missing. This deviates from SD Prompt Reader's behavior:
+  - SD Prompt Reader: Falls back to `"0x0"` (width=0, height=0) when `Size` is absent
+  - Current implementation: Returns `parseError` when `Size` is missing
+  - This overly strict validation may reject valid A1111 metadata that lacks `Size` (e.g., some img2img workflows)
+  - Future: Align with SD Prompt Reader by making `Size` optional with `"0x0"` fallback
+  - Reference: [SD Prompt Reader a1111.py](https://github.com/receyuki/stable-diffusion-prompt-reader/blob/master/sd_prompt_reader/format/a1111.py)
+
 ## Development
 
 ```bash
