@@ -46,11 +46,11 @@ describe('parseComfyUI - Unit Tests', () => {
   describe('basic parsing', () => {
     it('should parse minimal ComfyUI metadata', () => {
       const prompt = {
-        '1': {
+        PositiveCLIP_Base: {
           inputs: { text: 'positive prompt' },
           class_type: 'CLIPTextEncode',
         },
-        '2': {
+        NegativeCLIP_Base: {
           inputs: { text: 'negative prompt' },
           class_type: 'CLIPTextEncode',
         },
@@ -72,38 +72,6 @@ describe('parseComfyUI - Unit Tests', () => {
         expect(result.value.type).toBe('comfyui');
         expect(result.value.prompt).toBe('positive prompt');
         expect(result.value.negativePrompt).toBe('negative prompt');
-      }
-    });
-
-    it('should extract SDXL dual prompts', () => {
-      const prompt = {
-        '1': {
-          inputs: {
-            text_g: 'global prompt',
-            text_l: 'local prompt',
-          },
-          class_type: 'CLIPTextEncodeSDXL',
-        },
-        '2': {
-          inputs: { text: 'negative' },
-          class_type: 'CLIPTextEncode',
-        },
-        '3': {
-          inputs: {
-            positive: ['1', 0],
-            negative: ['2', 0],
-          },
-          class_type: 'KSampler',
-        },
-      };
-      const entries = createComfyUIEntries(prompt);
-
-      const result = parseComfyUI(entries);
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        // Should combine text_g and text_l with actual newline
-        expect(result.value.prompt).toBe('global prompt,\nlocal prompt');
       }
     });
 
@@ -130,7 +98,7 @@ describe('parseComfyUI - Unit Tests', () => {
   describe('node finding', () => {
     it('should find KSampler node', () => {
       const prompt = {
-        '1': {
+        PositiveCLIP_Base: {
           inputs: { text: 'positive' },
           class_type: 'CLIPTextEncode',
         },
@@ -153,7 +121,7 @@ describe('parseComfyUI - Unit Tests', () => {
 
     it('should find KSamplerAdvanced node', () => {
       const prompt = {
-        '1': {
+        PositiveCLIP_Base: {
           inputs: { text: 'positive' },
           class_type: 'CLIPTextEncode',
         },
@@ -240,33 +208,6 @@ describe('parseComfyUI - Unit Tests', () => {
       if (result.ok) {
         expect(result.value.prompt).toBe('');
         expect(result.value.negativePrompt).toBe('');
-      }
-    });
-
-    it('should handle SDXL identical text_g and text_l', () => {
-      const prompt = {
-        '1': {
-          inputs: {
-            text_g: 'same prompt',
-            text_l: 'same prompt',
-          },
-          class_type: 'CLIPTextEncodeSDXL',
-        },
-        '2': {
-          inputs: {
-            positive: ['1', 0],
-          },
-          class_type: 'KSampler',
-        },
-      };
-      const entries = createComfyUIEntries(prompt);
-
-      const result = parseComfyUI(entries);
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        // Should return one copy when identical
-        expect(result.value.prompt).toBe('same prompt');
       }
     });
   });

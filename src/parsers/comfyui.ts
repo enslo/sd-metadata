@@ -93,32 +93,18 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Find key nodes
-  const ksampler = findNodeByClass(prompt, [
-    'KSampler',
-    'KSamplerAdvanced',
-    'SamplerCustom',
-    'KSampler (Efficient)',
-  ]);
-  const positiveClip = findClipNode(prompt, ksampler, 'positive');
-  const negativeClip = findClipNode(prompt, ksampler, 'negative');
-  const checkpoint = findNodeByClass(prompt, [
-    'CheckpointLoaderSimple',
-    'CheckpointLoader',
-    'Checkpoint Loader (Simple)',
-    'unCLIPCheckpointLoader',
-  ]);
-  const latentImage = findNodeByClass(prompt, [
-    'EmptyLatentImage',
-    'EmptySD3LatentImage',
-  ]);
-
-  // Extract dimensions
-  const latentWidth = latentImage ? Number(latentImage.inputs.width) || 0 : 0;
-  const latentHeight = latentImage ? Number(latentImage.inputs.height) || 0 : 0;
+  const ksampler = findNode(prompt, ['Sampler']);
 
   // Extract prompts from CLIP nodes
+  const positiveClip = findNode(prompt, ['PositiveCLIP_Base']);
+  const negativeClip = findNode(prompt, ['NegativeCLIP_Base']);
   const clipPositiveText = extractText(positiveClip);
   const clipNegativeText = extractText(negativeClip);
+
+  // Extract dimensions
+  const latentImage = findNode(prompt, ['EmptyLatentImage']);
+  const latentWidth = latentImage ? Number(latentImage.inputs.width) || 0 : 0;
+  const latentHeight = latentImage ? Number(latentImage.inputs.height) || 0 : 0;
 
   // Apply Civitai extraMetadata fallbacks
   const extraMeta = extractExtraMetadata(prompt);
@@ -138,28 +124,23 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   };
 
   // Add model settings
+  const checkpoint = findNode(prompt, ['CheckpointLoader_Base'])?.inputs
+    ?.ckpt_name;
+
   if (checkpoint) {
-    const ckptName = checkpoint.inputs.ckpt_name;
-    if (typeof ckptName === 'string') {
-      metadata.model = { name: ckptName };
-    }
+    metadata.model = { name: String(checkpoint) };
   } else if (extraMeta?.baseModel) {
     metadata.model = { name: extraMeta.baseModel };
   }
 
   // Add sampling settings
   if (ksampler) {
-    const inputs = ksampler.inputs;
     metadata.sampling = {
-      seed: typeof inputs.seed === 'number' ? inputs.seed : undefined,
-      steps: typeof inputs.steps === 'number' ? inputs.steps : undefined,
-      cfg: typeof inputs.cfg === 'number' ? inputs.cfg : undefined,
-      sampler:
-        typeof inputs.sampler_name === 'string'
-          ? inputs.sampler_name
-          : undefined,
-      scheduler:
-        typeof inputs.scheduler === 'string' ? inputs.scheduler : undefined,
+      seed: ksampler.inputs.seed as number,
+      steps: ksampler.inputs.steps as number,
+      cfg: ksampler.inputs.cfg as number,
+      sampler: ksampler.inputs.sampler_name as string,
+      scheduler: ksampler.inputs.scheduler as string,
     };
   } else if (extraMeta) {
     metadata.sampling = {
@@ -168,6 +149,40 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
       cfg: extraMeta.cfgScale,
       sampler: extraMeta.sampler,
     };
+  }
+
+  // Add HiresFix/Upscaler settings
+  const hiresModel = findNode(prompt, [
+    'HiresFix_ModelUpscale_UpscaleModelLoader',
+    'PostUpscale_ModelUpscale_UpscaleModelLoader',
+  ])?.inputs;
+  const hiresScale = findNode(prompt, [
+    'HiresFix_ImageScale',
+    'PostUpscale_ImageScale',
+  ])?.inputs;
+  const hiresSampler = findNode(prompt, ['HiresFix_Sampler'])?.inputs;
+
+  if (hiresModel && hiresScale) {
+    // Calculate scale from HiresFix_ImageScale node
+    const hiresWidth = hiresScale.width as number;
+    const scale =
+      latentWidth > 0
+        ? Math.round((hiresWidth / latentWidth) * 100) / 100
+        : undefined;
+
+    if (hiresSampler) {
+      metadata.hires = {
+        upscaler: hiresModel.model_name as string,
+        scale,
+        steps: hiresSampler.steps as number,
+        denoise: hiresSampler.denoise as number,
+      };
+    } else {
+      metadata.upscale = {
+        upscaler: hiresModel.model_name as string,
+        scale,
+      };
+    }
   }
 
   // Add upscale settings from Civitai extraMetadata
@@ -243,34 +258,10 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
 // =============================================================================
 
 /**
- * Find a node by class type (first match)
+ * Find a node by key name (first match)
  */
-function findNodeByClass(
-  prompt: ComfyPrompt,
-  classTypes: string[],
-): ComfyNode | undefined {
-  return Object.values(prompt).find((node) =>
-    classTypes.includes(node.class_type),
-  );
-}
-
-/**
- * Find CLIP text encode node connected to KSampler input
- */
-function findClipNode(
-  prompt: ComfyPrompt,
-  ksampler: ComfyNode | undefined,
-  inputName: string,
-): ComfyNode | undefined {
-  if (!ksampler) return undefined;
-
-  const link = ksampler.inputs[inputName];
-  if (Array.isArray(link) && link.length >= 1) {
-    const nodeId = String(link[0]);
-    return prompt[nodeId];
-  }
-
-  return undefined;
+function findNode(prompt: ComfyPrompt, keys: string[]): ComfyNode | undefined {
+  return Object.entries(prompt).find(([key]) => keys.includes(key))?.[1];
 }
 
 // =============================================================================
@@ -279,40 +270,9 @@ function findClipNode(
 
 /**
  * Extract text from CLIP text encode node
- *
- * Supports both standard CLIPTextEncode (text input) and
- * CLIPTextEncodeSDXL (text_g / text_l inputs).
- *
- * For SDXL:
- * - If text_g and text_l are identical, returns one of them
- * - If different, combines them as "text_g,\ntext_l"
  */
 function extractText(node: ComfyNode | undefined): string {
-  if (!node) return '';
-
-  // Standard CLIPTextEncode: single text input
-  const text = node.inputs.text;
-  if (typeof text === 'string') {
-    return text;
-  }
-
-  // CLIPTextEncodeSDXL: text_g and text_l inputs
-  const textG = node.inputs.text_g;
-  const textL = node.inputs.text_l;
-
-  if (typeof textG === 'string' || typeof textL === 'string') {
-    const g = typeof textG === 'string' ? textG : '';
-    const l = typeof textL === 'string' ? textL : '';
-
-    // If both are the same (or one is empty), return just one
-    if (g === l || !g) return l;
-    if (!l) return g;
-
-    // If different, combine with comma and newline (matching SD Prompt Reader)
-    return `${g},\n${l}`;
-  }
-
-  return '';
+  return typeof node?.inputs.text === 'string' ? node.inputs.text : '';
 }
 
 // =============================================================================

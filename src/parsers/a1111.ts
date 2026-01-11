@@ -75,7 +75,9 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
   const sampler = settingsMap.get('Sampler');
   const scheduler = settingsMap.get('Schedule type');
   const steps = parseNumber(settingsMap.get('Steps'));
-  const cfg = parseNumber(settingsMap.get('CFG scale'));
+  const cfg = parseNumber(
+    settingsMap.get('CFG scale') ?? settingsMap.get('CFG Scale'),
+  );
   const seed = parseNumber(settingsMap.get('Seed'));
   const clipSkip = parseNumber(settingsMap.get('Clip skip'));
 

@@ -1,0 +1,480 @@
+import { describe, expect, it } from 'vitest';
+import { parseComfyUI } from '../../../src/parsers/comfyui';
+import type { ComfyUIMetadata } from '../../../src/types';
+import { parseConvertedSample, parsePngSample } from '../helpers';
+
+describe('ComfyUI Parsers - Samples', () => {
+  describe('PNG samples', () => {
+    it('should parse comfyui.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>('comfyui.png', parseComfyUI);
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 422847914351919,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-hires.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-hires.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 1116526567339338,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: {
+          scale: 1.5,
+          upscaler: 'RealESRGAN_x4plus_anime_6B.pth',
+          steps: 10,
+          denoise: 0.3,
+        },
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-upscale.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-upscale.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 511796159331902,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: {
+          upscaler: 'SwinIR_4x.pth',
+          scale: 1.5,
+        },
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-saveimage-plus.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-saveimage-plus.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 434067965194649,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-save-image-extended.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-save-image-extended.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 779742380066441,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-saveimagewithmetadata.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-saveimagewithmetadata.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 38802053347333,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-comfy-image-saver.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-comfy-image-saver.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 106744160813738,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+  });
+
+  describe('WebP samples', () => {
+    it('should parse comfyui-saveimage-plus.webp', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'webp',
+        'comfyui-saveimage-plus.webp',
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 453851843419278,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-save-image-extended.webp', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'webp',
+        'comfyui-save-image-extended.webp',
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 602057552457611,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-saveimagewithmetadata.webp', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'webp',
+        'comfyui-saveimagewithmetadata.webp',
+      );
+
+      expect(meta).toEqual({
+        type: 'a1111',
+        software: 'sd-webui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku,',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          seed: 827555711811618,
+          steps: 20,
+          cfg: 5,
+          sampler: 'Euler a',
+          clipSkip: 2,
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-comfy-image-saver.webp', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'webp',
+        'comfyui-comfy-image-saver.webp',
+      );
+
+      expect(meta).toEqual({
+        type: 'a1111',
+        software: 'sd-webui',
+        prompt: 'unknown',
+        negativePrompt: 'unknown',
+        width: 512,
+        height: 512,
+        model: {
+          name: 'JANKUV5NSFWTrainedNoobai_v50',
+          hash: '217daae812',
+        },
+        sampling: {
+          seed: 0,
+          steps: 20,
+          cfg: 8,
+          sampler: 'euler_simple',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+  });
+
+  describe('JPEG samples', () => {
+    it('should parse comfyui-saveimage-plus.jpg', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'jpeg',
+        'comfyui-saveimage-plus.jpg',
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 577723948579568,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-save-image-extended.jpeg', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'jpeg',
+        'comfyui-save-image-extended.jpeg',
+      );
+
+      expect(meta).toEqual({
+        type: 'comfyui',
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 813617545434765,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-saveimagewithmetadata.jpeg', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'jpeg',
+        'comfyui-saveimagewithmetadata.jpeg',
+      );
+
+      expect(meta).toEqual({
+        type: 'a1111',
+        software: 'sd-webui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku,',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          seed: 347382230306562,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral_karras',
+          clipSkip: 2,
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+
+    it('should parse comfyui-comfy-image-saver.jpeg', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'jpeg',
+        'comfyui-comfy-image-saver.jpeg',
+      );
+
+      expect(meta).toEqual({
+        type: 'a1111',
+        software: 'sd-webui',
+        prompt: 'unknown',
+        negativePrompt: 'unknown',
+        width: 512,
+        height: 512,
+        model: {
+          name: 'JANKUV5NSFWTrainedNoobai_v50',
+          hash: '217daae812',
+        },
+        sampling: {
+          seed: 0,
+          steps: 20,
+          cfg: 8,
+          sampler: 'euler_simple',
+        },
+        hires: undefined,
+        upscale: undefined,
+        workflow: undefined,
+      });
+    });
+  });
+});
