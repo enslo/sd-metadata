@@ -81,15 +81,16 @@ describe('parseA1111', () => {
     expect(result.value.height).toBe(1360);
   });
 
-  it('should return error for non-A1111 format', () => {
+  it('should parse NovelAI format with no settings section', () => {
     const entries = loadEntries('novelai-full.png');
     const result = parseA1111(entries);
 
-    // NovelAI has 'Comment' keyword which A1111 parser now accepts,
-    // but it should fail to parse because the format is different (JSON vs A1111 text)
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    // May return parseError (invalid format) or unsupportedFormat (no parameters/Comment)
-    expect(['parseError', 'unsupportedFormat']).toContain(result.error.type);
+    // NovelAI has 'Comment' chunk but no "Steps:" marker
+    // Parser treats it as A1111 format with no settings section (width=0, height=0)
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.value.width).toBe(0);
+    expect(result.value.height).toBe(0);
   });
 });
