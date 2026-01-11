@@ -12,10 +12,28 @@ A TypeScript library to read and write metadata embedded in AI-generated images.
 
 ### Supported AI Tools
 
+#### Verified (Tested with sample files)
+
 - NovelAI
 - ComfyUI
 - Stable Diffusion WebUI (AUTOMATIC1111)
-- And more (based on sample image analysis)
+- Forge / Forge Neo
+- Civitai
+- InvokeAI
+- SwarmUI
+- TensorArt
+- Stability Matrix
+- HuggingFace Space
+- Ruined Fooocus
+
+#### Unverified (Based on reference implementations)
+
+> ⚠️ **Note**: The following parsers are implemented based on reference code from other libraries
+> but have not been verified with actual sample files. They may not work correctly.
+> Please report any issues if you encounter problems.
+
+- Easy Diffusion
+- Fooocus
 
 ## Installation
 

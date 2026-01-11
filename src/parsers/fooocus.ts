@@ -10,6 +10,11 @@ import { parseJson } from '../utils/json';
 /**
  * Fooocus JSON metadata structure
  *
+ * ⚠️ UNVERIFIED: This parser has not been verified with actual Fooocus samples.
+ * The implementation is based on reference code from other libraries but may not be
+ * fully accurate. Please report any issues if you encounter problems with Fooocus
+ * metadata parsing.
+ *
  * Fooocus stores metadata as JSON in:
  * - PNG: Comment chunk
  * - JPEG: comment field
