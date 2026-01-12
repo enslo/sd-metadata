@@ -16,6 +16,8 @@ import { createTextChunk, findSegment, stringify } from './utils';
  * Convert ComfyUI PNG chunks to JPEG/WebP segments
  *
  * Uses saveimage-plus format: stores chunk keywords as JSON keys.
+ * For chunks that contain JSON strings (prompt, workflow), parse them
+ * and store as objects to match saveimage-plus format.
  *
  * @param chunks - PNG text chunks
  * @returns Metadata segments for JPEG/WebP
@@ -23,10 +25,20 @@ import { createTextChunk, findSegment, stringify } from './utils';
 export function convertComfyUIPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  // Store all chunks as strings to ensure lossless round-trip
-  const data = Object.fromEntries(
-    chunks.map((chunk) => [chunk.keyword, chunk.text]),
-  );
+  // Parse JSON chunks and convert to objects
+  const data: Record<string, unknown> = {};
+
+  for (const chunk of chunks) {
+    // Try to parse as JSON
+    const parsed = parseJson<unknown>(chunk.text);
+    if (parsed.ok) {
+      // Store as object (matches saveimage-plus format)
+      data[chunk.keyword] = parsed.value;
+    } else {
+      // Not JSON, store as string
+      data[chunk.keyword] = chunk.text;
+    }
+  }
 
   return [
     {

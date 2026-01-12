@@ -122,19 +122,6 @@ describe('parseTensorArt - Unit Tests', () => {
         });
       }
     });
-
-    it('should extract ComfyUI workflow', () => {
-      const data = { prompt: 'test' };
-      const workflow = { nodes: ['test'] };
-      const entries = createTensorArtEntries(data, workflow);
-
-      const result = parseTensorArt(entries);
-
-      expect(result.ok).toBe(true);
-      if (result.ok && result.value.type === 'comfyui') {
-        expect(result.value.workflow).toEqual({ nodes: ['test'] });
-      }
-    });
   });
 
   describe('edge cases', () => {

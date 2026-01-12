@@ -58,6 +58,59 @@ function detectFromKeywords(
     return 'easydiffusion';
   }
 
+  // For JPEG/WebP: Check if Comment contains JSON with specific keys
+  // This handles cases where PNG chunks were converted to JPEG/WebP
+  const comment = entryRecord.Comment;
+  if (comment?.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(comment) as Record<string, unknown>;
+
+      // InvokeAI: has invokeai_metadata key in JSON
+      if ('invokeai_metadata' in parsed) {
+        return 'invokeai';
+      }
+
+      // ComfyUI: has both prompt and workflow keys in JSON
+      // Values can be either:
+      // 1. Objects (saveimage-plus format): {"prompt": {"nodes": [...]}, "workflow": {...}}
+      // 2. JSON strings (our converter): {"prompt": "{\"nodes\": [...]}", "workflow": "..."}
+      if ('prompt' in parsed && 'workflow' in parsed) {
+        const workflow = parsed.workflow;
+        const prompt = parsed.prompt;
+
+        // Check if values are objects (saveimage-plus) or JSON strings (our format)
+        const isObject =
+          typeof workflow === 'object' || typeof prompt === 'object';
+        const isJsonString =
+          (typeof workflow === 'string' && workflow.startsWith('{')) ||
+          (typeof prompt === 'string' && prompt.startsWith('{'));
+
+        if (isObject || isJsonString) {
+          return 'comfyui';
+        }
+      }
+
+      // SwarmUI: has sui_image_params key in JSON
+      if ('sui_image_params' in parsed) {
+        return 'swarmui';
+      }
+
+      // SwarmUI alternative: has both prompt and parameters keys
+      // (different from ComfyUI which has workflow, and values are plain text)
+      if ('prompt' in parsed && 'parameters' in parsed) {
+        const params = String(parsed.parameters || '');
+        if (
+          params.includes('sui_image_params') ||
+          params.includes('swarm_version')
+        ) {
+          return 'swarmui';
+        }
+      }
+    } catch {
+      // Not valid JSON, continue to content-based detection
+    }
+  }
+
   return null;
 }
 

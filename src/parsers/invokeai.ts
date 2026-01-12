@@ -40,7 +40,21 @@ export function parseInvokeAI(entries: MetadataEntry[]): InternalParseResult {
   const entryRecord = buildEntryRecord(entries);
 
   // Find invokeai_metadata entry
-  const metadataText = entryRecord.invokeai_metadata;
+  // For PNG: direct keyword
+  // For JPEG/WebP: inside Comment JSON
+  let metadataText = entryRecord.invokeai_metadata;
+
+  if (!metadataText && entryRecord.Comment) {
+    // Try to parse Comment as JSON
+    const commentParsed = parseJson<Record<string, unknown>>(
+      entryRecord.Comment,
+    );
+    if (commentParsed.ok && 'invokeai_metadata' in commentParsed.value) {
+      // Extract invokeai_metadata from JSON
+      metadataText = JSON.stringify(commentParsed.value.invokeai_metadata);
+    }
+  }
+
   if (!metadataText) {
     return Result.error({ type: 'unsupportedFormat' });
   }

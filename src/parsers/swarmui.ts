@@ -43,8 +43,30 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
   // Build entry record for easy access
   const entryRecord = buildEntryRecord(entries);
 
-  // Find parameters entry (PNG uses 'parameters', JPEG/WebP uses 'Comment')
-  const parametersText = entryRecord.parameters ?? entryRecord.Comment;
+  // Find parameters entry
+  // For PNG: direct keyword 'parameters'
+  // For JPEG/WebP: inside Comment JSON
+  let parametersText = entryRecord.parameters;
+
+  if (!parametersText && entryRecord.Comment) {
+    // Try to parse Comment as JSON
+    const commentParsed = parseJson<Record<string, unknown>>(
+      entryRecord.Comment,
+    );
+    if (commentParsed.ok) {
+      // Check for 'parameters' key (our converter format)
+      if ('parameters' in commentParsed.value) {
+        parametersText = JSON.stringify(commentParsed.value.parameters);
+      }
+      // Also check direct sui_image_params (alternative format)
+      else if ('sui_image_params' in commentParsed.value) {
+        parametersText = JSON.stringify({
+          sui_image_params: commentParsed.value.sui_image_params,
+        });
+      }
+    }
+  }
+
   if (!parametersText) {
     return Result.error({ type: 'unsupportedFormat' });
   }

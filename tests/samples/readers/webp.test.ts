@@ -19,7 +19,14 @@ describe('WebP Readers - Samples', () => {
       const result = readWebpMetadata(data);
 
       expect(result.ok).toBe(true);
-      // WebP may not have EXIF data, so we don't check value.length
+      if (result.ok) {
+        // Empty file has no segments, others should have at least some
+        if (sample === 'empty.webp') {
+          expect(result.value.length).toBe(0);
+        } else {
+          expect(result.value.length).toBeGreaterThan(0);
+        }
+      }
     });
   }
 });

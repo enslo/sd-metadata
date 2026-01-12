@@ -75,7 +75,9 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
   const sampler = settingsMap.get('Sampler');
   const scheduler = settingsMap.get('Schedule type');
   const steps = parseNumber(settingsMap.get('Steps'));
-  const cfg = parseNumber(settingsMap.get('CFG scale'));
+  const cfg = parseNumber(
+    settingsMap.get('CFG scale') ?? settingsMap.get('CFG Scale'),
+  );
   const seed = parseNumber(settingsMap.get('Seed'));
   const clipSkip = parseNumber(settingsMap.get('Clip skip'));
 
@@ -99,22 +101,19 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
 
   // Add hires settings
   const hiresScale = parseNumber(settingsMap.get('Hires upscale'));
-  const hiresUpscaler = settingsMap.get('Hires upscaler');
+  const upscaler = settingsMap.get('Hires upscaler');
   const hiresSteps = parseNumber(settingsMap.get('Hires steps'));
   const denoise = parseNumber(settingsMap.get('Denoising strength'));
+  const hiresSize = settingsMap.get('Hires size');
 
   if (
-    hiresScale !== undefined ||
-    hiresUpscaler !== undefined ||
-    hiresSteps !== undefined ||
-    denoise !== undefined
+    [hiresScale, hiresSize, upscaler, hiresSteps, denoise].some(
+      (v) => v !== undefined,
+    )
   ) {
-    metadata.hires = {
-      scale: hiresScale,
-      upscaler: hiresUpscaler,
-      steps: hiresSteps,
-      denoise,
-    };
+    const [hiresWidth] = parseSize(hiresSize ?? '');
+    const scale = hiresScale ?? hiresWidth / width;
+    metadata.hires = { scale, upscaler, steps: hiresSteps, denoise };
   }
 
   return Result.ok(metadata);

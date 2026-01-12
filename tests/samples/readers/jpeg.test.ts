@@ -20,8 +20,12 @@ describe('JPEG Readers - Samples', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        // Should extract at least some segments
-        expect(result.value.length).toBeGreaterThan(0);
+        // Empty file has no segments, others should have at least some
+        if (sample === 'empty.jpg') {
+          expect(result.value.length).toBe(0);
+        } else {
+          expect(result.value.length).toBeGreaterThan(0);
+        }
       }
     });
   }

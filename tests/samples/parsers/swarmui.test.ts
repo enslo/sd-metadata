@@ -1,0 +1,160 @@
+import { describe, expect, it } from 'vitest';
+import { parseSwarmUI } from '../../../src/parsers/swarmui';
+import type { SwarmUIMetadata } from '../../../src/types';
+import { parseConvertedSample, parsePngSample } from '../helpers';
+
+describe('SwarmUI Parsers - Samples', () => {
+  describe('PNG samples', () => {
+    it('should parse swarmui.png', () => {
+      const meta = parsePngSample<SwarmUIMetadata>('swarmui.png', parseSwarmUI);
+
+      expect(meta).toEqual({
+        type: 'swarmui',
+        software: 'swarmui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+        },
+        sampling: {
+          seed: 2083100758,
+          steps: 20,
+          cfg: 7,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+
+    it('should parse swarmui-hires.png', () => {
+      const meta = parsePngSample<SwarmUIMetadata>(
+        'swarmui-hires.png',
+        parseSwarmUI,
+      );
+
+      expect(meta).toEqual({
+        type: 'swarmui',
+        software: 'swarmui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 768,
+        height: 768,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+        },
+        sampling: {
+          seed: 733776228,
+          steps: 20,
+          cfg: 7,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: {
+          scale: 1.5,
+          upscaler: 'model-RealESRGAN_x4plus_anime_6B.pth',
+          denoise: 0.3,
+        },
+        upscale: undefined,
+      });
+    });
+
+    it('should parse swarmui-upscale.png', () => {
+      const meta = parsePngSample<SwarmUIMetadata>(
+        'swarmui-upscale.png',
+        parseSwarmUI,
+      );
+
+      expect(meta).toEqual({
+        type: 'swarmui',
+        software: 'swarmui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1536,
+        height: 1536,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+        },
+        sampling: {
+          seed: 1741309074,
+          steps: 20,
+          cfg: 7,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+  });
+
+  describe('JPEG samples', () => {
+    it('should parse swarmui.jpg', () => {
+      const meta = parseConvertedSample<SwarmUIMetadata>('jpeg', 'swarmui.jpg');
+
+      expect(meta).toEqual({
+        type: 'swarmui',
+        software: 'swarmui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+        },
+        sampling: {
+          seed: 697543491,
+          steps: 20,
+          cfg: 7,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+  });
+
+  describe('WebP samples', () => {
+    it('should parse swarmui.webp', () => {
+      const meta = parseConvertedSample<SwarmUIMetadata>(
+        'webp',
+        'swarmui.webp',
+      );
+
+      expect(meta).toEqual({
+        type: 'swarmui',
+        software: 'swarmui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+        },
+        sampling: {
+          seed: 830680752,
+          steps: 20,
+          cfg: 7,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+  });
+});

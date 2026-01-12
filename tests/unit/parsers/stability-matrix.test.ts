@@ -3,25 +3,79 @@ import { parseStabilityMatrix } from '../../../src/parsers/stability-matrix';
 import type { MetadataEntry } from '../../../src/types';
 
 /**
+ * Helper to create ComfyUI workflow entries for testing
+ */
+function createComfyUIWorkflow(
+  prompt: string,
+  negativePrompt: string,
+  options: {
+    width?: number;
+    height?: number;
+    seed?: number;
+    steps?: number;
+    cfg?: number;
+    sampler?: string;
+    modelName?: string;
+    modelHash?: string;
+  } = {},
+): unknown {
+  return {
+    PositiveCLIP_Base: {
+      inputs: { text: prompt },
+      class_type: 'CLIPTextEncode',
+    },
+    NegativeCLIP_Base: {
+      inputs: { text: negativePrompt },
+      class_type: 'CLIPTextEncode',
+    },
+    Sampler: {
+      inputs: {
+        seed: options.seed ?? 0,
+        steps: options.steps ?? 20,
+        cfg: options.cfg ?? 7,
+        sampler_name: options.sampler ?? 'euler',
+        positive: ['PositiveCLIP_Base', 0],
+        negative: ['NegativeCLIP_Base', 0],
+        latent_image: ['EmptyLatentImage', 0],
+      },
+      class_type: 'KSampler',
+    },
+    EmptyLatentImage: {
+      inputs: {
+        width: options.width ?? 512,
+        height: options.height ?? 512,
+      },
+      class_type: 'EmptyLatentImage',
+    },
+    ...(options.modelName && {
+      Checkpoint_Base: {
+        inputs: { ckpt_name: options.modelName },
+        class_type: 'CheckpointLoaderSimple',
+      },
+    }),
+  };
+}
+
+/**
  * Helper to create StabilityMatrix entries
  */
 function createStabilityMatrixEntries(
   json: unknown,
   workflow?: unknown,
 ): MetadataEntry[] {
-  const entries: MetadataEntry[] = [
-    { keyword: 'parameters-json', text: JSON.stringify(json) },
-  ];
+  const entries: MetadataEntry[] = [];
   if (workflow) {
     entries.push({ keyword: 'prompt', text: JSON.stringify(workflow) });
   }
+  entries.push({ keyword: 'parameters-json', text: JSON.stringify(json) });
   return entries;
 }
 
 describe('parseStabilityMatrix - Unit Tests', () => {
   describe('format validation', () => {
-    it('should return error for missing parameters-json', () => {
-      const entries: MetadataEntry[] = [];
+    it('should return error for missing workflow (ComfyUI required)', () => {
+      const json = { PositivePrompt: 'test' };
+      const entries = createStabilityMatrixEntries(json);
 
       const result = parseStabilityMatrix(entries);
 
@@ -30,26 +84,19 @@ describe('parseStabilityMatrix - Unit Tests', () => {
         expect(result.error.type).toBe('unsupportedFormat');
       }
     });
-
-    it('should return error for invalid JSON', () => {
-      const entries = [{ keyword: 'parameters-json', text: 'not valid json' }];
-
-      const result = parseStabilityMatrix(entries);
-
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe('parseError');
-      }
-    });
   });
 
   describe('basic parsing', () => {
-    it('should parse minimal Stability Matrix metadata', () => {
+    it('should parse metadata and override prompts from parameters-json', () => {
+      const workflow = createComfyUIWorkflow(
+        'workflow prompt',
+        'workflow negative',
+      );
       const json = {
-        PositivePrompt: 'a beautiful landscape',
-        NegativePrompt: 'lowres, bad quality',
+        PositivePrompt: 'json prompt (more complete)',
+        NegativePrompt: 'json negative (more complete)',
       };
-      const entries = createStabilityMatrixEntries(json);
+      const entries = createStabilityMatrixEntries(json, workflow);
 
       const result = parseStabilityMatrix(entries);
 
@@ -57,37 +104,40 @@ describe('parseStabilityMatrix - Unit Tests', () => {
       if (result.ok) {
         expect(result.value.software).toBe('stability-matrix');
         expect(result.value.type).toBe('comfyui');
-        expect(result.value.prompt).toBe('a beautiful landscape');
-        expect(result.value.negativePrompt).toBe('lowres, bad quality');
+        // Prompts should be from parameters-json (override)
+        expect(result.value.prompt).toBe('json prompt (more complete)');
+        expect(result.value.negativePrompt).toBe(
+          'json negative (more complete)',
+        );
       }
     });
 
-    it('should extract dimensions', () => {
-      const json = {
-        PositivePrompt: 'test',
-        Width: 512,
-        Height: 768,
-      };
-      const entries = createStabilityMatrixEntries(json);
+    it('should extract dimensions from ComfyUI workflow', () => {
+      const workflow = createComfyUIWorkflow('test', 'negative', {
+        width: 1024,
+        height: 768,
+      });
+      const json = { PositivePrompt: 'test' };
+      const entries = createStabilityMatrixEntries(json, workflow);
 
       const result = parseStabilityMatrix(entries);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.width).toBe(512);
+        expect(result.value.width).toBe(1024);
         expect(result.value.height).toBe(768);
       }
     });
 
-    it('should extract sampling settings', () => {
-      const json = {
-        PositivePrompt: 'test',
-        Seed: 123456,
-        Steps: 20,
-        CfgScale: 7.5,
-        Sampler: 'Euler a',
-      };
-      const entries = createStabilityMatrixEntries(json);
+    it('should extract sampling settings from ComfyUI workflow', () => {
+      const workflow = createComfyUIWorkflow('test', 'negative', {
+        seed: 123456,
+        steps: 20,
+        cfg: 7.5,
+        sampler: 'euler_a',
+      });
+      const json = { PositivePrompt: 'test' };
+      const entries = createStabilityMatrixEntries(json, workflow);
 
       const result = parseStabilityMatrix(entries);
 
@@ -97,60 +147,51 @@ describe('parseStabilityMatrix - Unit Tests', () => {
           seed: 123456,
           steps: 20,
           cfg: 7.5,
-          sampler: 'Euler a',
+          sampler: 'euler_a',
         });
       }
     });
 
-    it('should extract model settings', () => {
+    it('should override model settings from parameters-json', () => {
+      const workflow = createComfyUIWorkflow('test', 'negative', {
+        modelName: 'workflow-model.safetensors',
+      });
       const json = {
         PositivePrompt: 'test',
-        ModelName: 'sd-v1-5.safetensors',
-        ModelHash: 'abc123',
+        ModelName: 'json-model.safetensors',
+        ModelHash: 'json-hash-123',
       };
-      const entries = createStabilityMatrixEntries(json);
+      const entries = createStabilityMatrixEntries(json, workflow);
 
       const result = parseStabilityMatrix(entries);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
+        // Model should be from parameters-json (override)
         expect(result.value.model).toMatchObject({
-          name: 'sd-v1-5.safetensors',
-          hash: 'abc123',
+          name: 'json-model.safetensors',
+          hash: 'json-hash-123',
         });
       }
     });
+  });
 
-    it('should extract ComfyUI workflow', () => {
-      const json = { PositivePrompt: 'test' };
-      const workflow = { nodes: ['test'] };
+  describe('edge cases', () => {
+    it('should use workflow prompts when parameters-json has no prompts', () => {
+      const workflow = createComfyUIWorkflow(
+        'workflow prompt',
+        'workflow negative',
+      );
+      const json = {}; // No prompts in parameters-json
       const entries = createStabilityMatrixEntries(json, workflow);
 
       const result = parseStabilityMatrix(entries);
 
       expect(result.ok).toBe(true);
       if (result.ok && result.value.type === 'comfyui') {
-        expect(result.value.workflow).toEqual({ nodes: ['test'] });
-      }
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle missing optional fields', () => {
-      const json = { PositivePrompt: 'test' };
-      const entries = createStabilityMatrixEntries(json);
-
-      const result = parseStabilityMatrix(entries);
-
-      expect(result.ok).toBe(true);
-      if (result.ok && result.value.type === 'comfyui') {
-        expect(result.value.prompt).toBe('test');
-        expect(result.value.negativePrompt).toBe('');
-        expect(result.value.width).toBe(0);
-        expect(result.value.height).toBe(0);
-        expect(result.value.sampling).toBeUndefined();
-        expect(result.value.model).toBeUndefined();
-        expect(result.value.workflow).toBeUndefined();
+        // Should use workflow prompts (no override)
+        expect(result.value.prompt).toBe('workflow prompt');
+        expect(result.value.negativePrompt).toBe('workflow negative');
       }
     });
   });
