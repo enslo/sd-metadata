@@ -10,7 +10,8 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
-import { createTextChunk, findSegment, stringify } from './utils';
+import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
+import { findSegment, stringify } from './utils';
 
 /**
  * Convert SwarmUI PNG chunks to JPEG/WebP segments
@@ -58,20 +59,36 @@ export function convertSwarmUISegmentsToPng(
 
   const parsed = parseJson<Record<string, unknown>>(userComment.data);
   if (!parsed.ok) {
-    // Fallback for non-JSON
-    return createTextChunk('parameters', userComment.data);
+    // Fallback for non-JSON (use Unicode escaping)
+    return createEncodedChunk(
+      'parameters',
+      userComment.data,
+      getEncodingStrategy('swarmui'),
+    );
   }
 
   // Check for round-trip format (prompt and/or parameters keys)
   const chunks = [
-    createTextChunk('prompt', stringify(parsed.value.prompt)),
-    createTextChunk('parameters', stringify(parsed.value.parameters)),
-  ].flat();
+    ...createEncodedChunk(
+      'prompt',
+      stringify(parsed.value.prompt),
+      getEncodingStrategy('swarmui'),
+    ),
+    ...createEncodedChunk(
+      'parameters',
+      stringify(parsed.value.parameters),
+      getEncodingStrategy('swarmui'),
+    ),
+  ];
 
   if (chunks.length > 0) {
     return chunks;
   }
 
   // Fallback: return as parameters chunk
-  return createTextChunk('parameters', userComment.data);
+  return createEncodedChunk(
+    'parameters',
+    userComment.data,
+    getEncodingStrategy('swarmui'),
+  );
 }

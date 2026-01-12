@@ -10,7 +10,8 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
-import { createTextChunk, findSegment, stringify } from './utils';
+import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
+import { findSegment, stringify } from './utils';
 
 /**
  * Convert ComfyUI PNG chunks to JPEG/WebP segments
@@ -64,9 +65,13 @@ const tryParseExtendedFormat = (
   }
 
   return [
-    createTextChunk('prompt', make?.data),
-    createTextChunk('workflow', imageDescription?.data),
-  ].flat();
+    ...createEncodedChunk('prompt', make?.data, getEncodingStrategy('comfyui')),
+    ...createEncodedChunk(
+      'workflow',
+      imageDescription?.data,
+      getEncodingStrategy('comfyui'),
+    ),
+  ];
 };
 
 /**
@@ -85,12 +90,20 @@ const tryParseSaveImagePlusFormat = (
   const parsed = parseJson<Record<string, unknown>>(userComment.data);
   if (!parsed.ok) {
     // Not valid JSON, return as prompt fallback
-    return createTextChunk('prompt', userComment.data);
+    return createEncodedChunk(
+      'prompt',
+      userComment.data,
+      getEncodingStrategy('comfyui'),
+    );
   }
 
-  // Convert all keys to PNG chunks
+  // Convert all keys to PNG chunks with Unicode escaping
   return Object.entries(parsed.value).flatMap(([keyword, value]) =>
-    createTextChunk(keyword, stringify(value)),
+    createEncodedChunk(
+      keyword,
+      stringify(value),
+      getEncodingStrategy('comfyui'),
+    ),
   );
 };
 

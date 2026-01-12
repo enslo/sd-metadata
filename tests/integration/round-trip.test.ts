@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { read, write } from '../../src/index';
+import { expectRawEqual } from '../helpers/raw-equal';
 
 /**
  * Load a sample file from the samples directory
@@ -52,9 +53,7 @@ describe('Round-trip preservation', () => {
 
           // Metadata should be identical
           expect(secondRead.metadata).toEqual(firstRead.metadata);
-          // TODO: Raw comparison fails due to chunk type differences (iTXt/tEXt)
-          // Need to implement dynamic chunk type selection
-          // expect(secondRead.raw).toEqual(firstRead.raw);
+          expectRawEqual(secondRead.raw, firstRead.raw);
         });
       }
     });
@@ -85,8 +84,7 @@ describe('Round-trip preservation', () => {
           if (secondRead.status !== 'success') return;
 
           expect(secondRead.metadata).toEqual(firstRead.metadata);
-          // TODO: Raw comparison fails due to chunk type differences
-          // expect(secondRead.raw).toEqual(firstRead.raw);
+          expectRawEqual(secondRead.raw, firstRead.raw);
         });
       }
     });
@@ -115,8 +113,7 @@ describe('Round-trip preservation', () => {
           if (secondRead.status !== 'success') return;
 
           expect(secondRead.metadata).toEqual(firstRead.metadata);
-          // TODO: Raw comparison fails due to chunk type differences
-          // expect(secondRead.raw).toEqual(firstRead.raw);
+          expectRawEqual(secondRead.raw, firstRead.raw);
         });
       }
     });
@@ -162,11 +159,7 @@ describe('Round-trip preservation', () => {
 
           // Metadata should match original
           expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          // TODO: Raw comparison fails due to:
-          // 1. iTXt -> tEXt conversion
-          // 2. JSON formatting loss
-          // 3. Unicode escape expansion
-          // expect(finalRead.raw).toEqual(originalMetadata.raw);
+          expectRawEqual(finalRead.raw, originalMetadata.raw);
         });
       }
     });
@@ -207,8 +200,7 @@ describe('Round-trip preservation', () => {
           if (finalRead.status !== 'success') return;
 
           expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          // TODO: Raw comparison fails (see above)
-          // expect(finalRead.raw).toEqual(originalMetadata.raw);
+          expectRawEqual(finalRead.raw, originalMetadata.raw);
         });
       }
     });
@@ -249,8 +241,7 @@ describe('Round-trip preservation', () => {
           if (finalRead.status !== 'success') return;
 
           expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          // TODO: Raw comparison fails (see above)
-          // expect(finalRead.raw).toEqual(originalMetadata.raw);
+          expectRawEqual(finalRead.raw, originalMetadata.raw);
         });
       }
     });

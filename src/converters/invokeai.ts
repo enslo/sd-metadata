@@ -2,7 +2,7 @@
  * InvokeAI metadata conversion utilities
  *
  * InvokeAI stores metadata as:
- * - PNG: `invokeai_metadata` + `invokeai_graph` iTXt chunks (both JSON)
+ * - PNG: `invokeai_metadata` + `invokeai_graph` iTXt/tEXt chunks (both JSON, dynamic selection)
  * - JPEG/WebP: Not officially supported by InvokeAI
  *
  * For conversion, we use a JSON format similar to ComfyUI saveimage-plus:
@@ -11,7 +11,8 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
-import { createITxtChunk, findSegment, stringify } from './utils';
+import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
+import { findSegment, stringify } from './utils';
 
 /**
  * Convert InvokeAI PNG chunks to JPEG/WebP segments
@@ -59,22 +60,40 @@ export function convertInvokeAISegmentsToPng(
 
   const parsed = parseJson<Record<string, unknown>>(userComment.data);
   if (!parsed.ok) {
-    // Fallback for non-JSON
-    return createITxtChunk('invokeai_metadata', userComment.data);
+    // Not valid JSON, store as single chunk with dynamic selection
+    return createEncodedChunk(
+      'invokeai_metadata',
+      userComment.data,
+      getEncodingStrategy('invokeai'),
+    );
   }
 
+  // Parse saved chunks
+  const metadataText = stringify(parsed.value.invokeai_metadata);
+  const graphText = stringify(parsed.value.invokeai_graph);
+
+  // Create chunks with dynamic selection
   const chunks = [
-    createITxtChunk(
+    ...createEncodedChunk(
       'invokeai_metadata',
-      stringify(parsed.value.invokeai_metadata),
+      metadataText,
+      getEncodingStrategy('invokeai'),
     ),
-    createITxtChunk('invokeai_graph', stringify(parsed.value.invokeai_graph)),
-  ].flat();
+    ...createEncodedChunk(
+      'invokeai_graph',
+      graphText,
+      getEncodingStrategy('invokeai'),
+    ),
+  ];
 
   if (chunks.length > 0) {
     return chunks;
   }
 
-  // Fallback
-  return createITxtChunk('invokeai_metadata', userComment.data);
+  // Fallback: return as invokeai_metadata chunk
+  return createEncodedChunk(
+    'invokeai_metadata',
+    userComment.data,
+    getEncodingStrategy('invokeai'),
+  );
 }
