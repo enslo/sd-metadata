@@ -6,6 +6,7 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
+import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
 import { createTextChunk, findSegment, stringify } from './utils';
 
 /** Fixed values for NovelAI PNG chunks */
@@ -23,38 +24,34 @@ const NOVELAI_SOFTWARE = 'NovelAI';
  * - Generation time: time
  * - Comment: full JSON parameters
  *
- * JPEG/WebP structure:
- * - exifImageDescription: short prompt (from Description)
- * - exifUserComment: nested JSON with all chunks
- *
- * @param chunks - PNG text chunks from NovelAI image
+ * @param chunks - PNG text chunks
  * @returns Metadata segments for JPEG/WebP
  */
 export function convertNovelaiPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  const chunkMap = Object.fromEntries(
-    chunks.map((chunk) => [chunk.keyword, chunk.text]),
-  );
+  const comment = chunks.find((c) => c.keyword === 'Comment');
+  if (!comment) {
+    return [];
+  }
 
+  // Parse and extract all chunk data
+  const data: Record<string, string> = {};
+  for (const chunk of chunks) {
+    data[chunk.keyword] = chunk.text;
+  }
+
+  // For JPEG: store as JSON in exifUserComment
   return [
-    ...(chunkMap.Description
-      ? [
-          {
-            source: { type: 'exifImageDescription' as const },
-            data: chunkMap.Description,
-          },
-        ]
-      : []),
     {
-      source: { type: 'exifUserComment' as const },
-      data: JSON.stringify(chunkMap),
+      source: { type: 'exifUserComment' },
+      data: JSON.stringify(data),
     },
   ];
 }
 
 /**
- * Parse from exifUserComment format
+ * Helper: Parse from exifUserComment (combined JSON format)
  */
 const parseFromUserComment = (
   userCommentSeg: MetadataSegment,
@@ -69,11 +66,17 @@ const parseFromUserComment = (
   return [
     // Title (required, use default if missing)
     createTextChunk('Title', stringify(parsed.value.Title) ?? NOVELAI_TITLE),
-    // Description (optional, fallback to segment)
-    createTextChunk(
-      'Description',
-      stringify(parsed.value.Description) ?? descriptionSeg?.data,
-    ),
+    // Description (optional, use dynamic selection for this chunk only)
+    ...(() => {
+      const descText =
+        stringify(parsed.value.Description) ?? descriptionSeg?.data;
+      if (!descText) return [];
+      return createEncodedChunk(
+        'Description',
+        descText,
+        getEncodingStrategy('novelai'),
+      );
+    })(),
     // Software (required, use default if missing)
     createTextChunk(
       'Software',
@@ -92,15 +95,22 @@ const parseFromUserComment = (
 };
 
 /**
- * Parse from JPEG COM segment format
+ * Helper: Parse from JPEG COM segment format
  */
 const parseFromComSegment = (
   comSeg: MetadataSegment,
   descriptionSeg: MetadataSegment | undefined,
 ): PngTextChunk[] => {
+  const descText = descriptionSeg?.data;
   return [
     createTextChunk('Title', NOVELAI_TITLE),
-    createTextChunk('Description', descriptionSeg?.data),
+    ...(descText
+      ? createEncodedChunk(
+          'Description',
+          descText,
+          getEncodingStrategy('novelai'),
+        )
+      : []),
     createTextChunk('Software', NOVELAI_SOFTWARE),
     createTextChunk('Comment', comSeg.data),
   ].flat();

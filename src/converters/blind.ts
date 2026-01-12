@@ -7,6 +7,7 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
+import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
 
 /**
  * Convert ALL PNG chunks to SINGLE exifUserComment segment with JSON
@@ -51,15 +52,18 @@ export function blindSegmentsToPng(
   // Try to parse as JSON
   const parsed = parseJson<Record<string, unknown>>(userComment.data);
   if (parsed.ok) {
-    // Convert JSON object back to chunks
-    return Object.entries(parsed.value)
-      .map(([keyword, value]) => {
-        const text = typeof value === 'string' ? value : JSON.stringify(value);
-        return { type: 'tEXt' as const, keyword, text };
-      })
-      .filter((chunk) => chunk.text); // Remove empty chunks
+    // Reconstruct individual chunks with dynamic selection
+    return Object.entries(parsed.value).flatMap(([keyword, value]) => {
+      const text = typeof value === 'string' ? value : JSON.stringify(value);
+      if (!text) return [];
+      return createEncodedChunk(keyword, text, getEncodingStrategy('blind'));
+    });
   }
 
-  // Fallback: if not JSON, treat as single chunk
-  return [{ type: 'tEXt', keyword: 'metadata', text: userComment.data }];
+  // Not JSON: create single metadata chunk with dynamic selection
+  return createEncodedChunk(
+    'metadata',
+    userComment.data,
+    getEncodingStrategy('blind'),
+  );
 }

@@ -3,11 +3,12 @@
  *
  * Handles conversion for sd-webui, forge, forge-neo, and civitai.
  * A1111 format stores metadata as plain text in:
- * - PNG: `parameters` tEXt chunk
+ * - PNG: `parameters` tEXt/iTXt chunk (dynamic selection)
  * - JPEG/WebP: Exif UserComment
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
+import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
 
 /**
  * Convert A1111-format PNG chunks to JPEG/WebP segments
@@ -24,7 +25,7 @@ export function convertA1111PngToSegments(
     return [];
   }
 
-  // Simply copy to exifUserComment
+  //Simply copy to exifUserComment
   return [
     {
       source: { type: 'exifUserComment' },
@@ -48,12 +49,10 @@ export function convertA1111SegmentsToPng(
     return [];
   }
 
-  // Simply copy to parameters chunk
-  return [
-    {
-      type: 'tEXt',
-      keyword: 'parameters',
-      text: userComment.data,
-    },
-  ];
+  // Use dynamic selection (tEXt for ASCII, iTXt for non-ASCII)
+  return createEncodedChunk(
+    'parameters',
+    userComment.data,
+    getEncodingStrategy('a1111'),
+  );
 }

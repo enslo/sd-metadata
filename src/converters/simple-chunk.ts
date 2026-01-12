@@ -2,10 +2,11 @@
  * Simple chunk converter utilities
  *
  * Factory functions for converters that simply copy a single chunk keyword
- * between PNG and JPEG/WebP formats.
+ * between PNG and JPEG/WebP formats, with encoding based on tool strategy.
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
+import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
 
 /**
  * Create a PNG-to-segments converter that extracts a single chunk by keyword
@@ -27,7 +28,9 @@ export function createPngToSegments(
 /**
  * Create a segments-to-PNG converter that writes to a single chunk keyword
  *
- * @param keyword - The PNG chunk keyword to write
+ * Uses getEncodingStrategy to determine encoding based on keyword (tool name).
+ *
+ * @param keyword - The PNG chunk keyword to write (also used as tool name for strategy)
  * @returns Converter function
  */
 export function createSegmentsToPng(
@@ -37,8 +40,13 @@ export function createSegmentsToPng(
     const userComment = segments.find(
       (s) => s.source.type === 'exifUserComment',
     );
-    return !userComment
-      ? []
-      : [{ type: 'tEXt', keyword, text: userComment.data }];
+    if (!userComment) return [];
+
+    // Use keyword as tool name for strategy lookup
+    return createEncodedChunk(
+      keyword,
+      userComment.data,
+      getEncodingStrategy(keyword),
+    );
   };
 }
