@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { read, write } from '../../src/index';
-import { expectRawEqual } from '../helpers/raw-equal';
+import { expectNovelAIRawEqual, expectRawEqual } from '../helpers/raw-equal';
 
 /**
  * Load a sample file from the samples directory
@@ -337,8 +337,17 @@ describe('Round-trip preservation', () => {
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
+          // Parsed metadata should always match
           expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          expectRawEqual(finalRead.raw, originalMetadata.raw);
+
+          // Raw metadata validation
+          if (tool === 'NovelAI') {
+            // NovelAI: partial check due to intentional Description correction
+            expectNovelAIRawEqual(finalRead.raw, originalMetadata.raw);
+          } else {
+            // Other tools: full content-equivalent check
+            expectRawEqual(finalRead.raw, originalMetadata.raw);
+          }
         });
       }
     });

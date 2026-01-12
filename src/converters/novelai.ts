@@ -17,9 +17,9 @@ const NOVELAI_SOFTWARE = 'NovelAI';
  * Convert NovelAI PNG chunks to JPEG/WebP segments
  *
  * PNG structure:
- * - Title: "NovelAI generated image"
+ * - Title: \"NovelAI generated image\"
  * - Description: short prompt
- * - Software: "NovelAI"
+ * - Software: \"NovelAI\"
  * - Source: version info
  * - Generation time: time
  * - Comment: full JSON parameters
@@ -35,86 +35,53 @@ export function convertNovelaiPngToSegments(
     return [];
   }
 
-  // Parse and extract all chunk data
-  const data: Record<string, string> = {};
-  for (const chunk of chunks) {
-    data[chunk.keyword] = chunk.text;
-  }
+  const description = chunks.find((c) => c.keyword === 'Description');
+  const data = buildUserCommentJson(chunks);
 
-  // For JPEG: store as JSON in exifUserComment
-  return [
-    {
-      source: { type: 'exifUserComment' },
-      data: JSON.stringify(data),
-    },
-  ];
+  // Build segments array declaratively
+  const descriptionSegment: MetadataSegment[] = description
+    ? [
+        {
+          source: { type: 'exifImageDescription' },
+          data: `\0\0\0\0${description.text}`,
+        },
+      ]
+    : [];
+
+  const userCommentSegment: MetadataSegment = {
+    source: { type: 'exifUserComment' },
+    data: JSON.stringify(data),
+  };
+
+  return [...descriptionSegment, userCommentSegment];
 }
 
 /**
- * Helper: Parse from exifUserComment (combined JSON format)
+ * Build UserComment JSON from PNG chunks in NovelAI's standard key order
  */
-const parseFromUserComment = (
-  userCommentSeg: MetadataSegment,
-  descriptionSeg: MetadataSegment | undefined,
-): PngTextChunk[] | null => {
-  const parsed = parseJson<Record<string, unknown>>(userCommentSeg.data);
-  if (!parsed.ok) {
-    // If parsing fails, treat the whole thing as Comment
-    return createTextChunk('Comment', userCommentSeg.data);
-  }
-
-  return [
-    // Title (required, use default if missing)
-    createTextChunk('Title', stringify(parsed.value.Title) ?? NOVELAI_TITLE),
-    // Description (optional, use dynamic selection for this chunk only)
-    ...(() => {
-      const descText =
-        stringify(parsed.value.Description) ?? descriptionSeg?.data;
-      if (!descText) return [];
-      return createEncodedChunk(
-        'Description',
-        descText,
-        getEncodingStrategy('novelai'),
-      );
-    })(),
-    // Software (required, use default if missing)
-    createTextChunk(
-      'Software',
-      stringify(parsed.value.Software) ?? NOVELAI_SOFTWARE,
-    ),
-    // Source (optional)
-    createTextChunk('Source', stringify(parsed.value.Source)),
-    // Generation time (optional)
-    createTextChunk(
-      'Generation time',
-      stringify(parsed.value['Generation time']),
-    ),
-    // Comment (optional)
-    createTextChunk('Comment', stringify(parsed.value.Comment)),
-  ].flat();
-};
+function buildUserCommentJson(chunks: PngTextChunk[]): Record<string, string> {
+  return NOVELAI_KEY_ORDER.map((key) => {
+    const chunk = chunks.find((c) => c.keyword === key);
+    return chunk ? { [key]: chunk.text } : null;
+  })
+    .filter((entry): entry is Record<string, string> => entry !== null)
+    .reduce(
+      (acc, entry) => Object.assign(acc, entry),
+      {} as Record<string, string>,
+    );
+}
 
 /**
- * Helper: Parse from JPEG COM segment format
+ * NovelAI standard key order for UserComment JSON
  */
-const parseFromComSegment = (
-  comSeg: MetadataSegment,
-  descriptionSeg: MetadataSegment | undefined,
-): PngTextChunk[] => {
-  const descText = descriptionSeg?.data;
-  return [
-    createTextChunk('Title', NOVELAI_TITLE),
-    ...(descText
-      ? createEncodedChunk(
-          'Description',
-          descText,
-          getEncodingStrategy('novelai'),
-        )
-      : []),
-    createTextChunk('Software', NOVELAI_SOFTWARE),
-    createTextChunk('Comment', comSeg.data),
-  ].flat();
-};
+const NOVELAI_KEY_ORDER = [
+  'Comment',
+  'Description',
+  'Generation time',
+  'Software',
+  'Source',
+  'Title',
+] as const;
 
 /**
  * Convert JPEG/WebP segments to NovelAI PNG chunks
@@ -126,16 +93,87 @@ export function convertNovelaiSegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
   const userCommentSeg = findSegment(segments, 'exifUserComment');
-  const comSeg = findSegment(segments, 'jpegCom');
   const descriptionSeg = findSegment(segments, 'exifImageDescription');
 
-  if (userCommentSeg) {
-    return parseFromUserComment(userCommentSeg, descriptionSeg) ?? [];
+  return parseSegments(userCommentSeg, descriptionSeg);
+}
+
+/**
+ * Parse UserComment JSON and convert to PNG chunks
+ */
+function parseSegments(
+  userCommentSeg: MetadataSegment | undefined,
+  descriptionSeg: MetadataSegment | undefined,
+): PngTextChunk[] {
+  if (!userCommentSeg || !descriptionSeg) {
+    return [];
   }
 
-  if (comSeg) {
-    return parseFromComSegment(comSeg, descriptionSeg);
+  const parsed = parseJson<Record<string, unknown>>(userCommentSeg.data);
+  if (!parsed.ok) {
+    // If parsing fails, treat the whole thing as Comment
+    return createTextChunk('Comment', userCommentSeg.data);
   }
 
-  return [];
+  const jsonData = parsed.value;
+
+  // Extract Description text (prefer exifImageDescription over corrupted JSON)
+  const descriptionText = extractDescriptionText(
+    descriptionSeg,
+    stringify(jsonData.Description),
+  );
+
+  const descriptionChunks = descriptionText
+    ? createEncodedChunk(
+        'Description',
+        descriptionText,
+        getEncodingStrategy('novelai'),
+      )
+    : [];
+
+  return [
+    // Title (required, use default if missing)
+    createTextChunk('Title', stringify(jsonData.Title) ?? NOVELAI_TITLE),
+    // Description (optional, prefer exifImageDescription over JSON)
+    ...descriptionChunks,
+    // Software (required, use default if missing)
+    createTextChunk(
+      'Software',
+      stringify(jsonData.Software) ?? NOVELAI_SOFTWARE,
+    ),
+    // Source (optional)
+    createTextChunk('Source', stringify(jsonData.Source)),
+    // Generation time (optional)
+    createTextChunk('Generation time', stringify(jsonData['Generation time'])),
+    // Comment (optional)
+    createTextChunk('Comment', stringify(jsonData.Comment)),
+  ].flat();
+}
+
+/**
+ * Extract Description text from exifImageDescription or UserComment JSON
+ *
+ * NovelAI WebP has corrupted UTF-8 in UserComment JSON Description,
+ * so we prefer the clean exifImageDescription segment when available.
+ */
+function extractDescriptionText(
+  descriptionSeg: MetadataSegment | undefined,
+  jsonDescription: string | undefined,
+): string | undefined {
+  // First, try exifImageDescription segment (strip 4-byte null prefix)
+  if (descriptionSeg?.data) {
+    const data = descriptionSeg.data;
+    // NovelAI WebP format has 4-byte null prefix before ImageDescription
+    return data.startsWith('\0\0\0\0') ? data.slice(4) : data;
+  }
+
+  // Fallback: use JSON value (for non-NovelAI WebP sources)
+  if (jsonDescription) {
+    // Strip 4-byte null prefix if present
+    return jsonDescription.startsWith('\0\0\0\0')
+      ? jsonDescription.slice(4)
+      : jsonDescription;
+  }
+
+  return undefined;
 }

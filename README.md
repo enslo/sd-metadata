@@ -100,6 +100,13 @@ const newImageData = writeMetadata(imageData, metadata);
 
 ### Known Limitations
 
+- **NovelAI WebP metadata correction**:  
+  NovelAI-generated WebP files contain corrupted UTF-8 text in the `Description` field of the UserComment JSON.
+  The library automatically corrects this by preferring the clean data from the `exifImageDescription` segment.
+  - ✅ Users receive correct, readable metadata (e.g., `#テスト` instead of `#ãã¹ã`)
+  - ❌ WebP → PNG → WebP round-trip is not content-equivalent (corrected Description differs from original)
+  - Note: This is intentional to provide users with valid data despite NovelAI's encoding bug
+
 - **SwarmUI cross-format conversion**:  
   SwarmUI PNG files contain both `prompt` (ComfyUI workflow) and `parameters` (sui_image_params) chunks.
   When converting PNG → JPEG/WebP, only `parameters` is preserved to match the native WebP format.

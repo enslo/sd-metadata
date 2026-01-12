@@ -84,3 +84,60 @@ export function expectRawEqual(
     }
   }
 }
+
+/**
+ * Compare raw metadata for NovelAI with special handling for corrected Description
+ *
+ * NovelAI WebP files have corrupted UTF-8 in the UserComment JSON Description field.
+ * This library intentionally corrects it, so we validate:
+ * - All UserComment JSON fields except Description match exactly
+ * - Description is corrected (no null prefix, no corruption)
+ * - Other segments (e.g., exifImageDescription) match exactly
+ *
+ * @param actual - Actual raw metadata
+ * @param expected - Expected raw metadata
+ */
+export function expectNovelAIRawEqual(
+  actual: RawMetadata,
+  expected: RawMetadata,
+): void {
+  expect(actual.format).toBe(expected.format);
+
+  if (actual.format === 'png' || expected.format === 'png') {
+    throw new Error('NovelAI raw comparison is only for WebP/JPEG formats');
+  }
+
+  expect(actual.segments.length).toBe(expected.segments.length);
+
+  for (let i = 0; i < actual.segments.length; i++) {
+    const actualSeg = actual.segments[i];
+    const expectedSeg = expected.segments[i];
+
+    expect(actualSeg?.source).toEqual(expectedSeg?.source);
+
+    // For exifUserComment: compare JSON fields except Description
+    if (actualSeg?.source.type === 'exifUserComment' && expectedSeg) {
+      try {
+        const actualJson = JSON.parse(actualSeg.data);
+        const expectedJson = JSON.parse(expectedSeg.data);
+
+        // Check all fields except Description
+        for (const key of Object.keys(expectedJson)) {
+          if (key !== 'Description') {
+            expect(actualJson[key]).toEqual(expectedJson[key]);
+          }
+        }
+
+        // Description should be corrected (no corruption)
+        expect(actualJson.Description).toBeTruthy();
+        expect(actualJson.Description).not.toContain('\0\0\0\0');
+      } catch {
+        // If not JSON, compare directly
+        expect(actualSeg.data).toBe(expectedSeg.data);
+      }
+    } else if (actualSeg && expectedSeg) {
+      // For other segments (e.g., exifImageDescription), compare directly
+      expect(actualSeg.data).toBe(expectedSeg.data);
+    }
+  }
+}
