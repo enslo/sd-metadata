@@ -1,6 +1,6 @@
 {
-  "name": "sd-metadata",
-  "version": "0.0.0",
+  "name": "@enslo/sd-metadata",
+  "version": "1.0.0",
   "description": "Read and write AI-generated image metadata",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,14 +29,19 @@
   },
   "keywords": [
     "stable-diffusion",
+    "ai-image",
+    "image-metadata",
+    "metadata-parser",
+    "prompt",
     "novelai",
     "comfyui",
-    "metadata",
+    "forge",
     "png",
     "jpeg",
-    "webp"
+    "webp",
+    "exif"
   ],
-  "author": "",
+  "author": "Ernest Croft",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/enslo/sd-metadata/issues"
