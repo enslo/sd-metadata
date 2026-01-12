@@ -30,6 +30,44 @@ interface SwarmUIParameters {
 }
 
 /**
+ * Extract SwarmUI parameters from entry record
+ *
+ * Checks direct 'parameters' entry first, then tries to extract from Comment JSON
+ */
+function extractSwarmUIParameters(
+  entryRecord: Record<string, string | undefined>,
+): string | undefined {
+  // Direct parameters entry (PNG format)
+  if (entryRecord.parameters) {
+    return entryRecord.parameters;
+  }
+
+  // Try to extract from Comment JSON (JPEG/WebP format)
+  if (!entryRecord.Comment) {
+    return undefined;
+  }
+
+  const commentParsed = parseJson<Record<string, unknown>>(entryRecord.Comment);
+  if (!commentParsed.ok) {
+    return undefined;
+  }
+
+  // Check for 'parameters' key (our converter format)
+  if ('parameters' in commentParsed.value) {
+    return JSON.stringify(commentParsed.value.parameters);
+  }
+
+  // Also check direct sui_image_params (alternative format)
+  if ('sui_image_params' in commentParsed.value) {
+    return JSON.stringify({
+      sui_image_params: commentParsed.value.sui_image_params,
+    });
+  }
+
+  return undefined;
+}
+
+/**
  * Parse SwarmUI metadata from entries
  *
  * SwarmUI stores metadata with:
@@ -46,26 +84,7 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
   // Find parameters entry
   // For PNG: direct keyword 'parameters'
   // For JPEG/WebP: inside Comment JSON
-  let parametersText = entryRecord.parameters;
-
-  if (!parametersText && entryRecord.Comment) {
-    // Try to parse Comment as JSON
-    const commentParsed = parseJson<Record<string, unknown>>(
-      entryRecord.Comment,
-    );
-    if (commentParsed.ok) {
-      // Check for 'parameters' key (our converter format)
-      if ('parameters' in commentParsed.value) {
-        parametersText = JSON.stringify(commentParsed.value.parameters);
-      }
-      // Also check direct sui_image_params (alternative format)
-      else if ('sui_image_params' in commentParsed.value) {
-        parametersText = JSON.stringify({
-          sui_image_params: commentParsed.value.sui_image_params,
-        });
-      }
-    }
-  }
+  const parametersText = extractSwarmUIParameters(entryRecord);
 
   if (!parametersText) {
     return Result.error({ type: 'unsupportedFormat' });
