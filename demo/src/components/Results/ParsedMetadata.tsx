@@ -1,4 +1,4 @@
-import type { GenerationMetadata } from 'sd-metadata';
+import type { GenerationMetadata } from '@enslo/sd-metadata';
 import { CopyButton } from '../CopyButton/CopyButton';
 import styles from './Results.module.css';
 

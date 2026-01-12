@@ -1,4 +1,4 @@
-import type { RawMetadata } from 'sd-metadata';
+import type { RawMetadata } from '@enslo/sd-metadata';
 import { formatJson } from '../../utils';
 import styles from './Results.module.css';
 

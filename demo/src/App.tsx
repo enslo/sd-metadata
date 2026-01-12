@@ -1,6 +1,6 @@
+import { read } from '@enslo/sd-metadata';
+import type { ParseResult } from '@enslo/sd-metadata';
 import { useEffect, useState } from 'preact/hooks';
-import { read } from 'sd-metadata';
-import type { ParseResult } from 'sd-metadata';
 import styles from './App.module.css';
 import { DropZone } from './components/DropZone/DropZone';
 import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
@@ -133,7 +133,7 @@ export function App() {
         <p>
           Powered by{' '}
           <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-            sd-metadata
+            @enslo/sd-metadata
           </a>
         </p>
       </footer>
