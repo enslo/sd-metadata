@@ -1,5 +1,5 @@
+import type { ParseResult } from '@enslo/sd-metadata';
 import { useEffect, useState } from 'preact/hooks';
-import type { ParseResult } from 'sd-metadata';
 import { ParsedMetadata } from './ParsedMetadata';
 import { ExifSegments, RawChunks } from './RawData';
 import styles from './Results.module.css';
