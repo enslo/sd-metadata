@@ -2,21 +2,22 @@
  * SwarmUI metadata conversion utilities
  *
  * SwarmUI stores metadata as:
- * - PNG: `prompt` (ComfyUI workflow) + `parameters` (sui_image_params JSON)
- * - JPEG/WebP: exifUserComment contains the `parameters` JSON
+ * - PNG: `parameters` chunk containing sui_image_params JSON
+ * - JPEG/WebP: exifUserComment contains sui_image_params JSON directly
  *
- * For round-trip preservation, we store both chunks as a JSON object.
+ * The converter extracts/wraps the content appropriately for each format.
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
 import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
-import { findSegment, stringify } from './utils';
+import { findSegment } from './utils';
 
 /**
  * Convert SwarmUI PNG chunks to JPEG/WebP segments
  *
- * Parses JSON chunks and stores them as objects.
+ * Extracts the 'parameters' chunk content directly to match native SwarmUI WebP format.
+ * SwarmUI native WebP stores sui_image_params directly in exifUserComment, not wrapped in a parameters key.
  *
  * @param chunks - PNG text chunks
  * @returns Metadata segments for JPEG/WebP
@@ -24,27 +25,29 @@ import { findSegment, stringify } from './utils';
 export function convertSwarmUIPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  const data: Record<string, unknown> = {};
-
-  for (const chunk of chunks) {
-    const parsed = parseJson<unknown>(chunk.text);
-    if (parsed.ok) {
-      data[chunk.keyword] = parsed.value;
-    } else {
-      data[chunk.keyword] = chunk.text;
-    }
+  // Find 'parameters' chunk
+  const parametersChunk = chunks.find((c) => c.keyword === 'parameters');
+  if (!parametersChunk) {
+    return [];
   }
+
+  // Parse and return the JSON directly (no wrapping in parameters key)
+  const parsed = parseJson<unknown>(parametersChunk.text);
+  const data = parsed.ok ? parsed.value : parametersChunk.text;
 
   return [
     {
       source: { type: 'exifUserComment' },
-      data: JSON.stringify(data),
+      data: typeof data === 'string' ? data : JSON.stringify(data),
     },
   ];
 }
 
 /**
  * Convert JPEG/WebP segments to SwarmUI PNG chunks
+ *
+ * Handles native SwarmUI WebP format (direct sui_image_params) by wrapping it
+ * in a 'parameters' PNG chunk for compatibility.
  *
  * @param segments - Metadata segments from JPEG/WebP
  * @returns PNG text chunks
@@ -57,35 +60,11 @@ export function convertSwarmUISegmentsToPng(
     return [];
   }
 
-  const parsed = parseJson<Record<string, unknown>>(userComment.data);
-  if (!parsed.ok) {
-    // Fallback for non-JSON (use Unicode escaping)
-    return createEncodedChunk(
-      'parameters',
-      userComment.data,
-      getEncodingStrategy('swarmui'),
-    );
-  }
-
-  // Check for round-trip format (prompt and/or parameters keys)
-  const chunks = [
-    ...createEncodedChunk(
-      'prompt',
-      stringify(parsed.value.prompt),
-      getEncodingStrategy('swarmui'),
-    ),
-    ...createEncodedChunk(
-      'parameters',
-      stringify(parsed.value.parameters),
-      getEncodingStrategy('swarmui'),
-    ),
-  ];
-
-  if (chunks.length > 0) {
-    return chunks;
-  }
-
-  // Fallback: return as parameters chunk
+  // Always wrap exifUserComment data in 'parameters' chunk
+  // This works for all cases:
+  // - Native WebP format (direct sui_image_params) → wrap as-is
+  // - Non-JSON text → wrap as-is
+  // - Any other format → wrap as-is
   return createEncodedChunk(
     'parameters',
     userComment.data,

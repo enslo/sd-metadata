@@ -26,6 +26,32 @@ interface InvokeAIMetadataJson {
 }
 
 /**
+ * Extract InvokeAI metadata from entry record
+ *
+ * Checks direct 'invokeai_metadata' entry first, then tries to extract from Comment JSON
+ */
+function extractInvokeAIMetadata(
+  entryRecord: Record<string, string | undefined>,
+): string | undefined {
+  // Direct invokeai_metadata entry (PNG format)
+  if (entryRecord.invokeai_metadata) {
+    return entryRecord.invokeai_metadata;
+  }
+
+  // Try to extract from Comment JSON (JPEG/WebP format)
+  if (!entryRecord.Comment) {
+    return undefined;
+  }
+
+  const commentParsed = parseJson<Record<string, unknown>>(entryRecord.Comment);
+  if (!commentParsed.ok || !('invokeai_metadata' in commentParsed.value)) {
+    return undefined;
+  }
+
+  return JSON.stringify(commentParsed.value.invokeai_metadata);
+}
+
+/**
  * Parse InvokeAI metadata from entries
  *
  * InvokeAI stores metadata with:
@@ -42,18 +68,7 @@ export function parseInvokeAI(entries: MetadataEntry[]): InternalParseResult {
   // Find invokeai_metadata entry
   // For PNG: direct keyword
   // For JPEG/WebP: inside Comment JSON
-  let metadataText = entryRecord.invokeai_metadata;
-
-  if (!metadataText && entryRecord.Comment) {
-    // Try to parse Comment as JSON
-    const commentParsed = parseJson<Record<string, unknown>>(
-      entryRecord.Comment,
-    );
-    if (commentParsed.ok && 'invokeai_metadata' in commentParsed.value) {
-      // Extract invokeai_metadata from JSON
-      metadataText = JSON.stringify(commentParsed.value.invokeai_metadata);
-    }
-  }
+  const metadataText = extractInvokeAIMetadata(entryRecord);
 
   if (!metadataText) {
     return Result.error({ type: 'unsupportedFormat' });

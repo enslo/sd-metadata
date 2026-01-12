@@ -62,6 +62,10 @@ type Seed = Branded<number, 'Seed'>;
 
 - Prefer functions (use classes only when necessary)
 - Use immutable update patterns
+- **Prefer immutability over mutation**
+  - **Use `const` instead of `let` whenever possible**
+  - **Prefer functional methods (`map`, `filter`, `reduce`) over `for` loops**
+  - **Use spread operators and array methods for transformations**
 - Flatten conditionals with early returns
 - Keep files under 500 lines
 
