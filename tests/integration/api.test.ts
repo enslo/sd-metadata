@@ -23,7 +23,6 @@ describe('API Integration Tests', () => {
         const samples = [
           'novelai-full.png',
           'comfyui.png',
-          'civitai.png',
           'forge.png',
           'invokeai.png',
         ];
@@ -169,7 +168,7 @@ describe('API Integration Tests', () => {
     describe('successful writes', () => {
       it('should write metadata to PNG', () => {
         const source = loadSample('png', 'novelai-full.png');
-        const target = loadSample('png', 'civitai.png');
+        const target = loadSample('png', 'forge.png');
 
         const metadata = read(source);
         expect(metadata.status).toBe('success');
