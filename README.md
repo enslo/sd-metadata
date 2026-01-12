@@ -14,7 +14,7 @@ A TypeScript library to read and write metadata embedded in AI-generated images.
 ## Installation
 
 ```bash
-npm install sd-metadata
+npm install @enslo/sd-metadata
 ```
 
 ## Tool Support
