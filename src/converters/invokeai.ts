@@ -16,15 +16,24 @@ import { createITxtChunk, findSegment, stringify } from './utils';
 /**
  * Convert InvokeAI PNG chunks to JPEG/WebP segments
  *
+ * Parses JSON chunks and stores them as objects.
+ *
  * @param chunks - PNG text chunks
  * @returns Metadata segments for JPEG/WebP
  */
 export function convertInvokeAIPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  const data = Object.fromEntries(
-    chunks.map((chunk) => [chunk.keyword, chunk.text]),
-  );
+  const data: Record<string, unknown> = {};
+
+  for (const chunk of chunks) {
+    const parsed = parseJson<unknown>(chunk.text);
+    if (parsed.ok) {
+      data[chunk.keyword] = parsed.value;
+    } else {
+      data[chunk.keyword] = chunk.text;
+    }
+  }
 
   return [
     {
