@@ -32,7 +32,8 @@ interface SwarmUIParameters {
 /**
  * Extract SwarmUI parameters from entry record
  *
- * Checks direct 'parameters' entry first, then tries to extract from Comment JSON
+ * Checks direct 'parameters' entry first, then tries to extract from Comment JSON.
+ * After converter fix, Comment JSON contains direct sui_image_params (native WebP format).
  */
 function extractSwarmUIParameters(
   entryRecord: Record<string, string | undefined>,
@@ -52,16 +53,9 @@ function extractSwarmUIParameters(
     return undefined;
   }
 
-  // Check for 'parameters' key (our converter format)
-  if ('parameters' in commentParsed.value) {
-    return JSON.stringify(commentParsed.value.parameters);
-  }
-
-  // Also check direct sui_image_params (alternative format)
+  // Native WebP format: direct sui_image_params
   if ('sui_image_params' in commentParsed.value) {
-    return JSON.stringify({
-      sui_image_params: commentParsed.value.sui_image_params,
-    });
+    return entryRecord.Comment; // Return as-is to preserve full structure
   }
 
   return undefined;

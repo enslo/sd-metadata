@@ -94,6 +94,7 @@ describe('Round-trip preservation', () => {
         'comfyui-saveimage-plus.webp',
         'comfyui-saveimagewithmetadata.webp',
         'forge-hires.webp',
+        'swarmui.webp',
       ];
 
       for (const filename of webpSamples) {
@@ -159,7 +160,13 @@ describe('Round-trip preservation', () => {
 
           // Metadata should match original
           expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          expectRawEqual(finalRead.raw, originalMetadata.raw);
+
+          // SwarmUI PNG contains 'prompt' chunk (ComfyUI workflow) that is not preserved
+          // in JPEG/WebP conversion (only 'parameters' is preserved to match native WebP format)
+          // So we skip raw equality check for SwarmUI
+          if (tool !== 'SwarmUI') {
+            expectRawEqual(finalRead.raw, originalMetadata.raw);
+          }
         });
       }
     });
@@ -237,6 +244,138 @@ describe('Round-trip preservation', () => {
           if (!jpegRestored.ok) return;
 
           const finalRead = read(jpegRestored.value);
+          expect(finalRead.status).toBe('success');
+          if (finalRead.status !== 'success') return;
+
+          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          expectRawEqual(finalRead.raw, originalMetadata.raw);
+        });
+      }
+    });
+
+    describe('JPEG → PNG → JPEG', () => {
+      const testCases = [
+        { file: 'civitai.jpeg', tool: 'Civitai' },
+        { file: 'comfyui-saveimage-plus.jpg', tool: 'ComfyUI' },
+        { file: 'forge.jpeg', tool: 'Forge' },
+        { file: 'swarmui.jpg', tool: 'SwarmUI' },
+        { file: 'sd-next.jpg', tool: 'SD.Next' },
+      ];
+
+      for (const { file, tool } of testCases) {
+        it(`should preserve ${tool} metadata through JPEG → PNG → JPEG`, () => {
+          const jpegOriginal = loadSample('jpg', file);
+          const originalMetadata = read(jpegOriginal);
+          expect(originalMetadata.status).toBe('success');
+          if (originalMetadata.status !== 'success') return;
+
+          // Get a PNG image to write to
+          const pngBase = loadSample('png', 'civitai.png');
+
+          // JPEG → PNG
+          const pngWithMetadata = write(pngBase, originalMetadata);
+          expect(pngWithMetadata.ok).toBe(true);
+          if (!pngWithMetadata.ok) return;
+
+          const pngRead = read(pngWithMetadata.value);
+          expect(pngRead.status).toBe('success');
+          if (pngRead.status !== 'success') return;
+
+          // PNG → JPEG
+          const jpegRestored = write(jpegOriginal, pngRead);
+          expect(jpegRestored.ok).toBe(true);
+          if (!jpegRestored.ok) return;
+
+          const finalRead = read(jpegRestored.value);
+          expect(finalRead.status).toBe('success');
+          if (finalRead.status !== 'success') return;
+
+          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+
+          // SwarmUI: JPEG contains only 'parameters', but conversion to PNG adds 'prompt' chunk
+          // from original PNG sample. This is expected behavior (no prompt in JPEG/WebP).
+          // However, we don't skip here because JPEG→PNG→JPEG should be lossless for JPEG format.
+          expectRawEqual(finalRead.raw, originalMetadata.raw);
+        });
+      }
+    });
+
+    describe('WebP → PNG → WebP', () => {
+      const testCases = [
+        { file: 'comfyui-saveimage-plus.webp', tool: 'ComfyUI' },
+        { file: 'forge-hires.webp', tool: 'Forge' },
+        { file: 'swarmui.webp', tool: 'SwarmUI' },
+        { file: 'novelai-curated.webp', tool: 'NovelAI' },
+        { file: 'sd-next.webp', tool: 'SD.Next' },
+      ];
+
+      for (const { file, tool } of testCases) {
+        it(`should preserve ${tool} metadata through WebP → PNG → WebP`, () => {
+          const webpOriginal = loadSample('webp', file);
+          const originalMetadata = read(webpOriginal);
+          expect(originalMetadata.status).toBe('success');
+          if (originalMetadata.status !== 'success') return;
+
+          // Get a PNG image to write to
+          const pngBase = loadSample('png', 'civitai.png');
+
+          // WebP → PNG
+          const pngWithMetadata = write(pngBase, originalMetadata);
+          expect(pngWithMetadata.ok).toBe(true);
+          if (!pngWithMetadata.ok) return;
+
+          const pngRead = read(pngWithMetadata.value);
+          expect(pngRead.status).toBe('success');
+          if (pngRead.status !== 'success') return;
+
+          // PNG → WebP
+          const webpRestored = write(webpOriginal, pngRead);
+          expect(webpRestored.ok).toBe(true);
+          if (!webpRestored.ok) return;
+
+          const finalRead = read(webpRestored.value);
+          expect(finalRead.status).toBe('success');
+          if (finalRead.status !== 'success') return;
+
+          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          expectRawEqual(finalRead.raw, originalMetadata.raw);
+        });
+      }
+    });
+
+    describe('WebP → JPEG → WebP', () => {
+      const testCases = [
+        { file: 'comfyui-saveimage-plus.webp', tool: 'ComfyUI' },
+        { file: 'forge-hires.webp', tool: 'Forge' },
+        { file: 'swarmui.webp', tool: 'SwarmUI' },
+        { file: 'novelai-curated.webp', tool: 'NovelAI' },
+      ];
+
+      for (const { file, tool } of testCases) {
+        it(`should preserve ${tool} metadata through WebP → JPEG → WebP`, () => {
+          const webpOriginal = loadSample('webp', file);
+          const originalMetadata = read(webpOriginal);
+          expect(originalMetadata.status).toBe('success');
+          if (originalMetadata.status !== 'success') return;
+
+          // Get a JPEG image to write to
+          const jpegBase = loadSample('jpg', 'civitai.jpeg');
+
+          // WebP → JPEG
+          const jpegWithMetadata = write(jpegBase, originalMetadata);
+          expect(jpegWithMetadata.ok).toBe(true);
+          if (!jpegWithMetadata.ok) return;
+
+          const jpegRead = read(jpegWithMetadata.value);
+          expect(jpegRead.status).toBe('success');
+          if (jpegRead.status !== 'success') return;
+
+          // JPEG → WebP
+          const webpRestored = write(webpOriginal, jpegRead);
+          expect(webpRestored.ok).toBe(true);
+          if (!webpRestored.ok) return;
+
+          const finalRead = read(webpRestored.value);
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 

@@ -100,7 +100,13 @@ const newImageData = writeMetadata(imageData, metadata);
 
 ### Known Limitations
 
-Currently, there are no known significant limitations.
+- **SwarmUI cross-format conversion**:  
+  SwarmUI PNG files contain both `prompt` (ComfyUI workflow) and `parameters` (sui_image_params) chunks.
+  When converting PNG → JPEG/WebP, only `parameters` is preserved to match the native WebP format.
+  This means PNG → JPEG/WebP → PNG conversions will lose the `prompt` chunk.
+  - ✅ Metadata (prompt, model, sampling settings) is fully preserved
+  - ❌ ComfyUI workflow data in `prompt` chunk is lost
+  - Note: This is intentional to maintain compatibility with SwarmUI's native WebP format
 
 ### Advanced Features
 
