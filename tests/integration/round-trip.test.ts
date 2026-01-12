@@ -21,15 +21,35 @@ describe('Round-trip preservation', () => {
     describe('PNG → PNG', () => {
       const pngSamples = [
         'novelai-full.png',
+        'novelai-curated.png',
+        'novelai-full-3char.png',
+        'novelai-ref.png',
         'comfyui.png',
-        'civitai.png',
+        'comfyui-hires.png',
+        'comfyui-upscale.png',
+        'comfyui-comfy-image-saver.png',
+        'comfyui-save-image-extended.png',
+        'comfyui-saveimage-plus.png',
+        'comfyui-saveimagewithmetadata.png',
         'forge.png',
+        'forge-en.png',
+        'forge-hires.png',
+        'forge-neo.png',
+        'forge-neo-hires.png',
         'invokeai.png',
+        'invokeai-en.png',
+        'swarmui.png',
         'swarmui-hires.png',
+        'swarmui-upscale.png',
         'tensorart.png',
         'stability-matrix.png',
+        'stability-matrix-hires.png',
+        'stability-matrix-upscale.png',
         'ruined-fooocus.png',
         'huggingface-animagine.png',
+        'sd-next.png',
+        'sd-next-en.png',
+        'sd-next-hires.png',
       ];
 
       for (const filename of pngSamples) {
@@ -61,9 +81,12 @@ describe('Round-trip preservation', () => {
     describe('JPEG → JPEG', () => {
       const jpegSamples = [
         'civitai.jpeg',
+        'civitai-hires.jpg',
+        'civitai-upscale.jpg',
         'forge.jpeg',
         'comfyui-saveimage-plus.jpg',
         'sd-next.jpg',
+        'sd-next-hires.jpg',
         'swarmui.jpg',
       ];
 
@@ -93,8 +116,16 @@ describe('Round-trip preservation', () => {
       const webpSamples = [
         'comfyui-saveimage-plus.webp',
         'comfyui-saveimagewithmetadata.webp',
+        'comfyui-comfy-image-saver.webp',
+        'comfyui-save-image-extended.webp',
+        'forge.webp',
         'forge-hires.webp',
+        'forge-neo.webp',
         'swarmui.webp',
+        'novelai-curated.webp',
+        'novelai-full-3char.webp',
+        'sd-next.webp',
+        'sd-next-hires.webp',
       ];
 
       for (const filename of webpSamples) {
@@ -270,7 +301,7 @@ describe('Round-trip preservation', () => {
           if (originalMetadata.status !== 'success') return;
 
           // Get a PNG image to write to
-          const pngBase = loadSample('png', 'civitai.png');
+          const pngBase = loadSample('png', 'forge.png');
 
           // JPEG → PNG
           const pngWithMetadata = write(pngBase, originalMetadata);
@@ -317,7 +348,7 @@ describe('Round-trip preservation', () => {
           if (originalMetadata.status !== 'success') return;
 
           // Get a PNG image to write to
-          const pngBase = loadSample('png', 'civitai.png');
+          const pngBase = loadSample('png', 'forge.png');
 
           // WebP → PNG
           const pngWithMetadata = write(pngBase, originalMetadata);

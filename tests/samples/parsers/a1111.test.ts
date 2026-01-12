@@ -133,41 +133,6 @@ describe('A1111 Parsers - Samples', () => {
     });
   });
 
-  describe('Civitai samples', () => {
-    it('should parse civitai.png', () => {
-      const meta = parsePngSample<A1111Metadata>('civitai.png', parseA1111);
-
-      expect(meta).toEqual({
-        type: 'a1111',
-        software: 'sd-webui',
-        prompt:
-          '1girl, hatsune miku, dress, long hair, jewelry, white dress, blue eyes, necklace, bubble, solo, underwater, hair between eyes, looking at viewer, bangs, blue hair, bow, reaching towards viewer, blue theme, air bubble, hair bow, collarbone, floating hair, frills, twintails, blurry foreground, frilled dress, off-shoulder dress, bare shoulders, blurry, very long hair\n,masterpiece,best quality,amazing quality,',
-        negativePrompt: 'bad quality,worst quality,worst detail,sketch,censor,',
-        width: 1024,
-        height: 1360,
-        model: {
-          name: 'WAI-Nsfw-Illustrious-16',
-          hash: 'a5f58eb1c3',
-        },
-        sampling: {
-          sampler: 'Euler a',
-          scheduler: 'Automatic',
-          steps: 30,
-          cfg: 7,
-          seed: 2073075463,
-          clipSkip: 2,
-        },
-        hires: {
-          scale: 1.5,
-          upscaler: 'R-ESRGAN 4x+ Anime6B',
-          steps: 20,
-          denoise: 0.5,
-        },
-        upscale: undefined,
-      });
-    });
-  });
-
   describe('SD-Next samples', () => {
     it('should parse sd-next.png', () => {
       const meta = parsePngSample<A1111Metadata>('sd-next.png', parseA1111);

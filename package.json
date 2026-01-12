@@ -15,8 +15,8 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsup",
-    "test": "vitest",
-    "test:run": "vitest run",
+    "test": "vitest run",
+    "test:watch": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check src tests",
     "lint:fix": "biome check --write src tests",
