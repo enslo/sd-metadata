@@ -5,11 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-01-13
+
+### Changed
+
+- Updated package homepage URL to point to the demo site (<https://sd-metadata.pages.dev/>) instead of the GitHub repository
+
 ## [1.0.0] - 2026-01-13
 
 ### Added
 
 #### Core Features
+
 - **Multi-format Support**: PNG (tEXt / iTXt), JPEG (COM / Exif), WebP (Exif)
 - **Unified API**: Simple `read()` and `write()` functions work across all formats
 - **TypeScript Native**: Written in TypeScript with full type definitions included
@@ -21,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Supported AI Tools
 
 **Fully Supported** (verified with sample files, native format support):
+
 - NovelAI - PNG and WebP native formats
 - ComfyUI - PNG native format
 - Stable Diffusion WebUI (AUTOMATIC1111) - Experimental (no samples yet)
@@ -29,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SwarmUI - PNG and WebP native formats
 
 **Extended Support** (sd-metadata specific parsers, cross-format conversion):
+
 - Civitai - Uses A1111-compatible format, JPEG primary format
 - TensorArt - Custom JSON format in PNG
 - Stability Matrix - Custom JSON format in PNG
@@ -36,10 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ruined Fooocus - PNG format
 
 **Experimental** (implemented from reference code, no sample verification):
+
 - Easy Diffusion
 - Fooocus
 
 #### Advanced Features
+
 - Segment/chunk tracking for lossless round-trip preservation
 - ComfyUI detection priority when both prompt and workflow exist
 - NovelAI WebP UTF-8 corruption auto-correction
@@ -52,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SwarmUI PNG→JPEG/WebP**: Loses ComfyUI workflow data from `prompt` chunk to match native WebP format (metadata preserved)
 
 ### Development
+
 - Comprehensive test suite with unit, sample, and integration tests
 - Test coverage reporting with Vitest
 - GitHub Actions CI with automated coverage reports
@@ -59,4 +71,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[1.0.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.0.1
 [1.0.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.0.0
