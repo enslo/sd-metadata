@@ -226,18 +226,16 @@ Steps: 20, Size: 512x512`;
       }
     });
 
-    it('should handle parameters with no settings section', () => {
-      // No "Steps:" → no settings section
+    it('should reject parameters with no AI generation markers', () => {
+      // No "Steps:", "Sampler:", or "Negative prompt:" → should be rejected
       const parameters = 'just a prompt';
       const entries = createA1111Entry(parameters);
 
       const result = parseA1111(entries);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.prompt).toBe('just a prompt');
-        expect(result.value.width).toBe(0);
-        expect(result.value.height).toBe(0);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe('unsupportedFormat');
       }
     });
 
@@ -256,6 +254,44 @@ Negative prompt: negative`;
         expect(result.value.width).toBe(0);
         expect(result.value.height).toBe(0);
       }
+    });
+  });
+
+  describe('false positive prevention', () => {
+    it('should reject retouch software metadata', () => {
+      // Simulates non-AI software metadata in JPEG COM segment
+      // This should be rejected because it lacks typical AI generation markers
+      const retouchSoftware = 'Photo Editor Pro v2.0';
+      const entries: MetadataEntry[] = [
+        { keyword: 'Comment', text: retouchSoftware },
+      ];
+
+      const result = parseA1111(entries);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe('unsupportedFormat');
+      }
+    });
+
+    it('should accept text with Steps marker', () => {
+      // Even without other typical fields, "Steps:" should mark it as AI-generated
+      const withSteps = 'Some prompt\nSteps: 20';
+      const entries = createA1111Entry(withSteps);
+
+      const result = parseA1111(entries);
+
+      expect(result.ok).toBe(true);
+    });
+
+    it('should accept text with Negative prompt marker', () => {
+      // "Negative prompt:" should also mark it as AI-generated
+      const withNegative = 'Some prompt\nNegative prompt: bad quality';
+      const entries = createA1111Entry(withNegative);
+
+      const result = parseA1111(entries);
+
+      expect(result.ok).toBe(true);
     });
   });
 });

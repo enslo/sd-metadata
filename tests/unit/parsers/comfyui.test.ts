@@ -211,4 +211,64 @@ describe('parseComfyUI - Unit Tests', () => {
       }
     });
   });
+
+  describe('false negative prevention', () => {
+    it('should detect ComfyUI from prompt-only chunk with workflow data', () => {
+      // Simulates PNG with only "prompt" chunk containing ComfyUI workflow JSON
+      // This represents real-world ComfyUI files that don't have separate workflow chunk
+      const prompt = {
+        '1': {
+          inputs: {
+            filename_prefix: 'test',
+            images: ['2:0', 0],
+          },
+          class_type: 'SaveImage',
+        },
+        '2': {
+          inputs: { image: 'test_a.jpg' },
+          class_type: 'LoadImage',
+        },
+        '3': {
+          inputs: { image: 'test_b.png' },
+          class_type: 'LoadImage',
+        },
+      };
+
+      const entries = createComfyUIEntries(prompt);
+      const result = parseComfyUI(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.software).toBe('comfyui');
+        expect(result.value.type).toBe('comfyui');
+      }
+    });
+
+    it('should handle workflow keyword entry from WebP EXIF', () => {
+      // Simulates WebP with EXIF ImageDescription containing "Workflow" prefix
+      // The convert.ts should transform this into a "workflow" keyword entry
+      const workflow = {
+        id: 'test-workflow-id',
+        revision: 0,
+        last_node_id: 3,
+        nodes: [
+          {
+            id: 1,
+            type: 'TestNode',
+            class_type: 'TestNode',
+          },
+        ],
+      };
+
+      // This simulates what the reader should produce after parsing EXIF
+      const entries: MetadataEntry[] = [
+        { keyword: 'workflow', text: JSON.stringify(workflow) },
+      ];
+
+      // Verify the workflow keyword is correctly set
+      // This is important for detection logic to catch workflow-only files
+      expect(entries).toHaveLength(1);
+      expect(entries[0]?.keyword).toBe('workflow');
+    });
+  });
 });

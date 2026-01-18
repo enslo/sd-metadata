@@ -58,6 +58,14 @@ function detectFromKeywords(
     return 'easydiffusion';
   }
 
+  // SwarmUI: Check for sui_image_params in parameters entry (PNG)
+  // Must check BEFORE prompt-only detection because SwarmUI files may have both
+  // ComfyUI prompt chunk AND SwarmUI parameters chunk
+  const parameters = entryRecord.parameters;
+  if (parameters?.includes('sui_image_params')) {
+    return 'swarmui';
+  }
+
   // For JPEG/WebP: Check if Comment contains JSON with specific keys
   // This handles cases where PNG chunks were converted to JPEG/WebP
   const comment = entryRecord.Comment;
@@ -128,6 +136,23 @@ function detectFromContent(
   // A1111-style parameters AND ComfyUI prompt/workflow
   if ('prompt' in entryRecord && 'workflow' in entryRecord) {
     return 'comfyui';
+  }
+
+  // Check for prompt-only chunks with workflow data
+  if ('prompt' in entryRecord) {
+    const promptText = entryRecord.prompt;
+    if (promptText?.startsWith('{')) {
+      // SwarmUI: must check BEFORE ComfyUI because SwarmUI files
+      // also contain class_type. SwarmUI is identified by sui_image_params
+      if (promptText.includes('sui_image_params')) {
+        return 'swarmui';
+      }
+
+      // ComfyUI: check if it's ComfyUI workflow JSON by looking for class_type
+      if (promptText.includes('class_type')) {
+        return 'comfyui';
+      }
+    }
   }
 
   // Check parameters entry (PNG) or Comment entry (JPEG/WebP)

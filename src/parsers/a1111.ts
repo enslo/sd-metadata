@@ -36,6 +36,17 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
 
   const text = parametersEntry.text;
 
+  // Validate that this is AI-generated metadata by checking for typical markers
+  // This prevents false positives from retouch software or other non-AI tools
+  const hasAIMarkers =
+    text.includes('Steps:') ||
+    text.includes('Sampler:') ||
+    text.includes('Negative prompt:');
+
+  if (!hasAIMarkers) {
+    return Result.error({ type: 'unsupportedFormat' });
+  }
+
   // Parse the text into sections
   const { prompt, negativePrompt, settings } = parseParametersText(text);
 
