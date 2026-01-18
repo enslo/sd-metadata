@@ -1,11 +1,14 @@
 import { read } from '@enslo/sd-metadata';
 import type { ParseResult } from '@enslo/sd-metadata';
+import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import styles from './App.module.css';
 import { DropZone } from './components/DropZone/DropZone';
 import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
+import { LanguageSwitcher } from './components/LanguageSwitcher/LanguageSwitcher';
 import { Results } from './components/Results/Results';
 import { ScrollToTop } from './components/ScrollToTop/ScrollToTop';
+import { $t } from './i18n';
 import { getSoftwareLabel } from './utils';
 
 const GITHUB_URL = 'https://github.com/enslo/sd-metadata';
@@ -20,6 +23,7 @@ interface AppState {
  * Main application component
  */
 export function App() {
+  const t = useStore($t);
   const [state, setState] = useState<AppState>({
     parseResult: null,
     filename: null,
@@ -86,34 +90,34 @@ export function App() {
     };
   }, []);
 
-  const getSoftwareLabelForDisplay = (): string | null => {
+  const getSoftwareLabelForDisplay = (): {
+    label: string;
+    status: 'success' | 'empty' | 'unrecognized' | 'invalid';
+  } | null => {
     if (!state.parseResult) return null;
     if (state.parseResult.status === 'success') {
-      return getSoftwareLabel(state.parseResult.metadata.software || 'Unknown');
+      return {
+        label: getSoftwareLabel(state.parseResult.metadata.software || 'Unknown'),
+        status: 'success',
+      };
     }
-    return 'Unknown';
-  };
-
-  const getErrorMessage = (): string | undefined => {
-    if (!state.parseResult) return undefined;
-    switch (state.parseResult.status) {
-      case 'empty':
-        return 'empty';
-      case 'unrecognized':
-        return 'unrecognized';
-      default:
-        return undefined;
+    if (state.parseResult.status === 'empty') {
+      return { label: 'Empty', status: 'empty' };
     }
+    if (state.parseResult.status === 'unrecognized') {
+      return { label: 'Unrecognized', status: 'unrecognized' };
+    }
+    // invalid or unsupportedFormat
+    return { label: 'Invalid', status: 'invalid' };
   };
 
   return (
     <>
+      <LanguageSwitcher />
       <GitHubCorner url={GITHUB_URL} />
       <header class={styles.header}>
         <h1 class={styles.title}>sd-metadata</h1>
-        <p class={styles.description}>
-          Extract metadata from AI-generated images
-        </p>
+        <p class={styles.description}>{t.app.description}</p>
       </header>
 
       <main>
@@ -121,8 +125,7 @@ export function App() {
           onFileSelect={handleFileSelect}
           previewUrl={state.previewUrl}
           filename={state.filename}
-          softwareLabel={getSoftwareLabelForDisplay()}
-          error={getErrorMessage()}
+          softwareInfo={getSoftwareLabelForDisplay()}
           globalDragOver={globalDragOver}
         />
 

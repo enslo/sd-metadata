@@ -1,13 +1,17 @@
+import { useStore } from '@nanostores/preact';
 import { Upload } from 'lucide-preact';
 import { useRef, useState } from 'preact/hooks';
+import { $t } from '../../i18n';
 import styles from './DropZone.module.css';
 
 interface DropZoneProps {
   onFileSelect: (file: File) => void;
   previewUrl: string | null;
   filename: string | null;
-  softwareLabel: string | null;
-  error?: string;
+  softwareInfo: {
+    label: string;
+    status: 'success' | 'empty' | 'unrecognized' | 'invalid';
+  } | null;
   globalDragOver?: boolean;
 }
 
@@ -18,10 +22,10 @@ export function DropZone({
   onFileSelect,
   previewUrl,
   filename,
-  softwareLabel,
-  error,
+  softwareInfo,
   globalDragOver = false,
 }: DropZoneProps) {
+  const t = useStore($t);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -72,7 +76,7 @@ export function DropZone({
       tabIndex={0}
       // biome-ignore lint/a11y/useSemanticElements: drop zone needs large clickable area
       role="button"
-      aria-label="Upload image"
+      aria-label={t.dropzone.uploadLabel}
     >
       <input
         ref={inputRef}
@@ -84,30 +88,35 @@ export function DropZone({
 
       {hasPreview ? (
         <div class={styles.preview}>
-          <img src={previewUrl} alt="Preview" />
+          <img src={previewUrl} alt={t.dropzone.preview} />
           <div class={styles.previewRight}>
             <div class={styles.imageInfo}>
               <h3 class={styles.filename} title={filename ?? ''}>
                 {filename}
               </h3>
-              {error && (
-                <p style={{ color: 'var(--color-error)', marginTop: '0.5rem' }}>
-                  Parse error: {error}
-                </p>
-              )}
             </div>
             <div class={styles.infoRow}>
-              <span class={styles.softwareBadge}>
-                {softwareLabel || 'Unknown'}
+              <span
+                class={`${styles.softwareBadge} ${
+                  softwareInfo?.status === 'empty'
+                    ? styles.badgeEmpty
+                    : softwareInfo?.status === 'unrecognized'
+                      ? styles.badgeUnrecognized
+                      : softwareInfo?.status === 'invalid'
+                        ? styles.badgeInvalid
+                        : ''
+                }`}
+              >
+                {softwareInfo?.label || t.dropzone.unknown}
               </span>
-              <span class={styles.changeHint}>Click or drop to change</span>
+              <span class={styles.changeHint}>{t.dropzone.changeHint}</span>
             </div>
           </div>
         </div>
       ) : (
         <div class={styles.content}>
           <Upload size={48} aria-hidden="true" />
-          <p>Drop PNG, JPEG, or WebP image here</p>
+          <p>{t.dropzone.placeholder}</p>
         </div>
       )}
     </div>

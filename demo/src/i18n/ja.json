@@ -1,0 +1,29 @@
+{
+  "app": {
+    "description": "AI生成画像のメタデータを抽出・表示します"
+  },
+  "dropzone": {
+    "placeholder": "PNG、JPEG、WebP画像をここにドロップ",
+    "changeHint": "クリックまたはドロップで変更",
+    "unknown": "不明",
+    "uploadLabel": "画像をアップロード",
+    "preview": "プレビュー"
+  },
+  "results": {
+    "tabs": {
+      "parsed": "生成メタデータ",
+      "raw": "生データ"
+    },
+    "errors": {
+      "invalid": "無効な画像ファイルです",
+      "noMetadata": "メタデータが見つかりません",
+      "unrecognized": "メタデータが見つかりましたが、解析できません。生データタブを確認してください。",
+      "noRawData": "データがありません"
+    }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "言語を切り替え",
+    "switchToJapanese": "日本語に切り替え",
+    "switchToEnglish": "英語に切り替え"
+  }
+}
