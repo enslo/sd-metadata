@@ -8,7 +8,10 @@ interface DropZoneProps {
   onFileSelect: (file: File) => void;
   previewUrl: string | null;
   filename: string | null;
-  softwareLabel: string | null;
+  softwareInfo: {
+    label: string;
+    status: 'success' | 'empty' | 'unrecognized' | 'invalid';
+  } | null;
   globalDragOver?: boolean;
 }
 
@@ -19,7 +22,7 @@ export function DropZone({
   onFileSelect,
   previewUrl,
   filename,
-  softwareLabel,
+  softwareInfo,
   globalDragOver = false,
 }: DropZoneProps) {
   const t = useStore($t);
@@ -93,8 +96,18 @@ export function DropZone({
               </h3>
             </div>
             <div class={styles.infoRow}>
-              <span class={styles.softwareBadge}>
-                {softwareLabel || t.dropzone.unknown}
+              <span
+                class={`${styles.softwareBadge} ${
+                  softwareInfo?.status === 'empty'
+                    ? styles.badgeEmpty
+                    : softwareInfo?.status === 'unrecognized'
+                      ? styles.badgeUnrecognized
+                      : softwareInfo?.status === 'invalid'
+                        ? styles.badgeInvalid
+                        : ''
+                }`}
+              >
+                {softwareInfo?.label || t.dropzone.unknown}
               </span>
               <span class={styles.changeHint}>{t.dropzone.changeHint}</span>
             </div>

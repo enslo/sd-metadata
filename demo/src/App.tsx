@@ -90,15 +90,25 @@ export function App() {
     };
   }, []);
 
-  const getSoftwareLabelForDisplay = (): string | null => {
+  const getSoftwareLabelForDisplay = (): {
+    label: string;
+    status: 'success' | 'empty' | 'unrecognized' | 'invalid';
+  } | null => {
     if (!state.parseResult) return null;
     if (state.parseResult.status === 'success') {
-      return getSoftwareLabel(state.parseResult.metadata.software || 'Unknown');
+      return {
+        label: getSoftwareLabel(state.parseResult.metadata.software || 'Unknown'),
+        status: 'success',
+      };
     }
     if (state.parseResult.status === 'empty') {
-      return 'Empty';
+      return { label: 'Empty', status: 'empty' };
     }
-    return 'Unknown';
+    if (state.parseResult.status === 'unrecognized') {
+      return { label: 'Unrecognized', status: 'unrecognized' };
+    }
+    // invalid or unsupportedFormat
+    return { label: 'Invalid', status: 'invalid' };
   };
 
   return (
@@ -115,7 +125,7 @@ export function App() {
           onFileSelect={handleFileSelect}
           previewUrl={state.previewUrl}
           filename={state.filename}
-          softwareLabel={getSoftwareLabelForDisplay()}
+          softwareInfo={getSoftwareLabelForDisplay()}
           globalDragOver={globalDragOver}
         />
 
