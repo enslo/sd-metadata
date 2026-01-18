@@ -1,0 +1,29 @@
+{
+  "app": {
+    "description": "Extract and view metadata from AI-generated images"
+  },
+  "dropzone": {
+    "placeholder": "Drop PNG, JPEG, or WebP image here",
+    "changeHint": "Click or drop to change",
+    "unknown": "Unknown",
+    "uploadLabel": "Upload image",
+    "preview": "Preview"
+  },
+  "results": {
+    "tabs": {
+      "parsed": "Parsed Metadata",
+      "raw": "Raw Data"
+    },
+    "errors": {
+      "invalid": "Invalid image file",
+      "noMetadata": "No metadata found in this image",
+      "unrecognized": "Metadata found but format not recognized. Check Raw Data tab.",
+      "noRawData": "No data available"
+    }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Switch language",
+    "switchToJapanese": "Switch to Japanese",
+    "switchToEnglish": "Switch to English"
+  }
+}

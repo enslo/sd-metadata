@@ -1,5 +1,7 @@
 import type { ParseResult } from '@enslo/sd-metadata';
+import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
+import { $t } from '../../i18n';
 import { ParsedMetadata } from './ParsedMetadata';
 import { ExifSegments, RawChunks } from './RawData';
 import styles from './Results.module.css';
@@ -14,6 +16,7 @@ type TabName = 'parsed' | 'raw';
  * Results section with parsed and raw tabs
  */
 export function Results({ parseResult }: ResultsProps) {
+  const t = useStore($t);
   const [activeTab, setActiveTab] = useState<TabName>('parsed');
   const [resetKey, setResetKey] = useState(0);
 
@@ -29,7 +32,7 @@ export function Results({ parseResult }: ResultsProps) {
     return (
       <div class={`${styles.error} fade-in`}>
         <p class={styles.errorMessage}>
-          {parseResult.message ?? 'Invalid image file'}
+          {parseResult.message ?? t.results.errors.invalid}
         </p>
       </div>
     );
@@ -43,22 +46,22 @@ export function Results({ parseResult }: ResultsProps) {
           class={`${styles.tab} ${activeTab === 'parsed' ? styles.tabActive : ''}`}
           onClick={() => setActiveTab('parsed')}
         >
-          Parsed Metadata
+          {t.results.tabs.parsed}
         </button>
         <button
           type="button"
           class={`${styles.tab} ${activeTab === 'raw' ? styles.tabActive : ''}`}
           onClick={() => setActiveTab('raw')}
         >
-          Raw Data
+          {t.results.tabs.raw}
         </button>
       </div>
 
       <div class={styles.tabContent}>
         {activeTab === 'parsed' ? (
-          <ParsedTabContent parseResult={parseResult} />
+          <ParsedTabContent parseResult={parseResult} t={t} />
         ) : (
-          <RawTabContent parseResult={parseResult} key={resetKey} />
+          <RawTabContent parseResult={parseResult} t={t} key={resetKey} />
         )}
       </div>
     </div>
@@ -67,16 +70,18 @@ export function Results({ parseResult }: ResultsProps) {
 
 function ParsedTabContent({
   parseResult,
+  t,
 }: {
   parseResult: Exclude<ParseResult, { status: 'invalid' }>;
+  t: ReturnType<typeof useStore<typeof $t>>;
 }) {
   if (parseResult.status === 'empty') {
-    return <ErrorMessage message="No metadata found in this image" />;
+    return <ErrorMessage message={t.results.errors.noMetadata} />;
   }
 
   if (parseResult.status === 'unrecognized') {
     return (
-      <ErrorMessage message="Metadata found but format not recognized. Check Raw Data tab." />
+      <ErrorMessage message={t.results.errors.unrecognized} />
     );
   }
 
@@ -85,11 +90,13 @@ function ParsedTabContent({
 
 function RawTabContent({
   parseResult,
+  t,
 }: {
   parseResult: Exclude<ParseResult, { status: 'invalid' }>;
+  t: ReturnType<typeof useStore<typeof $t>>;
 }) {
   if (parseResult.status === 'empty') {
-    return <ErrorMessage message="No raw data available" />;
+    return <ErrorMessage message={t.results.errors.noRawData} />;
   }
 
   if (parseResult.raw.format === 'png') {
