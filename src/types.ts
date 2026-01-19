@@ -256,8 +256,14 @@ export interface CharacterPrompt {
  */
 export interface ComfyUIMetadata extends BaseMetadata {
   software: 'comfyui' | 'tensorart' | 'stability-matrix';
-  /** Full workflow JSON (for reproducibility) */
-  workflow?: unknown;
+  /**
+   * ComfyUI node graph from prompt chunk (required)
+   *
+   * Contains the node-based workflow data required for image reproduction.
+   * All ComfyUI-compatible tools include this data in all formats.
+   * Structure: Record<nodeId, ComfyNode> where ComfyNode contains inputs and class_type.
+   */
+  nodes: unknown;
 }
 
 /**
@@ -288,6 +294,13 @@ export interface InvokeAIMetadata extends BaseMetadata {
  */
 export interface SwarmUIMetadata extends BaseMetadata {
   software: 'swarmui';
+  /**
+   * ComfyUI node graph from prompt chunk (optional)
+   *
+   * Only available in PNG format. JPEG/WebP formats do not include this data.
+   * When present, contains the same node graph structure as ComfyUI.
+   */
+  nodes?: unknown;
 }
 
 /**

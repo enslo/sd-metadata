@@ -28,7 +28,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -63,7 +63,7 @@ describe('ComfyUI Parsers - Samples', () => {
           denoise: 0.3,
         },
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -96,7 +96,7 @@ describe('ComfyUI Parsers - Samples', () => {
           upscaler: 'SwinIR_4x.pth',
           scale: 1.5,
         },
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -126,7 +126,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -156,7 +156,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -186,7 +186,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -216,7 +216,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
   });
@@ -248,7 +248,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -278,7 +278,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -307,9 +307,6 @@ describe('ComfyUI Parsers - Samples', () => {
           sampler: 'Euler a',
           clipSkip: 2,
         },
-        hires: undefined,
-        upscale: undefined,
-        workflow: undefined,
       });
     });
 
@@ -335,9 +332,6 @@ describe('ComfyUI Parsers - Samples', () => {
           cfg: 8,
           sampler: 'euler_simple',
         },
-        hires: undefined,
-        upscale: undefined,
-        workflow: undefined,
       });
     });
   });
@@ -369,7 +363,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -399,7 +393,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -428,9 +422,6 @@ describe('ComfyUI Parsers - Samples', () => {
           sampler: 'euler_ancestral_karras',
           clipSkip: 2,
         },
-        hires: undefined,
-        upscale: undefined,
-        workflow: undefined,
       });
     });
 
@@ -456,9 +447,6 @@ describe('ComfyUI Parsers - Samples', () => {
           cfg: 8,
           sampler: 'euler_simple',
         },
-        hires: undefined,
-        upscale: undefined,
-        workflow: undefined,
       });
     });
 
@@ -486,7 +474,7 @@ describe('ComfyUI Parsers - Samples', () => {
         // Note: Hires scale information is not enough in the metadata (CivitAI limitation)
         hires: undefined,
         upscale: undefined,
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -517,7 +505,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: {
           scale: 1.5,
         },
-        workflow: undefined,
+        nodes: expect.any(Object),
       });
     });
   });

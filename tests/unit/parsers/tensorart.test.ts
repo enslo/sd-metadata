@@ -5,16 +5,14 @@ import type { MetadataEntry } from '../../../src/types';
 /**
  * Helper to create TensorArt metadata entries
  */
-function createTensorArtEntries(
-  generationData: unknown,
-  workflow?: unknown,
-): MetadataEntry[] {
+function createTensorArtEntries(generationData: unknown): MetadataEntry[] {
   const entries: MetadataEntry[] = [
     { keyword: 'generation_data', text: JSON.stringify(generationData) },
+    {
+      keyword: 'prompt',
+      text: JSON.stringify({ '1': { class_type: 'KSampler', inputs: {} } }),
+    },
   ];
-  if (workflow) {
-    entries.push({ keyword: 'prompt', text: JSON.stringify(workflow) });
-  }
   return entries;
 }
 
@@ -138,7 +136,6 @@ describe('parseTensorArt - Unit Tests', () => {
         expect(result.value.height).toBe(0);
         expect(result.value.sampling).toBeUndefined();
         expect(result.value.model).toBeUndefined();
-        expect(result.value.workflow).toBeUndefined();
       }
     });
 
@@ -146,7 +143,13 @@ describe('parseTensorArt - Unit Tests', () => {
       // TensorArt appends NUL characters
       const data = { prompt: 'test' };
       const jsonWithNul = `${JSON.stringify(data)}\x00\x00\x00`;
-      const entries = [{ keyword: 'generation_data', text: jsonWithNul }];
+      const entries = [
+        { keyword: 'generation_data', text: jsonWithNul },
+        {
+          keyword: 'prompt',
+          text: JSON.stringify({ '1': { class_type: 'KSampler', inputs: {} } }),
+        },
+      ];
 
       const result = parseTensorArt(entries);
 

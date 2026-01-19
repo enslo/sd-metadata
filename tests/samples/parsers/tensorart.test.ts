@@ -31,6 +31,7 @@ describe('TensorArt Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
+        nodes: expect.any(Object),
       });
     });
   });

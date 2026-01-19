@@ -32,6 +32,7 @@ describe('Stability Matrix Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -67,6 +68,7 @@ describe('Stability Matrix Parsers - Samples', () => {
           denoise: 0.2958477508650519,
         },
         upscale: undefined,
+        nodes: expect.any(Object),
       });
     });
 
@@ -100,6 +102,7 @@ describe('Stability Matrix Parsers - Samples', () => {
           upscaler: 'SwinIR_4x.pth',
           scale: 1.5,
         },
+        nodes: expect.any(Object),
       });
     });
   });

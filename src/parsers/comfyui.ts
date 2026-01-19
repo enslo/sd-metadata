@@ -120,6 +120,7 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
     negativePrompt: negativeText,
     width,
     height,
+    nodes: prompt, // Store the parsed node graph
   };
 
   // Add model settings
