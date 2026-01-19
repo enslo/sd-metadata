@@ -71,7 +71,6 @@ export function parseFooocus(entries: MetadataEntry[]): InternalParseResult {
   }
 
   const metadata: Omit<A1111Metadata, 'raw'> = {
-    type: 'a1111',
     software: 'fooocus',
     prompt: json.prompt?.trim() ?? '',
     negativePrompt: json.negative_prompt?.trim() ?? '',

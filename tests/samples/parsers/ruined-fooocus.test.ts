@@ -12,7 +12,6 @@ describe('Ruined Fooocus Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'ruined-fooocus',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',

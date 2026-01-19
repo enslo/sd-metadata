@@ -47,7 +47,6 @@ describe('parseInvokeAI - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('invokeai');
-        expect(result.value.type).toBe('invokeai');
         expect(result.value.prompt).toBe('a beautiful landscape');
         expect(result.value.negativePrompt).toBe('lowres, bad quality');
       }

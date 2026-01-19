@@ -12,7 +12,6 @@ describe('NovelAI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'novelai',
         software: 'novelai',
         prompt:
           '1girl, solo, hatsune miku, #テスト, very aesthetic, masterpiece, no text, -0.8::feet::, rating:general',
@@ -43,7 +42,6 @@ describe('NovelAI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'novelai',
         software: 'novelai',
         prompt:
           '1girl, solo, hatsune miku, #テスト, very aesthetic, masterpiece, no text',
@@ -74,7 +72,6 @@ describe('NovelAI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'novelai',
         software: 'novelai',
         prompt:
           '2girls, 1boy, dancing, #テスト\nwhite background, , very aesthetic, masterpiece, no text',
@@ -120,7 +117,6 @@ describe('NovelAI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'novelai',
         software: 'novelai',
         prompt:
           '1girl, solo, hatsune miku, #テスト, very aesthetic, masterpiece, no text, -0.8::feet::, rating:general',
@@ -151,7 +147,6 @@ describe('NovelAI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'novelai',
         software: 'novelai',
         prompt:
           '2girls, 1boy, dancing, #テスト\nwhite background, , very aesthetic, masterpiece, no text',

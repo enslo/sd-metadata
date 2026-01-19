@@ -91,7 +91,6 @@ export function parseNovelAI(entries: MetadataEntry[]): InternalParseResult {
 
   // Build metadata
   const metadata: Omit<NovelAIMetadata, 'raw'> = {
-    type: 'novelai',
     software: 'novelai',
     prompt,
     negativePrompt,

@@ -64,7 +64,6 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
 
   // Build metadata
   const metadata: Omit<A1111Metadata, 'raw'> = {
-    type: 'a1111',
     software,
     prompt,
     negativePrompt,

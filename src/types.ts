@@ -200,19 +200,6 @@ export type GenerationSoftware =
   | 'fooocus'
   | 'ruined-fooocus';
 
-/**
- * Metadata format classification
- *
- * This represents the format/structure of the metadata, not the specific tool.
- * Use this to determine which fields are available and how to interpret them.
- */
-export type MetadataFormat =
-  | 'novelai'
-  | 'comfyui'
-  | 'a1111'
-  | 'invokeai'
-  | 'swarmui';
-
 // ============================================================================
 // Unified Metadata Types
 // ============================================================================
@@ -221,8 +208,6 @@ export type MetadataFormat =
  * Base metadata fields shared by all tools
  */
 interface BaseMetadata {
-  /** Format classification (for type narrowing) */
-  type: MetadataFormat;
   /** Positive prompt */
   prompt: string;
   /** Negative prompt */
@@ -245,7 +230,6 @@ interface BaseMetadata {
  * NovelAI-specific metadata
  */
 export interface NovelAIMetadata extends BaseMetadata {
-  type: 'novelai';
   software: 'novelai';
   /** V4 character prompts (when using character placement) */
   characterPrompts?: CharacterPrompt[];
@@ -271,7 +255,6 @@ export interface CharacterPrompt {
  * These tools use ComfyUI-compatible workflow format.
  */
 export interface ComfyUIMetadata extends BaseMetadata {
-  type: 'comfyui';
   software: 'comfyui' | 'tensorart' | 'stability-matrix';
   /** Full workflow JSON (for reproducibility) */
   workflow?: unknown;
@@ -281,7 +264,6 @@ export interface ComfyUIMetadata extends BaseMetadata {
  * A1111-format metadata (SD WebUI, Forge, Forge Neo, Civitai)
  */
 export interface A1111Metadata extends BaseMetadata {
-  type: 'a1111';
   software:
     | 'sd-webui'
     | 'sd-next'
@@ -298,7 +280,6 @@ export interface A1111Metadata extends BaseMetadata {
  * InvokeAI-specific metadata
  */
 export interface InvokeAIMetadata extends BaseMetadata {
-  type: 'invokeai';
   software: 'invokeai';
 }
 
@@ -306,20 +287,18 @@ export interface InvokeAIMetadata extends BaseMetadata {
  * SwarmUI-specific metadata
  */
 export interface SwarmUIMetadata extends BaseMetadata {
-  type: 'swarmui';
   software: 'swarmui';
 }
 
 /**
  * Unified generation metadata (discriminated union)
  *
- * Use `metadata.type` to narrow by format, or `metadata.software` for specific tool:
+ * Use `metadata.software` to narrow by specific tool:
  * ```typescript
- * if (metadata.type === 'comfyui') {
+ * if (metadata.software === 'comfyui' ||
+ *     metadata.software === 'tensorart' ||
+ *     metadata.software === 'stability-matrix') {
  *   // TypeScript knows metadata.workflow exists
- * }
- * if (metadata.software === 'tensorart') {
- *   // Specific tool within comfyui format
  * }
  * ```
  */

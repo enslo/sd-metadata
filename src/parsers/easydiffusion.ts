@@ -138,7 +138,6 @@ function parseFromEntries(
   const height = Number(entryRecord.height ?? entryRecord.Height) || 0;
 
   const metadata: Omit<A1111Metadata, 'raw'> = {
-    type: 'a1111',
     software: 'easydiffusion',
     prompt: prompt.trim(),
     negativePrompt: negativePrompt.trim(),
@@ -183,7 +182,6 @@ function parseFromJson(json: EasyDiffusionJsonMetadata): InternalParseResult {
   const height = getValue<number>(json, 'height', 'Height') ?? 0;
 
   const metadata: Omit<A1111Metadata, 'raw'> = {
-    type: 'a1111',
     software: 'easydiffusion',
     prompt: prompt.trim(),
     negativePrompt: negativePrompt.trim(),

@@ -31,7 +31,6 @@ import { writeWebpMetadata } from './writers/webp';
 export type {
   GenerationMetadata,
   GenerationSoftware,
-  MetadataFormat,
   ParseResult,
   RawMetadata,
 } from './types';

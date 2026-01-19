@@ -103,7 +103,6 @@ describe('parseStabilityMatrix - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('stability-matrix');
-        expect(result.value.type).toBe('comfyui');
         // Prompts should be from parameters-json (override)
         expect(result.value.prompt).toBe('json prompt (more complete)');
         expect(result.value.negativePrompt).toBe(
@@ -188,7 +187,7 @@ describe('parseStabilityMatrix - Unit Tests', () => {
       const result = parseStabilityMatrix(entries);
 
       expect(result.ok).toBe(true);
-      if (result.ok && result.value.type === 'comfyui') {
+      if (result.ok && result.value.software === 'stability-matrix') {
         // Should use workflow prompts (no override)
         expect(result.value.prompt).toBe('workflow prompt');
         expect(result.value.negativePrompt).toBe('workflow negative');

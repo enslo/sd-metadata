@@ -12,7 +12,6 @@ describe('TensorArt Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'tensorart',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',

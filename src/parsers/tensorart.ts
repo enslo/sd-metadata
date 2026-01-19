@@ -62,7 +62,6 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
 
   // Build metadata
   const metadata: Omit<ComfyUIMetadata, 'raw'> = {
-    type: 'comfyui',
     software: 'tensorart',
     prompt: data.prompt ?? '',
     negativePrompt: data.negativePrompt ?? '',

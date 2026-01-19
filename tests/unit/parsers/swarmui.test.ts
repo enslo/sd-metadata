@@ -61,7 +61,6 @@ describe('parseSwarmUI - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('swarmui');
-        expect(result.value.type).toBe('swarmui');
         expect(result.value.prompt).toBe('a beautiful landscape');
         expect(result.value.negativePrompt).toBe('lowres, bad quality');
       }

@@ -9,7 +9,6 @@ describe('ComfyUI Parsers - Samples', () => {
       const meta = parsePngSample<ComfyUIMetadata>('comfyui.png', parseComfyUI);
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト, ',
@@ -40,7 +39,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -76,7 +74,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -110,7 +107,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -141,7 +137,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -172,7 +167,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -203,7 +197,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -236,7 +229,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -267,7 +259,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -298,7 +289,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-webui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku,',
@@ -330,7 +320,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-webui',
         prompt: 'unknown',
         negativePrompt: 'unknown',
@@ -361,7 +350,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -392,7 +380,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, ',
@@ -423,7 +410,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-webui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku,',
@@ -455,7 +441,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-webui',
         prompt: 'unknown',
         negativePrompt: 'unknown',
@@ -484,7 +469,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -513,7 +497,6 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'comfyui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',

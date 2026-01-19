@@ -115,7 +115,6 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
 
   // Build metadata
   const metadata: Omit<ComfyUIMetadata, 'raw'> = {
-    type: 'comfyui',
     software: 'comfyui',
     prompt: positiveText,
     negativePrompt: negativeText,
