@@ -4,7 +4,6 @@ on:
   workflow_run:
     workflows: ['Publish to npm']
     types: [completed]
-    branches: [main]
 
 jobs:
   trigger-cloudflare-deploy:
