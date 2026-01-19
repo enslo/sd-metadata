@@ -1,4 +1,5 @@
 import type {
+  ComfyNodeGraph,
   InternalParseResult,
   MetadataEntry,
   SwarmUIMetadata,
@@ -111,6 +112,14 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
     width,
     height,
   };
+  // Add nodes from prompt chunk (PNG format only)
+  const promptChunk = entryRecord.prompt;
+  if (promptChunk) {
+    const promptParsed = parseJson(promptChunk);
+    if (promptParsed.ok) {
+      metadata.nodes = promptParsed.value as ComfyNodeGraph;
+    }
+  }
 
   // Add model settings
   if (params.model) {

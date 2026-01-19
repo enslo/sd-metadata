@@ -6,6 +6,7 @@
  */
 
 import type {
+  ComfyNodeGraph,
   ComfyUIMetadata,
   InternalParseResult,
   MetadataEntry,
@@ -120,6 +121,7 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
     negativePrompt: negativeText,
     width,
     height,
+    nodes: prompt as ComfyNodeGraph, // Store the parsed node graph
   };
 
   // Add model settings

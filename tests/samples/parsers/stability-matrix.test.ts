@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseStabilityMatrix } from '../../../src/parsers/stability-matrix';
 import type { ComfyUIMetadata } from '../../../src/types';
+import { expectComfyNodeGraph } from '../../helpers/comfy-node-graph';
 import { parsePngSample } from '../helpers';
 
 describe('Stability Matrix Parsers - Samples', () => {
@@ -32,7 +33,9 @@ describe('Stability Matrix Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
+        nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse stability-matrix-hires.png', () => {
@@ -67,7 +70,9 @@ describe('Stability Matrix Parsers - Samples', () => {
           denoise: 0.2958477508650519,
         },
         upscale: undefined,
+        nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse stability-matrix-upscale.png', () => {
@@ -100,7 +105,9 @@ describe('Stability Matrix Parsers - Samples', () => {
           upscaler: 'SwinIR_4x.pth',
           scale: 1.5,
         },
+        nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
   });
 });

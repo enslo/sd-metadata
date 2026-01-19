@@ -1,4 +1,5 @@
 import type {
+  ComfyNodeGraph,
   ComfyUIMetadata,
   InternalParseResult,
   MetadataEntry,
@@ -60,6 +61,19 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   const width = data.width ?? 0;
   const height = data.height ?? 0;
 
+  // Parse nodes from prompt chunk (required for TensorArt)
+  const promptChunk = entryRecord.prompt;
+  if (!promptChunk) {
+    return Result.error({ type: 'unsupportedFormat' });
+  }
+  const promptParsed = parseJson(promptChunk);
+  if (!promptParsed.ok) {
+    return Result.error({
+      type: 'parseError',
+      message: 'Invalid JSON in prompt chunk',
+    });
+  }
+
   // Build metadata
   const metadata: Omit<ComfyUIMetadata, 'raw'> = {
     software: 'tensorart',
@@ -67,6 +81,7 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
     negativePrompt: data.negativePrompt ?? '',
     width,
     height,
+    nodes: promptParsed.value as ComfyNodeGraph,
   };
 
   // Add model settings

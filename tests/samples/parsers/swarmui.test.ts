@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseSwarmUI } from '../../../src/parsers/swarmui';
 import type { SwarmUIMetadata } from '../../../src/types';
+import { expectComfyNodeGraph } from '../../helpers/comfy-node-graph';
 import { parseConvertedSample, parsePngSample } from '../helpers';
 
 describe('SwarmUI Parsers - Samples', () => {
@@ -28,7 +29,9 @@ describe('SwarmUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
+        nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse swarmui-hires.png', () => {
@@ -61,7 +64,9 @@ describe('SwarmUI Parsers - Samples', () => {
           denoise: 0.3,
         },
         upscale: undefined,
+        nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse swarmui-upscale.png', () => {
@@ -90,7 +95,9 @@ describe('SwarmUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
+        nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
   });
 

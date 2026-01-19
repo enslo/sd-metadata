@@ -189,8 +189,22 @@ describe('Round-trip preservation', () => {
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
-          // Metadata should match original
-          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          // Metadata should match original, except for SwarmUI nodes field
+          // SwarmUI PNG contains 'prompt' chunk (ComfyUI workflow) that is not preserved
+          // in JPEG/WebP conversion (only 'parameters' is preserved to match native format)
+          // TODO: Future improvement - preserve nodes data when converting PNG→JPEG→PNG
+          // (not possible for native JPEG/WebP since they never had nodes)
+          if (tool === 'SwarmUI') {
+            const { nodes: _, ...originalWithoutNodes } =
+              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+              originalMetadata.metadata as any;
+            const { nodes: __, ...finalWithoutNodes } =
+              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+              finalRead.metadata as any;
+            expect(finalWithoutNodes).toEqual(originalWithoutNodes);
+          } else {
+            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          }
 
           // SwarmUI PNG contains 'prompt' chunk (ComfyUI workflow) that is not preserved
           // in JPEG/WebP conversion (only 'parameters' is preserved to match native WebP format)

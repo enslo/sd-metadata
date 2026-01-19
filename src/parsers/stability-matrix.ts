@@ -49,7 +49,7 @@ export function parseStabilityMatrix(
 
   // First, parse as ComfyUI workflow to get base metadata
   const comfyResult = parseComfyUI(entries);
-  if (!comfyResult.ok) {
+  if (!comfyResult.ok || comfyResult.value.software !== 'comfyui') {
     return Result.error({ type: 'unsupportedFormat' });
   }
 

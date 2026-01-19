@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseTensorArt } from '../../../src/parsers/tensorart';
 import type { ComfyUIMetadata } from '../../../src/types';
+import { expectComfyNodeGraph } from '../../helpers/comfy-node-graph';
 import { parsePngSample } from '../helpers';
 
 describe('TensorArt Parsers - Samples', () => {
@@ -31,7 +32,9 @@ describe('TensorArt Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
+        nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
   });
 });
