@@ -16,98 +16,174 @@ export function detectSoftware(
 ): GenerationSoftware | null {
   const entryRecord = buildEntryRecord(entries);
 
-  // First try keyword-based detection (fast path)
-  const keywordResult = detectFromKeywords(entryRecord);
-  if (keywordResult) return keywordResult;
+  // Tier 1: Fastest - unique keywords
+  const uniqueResult = detectUniqueKeywords(entryRecord);
+  if (uniqueResult) return uniqueResult;
 
-  // Then try content-based detection (slower but more thorough)
-  return detectFromContent(entryRecord);
+  // Tier 2: Format-specific structured detection
+  const comfyResult = detectComfyUIEntries(entryRecord);
+  if (comfyResult) return comfyResult;
+
+  // Tier 3: Content analysis
+  const text = entryRecord.parameters ?? entryRecord.Comment ?? '';
+  if (text) {
+    return detectFromTextContent(text);
+  }
+
+  return null;
 }
 
 /**
- * Detect software from entry keywords
+ * Detect software from unique keywords (Tier 1)
  *
  * Fast path: checks for presence of specific keywords that uniquely
- * identify each software.
+ * identify each software. These are the most reliable indicators.
+ *
+ * Includes:
+ * - Unique PNG chunk keywords
+ * - Unique content patterns in parameters
+ * - JPEG/WebP Comment JSON parsing (conversion cases)
  */
-function detectFromKeywords(
+function detectUniqueKeywords(
   entryRecord: EntryRecord,
 ): GenerationSoftware | null {
-  // NovelAI: Software = "NovelAI"
+  // ========================================
+  // PNG Chunk Keywords
+  // ========================================
+
+  // NovelAI: Uses "Software" chunk with "NovelAI" value
   if (entryRecord.Software === 'NovelAI') {
     return 'novelai';
   }
 
-  // InvokeAI: has invokeai_metadata entry
+  // InvokeAI: Has unique "invokeai_metadata" chunk
   if ('invokeai_metadata' in entryRecord) {
     return 'invokeai';
   }
 
-  // TensorArt: has generation_data entry
+  // TensorArt: Has unique "generation_data" chunk
   if ('generation_data' in entryRecord) {
     return 'tensorart';
   }
 
-  // Stability Matrix: has smproj entry
+  // Stability Matrix: Has unique "smproj" chunk
   if ('smproj' in entryRecord) {
     return 'stability-matrix';
   }
 
-  // Easy Diffusion: has negative_prompt or Negative Prompt entry
+  // Easy Diffusion: Has "negative_prompt" or "Negative Prompt" keyword
   if ('negative_prompt' in entryRecord || 'Negative Prompt' in entryRecord) {
     return 'easydiffusion';
   }
 
-  // For JPEG/WebP: Check if Comment contains JSON with specific keys
-  // This handles cases where PNG chunks were converted to JPEG/WebP
+  // ========================================
+  // Parameters Content Patterns
+  // ========================================
+
+  // SwarmUI: Check parameters for "sui_image_params"
+  // MUST check here to catch it before ComfyUI detection
+  const parameters = entryRecord.parameters;
+  if (parameters?.includes('sui_image_params')) {
+    return 'swarmui';
+  }
+
+  // ========================================
+  // JPEG/WebP Comment JSON
+  // ========================================
+
   const comment = entryRecord.Comment;
   if (comment?.startsWith('{')) {
-    try {
-      const parsed = JSON.parse(comment) as Record<string, unknown>;
+    return detectFromCommentJson(comment);
+  }
 
-      // InvokeAI: has invokeai_metadata key in JSON
-      if ('invokeai_metadata' in parsed) {
-        return 'invokeai';
+  return null;
+}
+
+/**
+ * Detect software from Comment JSON (conversion cases)
+ *
+ * Handles PNG→JPEG/WebP conversions where chunks become JSON.
+ */
+function detectFromCommentJson(comment: string): GenerationSoftware | null {
+  try {
+    const parsed = JSON.parse(comment) as Record<string, unknown>;
+
+    // InvokeAI: Same as PNG chunk check, but from JSON
+    if ('invokeai_metadata' in parsed) {
+      return 'invokeai';
+    }
+
+    // ComfyUI: Has both prompt and workflow in JSON
+    if ('prompt' in parsed && 'workflow' in parsed) {
+      const workflow = parsed.workflow;
+      const prompt = parsed.prompt;
+
+      const isObject =
+        typeof workflow === 'object' || typeof prompt === 'object';
+      const isJsonString =
+        (typeof workflow === 'string' && workflow.startsWith('{')) ||
+        (typeof prompt === 'string' && prompt.startsWith('{'));
+
+      if (isObject || isJsonString) {
+        return 'comfyui';
       }
+    }
 
-      // ComfyUI: has both prompt and workflow keys in JSON
-      // Values can be either:
-      // 1. Objects (saveimage-plus format): {"prompt": {"nodes": [...]}, "workflow": {...}}
-      // 2. JSON strings (our converter): {"prompt": "{\"nodes\": [...]}", "workflow": "..."}
-      if ('prompt' in parsed && 'workflow' in parsed) {
-        const workflow = parsed.workflow;
-        const prompt = parsed.prompt;
+    // SwarmUI: Same as parameters check, but from Comment JSON
+    if ('sui_image_params' in parsed) {
+      return 'swarmui';
+    }
 
-        // Check if values are objects (saveimage-plus) or JSON strings (our format)
-        const isObject =
-          typeof workflow === 'object' || typeof prompt === 'object';
-        const isJsonString =
-          (typeof workflow === 'string' && workflow.startsWith('{')) ||
-          (typeof prompt === 'string' && prompt.startsWith('{'));
-
-        if (isObject || isJsonString) {
-          return 'comfyui';
-        }
+    // SwarmUI alternative format
+    if ('prompt' in parsed && 'parameters' in parsed) {
+      const params = String(parsed.parameters || '');
+      if (
+        params.includes('sui_image_params') ||
+        params.includes('swarm_version')
+      ) {
+        return 'swarmui';
       }
+    }
+  } catch {
+    // Invalid JSON
+  }
 
-      // SwarmUI: has sui_image_params key in JSON
-      if ('sui_image_params' in parsed) {
+  return null;
+}
+
+/**
+ * Detect ComfyUI from specific entry combinations (Tier 2)
+ *
+ * ComfyUI has unique entry combinations that can be detected
+ * before analyzing text content.
+ */
+function detectComfyUIEntries(
+  entryRecord: EntryRecord,
+): GenerationSoftware | null {
+  // ComfyUI: Both prompt AND workflow chunks exist
+  if ('prompt' in entryRecord && 'workflow' in entryRecord) {
+    return 'comfyui';
+  }
+
+  // ComfyUI: Workflow chunk only (rare, but valid)
+  if ('workflow' in entryRecord) {
+    return 'comfyui';
+  }
+
+  // ComfyUI: Prompt chunk with workflow JSON data
+  // IMPORTANT: Check SwarmUI FIRST
+  if ('prompt' in entryRecord) {
+    const promptText = entryRecord.prompt;
+    if (promptText?.startsWith('{')) {
+      // SwarmUI: Must check FIRST
+      if (promptText.includes('sui_image_params')) {
         return 'swarmui';
       }
 
-      // SwarmUI alternative: has both prompt and parameters keys
-      // (different from ComfyUI which has workflow, and values are plain text)
-      if ('prompt' in parsed && 'parameters' in parsed) {
-        const params = String(parsed.parameters || '');
-        if (
-          params.includes('sui_image_params') ||
-          params.includes('swarm_version')
-        ) {
-          return 'swarmui';
-        }
+      // ComfyUI: Has class_type in prompt JSON
+      if (promptText.includes('class_type')) {
+        return 'comfyui';
       }
-    } catch {
-      // Not valid JSON, continue to content-based detection
     }
   }
 
@@ -115,56 +191,62 @@ function detectFromKeywords(
 }
 
 /**
- * Detect software from entry content
+ * Detect software from text content (Tier 3)
  *
- * Slower path: analyzes the content of text entries to identify
- * software based on patterns in the metadata.
+ * Analyzes text content which can be either JSON format or A1111 text format.
+ * This is the slowest but most thorough detection path.
  */
-function detectFromContent(
-  entryRecord: EntryRecord,
-): GenerationSoftware | null {
-  // ComfyUI: prioritize if both prompt and workflow exist
-  // This handles custom nodes like SaveImageWithMetadata that output both
-  // A1111-style parameters AND ComfyUI prompt/workflow
-  if ('prompt' in entryRecord && 'workflow' in entryRecord) {
-    return 'comfyui';
-  }
-
-  // Check parameters entry (PNG) or Comment entry (JPEG/WebP)
-  const text = entryRecord.parameters ?? entryRecord.Comment ?? '';
-
-  if (!text) {
-    // Check for workflow entry (ComfyUI)
-    if ('workflow' in entryRecord) {
-      return 'comfyui';
-    }
-    return null;
-  }
-
+function detectFromTextContent(text: string): GenerationSoftware | null {
   // JSON format detection
   if (text.startsWith('{')) {
-    return detectFromJson(text);
+    return detectFromJsonFormat(text);
   }
 
   // A1111-style text format detection
-  return detectFromA1111Text(text);
+  return detectFromA1111Format(text);
 }
 
 /**
  * Detect software from JSON-formatted metadata
+ *
+ * Priority order:
+ * 1. Unique string patterns (most specific)
+ * 2. Multi-field combinations (moderately specific)
+ * 3. Generic patterns (least specific, fallback)
  */
-function detectFromJson(json: string): GenerationSoftware | null {
-  // SwarmUI: has sui_image_params
+function detectFromJsonFormat(json: string): GenerationSoftware | null {
+  // ========================================
+  // Tier 1: Unique String Identifiers
+  // ========================================
+
+  // SwarmUI: Has "sui_image_params" (unique identifier)
   if (json.includes('sui_image_params')) {
     return 'swarmui';
   }
 
-  // Civitai JSON format
+  // Ruined Fooocus: Has explicit software field
+  if (
+    json.includes('"software":"RuinedFooocus"') ||
+    json.includes('"software": "RuinedFooocus"')
+  ) {
+    return 'ruined-fooocus';
+  }
+
+  // Easy Diffusion: Has unique field name
+  if (json.includes('"use_stable_diffusion_model"')) {
+    return 'easydiffusion';
+  }
+
+  // Civitai: Has distinctive namespace or field
   if (json.includes('civitai:') || json.includes('"resource-stack"')) {
     return 'civitai';
   }
 
-  // NovelAI JSON format
+  // ========================================
+  // Tier 2: Multi-Field Combinations
+  // ========================================
+
+  // NovelAI: Has distinctive v4_prompt or noise_schedule fields
   if (
     json.includes('"v4_prompt"') ||
     json.includes('"noise_schedule"') ||
@@ -176,30 +258,21 @@ function detectFromJson(json: string): GenerationSoftware | null {
     return 'novelai';
   }
 
-  // HuggingFace Space JSON format (Gradio + Diffusers)
+  // HuggingFace Space: Combination of Model + resolution
   if (json.includes('"Model"') && json.includes('"resolution"')) {
     return 'hf-space';
   }
 
-  // Easy Diffusion: has use_stable_diffusion_model
-  if (json.includes('"use_stable_diffusion_model"')) {
-    return 'easydiffusion';
-  }
-
-  // Ruined Fooocus: has software = "RuinedFooocus"
-  if (
-    json.includes('"software":"RuinedFooocus"') ||
-    json.includes('"software": "RuinedFooocus"')
-  ) {
-    return 'ruined-fooocus';
-  }
-
-  // Fooocus: has prompt + base_model
+  // Fooocus: Has prompt + base_model combination
   if (json.includes('"prompt"') && json.includes('"base_model"')) {
     return 'fooocus';
   }
 
-  // ComfyUI JSON format
+  // ========================================
+  // Tier 3: Generic Fallback Patterns
+  // ========================================
+
+  // ComfyUI: Has "prompt" or "nodes" (very generic, last resort)
   if (json.includes('"prompt"') || json.includes('"nodes"')) {
     return 'comfyui';
   }
@@ -209,44 +282,67 @@ function detectFromJson(json: string): GenerationSoftware | null {
 
 /**
  * Detect software from A1111-style text format
+ *
+ * Priority order:
+ * 1. SwarmUI indicators (check first as it has unique markers)
+ * 2. Version field analysis (forge, forge-neo, comfyui variants)
+ * 3. App field (SD.Next)
+ * 4. Resource markers (Civitai)
+ * 5. Default A1111 format (steps + sampler)
  */
-function detectFromA1111Text(text: string): GenerationSoftware | null {
-  // SwarmUI: has sui_image_params in text
-  if (text.includes('sui_image_params')) {
+function detectFromA1111Format(text: string): GenerationSoftware | null {
+  // ========================================
+  // Tier 1: SwarmUI Detection
+  // ========================================
+
+  // SwarmUI: Has sui_image_params or swarm_version
+  if (text.includes('sui_image_params') || text.includes('swarm_version')) {
     return 'swarmui';
   }
 
-  // Check swarm_version
-  if (text.includes('swarm_version')) {
-    return 'swarmui';
-  }
+  // ========================================
+  // Tier 2: Version Field Analysis
+  // ========================================
 
-  // Check for Version field
   const versionMatch = text.match(/Version:\s*([^\s,]+)/);
   if (versionMatch) {
     const version = versionMatch[1];
+
+    // Forge Neo: Version starts with "neo"
     if (version === 'neo' || version?.startsWith('neo')) {
       return 'forge-neo';
     }
+
+    // Forge: Version starts with "f" followed by a digit
     if (version?.startsWith('f') && /^f\d/.test(version)) {
       return 'forge';
     }
+
+    // ComfyUI: Version explicitly says "ComfyUI"
     if (version === 'ComfyUI') {
       return 'comfyui';
     }
   }
 
-  // SD.Next: has App: SD.Next
+  // ========================================
+  // Tier 3: Other Unique Text Markers
+  // ========================================
+
+  // SD.Next: Has App field with SD.Next value
   if (text.includes('App: SD.Next') || text.includes('App:SD.Next')) {
     return 'sd-next';
   }
 
-  // Civitai resources
+  // Civitai: Has resource list marker
   if (text.includes('Civitai resources:')) {
     return 'civitai';
   }
 
-  // Default to A1111 format if it has typical parameters
+  // ========================================
+  // Tier 4: Default A1111 Format
+  // ========================================
+
+  // SD-WebUI (default): Has typical A1111 parameters
   if (text.includes('Steps:') && text.includes('Sampler:')) {
     return 'sd-webui';
   }
