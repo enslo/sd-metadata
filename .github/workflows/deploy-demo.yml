@@ -1,0 +1,19 @@
+name: Deploy Demo Site
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  trigger-cloudflare-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cloudflare Pages Deploy
+        run: |
+          curl -X POST "${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}"
+
+      - name: Deployment info
+        run: |
+          echo "✅ Cloudflare Pages deployment triggered!"
+          echo "📦 Release: ${{ github.event.release.tag_name }}"
+          echo "Demo site will be updated with the latest package version shortly."
