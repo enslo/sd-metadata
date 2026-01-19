@@ -16,31 +16,39 @@ export function detectSoftware(
 ): GenerationSoftware | null {
   const entryRecord = buildEntryRecord(entries);
 
-  // First try keyword-based detection (fast path)
-  const keywordResult = detectFromKeywords(entryRecord);
-  if (keywordResult) return keywordResult;
+  // Tier 1: Fastest - unique keywords
+  const uniqueResult = detectUniqueKeywords(entryRecord);
+  if (uniqueResult) return uniqueResult;
 
-  // Then try content-based detection (slower but more thorough)
-  return detectFromContent(entryRecord);
+  // Tier 2: Format-specific structured detection
+  const comfyResult = detectComfyUIEntries(entryRecord);
+  if (comfyResult) return comfyResult;
+
+  // Tier 3: Content analysis
+  const text = entryRecord.parameters ?? entryRecord.Comment ?? '';
+  if (text) {
+    return detectFromTextContent(text);
+  }
+
+  return null;
 }
 
 /**
- * Detect software from entry keywords
+ * Detect software from unique keywords (Tier 1)
  *
  * Fast path: checks for presence of specific keywords that uniquely
  * identify each software. These are the most reliable indicators.
  *
- * Priority order:
- * 1. Unique PNG chunk keywords (fastest, most reliable)
- * 2. Unique content patterns in parameters
- * 3. JPEG/WebP Comment JSON parsing (conversion cases)
+ * Includes:
+ * - Unique PNG chunk keywords
+ * - Unique content patterns in parameters
+ * - JPEG/WebP Comment JSON parsing (conversion cases)
  */
-function detectFromKeywords(
+function detectUniqueKeywords(
   entryRecord: EntryRecord,
 ): GenerationSoftware | null {
   // ========================================
-  // Tier 1: Unique PNG Chunk Keywords
-  // These are absolutely unique and can be detected instantly
+  // PNG Chunk Keywords
   // ========================================
 
   // NovelAI: Uses "Software" chunk with "NovelAI" value
@@ -64,102 +72,95 @@ function detectFromKeywords(
   }
 
   // Easy Diffusion: Has "negative_prompt" or "Negative Prompt" keyword
-  // (unusual casing makes this pretty unique)
   if ('negative_prompt' in entryRecord || 'Negative Prompt' in entryRecord) {
     return 'easydiffusion';
   }
 
   // ========================================
-  // Tier 2: Unique Content Patterns
-  // Check for distinctive text patterns in parameters
+  // Parameters Content Patterns
   // ========================================
 
   // SwarmUI: Check parameters for "sui_image_params"
-  // MUST check BEFORE prompt-based ComfyUI detection because:
-  // - SwarmUI files often have BOTH SwarmUI parameters AND ComfyUI prompt chunks
-  // - sui_image_params is absolutely unique to SwarmUI
+  // MUST check here to catch it before ComfyUI detection
   const parameters = entryRecord.parameters;
   if (parameters?.includes('sui_image_params')) {
     return 'swarmui';
   }
 
   // ========================================
-  // Tier 3: JPEG/WebP Comment JSON Detection
-  // These handle PNG→JPEG/WebP conversions where chunks become JSON
+  // JPEG/WebP Comment JSON
   // ========================================
 
   const comment = entryRecord.Comment;
   if (comment?.startsWith('{')) {
-    try {
-      const parsed = JSON.parse(comment) as Record<string, unknown>;
-
-      // InvokeAI: Same as PNG chunk check, but from JSON
-      if ('invokeai_metadata' in parsed) {
-        return 'invokeai';
-      }
-
-      // ComfyUI: Has both prompt and workflow in JSON
-      // This is our converter's output OR saveimage-plus node output
-      if ('prompt' in parsed && 'workflow' in parsed) {
-        const workflow = parsed.workflow;
-        const prompt = parsed.prompt;
-
-        // Values can be objects (saveimage-plus) or JSON strings (our format)
-        const isObject =
-          typeof workflow === 'object' || typeof prompt === 'object';
-        const isJsonString =
-          (typeof workflow === 'string' && workflow.startsWith('{')) ||
-          (typeof prompt === 'string' && prompt.startsWith('{'));
-
-        if (isObject || isJsonString) {
-          return 'comfyui';
-        }
-      }
-
-      // SwarmUI: Same as parameters check, but from Comment JSON
-      if ('sui_image_params' in parsed) {
-        return 'swarmui';
-      }
-
-      // SwarmUI alternative format: has prompt + parameters (not workflow)
-      // with SwarmUI-specific content
-      if ('prompt' in parsed && 'parameters' in parsed) {
-        const params = String(parsed.parameters || '');
-        if (
-          params.includes('sui_image_params') ||
-          params.includes('swarm_version')
-        ) {
-          return 'swarmui';
-        }
-      }
-    } catch {
-      // Invalid JSON, will fall through to content-based detection
-    }
+    return detectFromCommentJson(comment);
   }
 
   return null;
 }
 
 /**
- * Detect software from entry content
+ * Detect software from Comment JSON (conversion cases)
  *
- * Slower path: analyzes the content of text entries to identify
- * software based on patterns in the metadata.
- *
- * This is called after keyword-based detection fails, so we know
- * the software doesn't have unique keywords.
+ * Handles PNG→JPEG/WebP conversions where chunks become JSON.
  */
-function detectFromContent(
+function detectFromCommentJson(comment: string): GenerationSoftware | null {
+  try {
+    const parsed = JSON.parse(comment) as Record<string, unknown>;
+
+    // InvokeAI: Same as PNG chunk check, but from JSON
+    if ('invokeai_metadata' in parsed) {
+      return 'invokeai';
+    }
+
+    // ComfyUI: Has both prompt and workflow in JSON
+    if ('prompt' in parsed && 'workflow' in parsed) {
+      const workflow = parsed.workflow;
+      const prompt = parsed.prompt;
+
+      const isObject =
+        typeof workflow === 'object' || typeof prompt === 'object';
+      const isJsonString =
+        (typeof workflow === 'string' && workflow.startsWith('{')) ||
+        (typeof prompt === 'string' && prompt.startsWith('{'));
+
+      if (isObject || isJsonString) {
+        return 'comfyui';
+      }
+    }
+
+    // SwarmUI: Same as parameters check, but from Comment JSON
+    if ('sui_image_params' in parsed) {
+      return 'swarmui';
+    }
+
+    // SwarmUI alternative format
+    if ('prompt' in parsed && 'parameters' in parsed) {
+      const params = String(parsed.parameters || '');
+      if (
+        params.includes('sui_image_params') ||
+        params.includes('swarm_version')
+      ) {
+        return 'swarmui';
+      }
+    }
+  } catch {
+    // Invalid JSON
+  }
+
+  return null;
+}
+
+/**
+ * Detect ComfyUI from specific entry combinations (Tier 2)
+ *
+ * ComfyUI has unique entry combinations that can be detected
+ * before analyzing text content.
+ */
+function detectComfyUIEntries(
   entryRecord: EntryRecord,
 ): GenerationSoftware | null {
-  // ========================================
-  // ComfyUI-Specific Entry Detection
-  // Check for ComfyUI's unique entry combinations
-  // ========================================
-
   // ComfyUI: Both prompt AND workflow chunks exist
-  // This handles custom nodes like SaveImageWithMetadata that output
-  // both A1111-style parameters AND ComfyUI prompt/workflow
   if ('prompt' in entryRecord && 'workflow' in entryRecord) {
     return 'comfyui';
   }
@@ -170,43 +171,39 @@ function detectFromContent(
   }
 
   // ComfyUI: Prompt chunk with workflow JSON data
-  // Check for prompt-only chunks containing ComfyUI workflow
-  // IMPORTANT: Check SwarmUI BEFORE ComfyUI because SwarmUI files
-  // can also have prompt chunks with class_type
+  // IMPORTANT: Check SwarmUI FIRST
   if ('prompt' in entryRecord) {
     const promptText = entryRecord.prompt;
     if (promptText?.startsWith('{')) {
-      // SwarmUI: Has sui_image_params in prompt JSON
-      // Must check FIRST because SwarmUI also has class_type
+      // SwarmUI: Must check FIRST
       if (promptText.includes('sui_image_params')) {
         return 'swarmui';
       }
 
-      // ComfyUI: Has class_type in prompt JSON (workflow data)
+      // ComfyUI: Has class_type in prompt JSON
       if (promptText.includes('class_type')) {
         return 'comfyui';
       }
     }
   }
 
-  // ========================================
-  // Parameters/Comment Text Analysis
-  // Analyze the main text content (A1111 format or JSON)
-  // ========================================
+  return null;
+}
 
-  const text = entryRecord.parameters ?? entryRecord.Comment ?? '';
-
-  if (!text) {
-    return null;
-  }
-
+/**
+ * Detect software from text content (Tier 3)
+ *
+ * Analyzes text content which can be either JSON format or A1111 text format.
+ * This is the slowest but most thorough detection path.
+ */
+function detectFromTextContent(text: string): GenerationSoftware | null {
   // JSON format detection
   if (text.startsWith('{')) {
-    return detectFromJson(text);
+    return detectFromJsonFormat(text);
   }
 
   // A1111-style text format detection
-  return detectFromA1111Text(text);
+  return detectFromA1111Format(text);
 }
 
 /**
@@ -217,10 +214,9 @@ function detectFromContent(
  * 2. Multi-field combinations (moderately specific)
  * 3. Generic patterns (least specific, fallback)
  */
-function detectFromJson(json: string): GenerationSoftware | null {
+function detectFromJsonFormat(json: string): GenerationSoftware | null {
   // ========================================
   // Tier 1: Unique String Identifiers
-  // These are absolutely unique to their tools
   // ========================================
 
   // SwarmUI: Has "sui_image_params" (unique identifier)
@@ -248,11 +244,9 @@ function detectFromJson(json: string): GenerationSoftware | null {
 
   // ========================================
   // Tier 2: Multi-Field Combinations
-  // These require multiple fields to be present
   // ========================================
 
   // NovelAI: Has distinctive v4_prompt or noise_schedule fields
-  // (escaped quotes handle converted metadata)
   if (
     json.includes('"v4_prompt"') ||
     json.includes('"noise_schedule"') ||
@@ -265,7 +259,6 @@ function detectFromJson(json: string): GenerationSoftware | null {
   }
 
   // HuggingFace Space: Combination of Model + resolution
-  // (generic names, but combination is distinctive)
   if (json.includes('"Model"') && json.includes('"resolution"')) {
     return 'hf-space';
   }
@@ -277,11 +270,9 @@ function detectFromJson(json: string): GenerationSoftware | null {
 
   // ========================================
   // Tier 3: Generic Fallback Patterns
-  // Least specific  - only check if nothing else matches
   // ========================================
 
   // ComfyUI: Has "prompt" or "nodes" (very generic, last resort)
-  // Note: Many tools use "prompt", so this is truly a fallback
   if (json.includes('"prompt"') || json.includes('"nodes"')) {
     return 'comfyui';
   }
@@ -299,10 +290,9 @@ function detectFromJson(json: string): GenerationSoftware | null {
  * 4. Resource markers (Civitai)
  * 5. Default A1111 format (steps + sampler)
  */
-function detectFromA1111Text(text: string): GenerationSoftware | null {
+function detectFromA1111Format(text: string): GenerationSoftware | null {
   // ========================================
   // Tier 1: SwarmUI Detection
-  // Check SwarmUI FIRST as it has unique, reliable markers
   // ========================================
 
   // SwarmUI: Has sui_image_params or swarm_version
@@ -312,7 +302,6 @@ function detectFromA1111Text(text: string): GenerationSoftware | null {
 
   // ========================================
   // Tier 2: Version Field Analysis
-  // Many A1111 forks use the Version field to identify themselves
   // ========================================
 
   const versionMatch = text.match(/Version:\s*([^\s,]+)/);
@@ -324,12 +313,12 @@ function detectFromA1111Text(text: string): GenerationSoftware | null {
       return 'forge-neo';
     }
 
-    // Forge: Version starts with "f" followed by a digit (e.g., f1.0.0)
+    // Forge: Version starts with "f" followed by a digit
     if (version?.startsWith('f') && /^f\d/.test(version)) {
       return 'forge';
     }
 
-    // ComfyUI: Version explicitly says "ComfyUI" (rare A1111 format output)
+    // ComfyUI: Version explicitly says "ComfyUI"
     if (version === 'ComfyUI') {
       return 'comfyui';
     }
@@ -351,8 +340,6 @@ function detectFromA1111Text(text: string): GenerationSoftware | null {
 
   // ========================================
   // Tier 4: Default A1111 Format
-  // If it has Steps + Sampler, it's likely standard A1111
-  // This is the fallback for all unidentified A1111-format tools
   // ========================================
 
   // SD-WebUI (default): Has typical A1111 parameters
