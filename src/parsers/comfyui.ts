@@ -216,7 +216,10 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
 function findPromptJson(entryRecord: EntryRecord): string | undefined {
   // PNG format: prompt entry
   if (entryRecord.prompt) {
-    return entryRecord.prompt;
+    // Clean invalid JSON values that ComfyUI may include
+    // - NaN is not valid in JSON spec (JavaScript only)
+    // Replace NaN with null to make it parseable
+    return entryRecord.prompt.replace(/:\s*NaN\b/g, ': null');
   }
 
   // JPEG/WebP format: may be in various entries
@@ -233,8 +236,12 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
 
     // Check if it's JSON that looks like ComfyUI prompt
     if (candidate.startsWith('{')) {
-      // Remove null terminators that some tools append
-      const cleaned = candidate.replace(/\0+$/, '');
+      // Clean invalid JSON values
+      // - Remove null terminators that some tools append
+      // - Replace NaN with null (NaN is not valid in JSON spec)
+      const cleaned = candidate
+        .replace(/\0+$/, '')
+        .replace(/:\s*NaN\b/g, ': null');
       const parsed = parseJson<Record<string, unknown>>(cleaned);
       if (!parsed.ok) continue;
 
@@ -245,7 +252,7 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
       // Check for nodes with class_type
       const values = Object.values(parsed.value);
       if (values.some((v) => v && typeof v === 'object' && 'class_type' in v)) {
-        return candidate;
+        return cleaned; // Return cleaned JSON, not original candidate
       }
     }
   }
