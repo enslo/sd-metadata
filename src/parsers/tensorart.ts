@@ -1,4 +1,5 @@
 import type {
+  ComfyNodeGraph,
   ComfyUIMetadata,
   InternalParseResult,
   MetadataEntry,
@@ -80,7 +81,7 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
     negativePrompt: data.negativePrompt ?? '',
     width,
     height,
-    nodes: promptParsed.value,
+    nodes: promptParsed.value as ComfyNodeGraph,
   };
 
   // Add model settings

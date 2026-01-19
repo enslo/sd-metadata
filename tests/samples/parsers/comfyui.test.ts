@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseComfyUI } from '../../../src/parsers/comfyui';
 import type { ComfyUIMetadata } from '../../../src/types';
+import { expectComfyNodeGraph } from '../../helpers/comfy-node-graph';
 import { parseConvertedSample, parsePngSample } from '../helpers';
 
 describe('ComfyUI Parsers - Samples', () => {
@@ -30,6 +31,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-hires.png', () => {
@@ -65,6 +67,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-upscale.png', () => {
@@ -98,6 +101,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-saveimage-plus.png', () => {
@@ -128,6 +132,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-save-image-extended.png', () => {
@@ -158,6 +163,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-saveimagewithmetadata.png', () => {
@@ -188,6 +194,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-comfy-image-saver.png', () => {
@@ -218,6 +225,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
   });
 
@@ -250,6 +258,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-save-image-extended.webp', () => {
@@ -280,6 +289,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-saveimagewithmetadata.webp', () => {
@@ -365,6 +375,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-save-image-extended.jpeg', () => {
@@ -395,6 +406,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes);
     });
 
     it('should parse comfyui-saveimagewithmetadata.jpeg', () => {
@@ -476,6 +488,7 @@ describe('ComfyUI Parsers - Samples', () => {
         upscale: undefined,
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes, ['extra', 'extraMetadata']);
     });
 
     it('should parse civitai-upscale.jpg', () => {
@@ -507,6 +520,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         nodes: expect.any(Object),
       });
+      expectComfyNodeGraph(meta.nodes, ['extra', 'extraMetadata']);
     });
   });
 });
