@@ -112,10 +112,11 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
     width,
     height,
   };
-  // Add nodes from prompt chunk (PNG format only)
-  const promptChunk = entryRecord.prompt;
-  if (promptChunk) {
-    const promptParsed = parseJson(promptChunk);
+
+  // Add nodes from prompt chunk (PNG format) or Make field (JPEG/WebP extended format)
+  const promptSource = entryRecord.prompt || entryRecord.Make;
+  if (promptSource) {
+    const promptParsed = parseJson(promptSource);
     if (promptParsed.ok) {
       metadata.nodes = promptParsed.value as ComfyNodeGraph;
     }
