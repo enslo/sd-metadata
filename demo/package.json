@@ -14,7 +14,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
-    "@enslo/sd-metadata": "^1.0.0",
+    "@enslo/sd-metadata": "1.0.2",
     "@nanostores/preact": "^1.0.0",
     "lucide-preact": "^0.562.0",
     "nanostores": "^1.1.0",
