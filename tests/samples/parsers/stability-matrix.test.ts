@@ -12,7 +12,6 @@ describe('Stability Matrix Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'stability-matrix',
         prompt:
           'general, masterpiece, best quality, amazing quality, \r\n1girl, solo, hatsune miku, #テスト\r\n',
@@ -43,7 +42,6 @@ describe('Stability Matrix Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'stability-matrix',
         prompt:
           'general, masterpiece, best quality, amazing quality, \r\n1girl, solo, hatsune miku, #テスト\r\n',
@@ -79,7 +77,6 @@ describe('Stability Matrix Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'comfyui',
         software: 'stability-matrix',
         prompt:
           'general, masterpiece, best quality, amazing quality, \r\n1girl, solo, hatsune miku, #テスト\r\n',

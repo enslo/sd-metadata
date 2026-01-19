@@ -9,7 +9,6 @@ describe('SwarmUI Parsers - Samples', () => {
       const meta = parsePngSample<SwarmUIMetadata>('swarmui.png', parseSwarmUI);
 
       expect(meta).toEqual({
-        type: 'swarmui',
         software: 'swarmui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -39,7 +38,6 @@ describe('SwarmUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'swarmui',
         software: 'swarmui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -73,7 +71,6 @@ describe('SwarmUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'swarmui',
         software: 'swarmui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -102,7 +99,6 @@ describe('SwarmUI Parsers - Samples', () => {
       const meta = parseConvertedSample<SwarmUIMetadata>('jpeg', 'swarmui.jpg');
 
       expect(meta).toEqual({
-        type: 'swarmui',
         software: 'swarmui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -134,7 +130,6 @@ describe('SwarmUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'swarmui',
         software: 'swarmui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',

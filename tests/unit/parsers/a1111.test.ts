@@ -50,7 +50,6 @@ Steps: 20, Size: 512x768`;
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('sd-webui');
-        expect(result.value.type).toBe('a1111');
         expect(result.value.prompt).toBe('a beautiful landscape');
         expect(result.value.negativePrompt).toBe('');
         expect(result.value.width).toBe(512);

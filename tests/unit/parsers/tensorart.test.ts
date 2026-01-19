@@ -56,7 +56,6 @@ describe('parseTensorArt - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('tensorart');
-        expect(result.value.type).toBe('comfyui');
         expect(result.value.prompt).toBe('a beautiful landscape');
         expect(result.value.negativePrompt).toBe('lowres, bad quality');
       }
@@ -132,7 +131,7 @@ describe('parseTensorArt - Unit Tests', () => {
       const result = parseTensorArt(entries);
 
       expect(result.ok).toBe(true);
-      if (result.ok && result.value.type === 'comfyui') {
+      if (result.ok && result.value.software === 'tensorart') {
         expect(result.value.prompt).toBe('test');
         expect(result.value.negativePrompt).toBe('');
         expect(result.value.width).toBe(0);

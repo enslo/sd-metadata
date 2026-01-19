@@ -66,7 +66,6 @@ export function parseHfSpace(entries: MetadataEntry[]): InternalParseResult {
 
   // Build metadata
   const metadata: Omit<A1111Metadata, 'raw'> = {
-    type: 'a1111',
     software: 'hf-space',
     prompt: json.prompt ?? '',
     negativePrompt: json.negative_prompt ?? '',

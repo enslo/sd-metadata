@@ -9,7 +9,6 @@ describe('A1111 Parsers - Samples', () => {
       const meta = parsePngSample<A1111Metadata>('forge.png', parseA1111);
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
@@ -37,7 +36,6 @@ describe('A1111 Parsers - Samples', () => {
       const meta = parsePngSample<A1111Metadata>('forge-hires.png', parseA1111);
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
@@ -70,7 +68,6 @@ describe('A1111 Parsers - Samples', () => {
       const meta = parsePngSample<A1111Metadata>('forge-neo.png', parseA1111);
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge-neo',
         prompt:
           'general, masterpiece, best quality, amazing quality,\n1girl, solo, hatsune miku, テスト',
@@ -102,7 +99,6 @@ describe('A1111 Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge-neo',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku,',
@@ -138,7 +134,6 @@ describe('A1111 Parsers - Samples', () => {
       const meta = parsePngSample<A1111Metadata>('sd-next.png', parseA1111);
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-next',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -168,7 +163,6 @@ describe('A1111 Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-next',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -200,7 +194,6 @@ describe('A1111 Parsers - Samples', () => {
       const meta = parseConvertedSample<A1111Metadata>('jpeg', 'forge.jpeg');
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
@@ -231,7 +224,6 @@ describe('A1111 Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
@@ -268,7 +260,6 @@ describe('A1111 Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge-neo',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku,',
@@ -297,7 +288,6 @@ describe('A1111 Parsers - Samples', () => {
       const meta = parseConvertedSample<A1111Metadata>('jpeg', 'civitai.jpeg');
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-webui',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -322,7 +312,6 @@ describe('A1111 Parsers - Samples', () => {
       const meta = parseConvertedSample<A1111Metadata>('jpeg', 'sd-next.jpg');
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-next',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -353,7 +342,6 @@ describe('A1111 Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-next',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -388,7 +376,6 @@ describe('A1111 Parsers - Samples', () => {
       const meta = parseConvertedSample<A1111Metadata>('webp', 'forge.webp');
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
@@ -420,7 +407,6 @@ describe('A1111 Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
@@ -457,7 +443,6 @@ describe('A1111 Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'forge-neo',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku,',
@@ -486,7 +471,6 @@ describe('A1111 Parsers - Samples', () => {
       const meta = parseConvertedSample<A1111Metadata>('webp', 'sd-next.webp');
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-next',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
@@ -517,7 +501,6 @@ describe('A1111 Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'sd-next',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',

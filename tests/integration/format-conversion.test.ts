@@ -34,7 +34,6 @@ describe('Format conversion accuracy', () => {
 
       // Verify key fields are preserved
       expect(convertedRead.metadata.software).toBe('novelai');
-      expect(convertedRead.metadata.type).toBe('novelai');
       expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
       expect(convertedRead.metadata.width).toBe(parseResult.metadata.width);
       expect(convertedRead.metadata.height).toBe(parseResult.metadata.height);
@@ -56,7 +55,6 @@ describe('Format conversion accuracy', () => {
       if (convertedRead.status !== 'success') return;
 
       expect(convertedRead.metadata.software).toBe('forge');
-      expect(convertedRead.metadata.type).toBe('a1111');
       expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
     });
 
@@ -76,7 +74,6 @@ describe('Format conversion accuracy', () => {
       if (convertedRead.status !== 'success') return;
 
       expect(convertedRead.metadata.software).toBe('comfyui');
-      expect(convertedRead.metadata.type).toBe('comfyui');
       expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
       expect(convertedRead.metadata.negativePrompt).toBe(
         parseResult.metadata.negativePrompt,
@@ -99,7 +96,6 @@ describe('Format conversion accuracy', () => {
       if (convertedRead.status !== 'success') return;
 
       expect(convertedRead.metadata.software).toBe('invokeai');
-      expect(convertedRead.metadata.type).toBe('invokeai');
       expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
     });
 
@@ -119,7 +115,6 @@ describe('Format conversion accuracy', () => {
       if (convertedRead.status !== 'success') return;
 
       expect(convertedRead.metadata.software).toBe('swarmui');
-      expect(convertedRead.metadata.type).toBe('swarmui');
       expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
     });
   });
@@ -181,7 +176,6 @@ describe('Format conversion accuracy', () => {
       if (convertedRead.status !== 'success') return;
 
       expect(convertedRead.metadata.software).toBe('forge');
-      expect(convertedRead.metadata.type).toBe('a1111');
       expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
     });
 

@@ -90,7 +90,6 @@ export function parseInvokeAI(entries: MetadataEntry[]): InternalParseResult {
 
   // Build metadata
   const metadata: Omit<InvokeAIMetadata, 'raw'> = {
-    type: 'invokeai',
     software: 'invokeai',
     prompt: data.positive_prompt ?? '',
     negativePrompt: data.negative_prompt ?? '',

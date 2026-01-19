@@ -105,7 +105,6 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
 
   // Build metadata
   const metadata: Omit<SwarmUIMetadata, 'raw'> = {
-    type: 'swarmui',
     software: 'swarmui',
     prompt: params.prompt ?? '',
     negativePrompt: params.negativeprompt ?? '',

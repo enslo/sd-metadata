@@ -266,7 +266,7 @@ type ParseResult =
 ### `GenerationMetadata`
 
 Unified metadata structure. This is a discriminated union of 5 specific metadata types.
-You can use `type` (format classification) or `software` (specific tool) to narrow down the type.
+You can use `software` (specific tool) to narrow down the type.
 
 ```typescript
 type GenerationMetadata =
@@ -281,8 +281,6 @@ type GenerationMetadata =
 
 ```typescript
 interface BaseMetadata {
-  /** Format classification (`novelai`, `comfyui`, `a1111`, etc.) */
-  type: MetadataFormat;
   /** Specific tool name (e.g., `tensorart`, `forge`) */
   software: GenerationSoftware;
   /** Positive prompt */
@@ -306,7 +304,6 @@ Metadata from NovelAI.
 
 ```typescript
 interface NovelAIMetadata extends BaseMetadata {
-  type: 'novelai';
   software: 'novelai';
   /** V4 character prompts (when using character placement) */
   characterPrompts?: Array<{
@@ -325,7 +322,6 @@ Includes the full workflow graph.
 
 ```typescript
 interface ComfyUIMetadata extends BaseMetadata {
-  type: 'comfyui';
   software: 'comfyui' | 'tensorart' | 'stability-matrix';
   /** Full workflow JSON (for reproducibility) */
   workflow?: unknown; // Record<string, ComfyNode>
@@ -338,7 +334,6 @@ Standard metadata format used by SD WebUI, Forge, Fooocus, and many others.
 
 ```typescript
 interface A1111Metadata extends BaseMetadata {
-  type: 'a1111';
   software: 'sd-webui' | 'forge' | 'civitai' | 'fooocus' /* ... */;
 }
 ```
@@ -349,7 +344,6 @@ Metadata from InvokeAI.
 
 ```typescript
 interface InvokeAIMetadata extends BaseMetadata {
-  type: 'invokeai';
   software: 'invokeai';
 }
 ```
@@ -360,7 +354,6 @@ Metadata from SwarmUI.
 
 ```typescript
 interface SwarmUIMetadata extends BaseMetadata {
-  type: 'swarmui';
   software: 'swarmui';
 }
 ```

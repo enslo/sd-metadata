@@ -12,7 +12,6 @@ describe('HF-Space Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'a1111',
         software: 'hf-space',
         prompt:
           '1girl, souryuu asuka langley, neon genesis evangelion, eyepatch, red plugsuit, sitting, on throne, crossed legs, head tilt, holding weapon, lance of longinus \\\\(evangelion\\\\), cowboy shot, depth of field, faux traditional media, painterly, impressionism, photo background, masterpiece, high score, great score, absurdres',

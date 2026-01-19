@@ -69,7 +69,6 @@ describe('parseComfyUI - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('comfyui');
-        expect(result.value.type).toBe('comfyui');
         expect(result.value.prompt).toBe('positive prompt');
         expect(result.value.negativePrompt).toBe('negative prompt');
       }
@@ -240,7 +239,6 @@ describe('parseComfyUI - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('comfyui');
-        expect(result.value.type).toBe('comfyui');
       }
     });
 

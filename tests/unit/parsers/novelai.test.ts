@@ -66,7 +66,6 @@ describe('parseNovelAI - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('novelai');
-        expect(result.value.type).toBe('novelai');
         expect(result.value.prompt).toBe('a beautiful landscape');
         expect(result.value.negativePrompt).toBe('lowres, bad quality');
       }
@@ -161,7 +160,7 @@ describe('parseNovelAI - Unit Tests', () => {
       const result = parseNovelAI(entries);
 
       expect(result.ok).toBe(true);
-      if (result.ok && result.value.type === 'novelai') {
+      if (result.ok && result.value.software === 'novelai') {
         expect(result.value.characterPrompts).toHaveLength(2);
         expect(result.value.characterPrompts?.[0]).toMatchObject({
           prompt: 'char1 description',
@@ -230,7 +229,7 @@ describe('parseNovelAI - Unit Tests', () => {
       const result = parseNovelAI(entries);
 
       expect(result.ok).toBe(true);
-      if (result.ok && result.value.type === 'novelai') {
+      if (result.ok && result.value.software === 'novelai') {
         // Should filter out invalid character captions
         expect(result.value.characterPrompts).toHaveLength(1);
         expect(result.value.characterPrompts?.at(0)?.prompt).toBe('valid');

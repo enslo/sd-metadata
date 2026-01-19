@@ -67,7 +67,6 @@ export function parseRuinedFooocus(
   }
 
   const metadata: Omit<A1111Metadata, 'raw'> = {
-    type: 'a1111',
     software: 'ruined-fooocus',
     prompt: json.Prompt?.trim() ?? '',
     negativePrompt: json.Negative?.trim() ?? '',

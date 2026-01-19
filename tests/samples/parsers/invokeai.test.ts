@@ -12,7 +12,6 @@ describe('InvokeAI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        type: 'invokeai',
         software: 'invokeai',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト\n',

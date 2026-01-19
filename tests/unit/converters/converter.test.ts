@@ -12,7 +12,6 @@ import type {
  * Helper to create a successful ParseResult with mock data
  */
 function createParseResult(
-  type: GenerationMetadata['type'],
   software: GenerationMetadata['software'],
   format: 'png' | 'jpeg' | 'webp',
   data: { chunks?: PngTextChunk[]; segments?: MetadataSegment[] },
@@ -25,7 +24,6 @@ function createParseResult(
   return {
     status: 'success',
     metadata: {
-      type,
       software,
       prompt: 'test prompt',
       negativePrompt: '',
@@ -95,7 +93,7 @@ describe('convertMetadata - Unit Tests', () => {
       const chunks: PngTextChunk[] = [
         { type: 'tEXt', keyword: 'parameters', text: 'test data' },
       ];
-      const parseResult = createParseResult('a1111', 'sd-webui', 'png', {
+      const parseResult = createParseResult('sd-webui', 'png', {
         chunks,
       });
 
@@ -114,7 +112,7 @@ describe('convertMetadata - Unit Tests', () => {
       const segments: MetadataSegment[] = [
         { source: { type: 'exifUserComment' }, data: 'test data' },
       ];
-      const parseResult = createParseResult('a1111', 'sd-webui', 'jpeg', {
+      const parseResult = createParseResult('sd-webui', 'jpeg', {
         segments,
       });
 
@@ -133,7 +131,7 @@ describe('convertMetadata - Unit Tests', () => {
       const segments: MetadataSegment[] = [
         { source: { type: 'exifUserComment' }, data: 'test data' },
       ];
-      const parseResult = createParseResult('a1111', 'sd-webui', 'webp', {
+      const parseResult = createParseResult('sd-webui', 'webp', {
         segments,
       });
 
@@ -158,7 +156,7 @@ describe('convertMetadata - Unit Tests', () => {
           text: 'test prompt\nSteps: 20, Size: 512x512',
         },
       ];
-      const parseResult = createParseResult('a1111', 'sd-webui', 'png', {
+      const parseResult = createParseResult('sd-webui', 'png', {
         chunks,
       });
 
@@ -185,7 +183,7 @@ describe('convertMetadata - Unit Tests', () => {
           text: 'test prompt\nSteps: 20, Size: 512x512',
         },
       ];
-      const parseResult = createParseResult('a1111', 'sd-webui', 'png', {
+      const parseResult = createParseResult('sd-webui', 'png', {
         chunks,
       });
 
@@ -211,7 +209,7 @@ describe('convertMetadata - Unit Tests', () => {
           data: 'test prompt\nSteps: 20, Size: 512x512',
         },
       ];
-      const parseResult = createParseResult('a1111', 'sd-webui', 'jpeg', {
+      const parseResult = createParseResult('sd-webui', 'jpeg', {
         segments,
       });
 
@@ -233,7 +231,7 @@ describe('convertMetadata - Unit Tests', () => {
       const segments: MetadataSegment[] = [
         { source: { type: 'exifUserComment' }, data: 'test data' },
       ];
-      const parseResult = createParseResult('a1111', 'sd-webui', 'jpeg', {
+      const parseResult = createParseResult('sd-webui', 'jpeg', {
         segments,
       });
 
@@ -251,31 +249,30 @@ describe('convertMetadata - Unit Tests', () => {
 
   describe('software-specific conversion', () => {
     const testSoftware: Array<{
-      type: GenerationMetadata['type'];
       software: GenerationMetadata['software'];
       keyword: string;
     }> = [
-      { type: 'novelai', software: 'novelai', keyword: 'Comment' },
-      { type: 'a1111', software: 'sd-webui', keyword: 'parameters' },
-      { type: 'a1111', software: 'forge', keyword: 'parameters' },
-      { type: 'a1111', software: 'forge-neo', keyword: 'parameters' },
-      { type: 'a1111', software: 'civitai', keyword: 'parameters' },
-      { type: 'a1111', software: 'sd-next', keyword: 'parameters' },
-      { type: 'a1111', software: 'ruined-fooocus', keyword: 'parameters' },
-      { type: 'a1111', software: 'hf-space', keyword: 'parameters' },
-      { type: 'comfyui', software: 'comfyui', keyword: 'prompt' },
-      { type: 'comfyui', software: 'tensorart', keyword: 'prompt' },
-      { type: 'comfyui', software: 'stability-matrix', keyword: 'prompt' },
-      { type: 'swarmui', software: 'swarmui', keyword: 'parameters' },
-      { type: 'invokeai', software: 'invokeai', keyword: 'invokeai_metadata' },
+      { software: 'novelai', keyword: 'Comment' },
+      { software: 'sd-webui', keyword: 'parameters' },
+      { software: 'forge', keyword: 'parameters' },
+      { software: 'forge-neo', keyword: 'parameters' },
+      { software: 'civitai', keyword: 'parameters' },
+      { software: 'sd-next', keyword: 'parameters' },
+      { software: 'ruined-fooocus', keyword: 'parameters' },
+      { software: 'hf-space', keyword: 'parameters' },
+      { software: 'comfyui', keyword: 'prompt' },
+      { software: 'tensorart', keyword: 'prompt' },
+      { software: 'stability-matrix', keyword: 'prompt' },
+      { software: 'swarmui', keyword: 'parameters' },
+      { software: 'invokeai', keyword: 'invokeai_metadata' },
     ];
 
-    for (const { type, software, keyword } of testSoftware) {
+    for (const { software, keyword } of testSoftware) {
       it(`should convert ${software} PNG → JPEG`, () => {
         const chunks: PngTextChunk[] = [
           { type: 'tEXt', keyword, text: 'test data' },
         ];
-        const parseResult = createParseResult(type, software, 'png', {
+        const parseResult = createParseResult(software, 'png', {
           chunks,
         });
 
@@ -291,7 +288,7 @@ describe('convertMetadata - Unit Tests', () => {
 
   describe('edge cases', () => {
     it('should handle empty chunks', () => {
-      const parseResult = createParseResult('a1111', 'sd-webui', 'png', {
+      const parseResult = createParseResult('sd-webui', 'png', {
         chunks: [],
       });
 
@@ -304,7 +301,7 @@ describe('convertMetadata - Unit Tests', () => {
     });
 
     it('should handle empty segments', () => {
-      const parseResult = createParseResult('a1111', 'sd-webui', 'jpeg', {
+      const parseResult = createParseResult('sd-webui', 'jpeg', {
         segments: [],
       });
 
@@ -320,7 +317,7 @@ describe('convertMetadata - Unit Tests', () => {
       const chunks: PngTextChunk[] = [
         { type: 'tEXt', keyword: 'parameters', text: 'test' },
       ];
-      const parseResult = createParseResult('a1111', 'sd-webui', 'png', {
+      const parseResult = createParseResult('sd-webui', 'png', {
         chunks,
       });
 

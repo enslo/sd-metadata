@@ -56,7 +56,6 @@ export function parseStabilityMatrix(
   // Override software to stability-matrix
   const metadata: Omit<ComfyUIMetadata, 'raw'> = {
     ...comfyResult.value,
-    type: 'comfyui',
     software: 'stability-matrix',
   };
 
