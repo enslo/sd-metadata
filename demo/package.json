@@ -9,15 +9,15 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@preact/preset-vite": "^2.10.2",
-    "typescript": "~5.9.3",
-    "vite": "^7.2.4"
+    "@preact/preset-vite": "2.10.2",
+    "typescript": "5.9.3",
+    "vite": "7.3.1"
   },
   "dependencies": {
-    "@enslo/sd-metadata": "1.0.2",
-    "@nanostores/preact": "^1.0.0",
-    "lucide-preact": "^0.562.0",
-    "nanostores": "^1.1.0",
-    "preact": "^10.28.2"
+    "@enslo/sd-metadata": "1.1.0",
+    "@nanostores/preact": "1.0.0",
+    "lucide-preact": "0.562.0",
+    "nanostores": "1.1.0",
+    "preact": "10.28.2"
   }
 }

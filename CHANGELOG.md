@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-21
+
+### ⚠️ BREAKING CHANGES
+
+- **Replace `workflow` with `nodes` in ComfyUIMetadata** (#58): The `workflow?: unknown` field has been replaced with typed `nodes: ComfyNodeGraph`.
+  - **What `workflow` was**: ComfyUI UI layout data containing node positions, sizes, link connections, and visual groupings—information used by ComfyUI's graph editor but not required for image reproduction.
+  - **What `nodes` is**: The actual node graph (from PNG `prompt` chunk) mapping node IDs to their inputs and class types—the essential data needed to reproduce the generation.
+  - **Why this change**: Previously, `workflow` only existed in ComfyUI images and was `undefined` for other ComfyUI-compatible tools (TensorArt, Stability Matrix, SwarmUI). Now `nodes` provides actual node graph data from all tools.
+- **Remove `type` field from GenerationMetadata** (#57): Use `metadata.software` instead of `metadata.type` for type narrowing.
+- **Internal types no longer exported** (#60): `BaseMetadata` and `GenerationSoftware` are now internal types.
+
+### Added
+
+- **SwarmUI workflow preservation** (#59): Store ComfyUI node graph in `exifMake` segment when converting PNG to JPEG/WebP, enabling complete round-trip preservation
+- **Typed ComfyUI node graph** (#58): New types `ComfyNode`, `ComfyNodeGraph`, `ComfyNodeReference`, `ComfyNodeInputValue` for type-safe workflow access
+- **Expanded type exports** (#60): Export `ModelSettings`, `SamplingSettings`, `HiresSettings`, `UpscaleSettings`, `CharacterPrompt`, and chunk/segment types
+- **Type documentation** (#60): Comprehensive type reference at `docs/types.md`
+
+### Fixed
+
+- **TensorArt seed extraction** (#61): Extract actual seed from KSampler node when `generation_data.seed` is -1 (random placeholder)
+
+### Changed
+
+- **Metadata type consolidation** (#60): Renamed `A1111Metadata` to `StandardMetadata`, merged `InvokeAIMetadata` into `StandardMetadata`
+- **ComfyUIMetadata restructure** (#60): Split into `BasicComfyUIMetadata` (nodes required) and `SwarmUIMetadata` (nodes optional)
+
+### Documentation
+
+- Improved GenerationMetadata documentation in README (#62)
+- Added comprehensive type reference docs (#60)
+- Improved README usage examples (#56)
+
 ## [1.0.2] - 2026-01-19
 
 ### Fixed
@@ -82,6 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[1.1.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.1.0
 [1.0.2]: https://github.com/enslo/sd-metadata/releases/tag/v1.0.2
 [1.0.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.0.1
 [1.0.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.0.0
