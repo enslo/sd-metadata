@@ -1,6 +1,6 @@
 import type {
+  BasicComfyUIMetadata,
   ComfyNodeGraph,
-  ComfyUIMetadata,
   InternalParseResult,
   MetadataEntry,
 } from '../types';
@@ -75,7 +75,7 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Build metadata
-  const metadata: Omit<ComfyUIMetadata, 'raw'> = {
+  const metadata: Omit<BasicComfyUIMetadata, 'raw'> = {
     software: 'tensorart',
     prompt: data.prompt ?? '',
     negativePrompt: data.negativePrompt ?? '',

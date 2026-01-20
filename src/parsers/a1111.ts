@@ -1,7 +1,7 @@
 import type {
-  A1111Metadata,
   InternalParseResult,
   MetadataEntry,
+  StandardMetadata,
 } from '../types';
 import { Result } from '../types';
 
@@ -63,7 +63,7 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
   const software = detectSoftwareVariant(version, app);
 
   // Build metadata
-  const metadata: Omit<A1111Metadata, 'raw'> = {
+  const metadata: Omit<StandardMetadata, 'raw'> = {
     software,
     prompt,
     negativePrompt,

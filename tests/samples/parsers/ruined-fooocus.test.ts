@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseRuinedFooocus } from '../../../src/parsers/ruined-fooocus';
-import type { A1111Metadata } from '../../../src/types';
+import type { StandardMetadata } from '../../../src/types';
 import { parsePngSample } from '../helpers';
 
 describe('Ruined Fooocus Parsers - Samples', () => {
   describe('PNG samples', () => {
     it('should parse ruined-fooocus.png', () => {
-      const meta = parsePngSample<A1111Metadata>(
+      const meta = parsePngSample<StandardMetadata>(
         'ruined-fooocus.png',
         parseRuinedFooocus,
       );

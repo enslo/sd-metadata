@@ -1,7 +1,7 @@
 import type {
   InternalParseResult,
-  InvokeAIMetadata,
   MetadataEntry,
+  StandardMetadata,
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
@@ -89,7 +89,7 @@ export function parseInvokeAI(entries: MetadataEntry[]): InternalParseResult {
   const height = data.height ?? 0;
 
   // Build metadata
-  const metadata: Omit<InvokeAIMetadata, 'raw'> = {
+  const metadata: Omit<StandardMetadata, 'raw'> = {
     software: 'invokeai',
     prompt: data.positive_prompt ?? '',
     negativePrompt: data.negative_prompt ?? '',

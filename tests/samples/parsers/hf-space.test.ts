@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseHfSpace } from '../../../src/parsers/hf-space';
-import type { A1111Metadata } from '../../../src/types';
+import type { StandardMetadata } from '../../../src/types';
 import { parsePngSample } from '../helpers';
 
 describe('HF-Space Parsers - Samples', () => {
   describe('PNG samples', () => {
     it('should parse huggingface-animagine.png', () => {
-      const meta = parsePngSample<A1111Metadata>(
+      const meta = parsePngSample<StandardMetadata>(
         'huggingface-animagine.png',
         parseHfSpace,
       );

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseInvokeAI } from '../../../src/parsers/invokeai';
-import type { InvokeAIMetadata } from '../../../src/types';
+import type { StandardMetadata } from '../../../src/types';
 import { parsePngSample } from '../helpers';
 
 describe('InvokeAI Parsers - Samples', () => {
   describe('PNG samples', () => {
     it('should parse invokeai.png', () => {
-      const meta = parsePngSample<InvokeAIMetadata>(
+      const meta = parsePngSample<StandardMetadata>(
         'invokeai.png',
         parseInvokeAI,
       );
