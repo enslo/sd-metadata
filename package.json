@@ -48,7 +48,7 @@
   "bugs": {
     "url": "https://github.com/enslo/sd-metadata/issues"
   },
-  "homepage": "https://sd-metadata.pages.dev/",
+  "homepage": "https://sd-metadata.pages.dev",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^25.0.3",

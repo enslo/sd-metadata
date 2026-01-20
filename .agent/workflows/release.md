@@ -85,10 +85,20 @@ Edit `demo/package.json`:
 > Demo uses exact versions (no `^` or `~`) so no lockfile update is needed.
 > Cloudflare Pages is configured with `SKIP_DEPENDENCY_INSTALL=true` and uses `npm install`.
 
-### 6. Commit and Create PR
+### 6. Update README CDN Version
+
+Update the CDN usage example in README.md to reference the new version:
+
+```markdown
+> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@X.Y.Z/dist/index.js
+```
+
+Search for `@enslo/sd-metadata@` in README.md and update the pinned version example.
+
+### 7. Commit and Create PR
 
 ```bash
-git add CHANGELOG.md package.json demo/package.json
+git add CHANGELOG.md package.json demo/package.json README.md
 git commit -m "chore: release vX.Y.Z"
 git push -u origin release/vX.Y.Z
 ```
@@ -101,7 +111,7 @@ gh pr create --title "chore: release vX.Y.Z" --body "Release vX.Y.Z
 See CHANGELOG.md for details."
 ```
 
-### 7. Merge Release PR
+### 8. Merge Release PR
 
 After review, merge the PR:
 
@@ -109,7 +119,7 @@ After review, merge the PR:
 gh pr merge <PR_NUMBER> --squash
 ```
 
-### 8. Create GitHub Release
+### 9. Create GitHub Release
 
 Switch to main and create release:
 
@@ -124,7 +134,7 @@ Or manually copy CHANGELOG content to release notes.
 **Note**: `gh release create` automatically creates both the Git tag and the GitHub release.
 No need to create the tag separately.
 
-### 9. Verify Publish & Deploy
+### 10. Verify Publish & Deploy
 
 **Automated** (triggered by release):
 
@@ -137,7 +147,7 @@ No need to create the tag separately.
 - Check demo site: <https://sd-metadata.pages.dev/>
 - Verify GitHub Actions succeeded
 
-### 10. Cleanup
+### 11. Cleanup
 
 ```bash
 git branch -d release/vX.Y.Z
