@@ -31,7 +31,6 @@ import { writeWebpMetadata } from './writers/webp';
 export type {
   CharacterPrompt,
   GenerationMetadata,
-  GenerationSoftware,
   HiresSettings,
   ITXtChunk,
   MetadataSegment,

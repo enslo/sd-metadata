@@ -2,17 +2,49 @@
 
 Complete type reference for `@enslo/sd-metadata`.
 
+## Import Examples
+
+Quick reference for importing types:
+
+```typescript
+// Import types
+import type {
+  ParseResult,
+  GenerationMetadata,
+  NovelAIMetadata,
+  ComfyUIMetadata,
+  ModelSettings,
+  SamplingSettings,
+  PngTextChunk,
+  MetadataSegment,
+  WriteResult
+} from '@enslo/sd-metadata';
+
+// Use in function signatures
+function displayMetadata(result: ParseResult) {
+  if (result.status === 'success') {
+    console.log(result.metadata.prompt);
+  }
+}
+
+function getModel(metadata: GenerationMetadata): string | undefined {
+  return metadata.model?.name;
+}
+```
+
+---
+
 ## Table of Contents
 
 - [Core Types](#core-types)
   - [`ParseResult`](#parseresult)
   - [`GenerationMetadata`](#generationmetadata)
   - [`RawMetadata`](#rawmetadata)
+  - [`WriteResult`](#writeresult)
 - [Metadata Types](#metadata-types)
-  - [`BaseMetadata`](#basemetadata)
+  - [`StandardMetadata`](#standardmetadata)
   - [`NovelAIMetadata`](#novelaimetadata)
   - [`ComfyUIMetadata`](#comfyuimetadata)
-  - [`StandardMetadata`](#standardmetadata)
 - [Settings Types](#settings-types)
   - [`ModelSettings`](#modelsettings)
   - [`SamplingSettings`](#samplingsettings)
@@ -22,17 +54,14 @@ Complete type reference for `@enslo/sd-metadata`.
 - [ComfyUI Types](#comfyui-types)
   - [`ComfyNodeGraph`](#comfynodegraph)
   - [`ComfyNode`](#comfynode)
-  - [`ComfyNodeReference`](#comfynodereference)
   - [`ComfyNodeInputValue`](#comfynodeinputvalue)
+  - [`ComfyNodeReference`](#comfynodereference)
 - [Format-Specific Types](#format-specific-types)
   - [`PngTextChunk`](#pngtextchunk)
   - [`TExtChunk`](#textchunk)
   - [`ITXtChunk`](#itxtchunk)
   - [`MetadataSegment`](#metadatasegment)
   - [`MetadataSegmentSource`](#metadatasegmentsource)
-- [Other Types](#other-types)
-  - [`GenerationSoftware`](#generationsoftware)
-  - [`WriteResult`](#writeresult)
 
 ---
 
@@ -102,7 +131,15 @@ type GenerationMetadata =
   | StandardMetadata;
 ```
 
-Use the `software` field to narrow down the specific type:
+**Metadata Type Mapping:**
+
+| Metadata Type | `software` values |
+| ------------- | ----------------- |
+| `StandardMetadata` | `'sd-webui'` \| `'forge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'sd-next'` \| `'forge-neo'` |
+| `NovelAIMetadata` | `'novelai'` |
+| `ComfyUIMetadata` | `'comfyui'` \| `'tensorart'` \| `'stability-matrix'` \| `'swarmui'` |
+
+**Type narrowing example:**
 
 ```typescript
 if (metadata.software === 'novelai') {
@@ -134,53 +171,113 @@ type RawMetadata =
   | { format: 'webp'; segments: MetadataSegment[] };
 ```
 
-When converting between formats, this data ensures that converting back to the original format preserves all information.
+**Why is this needed?**
 
-**Example:**
+When you read metadata from an image and convert it to a different format (e.g., PNG → JPEG), `RawMetadata` preserves the original structure. This allows you to convert back to the original format without losing any information.
+
+**Round-trip conversion example:**
 
 ```typescript
-const result = read(pngData);
-if (result.status === 'success') {
-  // Convert to JPEG
-  const jpegResult = write(jpegData, result);
+import { read, write } from '@enslo/sd-metadata';
+import { convertImageFormat } from 'some-image-library';
+
+// Read metadata from PNG
+const pngData = readFileSync('image.png');
+const parseResult = read(pngData);
+
+if (parseResult.status === 'success') {
+  // Convert image to JPEG
+  const jpegImageData = convertImageFormat(pngData, 'jpeg');
   
-  // Convert back to PNG
-  const pngResult = write(pngData, result);
+  // Write metadata to JPEG
+  const jpegWithMeta = write(jpegImageData, parseResult);
   
-  // Original metadata is preserved via result.raw
+  // Later: convert back to PNG
+  const pngImageData = convertImageFormat(jpegWithMeta.value, 'png');
+  const pngWithMeta = write(pngImageData, parseResult);
+  
+  // Original PNG metadata structure is fully preserved!
 }
 ```
+
+Without `raw`, metadata would be converted to a generic format and lose format-specific details when converting back.
+
+---
+
+### `WriteResult`
+
+Result type returned by the `write()` function.
+
+```typescript
+export type WriteResult = 
+  | { ok: true; value: Uint8Array }
+  | { ok: false; error: { type: string; message?: string } };
+```
+
+**Success:**
+
+```typescript
+if (result.ok) {
+  writeFileSync('output.png', result.value);
+}
+```
+
+**Error:**
+
+```typescript
+if (!result.ok) {
+  console.error(`Write failed: ${result.error.type}`);
+  if (result.error.message) {
+    console.error(result.error.message);
+  }
+}
+```
+
+**Error Types:**
+
+- `unsupportedFormat`: Image format not supported
+- `conversionFailed`: Metadata conversion failed
+- `writeFailed`: Failed to write metadata to image
 
 ---
 
 ## Metadata Types
 
-### `BaseMetadata`
+### `StandardMetadata`
 
-Base interface shared by all AI generation metadata types.
+Standard parameters format used by most SD tools.
 
 ```typescript
-interface BaseMetadata {
-  /** Positive prompt */
-  prompt: string;
-  /** Negative prompt */
-  negativePrompt: string;
-  /** Model settings */
-  model?: ModelSettings;
-  /** Sampling settings */
-  sampling?: SamplingSettings;
-  /** Hires.fix settings (if applied) */
-  hires?: HiresSettings;
-  /** Upscale settings (if applied) */
-  upscale?: UpscaleSettings;
-  /** Image width */
-  width: number;
-  /** Image height */
-  height: number;
+export interface StandardMetadata extends BaseMetadata {
+  software:
+    | 'sd-webui'
+    | 'sd-next'
+    | 'forge'
+    | 'forge-neo'
+    | 'invokeai'
+    | 'civitai'
+    | 'hf-space'
+    | 'easydiffusion'
+    | 'fooocus'
+    | 'ruined-fooocus';
 }
 ```
 
-All metadata types extend this base interface.
+This is the most common metadata type. It represents the baseline generation metadata
+without any tool-specific extensions (unlike NovelAI's character prompts or ComfyUI's node graphs).
+Many tools use this minimal structure, including SD WebUI, Forge, InvokeAI, and others.
+
+All metadata types extend from an internal `BaseMetadata` interface which provides common fields like `prompt`, `negativePrompt`, `model`, `sampling`, `width`, `height`, etc.
+
+**Example:**
+
+```typescript
+if (metadata.software === 'forge' || metadata.software === 'sd-webui') {
+  console.log('Using standard format metadata');
+  console.log('Sampler:', metadata.sampling?.sampler);
+  console.log('Steps:', metadata.sampling?.steps);
+}
+```
 
 ---
 
@@ -245,7 +342,7 @@ interface SwarmUIMetadata extends BaseMetadata {
 **Unique Features:**
 
 - **ComfyUI/TensorArt/Stability Matrix**: `nodes` is always present in all formats
-- **SwarmUI**: `nodes` is only present in PNG format (JPEG/WebP contain parameters only)
+- **SwarmUI**: `nodes` may be present in all formats when converted from PNG (extended support)
 
 **Example:**
 
@@ -256,11 +353,12 @@ if (metadata.software === 'comfyui') {
 }
 
 if (metadata.software === 'swarmui') {
-  // nodes might not exist for SwarmUI
+  // nodes might not exist for native SwarmUI JPEG/WebP
+  // but will be present if converted from PNG
   if (metadata.nodes) {
-    console.log('PNG format: Has workflow');
+    console.log('Has workflow (PNG or converted)');
   } else {
-    console.log('JPEG/WebP format: Parameters only');
+    console.log('Native JPEG/WebP: Parameters only');
   }
 }
 
@@ -281,44 +379,6 @@ if (metadata.software === 'comfyui' ||
   }
 }
 ```
-
----
-
-### `StandardMetadata`
-
-Standard parameters format used by most SD tools.
-
-```typescript
-export interface StandardMetadata extends BaseMetadata {
-  software:
-    | 'sd-webui'
-    | 'sd-next'
-    | 'forge'
-    | 'forge-neo'
-    | 'invokeai'
-    | 'civitai'
-    | 'hf-space'
-    | 'easydiffusion'
-    | 'fooocus'
-    | 'ruined-fooocus';
-}
-```
-
-This is the most common metadata type. It represents the baseline generation metadata
-without any tool-specific extensions (unlike NovelAI's character prompts or ComfyUI's node graphs).
-Many tools use this minimal structure, including SD WebUI, Forge, InvokeAI, and others.
-
-**Example:**
-
-```typescript
-if (metadata.software === 'forge' || metadata.software === 'sd-webui') {
-  console.log('Using standard format metadata');
-  console.log('Sampler:', metadata.sampling?.sampler);
-  console.log('Steps:', metadata.sampling?.steps);
-}
-```
-
----
 
 ## Settings Types
 
@@ -509,6 +569,23 @@ const ksampler: ComfyNode = {
 
 ---
 
+### `ComfyNodeInputValue`
+
+Possible values for node inputs.
+
+```typescript
+export type ComfyNodeInputValue =
+  | string
+  | number
+  | boolean
+  | ComfyNodeReference
+  | ComfyNodeInputValue[];
+```
+
+Can be a primitive value, a reference to another node, or an array.
+
+---
+
 ### `ComfyNodeReference`
 
 Reference to another node's output.
@@ -531,24 +608,9 @@ const modelReference: ComfyNodeReference = ["CheckpointLoader_Base", 0];
 
 ---
 
-### `ComfyNodeInputValue`
-
-Possible values for node inputs.
-
-```typescript
-export type ComfyNodeInputValue =
-  | string
-  | number
-  | boolean
-  | ComfyNodeReference
-  | ComfyNodeInputValue[];
-```
-
-Can be a primitive value, a reference to another node, or an array.
-
----
-
 ## Format-Specific Types
+
+> **Note:** These types are mainly for advanced use cases or internal implementation details. Most users don't need to work with these types directly.
 
 ### `PngTextChunk`
 
@@ -632,83 +694,3 @@ export type MetadataSegmentSource =
 Tracks where the metadata came from in JPEG/WebP files for accurate round-tripping.
 
 ---
-
-## Other Types
-
-### `GenerationSoftware`
-
-String union of all supported software names.
-
-```typescript
-export type GenerationSoftware =
-  | 'novelai' | 'comfyui' | 'swarmui' | 'tensorart'
-  | 'stability-matrix' | 'invokeai' | 'forge-neo' | 'forge'
-  | 'sd-webui' | 'sd-next' | 'civitai' | 'hf-space'
-  | 'easydiffusion' | 'fooocus' | 'ruined-fooocus';
-```
-
----
-
-### `WriteResult`
-
-Result type returned by the `write()` function.
-
-```typescript
-export type WriteResult = 
-  | { ok: true; value: Uint8Array }
-  | { ok: false; error: { type: string; message?: string } };
-```
-
-**Success:**
-
-```typescript
-if (result.ok) {
-  writeFileSync('output.png', result.value);
-}
-```
-
-**Error:**
-
-```typescript
-if (!result.ok) {
-  console.error(`Write failed: ${result.error.type}`);
-  if (result.error.message) {
-    console.error(result.error.message);
-  }
-}
-```
-
-**Error Types:**
-
-- `unsupportedFormat`: Image format not supported
-- `conversionFailed`: Metadata conversion failed
-- `writeFailed`: Failed to write metadata to image
-
----
-
-## Import Examples
-
-```typescript
-// Import types
-import type {
-  ParseResult,
-  GenerationMetadata,
-  NovelAIMetadata,
-  ComfyUIMetadata,
-  ModelSettings,
-  SamplingSettings,
-  PngTextChunk,
-  MetadataSegment
-} from '@enslo/sd-metadata';
-
-// Use in function signatures
-function displayMetadata(result: ParseResult) {
-  if (result.status === 'success') {
-    console.log(result.metadata.prompt);
-  }
-}
-
-function getModel(metadata: GenerationMetadata): string | undefined {
-  return metadata.model?.name;
-}
-```
