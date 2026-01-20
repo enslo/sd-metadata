@@ -13,13 +13,30 @@ A TypeScript library to read and write metadata embedded in AI-generated images.
 - **TypeScript Native**: Written in TypeScript with full type definitions included
 - **Zero Dependencies**: Works in Node.js and browsers without any external dependencies
 - **Format Conversion**: Seamlessly convert metadata between PNG, JPEG, and WebP
-- **Lossless Round-trip**: Preserves original metadata structure when converting back to native format
+- **Metadata Preservation**: Preserves original metadata structure when converting formats (e.g., PNG → JPEG → PNG maintains all original data)
 
 ## Installation
 
 ```bash
 npm install @enslo/sd-metadata
 ```
+
+### Quick Start
+
+**ESM (TypeScript / Modern JavaScript):**
+
+```typescript
+import { read } from '@enslo/sd-metadata';
+```
+
+**CommonJS (Node.js):**
+
+```javascript
+const { read } = require('@enslo/sd-metadata');
+```
+
+> [!NOTE]
+> All examples below use ESM syntax. CommonJS users can replace `import` with `require`.
 
 ## Tool Support
 
@@ -42,8 +59,15 @@ npm install @enslo/sd-metadata
 **Legend:**
 
 - ✅ **Fully Supported** - Formats natively supported by the tool, verified with sample files
-- 🔄️ **Extended Support** - sd-metadata specific parsers, cross-format conversion supported
-- ⚠️ **Experimental** - Implemented from reference code, not verified with samples
+- 🔄️ **Extended Support** - Formats not natively supported by the tool, but sd-metadata enables read/write through custom format conversion. Supports round-trip conversion back to native formats.
+- ⚠️ **Experimental** - Implemented by analyzing reference code or documentation, not verified with actual sample files. May not extract all metadata fields correctly.
+
+**Extended Support Examples:**
+
+- **Stability Matrix** (native: PNG only) → sd-metadata enables JPEG/WebP support
+- **NovelAI** (native: PNG, WebP) → sd-metadata enables JPEG support
+
+When you convert from a native format to an extended format and back (e.g., PNG → JPEG → PNG), all metadata is preserved.
 
 > [!NOTE]
 > \* Tools with known limitations. See [Known Limitations](#known-limitations) for details.
@@ -91,6 +115,8 @@ import { read } from 'sd-metadata';
 const fileInput = document.querySelector('input[type="file"]');
 fileInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
+  if (!file) return;
+  
   const arrayBuffer = await file.arrayBuffer();
   const imageData = new Uint8Array(arrayBuffer);
   
@@ -112,7 +138,11 @@ For bookmarklets or userscripts (Tampermonkey, Violentmonkey, etc.), load from j
 // Import from CDN
 import { read } from 'https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@latest/dist/index.js';
 
-// Use as usual
+// Fetch image and read metadata
+const response = await fetch(imageUrl);
+const arrayBuffer = await response.arrayBuffer();
+const imageData = new Uint8Array(arrayBuffer);
+
 const result = read(imageData);
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software);
@@ -134,19 +164,26 @@ Convert metadata between different image formats:
 ```typescript
 import { read, write } from 'sd-metadata';
 
-// Read from PNG
+// Read metadata from PNG
 const pngData = readFileSync('comfyui-output.png');
-const metadata = read(pngData);
+const parseResult = read(pngData);
 
-// Write to JPEG
-const jpegData = readFileSync('target.jpg');
-const result = write(jpegData, metadata);
-
-if (result.ok) {
-  writeFileSync('output.jpg', result.value);
-  console.log('Metadata converted from PNG to JPEG');
+if (parseResult.status === 'success') {
+  // Convert PNG to JPEG (using your preferred image processing library)
+  const jpegImageData = convertToJpeg(pngData); // Pseudo-code: use sharp, canvas, etc.
+  
+  // Embed the metadata into the JPEG
+  const result = write(jpegImageData, parseResult);
+  
+  if (result.ok) {
+    writeFileSync('output.jpg', result.value);
+    console.log('Image converted to JPEG with metadata preserved');
+  }
 }
 ```
+
+> [!TIP]
+> This library handles metadata read/write only. For actual image format conversion (decoding/encoding pixels), use image processing libraries like [sharp](https://www.npmjs.com/package/sharp), [jimp](https://www.npmjs.com/package/jimp), or browser Canvas API.
 
 ### Handling Different Result Types
 
@@ -251,6 +288,8 @@ Writes metadata to an image file.
 
 ## Type Reference
 
+This section provides an overview of the main types. For complete type definitions, see [Type Documentation](./docs/types.md).
+
 ### `ParseResult`
 
 The result of the `read()` function. It uses a discriminated union with a `status` field.
@@ -266,7 +305,24 @@ type ParseResult =
 ### `GenerationMetadata`
 
 Unified metadata structure. This is a discriminated union of 5 specific metadata types.
-You can use `software` (specific tool) to narrow down the type.
+Use the `software` field to narrow down the type:
+
+**Available Types:**
+
+- **`NovelAIMetadata`** (`software: 'novelai'`)  
+  NovelAI-specific metadata. Includes V4 character placement features.
+
+- **`ComfyUIMetadata`** (`software: 'comfyui' | 'tensorart' | 'stability-matrix'`)  
+  ComfyUI-format metadata with full workflow graph for reproducibility.
+
+- **`A1111Metadata`** (`software: 'sd-webui' | 'forge' | 'civitai' | 'fooocus' | ...`)  
+  Standard SD WebUI parameter format used by most tools.
+
+- **`InvokeAIMetadata`** (`software: 'invokeai'`)  
+  InvokeAI-specific metadata.
+
+- **`SwarmUIMetadata`** (`software: 'swarmui'`)  
+  SwarmUI-specific metadata. May include ComfyUI workflow in PNG format.
 
 ```typescript
 type GenerationMetadata =
@@ -277,90 +333,11 @@ type GenerationMetadata =
   | SwarmUIMetadata;
 ```
 
-#### `BaseMetadata` (Shared by all)
-
-```typescript
-interface BaseMetadata {
-  /** Specific tool name (e.g., `tensorart`, `forge`) */
-  software: GenerationSoftware;
-  /** Positive prompt */
-  prompt: string;
-  /** Negative prompt */
-  negativePrompt: string;
-  /** Image width */
-  width: number;
-  /** Image height */
-  height: number;
-  /** Model name, hash, VAE */
-  model?: ModelSettings;
-  /** Steps, CFG, seed, sampler */
-  sampling?: SamplingSettings;
-}
-```
-
-#### `NovelAIMetadata`
-
-Metadata from NovelAI.
-
-```typescript
-interface NovelAIMetadata extends BaseMetadata {
-  software: 'novelai';
-  /** V4 character prompts (when using character placement) */
-  characterPrompts?: Array<{
-    prompt: string;
-    center?: { x: number; y: number };
-  }>;
-  useCoords?: boolean;
-  useOrder?: boolean;
-}
-```
-
-#### `ComfyUIMetadata`
-
-Metadata from ComfyUI and compatible tools (TensorArt, Stability Matrix).
-Includes the full workflow graph.
-
-```typescript
-interface ComfyUIMetadata extends BaseMetadata {
-  software: 'comfyui' | 'tensorart' | 'stability-matrix';
-  /** Full workflow JSON (for reproducibility) */
-  workflow?: unknown; // Record<string, ComfyNode>
-}
-```
-
-#### `A1111Metadata`
-
-Standard metadata format used by SD WebUI, Forge, Fooocus, and many others.
-
-```typescript
-interface A1111Metadata extends BaseMetadata {
-  software: 'sd-webui' | 'forge' | 'civitai' | 'fooocus' /* ... */;
-}
-```
-
-#### `InvokeAIMetadata`
-
-Metadata from InvokeAI.
-
-```typescript
-interface InvokeAIMetadata extends BaseMetadata {
-  software: 'invokeai';
-}
-```
-
-#### `SwarmUIMetadata`
-
-Metadata from SwarmUI.
-
-```typescript
-interface SwarmUIMetadata extends BaseMetadata {
-  software: 'swarmui';
-}
-```
+See [Type Documentation](./docs/types.md) for detailed interface definitions of each metadata type.
 
 ### `RawMetadata`
 
-Preserves the original metadata structure for lossless round-trips.
+Preserves the original metadata structure for round-trip conversions.
 
 ```typescript
 type RawMetadata =
@@ -380,6 +357,22 @@ type GenerationSoftware =
   | 'sd-webui' | 'sd-next' | 'civitai' | 'hf-space'
   | 'easydiffusion' | 'fooocus' | 'ruined-fooocus';
 ```
+
+> [!TIP]
+> For TypeScript users: All types are exported and available for import.
+>
+> ```typescript
+> import type { 
+>   ParseResult, 
+>   GenerationMetadata, 
+>   ModelSettings, 
+>   SamplingSettings 
+> } from '@enslo/sd-metadata';
+> ```
+>
+> Use your IDE's IntelliSense for auto-completion and inline documentation.
+
+For detailed documentation of all exported types including `BaseMetadata`, `ModelSettings`, `SamplingSettings`, and format-specific types, see the [Type Documentation](./docs/types.md).
 
 ## Development
 

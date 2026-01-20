@@ -367,7 +367,7 @@ export type GenerationMetadata =
 /**
  * Model settings
  */
-interface ModelSettings {
+export interface ModelSettings {
   /** Model name */
   name?: string;
   /** Model hash */
@@ -379,7 +379,7 @@ interface ModelSettings {
 /**
  * Sampling settings
  */
-interface SamplingSettings {
+export interface SamplingSettings {
   /** Sampler name */
   sampler?: string;
   /** Scheduler (sometimes included in sampler, sometimes separate) */
@@ -397,7 +397,7 @@ interface SamplingSettings {
 /**
  * Hires.fix settings
  */
-interface HiresSettings {
+export interface HiresSettings {
   /** Upscale factor */
   scale?: number;
   /** Upscaler name */
@@ -411,7 +411,7 @@ interface HiresSettings {
 /**
  * Upscale settings (post-generation)
  */
-interface UpscaleSettings {
+export interface UpscaleSettings {
   /** Upscaler name */
   upscaler?: string;
   /** Scale factor */

@@ -29,10 +29,20 @@ import { writeWebpMetadata } from './writers/webp';
 
 // Export types (minimal public API)
 export type {
+  CharacterPrompt,
   GenerationMetadata,
   GenerationSoftware,
+  HiresSettings,
+  ITXtChunk,
+  MetadataSegment,
+  MetadataSegmentSource,
+  ModelSettings,
   ParseResult,
+  PngTextChunk,
   RawMetadata,
+  SamplingSettings,
+  TExtChunk,
+  UpscaleSettings,
 } from './types';
 
 // ============================================================================
