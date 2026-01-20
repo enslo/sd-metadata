@@ -99,8 +99,13 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
     data.cfgScale !== undefined ||
     data.clipSkip !== undefined
   ) {
+    const baseSeed = data.seed ? Number(data.seed) : undefined;
+
     metadata.sampling = {
-      seed: data.seed ? Number(data.seed) : undefined,
+      seed:
+        baseSeed === -1
+          ? findActualSeed(promptParsed.value as ComfyNodeGraph)
+          : baseSeed,
       steps: data.steps,
       cfg: data.cfgScale,
       clipSkip: data.clipSkip,
@@ -108,4 +113,33 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   }
 
   return Result.ok(metadata);
+}
+
+/**
+ * Find actual seed value from KSampler node in ComfyUI node graph
+ *
+ * @param nodes - ComfyUI node graph
+ * @returns Actual seed value, or -1 if not found
+ */
+function findActualSeed(nodes: ComfyNodeGraph): number {
+  const samplerNode = findSamplerNode(nodes);
+  return samplerNode && typeof samplerNode.inputs.seed === 'number'
+    ? samplerNode.inputs.seed
+    : -1;
+}
+
+/**
+ * Find KSampler node in ComfyUI node graph
+ *
+ * @param nodes - ComfyUI node graph
+ * @returns KSampler node or undefined
+ */
+function findSamplerNode(
+  nodes: ComfyNodeGraph,
+): { inputs: Record<string, unknown>; class_type: string } | undefined {
+  return Object.values(nodes).find(
+    (node) =>
+      node.class_type === 'KSampler' ||
+      node.class_type.toLowerCase().includes('sampler'),
+  );
 }

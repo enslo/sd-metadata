@@ -25,7 +25,7 @@ describe('TensorArt Parsers - Samples', () => {
           hash: 'A5F58EB1C33616C4F06BCA55AF39876A7B817913CD829CAA8ACB111B770C85CC',
         },
         sampling: {
-          seed: -1,
+          seed: 3036459311,
           steps: 25,
           cfg: 7,
           clipSkip: 2,
