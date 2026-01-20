@@ -296,53 +296,66 @@ export interface ComfyNode {
  */
 export type ComfyNodeGraph = Record<string, ComfyNode>;
 
-export interface ComfyUIMetadata extends BaseMetadata {
+/**
+ * ComfyUI-format metadata (ComfyUI, TensorArt, Stability Matrix)
+ *
+ * These tools always have nodes in all formats.
+ */
+export interface BasicComfyUIMetadata extends BaseMetadata {
   software: 'comfyui' | 'tensorart' | 'stability-matrix';
   /**
-   * ComfyUI node graph from prompt chunk (required)
+   * ComfyUI node graph (required)
    *
-   * Contains the node-based workflow data required for image reproduction.
-   * All ComfyUI-compatible tools include this data in all formats.
+   * Always present in all image formats (PNG, JPEG, WebP).
    * Structure: Record<nodeId, ComfyNode> where ComfyNode contains inputs and class_type.
    */
   nodes: ComfyNodeGraph;
 }
 
 /**
- * A1111-format metadata (SD WebUI, Forge, Forge Neo, Civitai)
+ * SwarmUI-specific metadata
+ *
+ * SwarmUI uses ComfyUI workflow format but nodes are only present in PNG.
  */
-export interface A1111Metadata extends BaseMetadata {
+export interface SwarmUIMetadata extends BaseMetadata {
+  software: 'swarmui';
+  /**
+   * ComfyUI node graph (optional for SwarmUI)
+   *
+   * Only present in PNG format. JPEG/WebP contain SwarmUI parameters only.
+   * Structure: Record<nodeId, ComfyNode> where ComfyNode contains inputs and class_type.
+   */
+  nodes?: ComfyNodeGraph;
+}
+
+/**
+ * ComfyUI-format metadata (union of BasicComfyUI and SwarmUI)
+ *
+ * This is a union type to handle different node graph requirements:
+ * - ComfyUI/TensorArt/Stability Matrix: nodes are always present
+ * - SwarmUI: nodes are only present in PNG format
+ */
+export type ComfyUIMetadata = BasicComfyUIMetadata | SwarmUIMetadata;
+
+/**
+ * Standard metadata (SD WebUI, Forge, InvokeAI, and others)
+ *
+ * Baseline generation metadata without tool-specific extensions.
+ * Used by most SD tools that don't require special features like
+ * NovelAI's character prompts or ComfyUI's node graphs.
+ */
+export interface StandardMetadata extends BaseMetadata {
   software:
     | 'sd-webui'
     | 'sd-next'
     | 'forge'
     | 'forge-neo'
+    | 'invokeai'
     | 'civitai'
     | 'hf-space'
     | 'easydiffusion'
     | 'fooocus'
     | 'ruined-fooocus';
-}
-
-/**
- * InvokeAI-specific metadata
- */
-export interface InvokeAIMetadata extends BaseMetadata {
-  software: 'invokeai';
-}
-
-/**
- * SwarmUI-specific metadata
- */
-export interface SwarmUIMetadata extends BaseMetadata {
-  software: 'swarmui';
-  /**
-   * ComfyUI node graph from prompt chunk (optional)
-   *
-   * Only available in PNG format. JPEG/WebP formats do not include this data.
-   * When present, contains the same node graph structure as ComfyUI.
-   */
-  nodes?: ComfyNodeGraph;
 }
 
 /**
@@ -352,17 +365,19 @@ export interface SwarmUIMetadata extends BaseMetadata {
  * ```typescript
  * if (metadata.software === 'comfyui' ||
  *     metadata.software === 'tensorart' ||
- *     metadata.software === 'stability-matrix') {
- *   // TypeScript knows metadata.workflow exists
+ *     metadata.software === 'stability-matrix' ||
+ *     metadata.software === 'swarmui') {
+ *   // TypeScript knows metadata is ComfyUIMetadata
+ *   if (metadata.nodes) {
+ *     // Access workflow graph
+ *   }
  * }
  * ```
  */
 export type GenerationMetadata =
   | NovelAIMetadata
   | ComfyUIMetadata
-  | A1111Metadata
-  | InvokeAIMetadata
-  | SwarmUIMetadata;
+  | StandardMetadata;
 
 /**
  * Model settings

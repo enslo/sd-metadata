@@ -1,5 +1,5 @@
 import type {
-  ComfyUIMetadata,
+  BasicComfyUIMetadata,
   InternalParseResult,
   MetadataEntry,
 } from '../types';
@@ -54,7 +54,7 @@ export function parseStabilityMatrix(
   }
 
   // Override software to stability-matrix
-  const metadata: Omit<ComfyUIMetadata, 'raw'> = {
+  const metadata: Omit<BasicComfyUIMetadata, 'raw'> = {
     ...comfyResult.value,
     software: 'stability-matrix',
   };

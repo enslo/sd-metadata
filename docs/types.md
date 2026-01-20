@@ -12,9 +12,7 @@ Complete type reference for `@enslo/sd-metadata`.
   - [`BaseMetadata`](#basemetadata)
   - [`NovelAIMetadata`](#novelaimetadata)
   - [`ComfyUIMetadata`](#comfyuimetadata)
-  - [`A1111Metadata`](#a1111metadata)
-  - [`InvokeAIMetadata`](#invokeaimetadata)
-  - [`SwarmUIMetadata`](#swarmuimetadata)
+  - [`StandardMetadata`](#standardmetadata)
 - [Settings Types](#settings-types)
   - [`ModelSettings`](#modelsettings)
   - [`SamplingSettings`](#samplingsettings)
@@ -101,9 +99,7 @@ Unified metadata structure. Discriminated union of all supported metadata types.
 type GenerationMetadata =
   | NovelAIMetadata
   | ComfyUIMetadata
-  | A1111Metadata
-  | InvokeAIMetadata
-  | SwarmUIMetadata;
+  | StandardMetadata;
 ```
 
 Use the `software` field to narrow down the specific type:
@@ -116,9 +112,12 @@ if (metadata.software === 'novelai') {
 
 if (metadata.software === 'comfyui' ||
     metadata.software === 'tensorart' ||
-    metadata.software === 'stability-matrix') {
+    metadata.software === 'stability-matrix' ||
+    metadata.software === 'swarmui') {
   // TypeScript knows metadata is ComfyUIMetadata
-  console.log(metadata.nodes);
+  if (metadata.nodes) {
+    console.log('Has workflow:', Object.keys(metadata.nodes).length);
+  }
 }
 ```
 
@@ -224,35 +223,60 @@ if (metadata.software === 'novelai' && metadata.characterPrompts) {
 
 ### `ComfyUIMetadata`
 
-Metadata from ComfyUI and compatible tools (TensorArt, Stability Matrix).
+Metadata from ComfyUI and compatible tools (TensorArt, Stability Matrix, SwarmUI).
 
 ```typescript
-export interface ComfyUIMetadata extends BaseMetadata {
+export type ComfyUIMetadata =
+  | BasicComfyUIMetadata
+  | SwarmUIMetadata;
+
+// Internal types:
+interface BasicComfyUIMetadata extends BaseMetadata {
   software: 'comfyui' | 'tensorart' | 'stability-matrix';
-  /**
-   * ComfyUI node graph from prompt chunk (required)
-   *
-   * Contains the node-based workflow data required for image reproduction.
-   */
-  nodes: ComfyNodeGraph;
+  nodes: ComfyNodeGraph;  // required
+}
+
+interface SwarmUIMetadata extends BaseMetadata {
+  software: 'swarmui';
+  nodes?: ComfyNodeGraph;  // optional
 }
 ```
 
 **Unique Features:**
 
-- **Workflow Graph**: Complete node-based workflow for exact reproduction
-- `nodes`: Full ComfyUI node graph (Record<nodeId, ComfyNode>)
+- **ComfyUI/TensorArt/Stability Matrix**: `nodes` is always present in all formats
+- **SwarmUI**: `nodes` is only present in PNG format (JPEG/WebP contain parameters only)
 
 **Example:**
 
 ```typescript
 if (metadata.software === 'comfyui') {
+  // nodes is guaranteed to exist for ComfyUI
   console.log('Node count:', Object.keys(metadata.nodes).length);
-  
-  // Find checkpoint node
-  for (const [nodeId, node] of Object.entries(metadata.nodes)) {
-    if (node.class_type === 'CheckpointLoaderSimple') {
-      console.log('Model:', node.inputs.ckpt_name);
+}
+
+if (metadata.software === 'swarmui') {
+  // nodes might not exist for SwarmUI
+  if (metadata.nodes) {
+    console.log('PNG format: Has workflow');
+  } else {
+    console.log('JPEG/WebP format: Parameters only');
+  }
+}
+
+// Type narrowing works across all ComfyUI-compatible tools
+if (metadata.software === 'comfyui' ||
+    metadata.software === 'tensorart' ||
+    metadata.software === 'stability-matrix' ||
+    metadata.software === 'swarmui') {
+  // TypeScript knows metadata is ComfyUIMetadata
+  // But you need to check metadata.nodes before using it
+  if (metadata.nodes) {
+    // Find checkpoint node
+    for (const [nodeId, node] of Object.entries(metadata.nodes)) {
+      if (node.class_type === 'CheckpointLoaderSimple') {
+        console.log('Model:', node.inputs.ckpt_name);
+      }
     }
   }
 }
@@ -260,17 +284,18 @@ if (metadata.software === 'comfyui') {
 
 ---
 
-### `A1111Metadata`
+### `StandardMetadata`
 
-Standard metadata format used by SD WebUI, Forge, and most other tools.
+Standard parameters format used by most SD tools.
 
 ```typescript
-export interface A1111Metadata extends BaseMetadata {
+export interface StandardMetadata extends BaseMetadata {
   software:
     | 'sd-webui'
     | 'sd-next'
     | 'forge'
     | 'forge-neo'
+    | 'invokeai'
     | 'civitai'
     | 'hf-space'
     | 'easydiffusion'
@@ -279,64 +304,17 @@ export interface A1111Metadata extends BaseMetadata {
 }
 ```
 
-This is the most common metadata format. It uses the standard "parameters" format popularized by AUTOMATIC1111's SD WebUI.
+This is the most common metadata type. It represents the baseline generation metadata
+without any tool-specific extensions (unlike NovelAI's character prompts or ComfyUI's node graphs).
+Many tools use this minimal structure, including SD WebUI, Forge, InvokeAI, and others.
 
 **Example:**
 
 ```typescript
 if (metadata.software === 'forge' || metadata.software === 'sd-webui') {
-  console.log('Using A1111-format metadata');
+  console.log('Using standard format metadata');
   console.log('Sampler:', metadata.sampling?.sampler);
   console.log('Steps:', metadata.sampling?.steps);
-}
-```
-
----
-
-### `InvokeAIMetadata`
-
-Metadata specific to InvokeAI.
-
-```typescript
-export interface InvokeAIMetadata extends BaseMetadata {
-  software: 'invokeai';
-}
-```
-
-Currently uses the base metadata structure without additional fields.
-
----
-
-### `SwarmUIMetadata`
-
-Metadata specific to SwarmUI.
-
-```typescript
-export interface SwarmUIMetadata extends BaseMetadata {
-  software: 'swarmui';
-  /**
-   * ComfyUI node graph from prompt chunk (optional)
-   *
-   * Only available in PNG format. JPEG/WebP do not include workflow data.
-   */
-  nodes?: ComfyNodeGraph;
-}
-```
-
-**Format-Specific Behavior:**
-
-- **PNG**: Contains both SwarmUI parameters and ComfyUI workflow (`nodes`)
-- **JPEG/WebP**: Only contains SwarmUI parameters (`nodes` is undefined)
-
-**Example:**
-
-```typescript
-if (metadata.software === 'swarmui') {
-  if (metadata.nodes) {
-    console.log('PNG format: Has workflow');
-  } else {
-    console.log('JPEG/WebP format: Parameters only');
-  }
 }
 ```
 

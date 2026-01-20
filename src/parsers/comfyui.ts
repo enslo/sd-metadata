@@ -6,8 +6,8 @@
  */
 
 import type {
+  BasicComfyUIMetadata,
   ComfyNodeGraph,
-  ComfyUIMetadata,
   InternalParseResult,
   MetadataEntry,
 } from '../types';
@@ -115,7 +115,7 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   const height = latentHeight || extraMeta?.height || 0;
 
   // Build metadata
-  const metadata: Omit<ComfyUIMetadata, 'raw'> = {
+  const metadata: Omit<BasicComfyUIMetadata, 'raw'> = {
     software: 'comfyui',
     prompt: positiveText,
     negativePrompt: negativeText,

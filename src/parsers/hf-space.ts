@@ -1,7 +1,7 @@
 import type {
-  A1111Metadata,
   InternalParseResult,
   MetadataEntry,
+  StandardMetadata,
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
@@ -65,7 +65,7 @@ export function parseHfSpace(entries: MetadataEntry[]): InternalParseResult {
   const { width, height } = parseResolution(json.resolution);
 
   // Build metadata
-  const metadata: Omit<A1111Metadata, 'raw'> = {
+  const metadata: Omit<StandardMetadata, 'raw'> = {
     software: 'hf-space',
     prompt: json.prompt ?? '',
     negativePrompt: json.negative_prompt ?? '',

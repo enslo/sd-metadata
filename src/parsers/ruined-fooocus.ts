@@ -1,7 +1,7 @@
 import type {
-  A1111Metadata,
   InternalParseResult,
   MetadataEntry,
+  StandardMetadata,
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
@@ -66,7 +66,7 @@ export function parseRuinedFooocus(
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  const metadata: Omit<A1111Metadata, 'raw'> = {
+  const metadata: Omit<StandardMetadata, 'raw'> = {
     software: 'ruined-fooocus',
     prompt: json.Prompt?.trim() ?? '',
     negativePrompt: json.Negative?.trim() ?? '',

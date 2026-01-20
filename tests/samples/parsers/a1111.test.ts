@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseA1111 } from '../../../src/parsers/a1111';
-import type { A1111Metadata } from '../../../src/types';
+import type { StandardMetadata } from '../../../src/types';
 import { parseConvertedSample, parsePngSample } from '../helpers';
 
 describe('A1111 Parsers - Samples', () => {
   describe('Forge samples', () => {
     it('should parse forge.png', () => {
-      const meta = parsePngSample<A1111Metadata>('forge.png', parseA1111);
+      const meta = parsePngSample<StandardMetadata>('forge.png', parseA1111);
 
       expect(meta).toEqual({
         software: 'forge',
@@ -33,7 +33,10 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse forge-hires.png', () => {
-      const meta = parsePngSample<A1111Metadata>('forge-hires.png', parseA1111);
+      const meta = parsePngSample<StandardMetadata>(
+        'forge-hires.png',
+        parseA1111,
+      );
 
       expect(meta).toEqual({
         software: 'forge',
@@ -65,7 +68,10 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse forge-neo.png', () => {
-      const meta = parsePngSample<A1111Metadata>('forge-neo.png', parseA1111);
+      const meta = parsePngSample<StandardMetadata>(
+        'forge-neo.png',
+        parseA1111,
+      );
 
       expect(meta).toEqual({
         software: 'forge-neo',
@@ -93,7 +99,7 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse forge-neo-hires.png', () => {
-      const meta = parsePngSample<A1111Metadata>(
+      const meta = parsePngSample<StandardMetadata>(
         'forge-neo-hires.png',
         parseA1111,
       );
@@ -131,7 +137,7 @@ describe('A1111 Parsers - Samples', () => {
 
   describe('SD-Next samples', () => {
     it('should parse sd-next.png', () => {
-      const meta = parsePngSample<A1111Metadata>('sd-next.png', parseA1111);
+      const meta = parsePngSample<StandardMetadata>('sd-next.png', parseA1111);
 
       expect(meta).toEqual({
         software: 'sd-next',
@@ -157,7 +163,7 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse sd-next-hires.png', () => {
-      const meta = parsePngSample<A1111Metadata>(
+      const meta = parsePngSample<StandardMetadata>(
         'sd-next-hires.png',
         parseA1111,
       );
@@ -191,7 +197,7 @@ describe('A1111 Parsers - Samples', () => {
 
   describe('JPEG samples', () => {
     it('should parse forge.jpeg', () => {
-      const meta = parseConvertedSample<A1111Metadata>('jpeg', 'forge.jpeg');
+      const meta = parseConvertedSample<StandardMetadata>('jpeg', 'forge.jpeg');
 
       expect(meta).toEqual({
         software: 'forge',
@@ -218,7 +224,7 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse forge-hires.jpeg', () => {
-      const meta = parseConvertedSample<A1111Metadata>(
+      const meta = parseConvertedSample<StandardMetadata>(
         'jpeg',
         'forge-hires.jpeg',
       );
@@ -254,7 +260,7 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse forge-neo.jpeg', () => {
-      const meta = parseConvertedSample<A1111Metadata>(
+      const meta = parseConvertedSample<StandardMetadata>(
         'jpeg',
         'forge-neo.jpeg',
       );
@@ -285,7 +291,10 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse civitai.jpeg', () => {
-      const meta = parseConvertedSample<A1111Metadata>('jpeg', 'civitai.jpeg');
+      const meta = parseConvertedSample<StandardMetadata>(
+        'jpeg',
+        'civitai.jpeg',
+      );
 
       expect(meta).toEqual({
         software: 'sd-webui',
@@ -309,7 +318,10 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse sd-next.jpg', () => {
-      const meta = parseConvertedSample<A1111Metadata>('jpeg', 'sd-next.jpg');
+      const meta = parseConvertedSample<StandardMetadata>(
+        'jpeg',
+        'sd-next.jpg',
+      );
 
       expect(meta).toEqual({
         software: 'sd-next',
@@ -336,7 +348,7 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse sd-next-hires.jpg', () => {
-      const meta = parseConvertedSample<A1111Metadata>(
+      const meta = parseConvertedSample<StandardMetadata>(
         'jpeg',
         'sd-next-hires.jpg',
       );
@@ -373,7 +385,7 @@ describe('A1111 Parsers - Samples', () => {
 
   describe('WebP samples', () => {
     it('should parse forge.webp', () => {
-      const meta = parseConvertedSample<A1111Metadata>('webp', 'forge.webp');
+      const meta = parseConvertedSample<StandardMetadata>('webp', 'forge.webp');
 
       expect(meta).toEqual({
         software: 'forge',
@@ -401,7 +413,7 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse forge-hires.webp', () => {
-      const meta = parseConvertedSample<A1111Metadata>(
+      const meta = parseConvertedSample<StandardMetadata>(
         'webp',
         'forge-hires.webp',
       );
@@ -437,7 +449,7 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse forge-neo.webp', () => {
-      const meta = parseConvertedSample<A1111Metadata>(
+      const meta = parseConvertedSample<StandardMetadata>(
         'webp',
         'forge-neo.webp',
       );
@@ -468,7 +480,10 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse sd-next.webp', () => {
-      const meta = parseConvertedSample<A1111Metadata>('webp', 'sd-next.webp');
+      const meta = parseConvertedSample<StandardMetadata>(
+        'webp',
+        'sd-next.webp',
+      );
 
       expect(meta).toEqual({
         software: 'sd-next',
@@ -495,7 +510,7 @@ describe('A1111 Parsers - Samples', () => {
     });
 
     it('should parse sd-next-hires.webp', () => {
-      const meta = parseConvertedSample<A1111Metadata>(
+      const meta = parseConvertedSample<StandardMetadata>(
         'webp',
         'sd-next-hires.webp',
       );

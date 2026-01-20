@@ -304,7 +304,7 @@ type ParseResult =
 
 ### `GenerationMetadata`
 
-Unified metadata structure. This is a discriminated union of 5 specific metadata types.
+Unified metadata structure. This is a discriminated union of 3 specific metadata types.
 Use the `software` field to narrow down the type:
 
 **Available Types:**
@@ -312,25 +312,18 @@ Use the `software` field to narrow down the type:
 - **`NovelAIMetadata`** (`software: 'novelai'`)  
   NovelAI-specific metadata. Includes V4 character placement features.
 
-- **`ComfyUIMetadata`** (`software: 'comfyui' | 'tensorart' | 'stability-matrix'`)  
-  ComfyUI-format metadata with full workflow graph for reproducibility.
+- **`ComfyUIMetadata`** (`software: 'comfyui' | 'tensorart' | 'stability-matrix' | 'swarmui'`)  
+  ComfyUI-format metadata with node workflow graph.
+  SwarmUI includes workflow only in PNG format (JPEG/WebP: parameters only).
 
-- **`A1111Metadata`** (`software: 'sd-webui' | 'forge' | 'civitai' | 'fooocus' | ...`)  
-  Standard SD WebUI parameter format used by most tools.
-
-- **`InvokeAIMetadata`** (`software: 'invokeai'`)  
-  InvokeAI-specific metadata.
-
-- **`SwarmUIMetadata`** (`software: 'swarmui'`)  
-  SwarmUI-specific metadata. May include ComfyUI workflow in PNG format.
+- **`StandardMetadata`** (`software: 'sd-webui' | 'forge' | 'invokeai' | 'civitai' | ...`)  
+  Baseline metadata without tool-specific extensions. Used by most SD tools.
 
 ```typescript
 type GenerationMetadata =
   | NovelAIMetadata
   | ComfyUIMetadata
-  | A1111Metadata
-  | InvokeAIMetadata
-  | SwarmUIMetadata;
+  | StandardMetadata;
 ```
 
 See [Type Documentation](./docs/types.md) for detailed interface definitions of each metadata type.

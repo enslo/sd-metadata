@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { parseSwarmUI } from '../../../src/parsers/swarmui';
-import type { SwarmUIMetadata } from '../../../src/types';
+import type { ComfyUIMetadata } from '../../../src/types';
 import { expectComfyNodeGraph } from '../../helpers/comfy-node-graph';
 import { parseConvertedSample, parsePngSample } from '../helpers';
 
 describe('SwarmUI Parsers - Samples', () => {
   describe('PNG samples', () => {
     it('should parse swarmui.png', () => {
-      const meta = parsePngSample<SwarmUIMetadata>('swarmui.png', parseSwarmUI);
+      const meta = parsePngSample<ComfyUIMetadata>('swarmui.png', parseSwarmUI);
 
       expect(meta).toEqual({
         software: 'swarmui',
@@ -35,7 +35,7 @@ describe('SwarmUI Parsers - Samples', () => {
     });
 
     it('should parse swarmui-hires.png', () => {
-      const meta = parsePngSample<SwarmUIMetadata>(
+      const meta = parsePngSample<ComfyUIMetadata>(
         'swarmui-hires.png',
         parseSwarmUI,
       );
@@ -70,7 +70,7 @@ describe('SwarmUI Parsers - Samples', () => {
     });
 
     it('should parse swarmui-upscale.png', () => {
-      const meta = parsePngSample<SwarmUIMetadata>(
+      const meta = parsePngSample<ComfyUIMetadata>(
         'swarmui-upscale.png',
         parseSwarmUI,
       );
@@ -103,7 +103,7 @@ describe('SwarmUI Parsers - Samples', () => {
 
   describe('JPEG samples', () => {
     it('should parse swarmui.jpg', () => {
-      const meta = parseConvertedSample<SwarmUIMetadata>('jpeg', 'swarmui.jpg');
+      const meta = parseConvertedSample<ComfyUIMetadata>('jpeg', 'swarmui.jpg');
 
       expect(meta).toEqual({
         software: 'swarmui',
@@ -131,7 +131,7 @@ describe('SwarmUI Parsers - Samples', () => {
 
   describe('WebP samples', () => {
     it('should parse swarmui.webp', () => {
-      const meta = parseConvertedSample<SwarmUIMetadata>(
+      const meta = parseConvertedSample<ComfyUIMetadata>(
         'webp',
         'swarmui.webp',
       );

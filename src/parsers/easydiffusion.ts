@@ -1,7 +1,7 @@
 import type {
-  A1111Metadata,
   InternalParseResult,
   MetadataEntry,
+  StandardMetadata,
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
@@ -137,7 +137,7 @@ function parseFromEntries(
   const width = Number(entryRecord.width ?? entryRecord.Width) || 0;
   const height = Number(entryRecord.height ?? entryRecord.Height) || 0;
 
-  const metadata: Omit<A1111Metadata, 'raw'> = {
+  const metadata: Omit<StandardMetadata, 'raw'> = {
     software: 'easydiffusion',
     prompt: prompt.trim(),
     negativePrompt: negativePrompt.trim(),
@@ -181,7 +181,7 @@ function parseFromJson(json: EasyDiffusionJsonMetadata): InternalParseResult {
   const width = getValue<number>(json, 'width', 'Width') ?? 0;
   const height = getValue<number>(json, 'height', 'Height') ?? 0;
 
-  const metadata: Omit<A1111Metadata, 'raw'> = {
+  const metadata: Omit<StandardMetadata, 'raw'> = {
     software: 'easydiffusion',
     prompt: prompt.trim(),
     negativePrompt: negativePrompt.trim(),
