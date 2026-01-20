@@ -7,4 +7,4 @@ pre-commit:
       run: npm run typecheck
     markdown:
       glob: "*.md"
-      run: npx markdownlint --fix {staged_files}
+      run: npm run markdownlint -- {staged_files}
