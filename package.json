@@ -1,6 +1,7 @@
 {
   "name": "@enslo/sd-metadata",
   "version": "1.0.2",
+  "packageManager": "npm@10.9.2",
   "description": "Read and write AI-generated image metadata",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,6 +21,7 @@
     "test:coverage": "vitest run --coverage",
     "lint": "biome check src tests",
     "lint:fix": "biome check --write src tests",
+    "markdownlint": "markdownlint --fix",
     "typecheck": "tsc --noEmit",
     "prepare": "lefthook install"
   },
