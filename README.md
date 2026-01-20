@@ -301,26 +301,77 @@ type ParseResult =
 
 ### `GenerationMetadata`
 
-Unified metadata structure. This is a discriminated union of 3 specific metadata types.
-Use the `software` field to narrow down the type:
+Unified metadata structure returned by the `read()` function. This is a discriminated union of 3 specific metadata types, distinguished by the `software` field.
 
-**Available Types:**
+**Common Fields (Available in All Types):**
+
+All metadata types include these base fields:
+
+- `prompt: string` - Positive prompt text
+- `negativePrompt: string` - Negative prompt text
+- `width: number` - Image width in pixels
+- `height: number` - Image height in pixels
+- `model?: ModelSettings` - Model information (name, hash, VAE)
+- `sampling?: SamplingSettings` - Sampling parameters (seed, steps, CFG, sampler, scheduler, clipSkip)
+- `hires?: HiresSettings` - Hires.fix settings (if applied)
+- `upscale?: UpscaleSettings` - Upscale settings (if applied)
+
+**Metadata Type Variants:**
 
 - **`NovelAIMetadata`** (`software: 'novelai'`)  
-  NovelAI-specific metadata. Includes V4 character placement features.
+  Includes NovelAI-specific fields for V4 character placement:
+  - `characterPrompts?: CharacterPrompt[]` - Per-character prompts with positions
+  - `useCoords?: boolean` - Use character coordinates for placement
+  - `useOrder?: boolean` - Use character order
 
 - **`ComfyUIMetadata`** (`software: 'comfyui' | 'tensorart' | 'stability-matrix' | 'swarmui'`)  
-  ComfyUI-format metadata with node workflow graph.
-  SwarmUI includes workflow only in PNG format (JPEG/WebP: parameters only).
+  Includes ComfyUI workflow graph:
+  - `nodes: ComfyNodeGraph` (required for comfyui/tensorart/stability-matrix)
+  - `nodes?: ComfyNodeGraph` (optional for swarmui - only in PNG format)
 
 - **`StandardMetadata`** (`software: 'sd-webui' | 'forge' | 'invokeai' | 'civitai' | ...`)  
-  Baseline metadata without tool-specific extensions. Used by most SD tools.
+  Baseline metadata without tool-specific extensions. Used by most SD WebUI-based tools.
+
+**Type Definition:**
 
 ```typescript
 type GenerationMetadata =
   | NovelAIMetadata
   | ComfyUIMetadata
   | StandardMetadata;
+```
+
+**Usage Example:**
+
+```typescript
+const result = read(imageData);
+
+if (result.status === 'success') {
+  const metadata = result.metadata;
+  
+  // Access common fields
+  console.log('Prompt:', metadata.prompt);
+  console.log('Model:', metadata.model?.name);
+  console.log('Seed:', metadata.sampling?.seed);
+  
+  // Type-specific handling using discriminated union
+  if (metadata.software === 'novelai') {
+    // TypeScript knows this is NovelAIMetadata
+    console.log('Character prompts:', metadata.characterPrompts);
+  } else if (
+    metadata.software === 'comfyui' ||
+    metadata.software === 'tensorart' ||
+    metadata.software === 'stability-matrix'
+  ) {
+    // TypeScript knows this is BasicComfyUIMetadata (nodes always present)
+    console.log('Node count:', Object.keys(metadata.nodes).length);
+  } else if (metadata.software === 'swarmui') {
+    // TypeScript knows this is SwarmUIMetadata (nodes optional)
+    if (metadata.nodes) {
+      console.log('Workflow included');
+    }
+  }
+}
 ```
 
 See [Type Documentation](./docs/types.md) for detailed interface definitions of each metadata type.
@@ -334,18 +385,6 @@ type RawMetadata =
   | { format: 'png'; chunks: PngTextChunk[] }
   | { format: 'jpeg'; segments: MetadataSegment[] }
   | { format: 'webp'; segments: MetadataSegment[] };
-```
-
-### `GenerationSoftware`
-
-String union of all supported software names.
-
-```typescript
-type GenerationSoftware =
-  | 'novelai' | 'comfyui' | 'swarmui' | 'tensorart'
-  | 'stability-matrix' | 'invokeai' | 'forge-neo' | 'forge'
-  | 'sd-webui' | 'sd-next' | 'civitai' | 'hf-space'
-  | 'easydiffusion' | 'fooocus' | 'ruined-fooocus';
 ```
 
 > [!TIP]
