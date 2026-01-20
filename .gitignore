@@ -138,3 +138,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 local_samples/
+
+# Demo site lockfile (exact versions used, no lockfile needed)
+demo/package-lock.json

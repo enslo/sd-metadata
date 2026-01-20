@@ -71,10 +71,6 @@ Update version in `package.json`:
 
 Update demo site to use the new version:
 
-```bash
-cd demo
-```
-
 Edit `demo/package.json`:
 
 ```json
@@ -85,17 +81,14 @@ Edit `demo/package.json`:
 }
 ```
 
-Regenerate lockfile:
-
-```bash
-npm install
-cd ..
-```
+> [!NOTE]
+> Demo uses exact versions (no `^` or `~`) so no lockfile update is needed.
+> Cloudflare Pages is configured with `SKIP_DEPENDENCY_INSTALL=true` and uses `npm install`.
 
 ### 6. Commit and Create PR
 
 ```bash
-git add CHANGELOG.md package.json demo/package.json demo/package-lock.json
+git add CHANGELOG.md package.json demo/package.json
 git commit -m "chore: release vX.Y.Z"
 git push -u origin release/vX.Y.Z
 ```
@@ -133,10 +126,10 @@ No need to create the tag separately.
 
 ### 9. Verify Publish & Deploy
 
-**Automated steps** (triggered by release):
+**Automated** (triggered by release):
 
-1. GitHub Actions publishes to npm
-2. Demo site deploys after npm publish completes
+- GitHub Actions publishes to npm
+- Cloudflare Pages deploys demo site
 
 **Manual verification**:
 
@@ -164,9 +157,10 @@ Check GitHub Actions logs. Common issues:
 
 Check:
 
-1. Demo site PR merged?
-2. Cloudflare Pages deployment succeeded?
-3. Browser cache cleared?
+1. Cloudflare Pages `SKIP_DEPENDENCY_INSTALL=true` environment variable set?
+2. Build command includes `npm install`?
+3. Cloudflare Pages deployment succeeded?
+4. Browser cache cleared?
 
 ## Notes
 
@@ -174,3 +168,4 @@ Check:
 - **Test locally** before creating release
 - **Version numbers** follow semantic versioning strictly
 - **CHANGELOG** should be user-facing (no internal refactorings unless significant)
+- **Demo dependencies** use exact versions (no `^` or `~`) for deterministic builds
