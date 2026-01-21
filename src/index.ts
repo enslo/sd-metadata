@@ -23,6 +23,7 @@ import {
   readUint32LE,
 } from './utils/binary';
 import { pngChunksToEntries, segmentsToEntries } from './utils/convert';
+import { writeAsWebUI } from './write-webui';
 import { writeJpegMetadata } from './writers/jpeg';
 import { writePngMetadata } from './writers/png';
 import { writeWebpMetadata } from './writers/webp';
@@ -43,6 +44,9 @@ export type {
   TExtChunk,
   UpscaleSettings,
 } from './types';
+
+// Export specialized write functions
+export { writeAsWebUI };
 
 // ============================================================================
 // Format Helpers
