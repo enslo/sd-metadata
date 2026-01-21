@@ -161,40 +161,39 @@ function buildCharacterPromptsSection(metadata: NovelAIMetadata): string[] {
 }
 
 /**
- * Serialize GenerationMetadata to A1111 plain text format
+ * Format metadata as SD WebUI (A1111) plain text
  *
- * Converts metadata from any source (NovelAI, ComfyUI, etc.) to
- * A1111-compatible plain text format.
+ * Converts GenerationMetadata to human-readable text in the SD WebUI format.
+ * This provides a standard, tool-agnostic way to display generation metadata
+ * without needing to manually read individual properties.
  *
- * Output order:
- * 1. Positive prompt
- * 2. Character prompts (NovelAI only, delimited by comment lines)
- * 3. Negative prompt
- * 4. Settings line
+ * The output format follows the A1111/SD WebUI convention:
+ * ```
+ * positive prompt
+ * [character prompts for NovelAI]
+ * Negative prompt: negative prompt
+ * Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, ...
+ * ```
  *
- * @param metadata - Generation metadata to serialize
- * @returns A1111-format plain text string
+ * @param metadata - Generation metadata from any tool
+ * @returns Human-readable text in SD WebUI format
  *
  * @example
  * ```typescript
- * const metadata: GenerationMetadata = {
- *   software: 'sd-webui',
- *   prompt: 'masterpiece, 1girl',
- *   negativePrompt: 'lowres, bad anatomy',
- *   width: 512,
- *   height: 768,
- *   sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
- *   model: { name: 'model.safetensors' },
- * };
+ * import { read, formatAsWebUI } from 'sd-metadata';
  *
- * const text = serializeA1111(metadata);
- * // Result:
- * // masterpiece, 1girl
- * // Negative prompt: lowres, bad anatomy
- * // Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: model.safetensors
+ * const result = read(imageData);
+ * if (result.status === 'success') {
+ *   const text = formatAsWebUI(result.metadata);
+ *   console.log(text);
+ *   // Output:
+ *   // masterpiece, 1girl
+ *   // Negative prompt: low quality, bad anatomy
+ *   // Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: model.safetensors
+ * }
  * ```
  */
-export function serializeA1111(metadata: GenerationMetadata): string {
+export function formatAsWebUI(metadata: GenerationMetadata): string {
   const sections: string[] = [];
 
   // 1. Positive prompt (always present, normalized)

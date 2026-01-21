@@ -9,7 +9,7 @@ import {
   createEncodedChunk,
   getEncodingStrategy,
 } from '../converters/chunk-encoding';
-import { serializeA1111 } from '../serializers/a1111';
+import { formatAsWebUI } from '../serializers/a1111';
 import type {
   GenerationMetadata,
   MetadataSegment,
@@ -72,7 +72,7 @@ export function writeAsWebUI(
   }
 
   // Convert metadata to A1111 plain text format
-  const text = serializeA1111(metadata);
+  const text = formatAsWebUI(metadata);
 
   // Create format-specific metadata structures
   let writeResult:
