@@ -151,7 +151,7 @@ if (result.status === 'success') {
 > For production use, pin to a specific version instead of `@latest`:
 >
 > ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.1.1/dist/index.js
+> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.2.0/dist/index.js
 > ```
 
 ### Format Conversion
@@ -247,6 +247,66 @@ if (result.ok) {
 }
 ```
 
+### Writing Metadata in WebUI Format
+
+Create and embed custom metadata in SD WebUI (A1111) format:
+
+```typescript
+import { writeAsWebUI } from 'sd-metadata';
+
+// Create custom metadata from scratch
+const metadata = {
+  software: 'sd-webui',
+  prompt: 'masterpiece, best quality, 1girl',
+  negativePrompt: 'lowres, bad quality',
+  width: 512,
+  height: 768,
+  sampling: {
+    steps: 20,
+    sampler: 'Euler a',
+    cfg: 7,
+    seed: 12345,
+  },
+  model: { name: 'model.safetensors' },
+};
+
+// Write to any image format (PNG, JPEG, WebP)
+const result = writeAsWebUI(imageData, metadata);
+if (result.ok) {
+  writeFileSync('output.png', result.value);
+}
+```
+
+> [!TIP]
+> `writeAsWebUI` is particularly useful when:
+>
+> - Creating images programmatically and want to embed generation parameters
+> - Converting metadata from proprietary formats to WebUI-compatible format
+> - Building tools that need to output WebUI-readable metadata
+
+### Formatting Metadata for Display
+
+Convert metadata to human-readable text in WebUI format:
+
+```typescript
+import { read, formatAsWebUI } from 'sd-metadata';
+
+const result = read(imageData);
+if (result.status === 'success') {
+  // Convert to WebUI format text
+  const text = formatAsWebUI(result.metadata);
+  console.log(text);
+  
+  // Output example:
+  // masterpiece, best quality, 1girl
+  // Negative prompt: lowres, bad quality
+  // Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: model.safetensors
+}
+```
+
+> [!NOTE]
+> `formatAsWebUI` provides a tool-agnostic standard format for displaying generation metadata. It works with metadata from any supported tool (NovelAI, ComfyUI, etc.) and formats it consistently.
+
 ## API Reference
 
 ### `read(data: Uint8Array): ParseResult`
@@ -282,6 +342,56 @@ Writes metadata to an image file.
 - `{ ok: true, value: Uint8Array }` - Successfully written (returns new image data)
 - `{ ok: false, error: { type: string, message?: string } }` - Failed
   - `type`: `'unsupportedFormat'`, `'conversionFailed'`, or `'writeFailed'`
+
+### `writeAsWebUI(data: Uint8Array, metadata: GenerationMetadata): WriteResult`
+
+Writes metadata to an image in SD WebUI (A1111) format.
+
+**Parameters:**
+
+- `data` - Target image file data (PNG, JPEG, or WebP)
+- `metadata` - Generation metadata to embed
+  - Can be from any tool or custom-created
+  - Automatically converted to WebUI format
+
+**Returns:**
+
+- `{ ok: true, value: Uint8Array }` - Successfully written (returns new image data)
+- `{ ok: false, error: { type: string, message?: string } }` - Failed
+  - `type`: `'unsupportedFormat'` or `'writeFailed'`
+
+**Use cases:**
+
+- Creating custom metadata for programmatically generated images
+- Converting metadata from other tools to WebUI-compatible format
+- Building applications that output WebUI-readable metadata
+
+### `formatAsWebUI(metadata: GenerationMetadata): string`
+
+Formats metadata as human-readable text in SD WebUI (A1111) format.
+
+**Parameters:**
+
+- `metadata` - Generation metadata from any tool
+
+**Returns:**
+
+- Human-readable string in WebUI format (plain text)
+
+**Output format:**
+
+```text
+positive prompt
+[character prompts for NovelAI]
+Negative prompt: negative prompt
+Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, ...
+```
+
+**Use cases:**
+
+- Displaying metadata to users in a consistent format
+- Copying generation parameters as text
+- Logging or debugging generation settings
 
 ## Type Reference
 

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-22
+
+### Added
+
+- **`writeAsWebUI()` function** (#69): Write any GenerationMetadata to PNG/JPEG/WebP in SD WebUI (A1111) format
+  - Create custom metadata from scratch
+  - Convert metadata from any tool to WebUI-compatible format
+  - Automatic encoding strategy (tEXt for ASCII, iTXt for non-ASCII in PNG)
+- **`formatAsWebUI()` function** (#69): Format metadata as human-readable text in SD WebUI format
+  - Tool-agnostic standard format for displaying generation metadata
+  - Supports NovelAI character prompts with position comments
+  - Normalizes line endings for cross-platform compatibility
+
 ## [1.1.1] - 2026-01-21
 
 ### Documentation
@@ -123,6 +136,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[1.2.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.2.0
 [1.1.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.1.1
 [1.1.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.1.0
 [1.0.2]: https://github.com/enslo/sd-metadata/releases/tag/v1.0.2
