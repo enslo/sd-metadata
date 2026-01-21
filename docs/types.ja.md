@@ -1,32 +1,32 @@
-# Type Documentation
+# 型ドキュメント
 
-🇯🇵 **[日本語版はこちら](./types.ja.md)**
+`@enslo/sd-metadata` の完全な型リファレンスです。
 
-Complete type reference for `@enslo/sd-metadata`.
+🌐 **[English version](./types.md)**
 
-## Table of Contents
+## 目次
 
-- [Core Types](#core-types)
+- [コア型](#コア型)
   - [`ParseResult`](#parseresult)
   - [`GenerationMetadata`](#generationmetadata)
   - [`RawMetadata`](#rawmetadata)
   - [`WriteResult`](#writeresult)
-- [Metadata Types](#metadata-types)
+- [メタデータ型](#メタデータ型)
   - [`StandardMetadata`](#standardmetadata)
   - [`NovelAIMetadata`](#novelaimetadata)
   - [`ComfyUIMetadata`](#comfyuimetadata)
-- [Settings Types](#settings-types)
+- [設定型](#設定型)
   - [`ModelSettings`](#modelsettings)
   - [`SamplingSettings`](#samplingsettings)
   - [`HiresSettings`](#hiressettings)
   - [`UpscaleSettings`](#upscalesettings)
   - [`CharacterPrompt`](#characterprompt)
-- [ComfyUI Types](#comfyui-types)
+- [ComfyUI型](#comfyui型)
   - [`ComfyNodeGraph`](#comfynodegraph)
   - [`ComfyNode`](#comfynode)
   - [`ComfyNodeInputValue`](#comfynodeinputvalue)
   - [`ComfyNodeReference`](#comfynodereference)
-- [Format-Specific Types](#format-specific-types)
+- [フォーマット固有の型](#フォーマット固有の型)
   - [`PngTextChunk`](#pngtextchunk)
   - [`TExtChunk`](#textchunk)
   - [`ITXtChunk`](#itxtchunk)
@@ -35,11 +35,11 @@ Complete type reference for `@enslo/sd-metadata`.
 
 ---
 
-## Core Types
+## コア型
 
 ### `ParseResult`
 
-The result type returned by the `read()` function.
+`read()` 関数が返す結果型。
 
 ```typescript
 type ParseResult =
@@ -49,18 +49,18 @@ type ParseResult =
   | { status: 'invalid'; message?: string };
 ```
 
-**Status Values:**
+**ステータス値：**
 
-- **`success`**: Metadata was successfully parsed
-  - `metadata`: Unified metadata object
-  - `raw`: Original format-specific data for round-trip conversion
-- **`unrecognized`**: Image has metadata but format is not recognized
-  - `raw`: Original metadata preserved for blind conversion (with `force: true`)
-- **`empty`**: No metadata found in the image
-- **`invalid`**: Corrupted or unsupported image format
-  - `message`: Optional error description
+- **`success`**: メタデータのパースに成功
+  - `metadata`: 統一されたメタデータオブジェクト
+  - `raw`: ラウンドトリップ変換用の元のフォーマット固有データ
+- **`unrecognized`**: 画像にメタデータがあるがフォーマットが認識できない
+  - `raw`: ブラインド変換用に保持された元のメタデータ（`force: true` で使用）
+- **`empty`**: 画像にメタデータが見つからない
+- **`invalid`**: 破損または非対応の画像フォーマット
+  - `message`: オプションのエラー説明
 
-**Example:**
+**例：**
 
 ```typescript
 import { read } from '@enslo/sd-metadata';
@@ -74,16 +74,16 @@ switch (result.status) {
     break;
   
   case 'unrecognized':
-    console.log('Unknown metadata format');
-    // Can still convert with force: true
+    console.log('不明なメタデータフォーマット');
+    // force: true で変換可能
     break;
   
   case 'empty':
-    console.log('No metadata');
+    console.log('メタデータなし');
     break;
   
   case 'invalid':
-    console.error(`Invalid image: ${result.message}`);
+    console.error(`無効な画像: ${result.message}`);
     break;
 }
 ```
@@ -92,7 +92,7 @@ switch (result.status) {
 
 ### `GenerationMetadata`
 
-Unified metadata structure. Discriminated union of all supported metadata types.
+統一されたメタデータ構造。サポートされている全てのメタデータ型のユニオン型。
 
 ```typescript
 type GenerationMetadata =
@@ -101,19 +101,19 @@ type GenerationMetadata =
   | StandardMetadata;
 ```
 
-**Metadata Type Mapping:**
+**メタデータ型のマッピング：**
 
-| Metadata Type | `software` values |
+| メタデータ型 | `software` 値 |
 | ------------- | ----------------- |
 | `StandardMetadata` | `'sd-webui'` \| `'forge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'sd-next'` \| `'forge-neo'` |
 | `NovelAIMetadata` | `'novelai'` |
 | `ComfyUIMetadata` | `'comfyui'` \| `'tensorart'` \| `'stability-matrix'` \| `'swarmui'` |
 
-**Type narrowing example:**
+**型の絞り込み例：**
 
 ```typescript
 if (metadata.software === 'novelai') {
-  // TypeScript knows metadata is NovelAIMetadata
+  // TypeScriptはmetadataがNovelAIMetadataであることを認識
   console.log(metadata.characterPrompts);
 }
 
@@ -121,7 +121,7 @@ if (metadata.software === 'comfyui' ||
     metadata.software === 'tensorart' ||
     metadata.software === 'stability-matrix' ||
     metadata.software === 'swarmui') {
-  // TypeScript knows metadata is ComfyUIMetadata
+  // TypeScriptはmetadataがComfyUIMetadataであることを認識
   if (metadata.nodes) {
     console.log('Has workflow:', Object.keys(metadata.nodes).length);
   }
@@ -132,7 +132,7 @@ if (metadata.software === 'comfyui' ||
 
 ### `RawMetadata`
 
-Preserves the original metadata structure for lossless round-trip conversion.
+ロスレスなラウンドトリップ変換のために元のメタデータ構造を保持。
 
 ```typescript
 type RawMetadata =
@@ -141,42 +141,42 @@ type RawMetadata =
   | { format: 'webp'; segments: MetadataSegment[] };
 ```
 
-**Why is this needed?**
+**なぜこれが必要？**
 
-When you read metadata from an image and convert it to a different format (e.g., PNG → JPEG), `RawMetadata` preserves the original structure. This allows you to convert back to the original format without losing any information.
+画像からメタデータを読み込んで別のフォーマットに変換する場合（例：PNG → JPEG）、`RawMetadata` は元の構造を保持します。これにより、情報を失うことなく元のフォーマットに戻すことができます。
 
-**Round-trip conversion example:**
+**ラウンドトリップ変換例：**
 
 ```typescript
 import { read, write } from '@enslo/sd-metadata';
 import { convertImageFormat } from 'some-image-library';
 
-// Read metadata from PNG
+// PNGからメタデータを読み込み
 const pngData = readFileSync('image.png');
 const parseResult = read(pngData);
 
 if (parseResult.status === 'success') {
-  // Convert image to JPEG
+  // 画像をJPEGに変換
   const jpegImageData = convertImageFormat(pngData, 'jpeg');
   
-  // Write metadata to JPEG
+  // メタデータをJPEGに書き込み
   const jpegWithMeta = write(jpegImageData, parseResult);
   
-  // Later: convert back to PNG
+  // 後で：PNGに戻す
   const pngImageData = convertImageFormat(jpegWithMeta.value, 'png');
   const pngWithMeta = write(pngImageData, parseResult);
   
-  // Original PNG metadata structure is fully preserved!
+  // 元のPNGメタデータ構造が完全に保持される！
 }
 ```
 
-Without `raw`, metadata would be converted to a generic format and lose format-specific details when converting back.
+`raw` がなければ、メタデータは汎用フォーマットに変換され、元に戻す際にフォーマット固有の詳細が失われます。
 
 ---
 
 ### `WriteResult`
 
-Result type returned by the `write()` function.
+`write()` 関数が返す結果型。
 
 ```typescript
 export type WriteResult = 
@@ -184,7 +184,7 @@ export type WriteResult =
   | { ok: false; error: { type: string; message?: string } };
 ```
 
-**Success:**
+**成功：**
 
 ```typescript
 if (result.ok) {
@@ -192,30 +192,30 @@ if (result.ok) {
 }
 ```
 
-**Error:**
+**エラー：**
 
 ```typescript
 if (!result.ok) {
-  console.error(`Write failed: ${result.error.type}`);
+  console.error(`書き込み失敗: ${result.error.type}`);
   if (result.error.message) {
     console.error(result.error.message);
   }
 }
 ```
 
-**Error Types:**
+**エラータイプ：**
 
-- `unsupportedFormat`: Image format not supported
-- `conversionFailed`: Metadata conversion failed
-- `writeFailed`: Failed to write metadata to image
+- `unsupportedFormat`: 画像フォーマットが非対応
+- `conversionFailed`: メタデータ変換に失敗
+- `writeFailed`: 画像へのメタデータ書き込みに失敗
 
 ---
 
-## Metadata Types
+## メタデータ型
 
 ### `StandardMetadata`
 
-Standard parameters format used by most SD tools.
+ほとんどのSDツールで使用される標準パラメータフォーマット。
 
 ```typescript
 export interface StandardMetadata extends BaseMetadata {
@@ -231,35 +231,33 @@ export interface StandardMetadata extends BaseMetadata {
     | 'fooocus'
     | 'ruined-fooocus';
 
-  // Common fields (inherited from internal BaseMetadata)
-  /** Positive prompt */
+  // 共通フィールド（内部のBaseMetadataから継承）
+  /** ポジティブプロンプト */
   prompt: string;
-  /** Negative prompt */
+  /** ネガティブプロンプト */
   negativePrompt: string;
-  /** Image width in pixels */
+  /** 画像の幅（ピクセル） */
   width: number;
-  /** Image height in pixels */
+  /** 画像の高さ（ピクセル） */
   height: number;
-  /** Model settings */
+  /** モデル設定 */
   model?: ModelSettings;
-  /** Sampling settings */
+  /** サンプリング設定 */
   sampling?: SamplingSettings;
-  /** Hires.fix settings (if applied) */
+  /** Hires.fix設定（適用されている場合） */
   hires?: HiresSettings;
-  /** Upscale settings (if applied) */
+  /** アップスケール設定（適用されている場合） */
   upscale?: UpscaleSettings;
 }
 ```
 
-This is the most common metadata type. It represents the baseline generation metadata
-without any tool-specific extensions (unlike NovelAI's character prompts or ComfyUI's node graphs).
-Many tools use this minimal structure, including SD WebUI, Forge, InvokeAI, and others.
+これは最も一般的なメタデータ型です。NovelAIのキャラクタープロンプトやComfyUIのノードグラフのようなツール固有の拡張なしのベースライン生成メタデータを表します。SD WebUI、Forge、InvokeAIなど多くのツールがこの最小限の構造を使用します。
 
-**Example:**
+**例：**
 
 ```typescript
 if (metadata.software === 'forge' || metadata.software === 'sd-webui') {
-  console.log('Using standard format metadata');
+  console.log('標準フォーマットのメタデータを使用');
   console.log('Sampler:', metadata.sampling?.sampler);
   console.log('Steps:', metadata.sampling?.steps);
 }
@@ -269,27 +267,27 @@ if (metadata.software === 'forge' || metadata.software === 'sd-webui') {
 
 ### `NovelAIMetadata`
 
-Metadata specific to NovelAI-generated images.
+NovelAI生成画像に固有のメタデータ。
 
 ```typescript
 export interface NovelAIMetadata extends BaseMetadata {
   software: 'novelai';
-  /** V4 character prompts (when using character placement) */
+  /** V4キャラクタープロンプト（キャラクター配置使用時） */
   characterPrompts?: CharacterPrompt[];
-  /** Use character coordinates for placement */
+  /** 配置にキャラクター座標を使用 */
   useCoords?: boolean;
-  /** Use character order */
+  /** キャラクターの順序を使用 */
   useOrder?: boolean;
 }
 ```
 
-**Unique Features:**
+**固有の機能：**
 
-- **Character Placement (V4)**: NovelAI V4 supports placing multiple characters at specific coordinates
-- `characterPrompts`: Array of character-specific prompts with optional positions
-- `useCoords`, `useOrder`: Control character placement behavior
+- **キャラクター配置（V4）**: NovelAI V4は特定の座標に複数のキャラクターを配置することをサポート
+- `characterPrompts`: オプションの位置情報付きキャラクター固有プロンプトの配列
+- `useCoords`、`useOrder`: キャラクター配置の動作を制御
 
-**Example:**
+**例：**
 
 ```typescript
 if (metadata.software === 'novelai' && metadata.characterPrompts) {
@@ -306,57 +304,57 @@ if (metadata.software === 'novelai' && metadata.characterPrompts) {
 
 ### `ComfyUIMetadata`
 
-Metadata from ComfyUI and compatible tools (TensorArt, Stability Matrix, SwarmUI).
+ComfyUIおよび互換ツール（TensorArt、Stability Matrix、SwarmUI）からのメタデータ。
 
 ```typescript
 export type ComfyUIMetadata =
   | BasicComfyUIMetadata
   | SwarmUIMetadata;
 
-// Internal types:
+// 内部型：
 interface BasicComfyUIMetadata extends BaseMetadata {
   software: 'comfyui' | 'tensorart' | 'stability-matrix';
-  nodes: ComfyNodeGraph;  // required
+  nodes: ComfyNodeGraph;  // 必須
 }
 
 interface SwarmUIMetadata extends BaseMetadata {
   software: 'swarmui';
-  nodes?: ComfyNodeGraph;  // optional
+  nodes?: ComfyNodeGraph;  // オプション
 }
 ```
 
-**Unique Features:**
+**固有の機能：**
 
-- **ComfyUI/TensorArt/Stability Matrix**: `nodes` is always present in all formats
-- **SwarmUI**: `nodes` may be present in all formats when converted from PNG (extended support)
+- **ComfyUI/TensorArt/Stability Matrix**: `nodes` は全フォーマットで常に存在
+- **SwarmUI**: PNGから変換された場合、全フォーマットで `nodes` が存在する可能性あり（拡張対応）
 
-**Example:**
+**例：**
 
 ```typescript
 if (metadata.software === 'comfyui') {
-  // nodes is guaranteed to exist for ComfyUI
+  // ComfyUIではnodesは必ず存在
   console.log('Node count:', Object.keys(metadata.nodes).length);
 }
 
 if (metadata.software === 'swarmui') {
-  // nodes might not exist for native SwarmUI JPEG/WebP
-  // but will be present if converted from PNG
+  // ネイティブSwarmUI JPEG/WebPではnodesが存在しない可能性あり
+  // ただしPNGから変換された場合は存在
   if (metadata.nodes) {
-    console.log('Has workflow (PNG or converted)');
+    console.log('ワークフローあり（PNGまたは変換済み）');
   } else {
-    console.log('Native JPEG/WebP: Parameters only');
+    console.log('ネイティブJPEG/WebP: パラメータのみ');
   }
 }
 
-// Type narrowing works across all ComfyUI-compatible tools
+// 型の絞り込みは全てのComfyUI互換ツールで機能
 if (metadata.software === 'comfyui' ||
     metadata.software === 'tensorart' ||
     metadata.software === 'stability-matrix' ||
     metadata.software === 'swarmui') {
-  // TypeScript knows metadata is ComfyUIMetadata
-  // But you need to check metadata.nodes before using it
+  // TypeScriptはmetadataがComfyUIMetadataであることを認識
+  // ただしmetadata.nodesは使用前にチェックが必要
   if (metadata.nodes) {
-    // Find checkpoint node
+    // チェックポイントノードを検索
     for (const [nodeId, node] of Object.entries(metadata.nodes)) {
       if (node.class_type === 'CheckpointLoaderSimple') {
         console.log('Model:', node.inputs.ckpt_name);
@@ -366,24 +364,24 @@ if (metadata.software === 'comfyui' ||
 }
 ```
 
-## Settings Types
+## 設定型
 
 ### `ModelSettings`
 
-Model configuration used for image generation.
+画像生成に使用されるモデル設定。
 
 ```typescript
 export interface ModelSettings {
-  /** Model name (e.g., "sd_xl_base_1.0.safetensors") */
+  /** モデル名（例："sd_xl_base_1.0.safetensors"） */
   name?: string;
-  /** Model hash for verification */
+  /** 検証用モデルハッシュ */
   hash?: string;
-  /** VAE (Variational AutoEncoder) name */
+  /** VAE（Variational AutoEncoder）名 */
   vae?: string;
 }
 ```
 
-**Example:**
+**例：**
 
 ```typescript
 if (metadata.model) {
@@ -397,26 +395,26 @@ if (metadata.model) {
 
 ### `SamplingSettings`
 
-Sampling parameters used during generation.
+生成時に使用されるサンプリングパラメータ。
 
 ```typescript
 export interface SamplingSettings {
-  /** Sampler algorithm (e.g., "Euler a", "DPM++ 2M Karras") */
+  /** サンプラーアルゴリズム（例："Euler a"、"DPM++ 2M Karras"） */
   sampler?: string;
-  /** Scheduler type (if separate from sampler) */
+  /** スケジューラータイプ（サンプラーと別の場合） */
   scheduler?: string;
-  /** Number of sampling steps */
+  /** サンプリングステップ数 */
   steps?: number;
-  /** CFG (Classifier Free Guidance) scale */
+  /** CFG（Classifier Free Guidance）スケール */
   cfg?: number;
-  /** Random seed for reproducibility */
+  /** 再現性のためのランダムシード */
   seed?: number;
-  /** CLIP skip layers */
+  /** CLIPスキップレイヤー */
   clipSkip?: number;
 }
 ```
 
-**Example:**
+**例：**
 
 ```typescript
 if (metadata.sampling) {
@@ -431,77 +429,77 @@ if (metadata.sampling) {
 
 ### `HiresSettings`
 
-Hires.fix (high-resolution fix) settings.
+Hires.fix（高解像度修正）の設定。
 
 ```typescript
 export interface HiresSettings {
-  /** Upscale factor */
+  /** アップスケール倍率 */
   scale?: number;
-  /** Upscaler name */
+  /** アップスケーラー名 */
   upscaler?: string;
-  /** Hires steps */
+  /** Hiresステップ数 */
   steps?: number;
-  /** Hires denoising strength */
+  /** Hiresデノイズ強度 */
   denoise?: number;
 }
 ```
 
-Applied during generation to improve high-resolution output quality.
+高解像度出力の品質を向上させるために生成時に適用されます。
 
 ---
 
 ### `UpscaleSettings`
 
-Post-generation upscale settings.
+生成後のアップスケール設定。
 
 ```typescript
 export interface UpscaleSettings {
-  /** Upscaler name */
+  /** アップスケーラー名 */
   upscaler?: string;
-  /** Scale factor */
+  /** スケール倍率 */
   scale?: number;
 }
 ```
 
-Applied after initial generation as a separate upscaling step.
+初期生成後に別のアップスケールステップとして適用されます。
 
 ---
 
 ### `CharacterPrompt`
 
-Character positioning for NovelAI V4 images.
+NovelAI V4画像のキャラクター位置指定。
 
 ```typescript
 export interface CharacterPrompt {
-  /** Character-specific prompt */
+  /** キャラクター固有のプロンプト */
   prompt: string;
-  /** Character position in image (normalized 0-1) */
+  /** 画像内のキャラクター位置（正規化 0-1） */
   center?: { x: number; y: number };
 }
 ```
 
-**Example:**
+**例：**
 
 ```typescript
 const character: CharacterPrompt = {
   prompt: "1girl, long hair, blue eyes",
-  center: { x: 0.3, y: 0.5 } // Left side, vertically centered
+  center: { x: 0.3, y: 0.5 } // 左側、垂直方向に中央
 };
 ```
 
 ---
 
-## ComfyUI Types
+## ComfyUI型
 
 ### `ComfyNodeGraph`
 
-Map of node IDs to their corresponding node data.
+ノードIDから対応するノードデータへのマップ。
 
 ```typescript
 export type ComfyNodeGraph = Record<string, ComfyNode>;
 ```
 
-**Example:**
+**例：**
 
 ```typescript
 const graph: ComfyNodeGraph = {
@@ -515,25 +513,25 @@ const graph: ComfyNodeGraph = {
 
 ### `ComfyNode`
 
-A single node in the ComfyUI workflow graph.
+ComfyUIワークフローグラフ内の単一ノード。
 
 ```typescript
 export interface ComfyNode {
-  /** Node class type (e.g., "CheckpointLoaderSimple", "KSampler") */
+  /** ノードクラスタイプ（例："CheckpointLoaderSimple"、"KSampler"） */
   class_type: string;
-  /** Node inputs */
+  /** ノード入力 */
   inputs: Record<string, ComfyNodeInputValue>;
-  /** Node metadata (ComfyUI only) */
+  /** ノードメタデータ（ComfyUIのみ） */
   _meta?: {
-    /** Node title for display */
+    /** 表示用ノードタイトル */
     title?: string;
   };
-  /** Change detection hash (rare, for caching) */
+  /** 変更検出ハッシュ（まれ、キャッシュ用） */
   is_changed?: string[] | null;
 }
 ```
 
-**Example:**
+**例：**
 
 ```typescript
 const ksampler: ComfyNode = {
@@ -557,7 +555,7 @@ const ksampler: ComfyNode = {
 
 ### `ComfyNodeInputValue`
 
-Possible values for node inputs.
+ノード入力の可能な値。
 
 ```typescript
 export type ComfyNodeInputValue =
@@ -568,39 +566,39 @@ export type ComfyNodeInputValue =
   | ComfyNodeInputValue[];
 ```
 
-Can be a primitive value, a reference to another node, or an array.
+プリミティブ値、別のノードへの参照、または配列を取ることができます。
 
 ---
 
 ### `ComfyNodeReference`
 
-Reference to another node's output.
+別のノードの出力への参照。
 
 ```typescript
 export type ComfyNodeReference = [nodeId: string, outputIndex: number];
 ```
 
-**Example:**
+**例：**
 
 ```typescript
 const modelReference: ComfyNodeReference = ["CheckpointLoader_Base", 0];
 
-// Used in node inputs:
+// ノード入力で使用：
 {
-  model: ["CheckpointLoader_Base", 0],  // References output 0 of CheckpointLoader_Base
+  model: ["CheckpointLoader_Base", 0],  // CheckpointLoader_Baseの出力0を参照
   positive: ["CLIPTextEncode_Positive", 0]
 }
 ```
 
 ---
 
-## Format-Specific Types
+## フォーマット固有の型
 
-> **Note:** These types are mainly for advanced use cases or internal implementation details. Most users don't need to work with these types directly.
+> **注意：** これらの型は主に高度なユースケースや内部実装の詳細用です。ほとんどのユーザーはこれらの型を直接扱う必要はありません。
 
 ### `PngTextChunk`
 
-PNG text chunk types (tEXt or iTXt).
+PNGテキストチャンク型（tEXtまたはiTXt）。
 
 ```typescript
 export type PngTextChunk = TExtChunk | ITXtChunk;
@@ -610,14 +608,14 @@ export type PngTextChunk = TExtChunk | ITXtChunk;
 
 ### `TExtChunk`
 
-PNG tEXt chunk (Latin-1 encoded).
+PNG tEXtチャンク（Latin-1エンコード）。
 
 ```typescript
 export interface TExtChunk {
   type: 'tEXt';
-  /** Chunk keyword (e.g., "parameters", "Comment") */
+  /** チャンクキーワード（例："parameters"、"Comment"） */
   keyword: string;
-  /** Text content */
+  /** テキスト内容 */
   text: string;
 }
 ```
@@ -626,22 +624,22 @@ export interface TExtChunk {
 
 ### `ITXtChunk`
 
-PNG iTXt chunk (UTF-8 international text).
+PNG iTXtチャンク（UTF-8国際テキスト）。
 
 ```typescript
 export interface ITXtChunk {
   type: 'iTXt';
-  /** Chunk keyword */
+  /** チャンクキーワード */
   keyword: string;
-  /** Compression flag (0=uncompressed, 1=compressed) */
+  /** 圧縮フラグ（0=非圧縮、1=圧縮） */
   compressionFlag: number;
-  /** Compression method (0=zlib/deflate) */
+  /** 圧縮方式（0=zlib/deflate） */
   compressionMethod: number;
-  /** Language tag (BCP 47) */
+  /** 言語タグ（BCP 47） */
   languageTag: string;
-  /** Translated keyword */
+  /** 翻訳されたキーワード */
   translatedKeyword: string;
-  /** Text content */
+  /** テキスト内容 */
   text: string;
 }
 ```
@@ -650,24 +648,24 @@ export interface ITXtChunk {
 
 ### `MetadataSegment`
 
-JPEG/WebP metadata segment with source tracking.
+ソース追跡機能付きのJPEG/WebPメタデータセグメント。
 
 ```typescript
 export interface MetadataSegment {
-  /** Source location of this segment */
+  /** このセグメントのソース位置 */
   source: MetadataSegmentSource;
-  /** Raw metadata string */
+  /** 生のメタデータ文字列 */
   data: string;
 }
 ```
 
-Used for round-trip conversion to write metadata back to the correct location.
+メタデータを正しい位置に書き戻すためのラウンドトリップ変換に使用されます。
 
 ---
 
 ### `MetadataSegmentSource`
 
-Source location of a metadata segment.
+メタデータセグメントのソース位置。
 
 ```typescript
 export type MetadataSegmentSource =
@@ -677,6 +675,6 @@ export type MetadataSegmentSource =
   | { type: 'jpegCom' };
 ```
 
-Tracks where the metadata came from in JPEG/WebP files for accurate round-tripping.
+正確なラウンドトリップのために、JPEG/WebPファイル内のメタデータの出所を追跡します。
 
 ---
