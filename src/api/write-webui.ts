@@ -1,28 +1,26 @@
 /**
- * Write metadata to images in SD WebUI format
+ * WebUI (A1111) format writer for sd-metadata
  *
- * Converts any GenerationMetadata to SD WebUI (A1111) format and embeds it
- * into PNG, JPEG, or WebP images.
+ * Converts any GenerationMetadata to SD WebUI (A1111) plain text format
+ * and writes it to PNG, JPEG, or WebP images.
  */
 
 import {
   createEncodedChunk,
   getEncodingStrategy,
-} from './converters/chunk-encoding';
-import { serializeA1111 } from './serializers/a1111';
+} from '../converters/chunk-encoding';
+import { serializeA1111 } from '../serializers/a1111';
 import type {
   GenerationMetadata,
   MetadataSegment,
   PngTextChunk,
-} from './types';
-import { Result } from './types';
-import { detectFormat } from './utils/binary';
-import { writeJpegMetadata } from './writers/jpeg';
-import { writePngMetadata } from './writers/png';
-import { writeWebpMetadata } from './writers/webp';
-
-// Import WriteResult from index.ts (defined there)
-import type { WriteResult } from './index';
+} from '../types';
+import { Result } from '../types';
+import { detectFormat } from '../utils/binary';
+import { writeJpegMetadata } from '../writers/jpeg';
+import { writePngMetadata } from '../writers/png';
+import { writeWebpMetadata } from '../writers/webp';
+import type { WriteResult } from './write';
 
 /**
  * Write metadata to an image in SD WebUI format
@@ -78,9 +76,9 @@ export function writeAsWebUI(
 
   // Create format-specific metadata structures
   let writeResult:
-    | import('./types').PngWriteResult
-    | import('./types').JpegWriteResult
-    | import('./types').WebpWriteResult;
+    | import('../types').PngWriteResult
+    | import('../types').JpegWriteResult
+    | import('../types').WebpWriteResult;
 
   if (format === 'png') {
     // PNG: Create parameters chunk with dynamic encoding
