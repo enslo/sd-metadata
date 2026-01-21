@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { writeAsWebUI } from '../../../src/api/write-webui';
 import { read } from '../../../src/index';
 import type {
   ComfyUIMetadata,
   NovelAIMetadata,
   StandardMetadata,
 } from '../../../src/types';
-import { writeAsWebUI } from '../../../src/write-webui';
 
 /**
  * Create a minimal valid PNG structure for testing
