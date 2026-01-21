@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseA1111 } from '../../../src/parsers/a1111';
-import { serializeA1111 } from '../../../src/serializers/a1111';
+import { formatAsWebUI } from '../../../src/serializers/a1111';
 import type {
   ComfyUIMetadata,
   GenerationMetadata,
@@ -18,7 +18,7 @@ function parseA1111Text(text: string): GenerationMetadata | null {
   return result.ok ? result.value : null;
 }
 
-describe('serializeA1111 - Unit Tests', () => {
+describe('formatAsWebUI - Unit Tests', () => {
   describe('basic serialization', () => {
     it('should serialize minimal metadata', () => {
       const metadata: StandardMetadata = {
@@ -29,7 +29,7 @@ describe('serializeA1111 - Unit Tests', () => {
         height: 768,
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       const expected = ['test prompt', 'Size: 512x768'].join('\n');
 
@@ -45,7 +45,7 @@ describe('serializeA1111 - Unit Tests', () => {
         height: 512,
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       // Verify exact format and order
       const expected = [
@@ -78,7 +78,7 @@ describe('serializeA1111 - Unit Tests', () => {
         },
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       // Verify exact format and order: prompt, negative, settings
       const expected = [
@@ -107,7 +107,7 @@ describe('serializeA1111 - Unit Tests', () => {
         },
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       // Verify exact settings line format with proper delimiter
       const expected = [
@@ -131,7 +131,7 @@ describe('serializeA1111 - Unit Tests', () => {
         },
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       // Verify exact output: upscale converted to Hires format, no steps/denoise
       const expected = [
@@ -161,7 +161,7 @@ describe('serializeA1111 - Unit Tests', () => {
         },
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       // Should use hires values, not upscale
       const expected = [
@@ -193,7 +193,7 @@ describe('serializeA1111 - Unit Tests', () => {
         ],
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       // Verify exact format and order: positive -> character -> negative -> settings
       const expected = [
@@ -223,7 +223,7 @@ describe('serializeA1111 - Unit Tests', () => {
         ],
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       const expected = [
         'test',
@@ -245,7 +245,7 @@ describe('serializeA1111 - Unit Tests', () => {
         characterPrompts: [],
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       const expected = ['test', 'Size: 512x512'].join('\n');
 
@@ -274,7 +274,7 @@ describe('serializeA1111 - Unit Tests', () => {
         },
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       const expected = [
         'comfy prompt',
@@ -299,7 +299,7 @@ describe('serializeA1111 - Unit Tests', () => {
         height: 512,
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       const expected = ['line1\nline2', 'Size: 512x512'].join('\n');
 
@@ -316,7 +316,7 @@ describe('serializeA1111 - Unit Tests', () => {
         height: 512,
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       const expected = [
         'test',
@@ -337,7 +337,7 @@ describe('serializeA1111 - Unit Tests', () => {
         height: 512,
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       // All normalized to \n
       const expected = [
@@ -365,7 +365,7 @@ describe('serializeA1111 - Unit Tests', () => {
         ],
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       const expected = [
         'test',
@@ -408,7 +408,7 @@ describe('serializeA1111 - Unit Tests', () => {
       };
 
       // Serialize
-      const serialized = serializeA1111(original);
+      const serialized = formatAsWebUI(original);
 
       // Parse back
       const parsed = parseA1111Text(serialized);
@@ -443,7 +443,7 @@ describe('serializeA1111 - Unit Tests', () => {
         height: 0,
       };
 
-      const serialized = serializeA1111(original);
+      const serialized = formatAsWebUI(original);
       const parsed = parseA1111Text(serialized);
 
       // This will be null because Parser requires AI markers (Steps, Sampler, or Negative prompt)
@@ -462,7 +462,7 @@ describe('serializeA1111 - Unit Tests', () => {
         height: 512,
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       // Empty prompt still outputs Size since width/height are positive
       const expected = ['', 'Size: 512x512'].join('\n');
@@ -482,7 +482,7 @@ describe('serializeA1111 - Unit Tests', () => {
         },
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       const expected = ['test', 'Seed: 0, Size: 512x512'].join('\n');
 
@@ -502,7 +502,7 @@ describe('serializeA1111 - Unit Tests', () => {
         },
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       const expected = ['test', 'Size: 512x512, Hires upscale: 2'].join('\n');
 
@@ -518,7 +518,7 @@ describe('serializeA1111 - Unit Tests', () => {
         height: 0,
       };
 
-      const result = serializeA1111(metadata);
+      const result = formatAsWebUI(metadata);
 
       // No settings line at all
       expect(result).toBe('just a prompt');
