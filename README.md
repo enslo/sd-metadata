@@ -4,6 +4,8 @@
 [![npm downloads](https://img.shields.io/npm/dm/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata)
 [![license](https://img.shields.io/npm/l/@enslo/sd-metadata.svg)](https://github.com/enslo/sd-metadata/blob/main/LICENSE)
 
+🇯🇵 **[日本語版はこちら](./README.ja.md)**
+
 A TypeScript library to read and write metadata embedded in AI-generated images.
 
 ## Features
@@ -511,7 +513,7 @@ type RawMetadata =
 >
 > Use your IDE's IntelliSense for auto-completion and inline documentation.
 
-For detailed documentation of all exported types including `BaseMetadata`, `ModelSettings`, `SamplingSettings`, and format-specific types, see the [Type Documentation](./docs/types.md).
+For detailed documentation of all exported types including `ModelSettings`, `SamplingSettings`, and format-specific types, see the [Type Documentation](./docs/types.md).
 
 ## Development
 
