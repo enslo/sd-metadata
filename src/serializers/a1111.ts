@@ -180,7 +180,7 @@ function buildCharacterPromptsSection(metadata: NovelAIMetadata): string[] {
  *
  * @example
  * ```typescript
- * import { read, formatAsWebUI } from 'sd-metadata';
+ * import { read, formatAsWebUI } from '@enslo/sd-metadata';
  *
  * const result = read(imageData);
  * if (result.status === 'success') {

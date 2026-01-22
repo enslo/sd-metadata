@@ -90,7 +90,7 @@ const { read } = require('@enslo/sd-metadata');
 ### Node.jsでの使用
 
 ```typescript
-import { read, write } from 'sd-metadata';
+import { read, write } from '@enslo/sd-metadata';
 import { readFileSync, writeFileSync } from 'fs';
 
 // サポートされている任意のフォーマットからメタデータを読み込み
@@ -108,7 +108,7 @@ if (result.status === 'success') {
 ### ブラウザでの使用
 
 ```typescript
-import { read } from 'sd-metadata';
+import { read } from '@enslo/sd-metadata';
 
 // ファイル入力を処理
 const fileInput = document.querySelector('input[type="file"]');
@@ -156,12 +156,15 @@ if (result.status === 'success') {
 > https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.2.0/dist/index.js
 > ```
 
-### フォーマット変換
+### 応用例
+
+<details>
+<summary>フォーマット変換</summary>
 
 異なる画像フォーマット間でメタデータを変換：
 
 ```typescript
-import { read, write } from 'sd-metadata';
+import { read, write } from '@enslo/sd-metadata';
 
 // PNGからメタデータを読み込み
 const pngData = readFileSync('comfyui-output.png');
@@ -184,10 +187,13 @@ if (parseResult.status === 'success') {
 > [!TIP]
 > このライブラリはメタデータの読み書きのみを扱います。実際の画像フォーマット変換（ピクセルのデコード/エンコード）には、[sharp](https://www.npmjs.com/package/sharp)、[jimp](https://www.npmjs.com/package/jimp)、ブラウザCanvas APIなどの画像処理ライブラリを使用してください。
 
-### 読み込み結果のタイプごとの処理
+</details>
+
+<details>
+<summary>読み込み結果のタイプごとの処理</summary>
 
 ```typescript
-import { read } from 'sd-metadata';
+import { read } from '@enslo/sd-metadata';
 
 const result = read(imageData);
 
@@ -217,31 +223,37 @@ switch (result.status) {
 }
 ```
 
-### 認識できないフォーマットの強制変換
+</details>
 
-認識できないメタデータでも変換したい場合：
+<details>
+<summary>未対応メタデータの保持</summary>
+
+未対応ツールのメタデータを含む画像を変換する際も、元のメタデータを保持できます：
 
 ```typescript
-import { read, write } from 'sd-metadata';
+import { read, write } from '@enslo/sd-metadata';
 
 const source = read(unknownImage);
 // source.status === 'unrecognized'
 
-// 強制的にブラインド変換（全てのメタデータチャンク/セグメントを保持）
+// 元のメタデータチャンク/セグメントをそのまま保持
 const result = write(targetImage, source, { force: true });
 
 if (result.ok) {
-  // フォーマットが認識できなくてもメタデータの変換に成功
-  console.log('強制変換が成功しました');
+  // 元のメタデータが新しい画像に保持される
+  console.log('メタデータの保持に成功しました');
 }
 ```
 
-### メタデータの削除
+</details>
+
+<details>
+<summary>メタデータの削除</summary>
 
 画像から全てのメタデータを削除：
 
 ```typescript
-import { write } from 'sd-metadata';
+import { write } from '@enslo/sd-metadata';
 
 const result = write(imageData, { status: 'empty' });
 if (result.ok) {
@@ -249,12 +261,15 @@ if (result.ok) {
 }
 ```
 
-### WebUIフォーマットでメタデータを書き込む
+</details>
+
+<details>
+<summary>WebUIフォーマットでメタデータを書き込む</summary>
 
 SD WebUI (A1111) フォーマットでカスタムメタデータを作成して埋め込み：
 
 ```typescript
-import { writeAsWebUI } from 'sd-metadata';
+import { writeAsWebUI } from '@enslo/sd-metadata';
 
 // カスタムメタデータをゼロから作成
 const metadata = {
@@ -286,20 +301,23 @@ if (result.ok) {
 > - ツール固有フォーマットからWebUI互換フォーマットにメタデータを変換する場合
 > - WebUIで読み取り可能なメタデータを出力するツールを構築する場合
 
-### 表示用にメタデータをフォーマット
+</details>
 
-メタデータをWebUIフォーマットのテキストに変換：
+<details>
+<summary>表示用にメタデータをフォーマット</summary>
+
+**どのツールのメタデータであっても**、統一されたWebUIフォーマットのテキストに変換できます。ツール間の差異（NovelAI、ComfyUI、Forgeなど）を吸収し、一貫したテキスト形式に正規化します：
 
 ```typescript
-import { read, formatAsWebUI } from 'sd-metadata';
+import { read, formatAsWebUI } from '@enslo/sd-metadata';
 
 const result = read(imageData);
 if (result.status === 'success') {
-  // WebUIフォーマットのテキストに変換
+  // どのツールでもOK: NovelAI, ComfyUI, Forge, InvokeAI, etc.
   const text = formatAsWebUI(result.metadata);
   console.log(text);
   
-  // 出力例：
+  // 常に統一されたWebUIフォーマットで出力:
   // masterpiece, best quality, 1girl
   // Negative prompt: lowres, bad quality
   // Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: model.safetensors
@@ -307,7 +325,9 @@ if (result.status === 'success') {
 ```
 
 > [!NOTE]
-> `formatAsWebUI` は生成メタデータを表示するためのツール非依存の標準フォーマットを提供します。サポートされている任意のツール（NovelAI、ComfyUIなど）からのメタデータで動作し、一貫したフォーマットで出力します。
+> どのツールで生成された画像であっても、`formatAsWebUI` は共通の生成パラメータを抽出し、標準化された形式に整形します。ツール固有のフォーマットを意識することなく、ユーザーにメタデータを表示するのに最適です。
+
+</details>
 
 ## APIリファレンス
 
@@ -337,13 +357,15 @@ if (result.status === 'success') {
   - `status: 'success'` または `'empty'` - 直接書き込み可能
   - `status: 'unrecognized'` - `force: true` オプションが必要
 - `options` - オプション設定：
-  - `force?: boolean` - `status: 'unrecognized'` メタデータの書き込み時に必要（ブラインド変換）
+  - `force?: boolean` - 未対応メタデータの書き込みを有効化（元データをそのまま保持）
 
 **戻り値:**
 
 - `{ ok: true, value: Uint8Array }` - 書き込み成功（新しい画像データを返す）
-- `{ ok: false, error: { type: string, message?: string } }` - 失敗
-  - `type`: `'unsupportedFormat'`、`'conversionFailed'`、または `'writeFailed'`
+- `{ ok: false, error: { type, message? } }` - 失敗。`type` は以下のいずれか：
+  - `'unsupportedFormat'`: 対象画像がPNG、JPEG、WebP以外の場合
+  - `'conversionFailed'`: メタデータ変換に失敗（例：互換性のないフォーマット）
+  - `'writeFailed'`: 画像へのメタデータ埋め込みに失敗
 
 ### `writeAsWebUI(data: Uint8Array, metadata: GenerationMetadata): WriteResult`
 
@@ -359,8 +381,9 @@ SD WebUI (A1111) フォーマットで画像にメタデータを書き込みま
 **戻り値:**
 
 - `{ ok: true, value: Uint8Array }` - 書き込み成功（新しい画像データを返す）
-- `{ ok: false, error: { type: string, message?: string } }` - 失敗
-  - `type`: `'unsupportedFormat'` または `'writeFailed'`
+- `{ ok: false, error: { type, message? } }` - 失敗。`type` は以下のいずれか：
+  - `'unsupportedFormat'`: 対象画像がPNG、JPEG、WebP以外の場合
+  - `'writeFailed'`: 画像へのメタデータ埋め込みに失敗
 
 **ユースケース:**
 
@@ -416,7 +439,7 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, ...
 **例:**
 
 ```typescript
-import { read, formatAsWebUI, formatRaw } from 'sd-metadata';
+import { read, formatAsWebUI, formatRaw } from '@enslo/sd-metadata';
 
 const result = read(imageData);
 

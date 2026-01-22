@@ -41,7 +41,7 @@ import type { WriteResult } from './write';
  *
  * @example
  * ```typescript
- * import { writeAsWebUI } from 'sd-metadata';
+ * import { writeAsWebUI } from '@enslo/sd-metadata';
  *
  * // Create custom metadata
  * const metadata = {

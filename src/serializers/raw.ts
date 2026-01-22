@@ -20,7 +20,7 @@ import type { RawMetadata } from '../types';
  *
  * @example
  * ```typescript
- * import { read, formatRaw } from 'sd-metadata';
+ * import { read, formatRaw } from '@enslo/sd-metadata';
  *
  * const result = read(imageData);
  * if (result.status === 'unrecognized') {
