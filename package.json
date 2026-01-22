@@ -1,6 +1,6 @@
 {
   "name": "@enslo/sd-metadata",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "packageManager": "pnpm@10.5.2",
   "description": "Read and write AI-generated image metadata",
   "type": "module",
@@ -13,9 +13,7 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
