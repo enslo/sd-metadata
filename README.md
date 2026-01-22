@@ -395,6 +395,41 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, ...
 - Copying generation parameters as text
 - Logging or debugging generation settings
 
+### `formatRaw(raw: RawMetadata): string`
+
+Formats raw metadata as plain text.
+
+**Parameters:**
+
+- `raw` - Raw metadata from `ParseResult` (`result.raw`)
+
+**Returns:**
+
+- Plain text content from the metadata (multiple entries separated by blank lines)
+
+**Use cases:**
+
+- Displaying unrecognized metadata to users
+- Quick inspection of raw metadata content
+- Fallback display when parsing fails
+
+**Example:**
+
+```typescript
+import { read, formatAsWebUI, formatRaw } from 'sd-metadata';
+
+const result = read(imageData);
+
+switch (result.status) {
+  case 'success':
+    console.log(formatAsWebUI(result.metadata));
+    break;
+  case 'unrecognized':
+    console.log(formatRaw(result.raw));
+    break;
+}
+```
+
 ## Type Reference
 
 This section provides an overview of the main types. For complete type definitions, see [Type Documentation](./docs/types.md).

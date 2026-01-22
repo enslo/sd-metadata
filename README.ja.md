@@ -395,6 +395,41 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, ...
 - 生成パラメータをテキストとしてコピー
 - 生成設定のログ出力やデバッグ
 
+### `formatRaw(raw: RawMetadata): string`
+
+生のメタデータをプレーンテキストとしてフォーマットします。
+
+**パラメータ:**
+
+- `raw` - `ParseResult` から得られた生のメタデータ（`result.raw`）
+
+**戻り値:**
+
+- メタデータのプレーンテキスト内容（複数エントリは空行で区切られる）
+
+**ユースケース:**
+
+- 認識できないメタデータをユーザーに表示
+- 生のメタデータ内容の素早い確認
+- パース失敗時のフォールバック表示
+
+**例:**
+
+```typescript
+import { read, formatAsWebUI, formatRaw } from 'sd-metadata';
+
+const result = read(imageData);
+
+switch (result.status) {
+  case 'success':
+    console.log(formatAsWebUI(result.metadata));
+    break;
+  case 'unrecognized':
+    console.log(formatRaw(result.raw));
+    break;
+}
+```
+
 ## 型リファレンス
 
 このセクションでは主要な型の概要を説明します。完全な型定義については[型ドキュメント](./docs/types.ja.md)を参照してください。
