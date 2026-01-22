@@ -8,7 +8,6 @@ Complete workflow for creating and publishing a new package release.
 
 ## Prerequisites
 
-- All PRs for the release are merged to `main`
 - All tests passing
 - Git working directory is clean
 
@@ -22,17 +21,20 @@ Determine version number using semantic versioning:
 - **Minor** (x.N.0): New features, backward compatible
 - **Major** (N.0.0): Breaking changes
 
-Review merged PRs and prepare CHANGELOG entries.
-
 ### 2. Create Release Branch
+
+Create a release branch from `main`:
 
 ```bash
 git checkout main
 git pull
 git checkout -b release/vX.Y.Z
+git push -u origin release/vX.Y.Z
 ```
 
-Replace `X.Y.Z` with your version number (e.g., `1.0.2`).
+Replace `X.Y.Z` with your version number (e.g., `1.3.0`).
+
+Feature PRs for the release should target `release/vX.Y.Z` branch (not `main`).
 
 ### 3. Update CHANGELOG.md
 

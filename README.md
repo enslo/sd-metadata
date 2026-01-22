@@ -90,7 +90,7 @@ const { read } = require('@enslo/sd-metadata');
 ### Node.js Usage
 
 ```typescript
-import { read, write } from 'sd-metadata';
+import { read, write } from '@enslo/sd-metadata';
 import { readFileSync, writeFileSync } from 'fs';
 
 // Read metadata from any supported format
@@ -108,7 +108,7 @@ if (result.status === 'success') {
 ### Browser Usage
 
 ```typescript
-import { read } from 'sd-metadata';
+import { read } from '@enslo/sd-metadata';
 
 // Handle file input
 const fileInput = document.querySelector('input[type="file"]');
@@ -153,15 +153,18 @@ if (result.status === 'success') {
 > For production use, pin to a specific version instead of `@latest`:
 >
 > ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.2.0/dist/index.js
+> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.3.0/dist/index.js
 > ```
 
-### Format Conversion
+### Advanced Examples
+
+<details>
+<summary>Format Conversion</summary>
 
 Convert metadata between different image formats:
 
 ```typescript
-import { read, write } from 'sd-metadata';
+import { read, write } from '@enslo/sd-metadata';
 
 // Read metadata from PNG
 const pngData = readFileSync('comfyui-output.png');
@@ -184,10 +187,13 @@ if (parseResult.status === 'success') {
 > [!TIP]
 > This library handles metadata read/write only. For actual image format conversion (decoding/encoding pixels), use image processing libraries like [sharp](https://www.npmjs.com/package/sharp), [jimp](https://www.npmjs.com/package/jimp), or browser Canvas API.
 
-### Handling Different Result Types
+</details>
+
+<details>
+<summary>Handling Different Result Types</summary>
 
 ```typescript
-import { read } from 'sd-metadata';
+import { read } from '@enslo/sd-metadata';
 
 const result = read(imageData);
 
@@ -217,31 +223,37 @@ switch (result.status) {
 }
 ```
 
-### Force Conversion for Unrecognized Formats
+</details>
 
-When you have unrecognized metadata but still want to convert it:
+<details>
+<summary>Preserving Unrecognized Metadata</summary>
+
+When converting images with metadata from unsupported tools, you can still preserve the original metadata:
 
 ```typescript
-import { read, write } from 'sd-metadata';
+import { read, write } from '@enslo/sd-metadata';
 
 const source = read(unknownImage);
 // source.status === 'unrecognized'
 
-// Force blind conversion (preserves all metadata chunks/segments)
+// Preserve all original metadata chunks/segments
 const result = write(targetImage, source, { force: true });
 
 if (result.ok) {
-  // Metadata successfully converted even though format wasn't recognized
-  console.log('Forced conversion succeeded');
+  // Original metadata preserved in the new image
+  console.log('Metadata preserved successfully');
 }
 ```
 
-### Removing Metadata
+</details>
+
+<details>
+<summary>Removing Metadata</summary>
 
 To strip all metadata from an image:
 
 ```typescript
-import { write } from 'sd-metadata';
+import { write } from '@enslo/sd-metadata';
 
 const result = write(imageData, { status: 'empty' });
 if (result.ok) {
@@ -249,12 +261,15 @@ if (result.ok) {
 }
 ```
 
-### Writing Metadata in WebUI Format
+</details>
+
+<details>
+<summary>Writing Metadata in WebUI Format</summary>
 
 Create and embed custom metadata in SD WebUI (A1111) format:
 
 ```typescript
-import { writeAsWebUI } from 'sd-metadata';
+import { writeAsWebUI } from '@enslo/sd-metadata';
 
 // Create custom metadata from scratch
 const metadata = {
@@ -286,20 +301,23 @@ if (result.ok) {
 > - Converting metadata from proprietary formats to WebUI-compatible format
 > - Building tools that need to output WebUI-readable metadata
 
-### Formatting Metadata for Display
+</details>
 
-Convert metadata to human-readable text in WebUI format:
+<details>
+<summary>Formatting Metadata for Display</summary>
+
+Convert metadata from **any supported tool** to a unified, human-readable WebUI format. This normalizes the differences between tools (NovelAI, ComfyUI, Forge, etc.) into a consistent text format:
 
 ```typescript
-import { read, formatAsWebUI } from 'sd-metadata';
+import { read, formatAsWebUI } from '@enslo/sd-metadata';
 
 const result = read(imageData);
 if (result.status === 'success') {
-  // Convert to WebUI format text
+  // Works with any tool: NovelAI, ComfyUI, Forge, InvokeAI, etc.
   const text = formatAsWebUI(result.metadata);
   console.log(text);
   
-  // Output example:
+  // Always outputs in consistent WebUI format:
   // masterpiece, best quality, 1girl
   // Negative prompt: lowres, bad quality
   // Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: model.safetensors
@@ -307,7 +325,9 @@ if (result.status === 'success') {
 ```
 
 > [!NOTE]
-> `formatAsWebUI` provides a tool-agnostic standard format for displaying generation metadata. It works with metadata from any supported tool (NovelAI, ComfyUI, etc.) and formats it consistently.
+> Regardless of which tool generated the image, `formatAsWebUI` extracts the common generation parameters and formats them in a standardized way. This is ideal for displaying metadata to users without worrying about tool-specific formats.
+
+</details>
 
 ## API Reference
 
@@ -337,13 +357,15 @@ Writes metadata to an image file.
   - `status: 'success'` or `'empty'` - Can write directly
   - `status: 'unrecognized'` - Requires `force: true` option
 - `options` - Optional settings:
-  - `force?: boolean` - Required when writing `status: 'unrecognized'` metadata (blind conversion)
+  - `force?: boolean` - Enables writing unrecognized metadata (preserves original data as-is)
 
 **Returns:**
 
 - `{ ok: true, value: Uint8Array }` - Successfully written (returns new image data)
-- `{ ok: false, error: { type: string, message?: string } }` - Failed
-  - `type`: `'unsupportedFormat'`, `'conversionFailed'`, or `'writeFailed'`
+- `{ ok: false, error: { type, message? } }` - Failed. `type` is one of:
+  - `'unsupportedFormat'`: Target image is not PNG, JPEG, or WebP
+  - `'conversionFailed'`: Metadata conversion failed (e.g., incompatible format)
+  - `'writeFailed'`: Failed to embed metadata into the image
 
 ### `writeAsWebUI(data: Uint8Array, metadata: GenerationMetadata): WriteResult`
 
@@ -359,8 +381,9 @@ Writes metadata to an image in SD WebUI (A1111) format.
 **Returns:**
 
 - `{ ok: true, value: Uint8Array }` - Successfully written (returns new image data)
-- `{ ok: false, error: { type: string, message?: string } }` - Failed
-  - `type`: `'unsupportedFormat'` or `'writeFailed'`
+- `{ ok: false, error: { type, message? } }` - Failed. `type` is one of:
+  - `'unsupportedFormat'`: Target image is not PNG, JPEG, or WebP
+  - `'writeFailed'`: Failed to embed metadata into the image
 
 **Use cases:**
 
@@ -394,6 +417,41 @@ Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, ...
 - Displaying metadata to users in a consistent format
 - Copying generation parameters as text
 - Logging or debugging generation settings
+
+### `formatRaw(raw: RawMetadata): string`
+
+Formats raw metadata as plain text.
+
+**Parameters:**
+
+- `raw` - Raw metadata from `ParseResult` (`result.raw`)
+
+**Returns:**
+
+- Plain text content from the metadata (multiple entries separated by blank lines)
+
+**Use cases:**
+
+- Displaying unrecognized metadata to users
+- Quick inspection of raw metadata content
+- Fallback display when parsing fails
+
+**Example:**
+
+```typescript
+import { read, formatAsWebUI, formatRaw } from '@enslo/sd-metadata';
+
+const result = read(imageData);
+
+switch (result.status) {
+  case 'success':
+    console.log(formatAsWebUI(result.metadata));
+    break;
+  case 'unrecognized':
+    console.log(formatRaw(result.raw));
+    break;
+}
+```
 
 ## Type Reference
 
