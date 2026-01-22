@@ -9,6 +9,7 @@ export { writeAsWebUI } from './api/write-webui';
 
 // Export utility functions
 export { formatAsWebUI } from './serializers/a1111';
+export { formatRaw } from './serializers/raw';
 
 // Export types (minimal public API)
 export type {
