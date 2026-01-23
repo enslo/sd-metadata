@@ -115,10 +115,10 @@ describe('readMetadata', () => {
 ## Commands
 
 ```bash
-npm run test        # Watch mode
-npm run test:run    # Single run
-npm run lint        # Lint check
-npm run typecheck   # Type check
+pnpm run test        # Single run
+pnpm run test:watch  # Watch mode
+pnpm run lint        # Lint check
+pnpm run typecheck   # Type check
 ```
 
 Pre-commit hooks automatically run lint + typecheck.

@@ -12,7 +12,6 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import { convertA1111PngToSegments, convertA1111SegmentsToPng } from './a1111';
-import { blindPngToSegments, blindSegmentsToPng } from './blind';
 import {
   convertComfyUIPngToSegments,
   convertComfyUISegmentsToPng,
@@ -43,7 +42,6 @@ import {
  *
  * @param parseResult - Result from parsePng, parseJpeg, or parseWebp
  * @param targetFormat - Target format ('png', 'jpeg', or 'webp')
- * @param force - Force blind conversion for unrecognized formats (default: false)
  * @returns Converted RawMetadata or error
  *
  * @example
@@ -58,7 +56,6 @@ import {
 export function convertMetadata(
   parseResult: ParseResult,
   targetFormat: ConversionTargetFormat,
-  force = false,
 ): ConversionResult {
   // Handle non-success statuses
   if (parseResult.status === 'empty') {
@@ -69,6 +66,15 @@ export function convertMetadata(
     return Result.error({
       type: 'invalidParseResult',
       status: parseResult.status,
+    });
+  }
+
+  // Handle unrecognized - should not reach here in normal flow
+  // since write() handles unrecognized separately
+  if (parseResult.status === 'unrecognized') {
+    return Result.error({
+      type: 'unsupportedSoftware',
+      software: 'unknown',
     });
   }
 
@@ -83,18 +89,7 @@ export function convertMetadata(
     return Result.ok(raw);
   }
 
-  const software =
-    parseResult.status === 'success' ? parseResult.metadata.software : null;
-
-  // If software is unknown, use blind conversion if force is enabled
-  if (!software) {
-    return force
-      ? convertBlind(raw, targetFormat)
-      : Result.error({
-          type: 'unsupportedSoftware',
-          software: 'unknown',
-        });
-  }
+  const software = parseResult.metadata.software;
 
   // Get converter for detected software
   const converter = softwareConverters[software];
@@ -201,11 +196,6 @@ const convertInvokeAI = createFormatConverter(
 const convertHfSpace = createFormatConverter(
   createPngToSegments('parameters'),
   createSegmentsToPng('parameters'),
-);
-
-const convertBlind = createFormatConverter(
-  blindPngToSegments,
-  blindSegmentsToPng,
 );
 
 /**

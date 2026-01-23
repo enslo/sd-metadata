@@ -257,9 +257,9 @@ describe('API Integration Tests', () => {
       });
     });
 
-    describe('force option', () => {
-      it('should enable blind conversion for unrecognized formats', () => {
-        const jpegTarget = loadSample('jpg', 'civitai.jpeg');
+    describe('unrecognized metadata handling', () => {
+      it('should write unrecognized metadata to same format without warning', () => {
+        const pngTarget = loadSample('png', 'empty.png');
 
         const unrecognizedResult: ParseResult = {
           status: 'unrecognized',
@@ -267,56 +267,47 @@ describe('API Integration Tests', () => {
             format: 'png',
             chunks: [
               { type: 'tEXt', keyword: 'unknown_tool', text: 'some data' },
-              { type: 'tEXt', keyword: 'other_field', text: 'other data' },
             ],
           },
         };
 
-        // Without force: should fail
-        const withoutForce = write(jpegTarget, unrecognizedResult);
-        expect(withoutForce.ok).toBe(false);
+        const result = write(pngTarget, unrecognizedResult);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+          // No warning for same format
+          expect(result.warning).toBeUndefined();
 
-        // With force: should succeed
-        const withForce = write(jpegTarget, unrecognizedResult, {
-          force: true,
-        });
-        expect(withForce.ok).toBe(true);
-
-        // Note: After blind conversion, the data may be detected as a known format
-        // if it happens to match a parser's pattern. This is expected behavior.
-        if (withForce.ok) {
-          const reread = read(withForce.value);
-          // Should be either unrecognized or successfully parsed
-          expect(['success', 'unrecognized']).toContain(reread.status);
+          // Metadata should be preserved
+          const reread = read(result.value);
+          expect(reread.status).toBe('unrecognized');
         }
       });
 
-      it('should preserve all chunks through blind conversion', () => {
-        const jpegTarget = loadSample('jpg', 'civitai.jpeg');
+      it('should drop metadata with warning for cross-format conversion', () => {
+        const jpegTarget = loadSample('jpg', 'empty.jpg');
 
         const unrecognizedResult: ParseResult = {
           status: 'unrecognized',
           raw: {
             format: 'png',
             chunks: [
-              { type: 'tEXt', keyword: 'field1', text: 'value1' },
-              { type: 'tEXt', keyword: 'field2', text: 'value2' },
-              { type: 'tEXt', keyword: 'field3', text: 'value3' },
+              { type: 'tEXt', keyword: 'unknown_tool', text: 'some data' },
             ],
           },
         };
 
-        const result = write(jpegTarget, unrecognizedResult, { force: true });
-        expect(result.ok).toBe(true);
+        const result = write(jpegTarget, unrecognizedResult);
 
-        // After blind conversion, metadata should be preserved in some form
+        // Should succeed with warning
+        expect(result.ok).toBe(true);
         if (result.ok) {
+          expect(result.warning).toBeDefined();
+          expect(result.warning?.type).toBe('metadataDropped');
+          expect(result.warning?.reason).toBe('unrecognizedCrossFormat');
+
+          // Metadata should be empty after write
           const reread = read(result.value);
-          // Should have raw data, either as unrecognized or successfully parsed
-          expect(['success', 'unrecognized']).toContain(reread.status);
-          if (reread.status === 'success' || reread.status === 'unrecognized') {
-            expect(reread.raw).toBeDefined();
-          }
+          expect(reread.status).toBe('empty');
         }
       });
     });

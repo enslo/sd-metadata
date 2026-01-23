@@ -55,7 +55,7 @@ type ParseResult =
   - `metadata`: 統一されたメタデータオブジェクト
   - `raw`: ラウンドトリップ変換用の元のフォーマット固有データ
 - **`unrecognized`**: 画像にメタデータがあるがフォーマットが認識できない
-  - `raw`: ブラインド変換用に保持された元のメタデータ（`force: true` で使用）
+  - `raw`: 元のメタデータが保持される
 - **`empty`**: 画像にメタデータが見つからない
 - **`invalid`**: 破損または非対応の画像フォーマット
   - `message`: オプションのエラー説明
@@ -75,7 +75,6 @@ switch (result.status) {
   
   case 'unrecognized':
     console.log('不明なメタデータフォーマット');
-    // force: true で変換可能
     break;
   
   case 'empty':
@@ -179,8 +178,8 @@ if (parseResult.status === 'success') {
 `write()` 関数が返す結果型。
 
 ```typescript
-export type WriteResult = 
-  | { ok: true; value: Uint8Array }
+export type WriteResult =
+  | { ok: true; value: Uint8Array; warning?: WriteWarning }
   | { ok: false; error: { type: string; message?: string } };
 ```
 
@@ -188,7 +187,10 @@ export type WriteResult =
 
 ```typescript
 if (result.ok) {
-  writeFileSync('output.png', result.value);
+  saveFile('output.png', result.value);
+  if (result.warning) {
+    console.warn('メタデータが削除されました:', result.warning.reason);
+  }
 }
 ```
 
@@ -208,6 +210,19 @@ if (!result.ok) {
 - `unsupportedFormat`: 画像フォーマットが非対応
 - `conversionFailed`: メタデータ変換に失敗
 - `writeFailed`: 画像へのメタデータ書き込みに失敗
+
+### `WriteWarning`
+
+書き込み操作の警告型。
+
+```typescript
+export type WriteWarning = {
+  type: 'metadataDropped';
+  reason: 'unrecognizedCrossFormat';
+};
+```
+
+書き込み操作中にメタデータが意図的に削除された場合に返される（例：未対応メタデータのクロスフォーマット変換）。
 
 ---
 

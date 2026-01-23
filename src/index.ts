@@ -4,7 +4,7 @@
 
 // Export core API functions
 export { read } from './api/read';
-export { write, type WriteOptions, type WriteResult } from './api/write';
+export { write, type WriteResult, type WriteWarning } from './api/write';
 export { writeAsWebUI } from './api/write-webui';
 
 // Export utility functions
