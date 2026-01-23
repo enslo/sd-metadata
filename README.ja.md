@@ -226,9 +226,9 @@ switch (result.status) {
 </details>
 
 <details>
-<summary>未対応メタデータの保持</summary>
+<summary>未対応メタデータの扱い</summary>
 
-未対応ツールのメタデータを含む画像を変換する際も、元のメタデータを保持できます：
+未対応ツールのメタデータを含む画像を扱う場合：
 
 ```typescript
 import { read, write } from '@enslo/sd-metadata';
@@ -236,12 +236,16 @@ import { read, write } from '@enslo/sd-metadata';
 const source = read(unknownImage);
 // source.status === 'unrecognized'
 
-// 元のメタデータチャンク/セグメントをそのまま保持
-const result = write(targetImage, source, { force: true });
-
+// ターゲット画像に書き込み
+// - 同じフォーマット（例：PNG → PNG）：メタデータそのまま保持
+// - 異なるフォーマット（例：PNG → JPEG）：warning付きでメタデータ削除
+const result = write(targetImage, source);
 if (result.ok) {
-  // 元のメタデータが新しい画像に保持される
-  console.log('メタデータの保持に成功しました');
+  saveFile('output.png', result.value);
+  if (result.warning) {
+    // クロスフォーマット変換によりメタデータが削除された場合
+    console.warn('メタデータが削除されました:', result.warning.reason);
+  }
 }
 ```
 
@@ -346,7 +350,7 @@ if (result.status === 'success') {
 - `{ status: 'invalid', message? }` - 破損または非対応の画像フォーマット
   - `message`: オプションのエラー説明
 
-### `write(data: Uint8Array, metadata: ParseResult, options?: WriteOptions): WriteResult`
+### `write(data: Uint8Array, metadata: ParseResult): WriteResult`
 
 画像ファイルにメタデータを書き込みます。
 
@@ -355,13 +359,12 @@ if (result.status === 'success') {
 - `data` - ターゲット画像ファイルデータ（PNG、JPEG、またはWebP）
 - `metadata` - `read()` から得られた `ParseResult`
   - `status: 'success'` または `'empty'` - 直接書き込み可能
-  - `status: 'unrecognized'` - `force: true` オプションが必要
-- `options` - オプション設定：
-  - `force?: boolean` - 未対応メタデータの書き込みを有効化（元データをそのまま保持）
+  - `status: 'unrecognized'` - 同じフォーマット：そのまま書き込み、異なるフォーマット：warning付きでメタデータ削除
 
 **戻り値:**
 
-- `{ ok: true, value: Uint8Array }` - 書き込み成功（新しい画像データを返す）
+- `{ ok: true, value: Uint8Array, warning?: WriteWarning }` - 書き込み成功
+  - `warning` はメタデータが意図的に削除された場合に設定される（例：未対応のクロスフォーマット変換）
 - `{ ok: false, error: { type, message? } }` - 失敗。`type` は以下のいずれか：
   - `'unsupportedFormat'`: 対象画像がPNG、JPEG、WebP以外の場合
   - `'conversionFailed'`: メタデータ変換に失敗（例：互換性のないフォーマット）

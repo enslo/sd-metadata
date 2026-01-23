@@ -31,7 +31,6 @@ const CHUNK_ENCODING_STRATEGIES: Record<string, ChunkEncodingStrategy> = {
   novelai: 'dynamic',
   'sd-next': 'dynamic',
   easydiffusion: 'dynamic',
-  blind: 'dynamic',
 
   // Unicode escape tools (spec-compliant)
   comfyui: 'text-unicode-escape',

@@ -55,7 +55,7 @@ type ParseResult =
   - `metadata`: Unified metadata object
   - `raw`: Original format-specific data for round-trip conversion
 - **`unrecognized`**: Image has metadata but format is not recognized
-  - `raw`: Original metadata preserved for blind conversion (with `force: true`)
+  - `raw`: Original metadata is preserved
 - **`empty`**: No metadata found in the image
 - **`invalid`**: Corrupted or unsupported image format
   - `message`: Optional error description
@@ -75,7 +75,6 @@ switch (result.status) {
   
   case 'unrecognized':
     console.log('Unknown metadata format');
-    // Can still convert with force: true
     break;
   
   case 'empty':
@@ -179,8 +178,8 @@ Without `raw`, metadata would be converted to a generic format and lose format-s
 Result type returned by the `write()` function.
 
 ```typescript
-export type WriteResult = 
-  | { ok: true; value: Uint8Array }
+export type WriteResult =
+  | { ok: true; value: Uint8Array; warning?: WriteWarning }
   | { ok: false; error: { type: string; message?: string } };
 ```
 
@@ -188,7 +187,10 @@ export type WriteResult =
 
 ```typescript
 if (result.ok) {
-  writeFileSync('output.png', result.value);
+  saveFile('output.png', result.value);
+  if (result.warning) {
+    console.warn('Metadata was dropped:', result.warning.reason);
+  }
 }
 ```
 
@@ -208,6 +210,19 @@ if (!result.ok) {
 - `unsupportedFormat`: Image format not supported
 - `conversionFailed`: Metadata conversion failed
 - `writeFailed`: Failed to write metadata to image
+
+### `WriteWarning`
+
+Warning type for write operations.
+
+```typescript
+export type WriteWarning = {
+  type: 'metadataDropped';
+  reason: 'unrecognizedCrossFormat';
+};
+```
+
+Returned when metadata was intentionally dropped during a write operation (e.g., unrecognized metadata with cross-format conversion).
 
 ---
 
