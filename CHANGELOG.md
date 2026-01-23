@@ -17,14 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`WriteWarning` type** (#76): Notifies when metadata was intentionally dropped during conversion (e.g., unrecognized cross-format).
 - **Graceful unrecognized handling**: Unrecognized metadata is still preserved when writing back to the same format or using `writeAsWebUI` with structured metadata.
 
-### Changed
-
-- **Removed blind conversion logic**: Deleted `blind.ts` and related internal functions to simplify the codebase.
-
 ### Documentation
 
 - Updated API examples to use the new `result.warning` pattern.
-- Comprehensive review and cleanup of out-of-context documentation comments.
 
 ## [1.3.0] - 2026-01-23
 
