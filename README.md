@@ -226,9 +226,9 @@ switch (result.status) {
 </details>
 
 <details>
-<summary>Preserving Unrecognized Metadata</summary>
+<summary>Handling Unrecognized Metadata</summary>
 
-When converting images with metadata from unsupported tools, you can still preserve the original metadata:
+When working with metadata from unsupported tools:
 
 ```typescript
 import { read, write } from '@enslo/sd-metadata';
@@ -236,12 +236,16 @@ import { read, write } from '@enslo/sd-metadata';
 const source = read(unknownImage);
 // source.status === 'unrecognized'
 
-// Preserve all original metadata chunks/segments
-const result = write(targetImage, source, { force: true });
-
+// Write to target image
+// - Same format (e.g., PNG → PNG): metadata preserved as-is
+// - Cross-format (e.g., PNG → JPEG): metadata dropped with warning
+const result = write(targetImage, source);
 if (result.ok) {
-  // Original metadata preserved in the new image
-  console.log('Metadata preserved successfully');
+  saveFile('output.png', result.value);
+  if (result.warning) {
+    // Metadata was dropped during cross-format conversion
+    console.warn('Metadata was dropped:', result.warning.reason);
+  }
 }
 ```
 
@@ -346,7 +350,7 @@ Reads and parses metadata from an image file.
 - `{ status: 'invalid', message? }` - Corrupted or unsupported image format
   - `message`: Optional error description
 
-### `write(data: Uint8Array, metadata: ParseResult, options?: WriteOptions): WriteResult`
+### `write(data: Uint8Array, metadata: ParseResult): WriteResult`
 
 Writes metadata to an image file.
 
@@ -355,13 +359,12 @@ Writes metadata to an image file.
 - `data` - Target image file data (PNG, JPEG, or WebP)
 - `metadata` - `ParseResult` from `read()`
   - `status: 'success'` or `'empty'` - Can write directly
-  - `status: 'unrecognized'` - Requires `force: true` option
-- `options` - Optional settings:
-  - `force?: boolean` - Enables writing unrecognized metadata (preserves original data as-is)
+  - `status: 'unrecognized'` - Same format: writes as-is; Cross-format: drops metadata with warning
 
 **Returns:**
 
-- `{ ok: true, value: Uint8Array }` - Successfully written (returns new image data)
+- `{ ok: true, value: Uint8Array, warning?: WriteWarning }` - Successfully written
+  - `warning` is set when metadata was intentionally dropped (e.g., unrecognized cross-format)
 - `{ ok: false, error: { type, message? } }` - Failed. `type` is one of:
   - `'unsupportedFormat'`: Target image is not PNG, JPEG, or WebP
   - `'conversionFailed'`: Metadata conversion failed (e.g., incompatible format)

@@ -7,7 +7,7 @@
 
 import { convertMetadata } from '../converters';
 import type { ParseResult } from '../types';
-import { Result } from '../types';
+
 import type { ImageFormat } from '../utils/binary';
 import { detectFormat } from '../utils/binary';
 import { writeJpegMetadata } from '../writers/jpeg';
@@ -19,116 +19,155 @@ import { writeWebpMetadata } from '../writers/webp';
 // ============================================================================
 
 /**
- * Result of the write operation
+ * Warning types for write operations
  */
-export type WriteResult = Result<
-  Uint8Array,
-  | { type: 'unsupportedFormat' }
-  | { type: 'conversionFailed'; message: string }
-  | { type: 'writeFailed'; message: string }
->;
+export type WriteWarning = {
+  type: 'metadataDropped';
+  reason: 'unrecognizedCrossFormat';
+};
 
 /**
- * Options for write operation
+ * Error types for write operations
  */
-export interface WriteOptions {
-  /**
-   * Force blind conversion for unrecognized formats
-   *
-   * When true, converts raw chunks/segments between formats even when
-   * the generating software is unknown. Enables format conversion for
-   * unknown/future tools without parser implementation.
-   *
-   * When false (default), returns error for unrecognized formats.
-   *
-   * @default false
-   */
-  force?: boolean;
-}
+type WriteError =
+  | { type: 'unsupportedFormat' }
+  | { type: 'conversionFailed'; message: string }
+  | { type: 'writeFailed'; message: string };
+
+/**
+ * Result of the write operation
+ *
+ * Success case may include a warning when metadata was intentionally dropped.
+ */
+export type WriteResult =
+  | { ok: true; value: Uint8Array; warning?: WriteWarning }
+  | { ok: false; error: WriteError };
 
 /**
  * Write metadata to an image
  *
  * Automatically detects the target image format and converts the metadata
- * if necessary.
+ * if necessary. For unrecognized metadata with cross-format conversion,
+ * metadata is dropped and a warning is returned.
  *
  * @param data - Target image file data
- * @param metadata - ParseResult from `read()` (must be 'success' or contain raw data)
- * @param options - Write options (e.g., { force: true } for blind conversion)
- * @returns New image data with embedded metadata
+ * @param metadata - ParseResult from `read()`
+ * @returns New image data with embedded metadata (or warning if metadata was dropped)
  */
-export function write(
-  data: Uint8Array,
-  metadata: ParseResult,
-  options?: WriteOptions,
-): WriteResult {
+export function write(data: Uint8Array, metadata: ParseResult): WriteResult {
   const targetFormat = detectFormat(data);
   if (!targetFormat) {
-    return Result.error({ type: 'unsupportedFormat' });
+    return { ok: false, error: { type: 'unsupportedFormat' } };
   }
 
-  // Handle empty or invalid metadata
+  // Handle empty metadata: strip all metadata
   if (metadata.status === 'empty') {
-    // Strip metadata (write empty segments/chunks)
     const result = HELPERS[targetFormat].writeEmpty(data, []);
     if (!result.ok) {
-      return Result.error({ type: 'writeFailed', message: result.error.type });
+      return {
+        ok: false,
+        error: { type: 'writeFailed', message: result.error.type },
+      };
     }
-    return Result.ok(result.value);
+    return { ok: true, value: result.value };
   }
 
+  // Handle invalid metadata
   if (metadata.status === 'invalid') {
-    return Result.error({
-      type: 'writeFailed',
-      message: 'Cannot write invalid metadata',
-    });
+    return {
+      ok: false,
+      error: { type: 'writeFailed', message: 'Cannot write invalid metadata' },
+    };
   }
 
-  // Conversion logic handled by convertMetadata
-  // If source == target, convertMetadata returns raw as-is.
-  // If source != target, it tries to convert.
-  // If force option is set, enables blind conversion for unrecognized formats.
-  const conversionResult = convertMetadata(
-    metadata,
-    targetFormat,
-    options?.force ?? false,
-  );
+  // Handle unrecognized metadata
+  if (metadata.status === 'unrecognized') {
+    const sourceFormat = metadata.raw.format;
+
+    // Same format: write as-is
+    if (sourceFormat === targetFormat) {
+      return writeRaw(data, targetFormat, metadata.raw);
+    }
+
+    // Cross-format: drop metadata and return with warning
+    const result = HELPERS[targetFormat].writeEmpty(data, []);
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: { type: 'writeFailed', message: result.error.type },
+      };
+    }
+    return {
+      ok: true,
+      value: result.value,
+      warning: { type: 'metadataDropped', reason: 'unrecognizedCrossFormat' },
+    };
+  }
+
+  // Handle success metadata: convert if needed
+  const conversionResult = convertMetadata(metadata, targetFormat);
 
   if (!conversionResult.ok) {
-    return Result.error({
-      type: 'conversionFailed',
-      message: `Failed to convert metadata: ${conversionResult.error.type}`,
-    });
+    return {
+      ok: false,
+      error: {
+        type: 'conversionFailed',
+        message: `Failed to convert metadata: ${conversionResult.error.type}`,
+      },
+    };
   }
 
-  const newRaw = conversionResult.value;
+  return writeRaw(data, targetFormat, conversionResult.value);
+}
 
-  // Dispatch to writer
-  if (targetFormat === 'png' && newRaw.format === 'png') {
-    const result = writePngMetadata(data, newRaw.chunks);
-    if (!result.ok)
-      return Result.error({ type: 'writeFailed', message: result.error.type });
-    return Result.ok(result.value);
+/**
+ * Write raw metadata to image
+ */
+function writeRaw(
+  data: Uint8Array,
+  targetFormat: ImageFormat,
+  raw: import('../types').RawMetadata,
+): WriteResult {
+  if (targetFormat === 'png' && raw.format === 'png') {
+    const result = writePngMetadata(data, raw.chunks);
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: { type: 'writeFailed', message: result.error.type },
+      };
+    }
+    return { ok: true, value: result.value };
   }
 
-  if (targetFormat === 'jpeg' && newRaw.format === 'jpeg') {
-    const result = writeJpegMetadata(data, newRaw.segments);
-    if (!result.ok)
-      return Result.error({ type: 'writeFailed', message: result.error.type });
-    return Result.ok(result.value);
+  if (targetFormat === 'jpeg' && raw.format === 'jpeg') {
+    const result = writeJpegMetadata(data, raw.segments);
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: { type: 'writeFailed', message: result.error.type },
+      };
+    }
+    return { ok: true, value: result.value };
   }
 
-  if (targetFormat === 'webp' && newRaw.format === 'webp') {
-    const result = writeWebpMetadata(data, newRaw.segments);
-    if (!result.ok)
-      return Result.error({ type: 'writeFailed', message: result.error.type });
-    return Result.ok(result.value);
+  if (targetFormat === 'webp' && raw.format === 'webp') {
+    const result = writeWebpMetadata(data, raw.segments);
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: { type: 'writeFailed', message: result.error.type },
+      };
+    }
+    return { ok: true, value: result.value };
   }
 
-  return Result.error({
-    type: 'writeFailed',
-    message: 'Internal error: format mismatch after conversion',
-  });
+  return {
+    ok: false,
+    error: {
+      type: 'writeFailed',
+      message: 'Internal error: format mismatch after conversion',
+    },
+  };
 }
 
 // ============================================================================
