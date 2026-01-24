@@ -136,6 +136,25 @@ describe('Format conversion accuracy', () => {
       expect(convertedRead.metadata.software).toBe('hf-space');
       expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
     });
+
+    it('should preserve Ruined Fooocus metadata', () => {
+      const pngData = loadSample('png', 'ruined-fooocus.png');
+      const parseResult = read(pngData);
+      expect(parseResult.status).toBe('success');
+      if (parseResult.status !== 'success') return;
+
+      const jpegBase = loadSample('jpg', 'civitai.jpeg');
+      const converted = write(jpegBase, parseResult);
+      expect(converted.ok).toBe(true);
+      if (!converted.ok) return;
+
+      const convertedRead = read(converted.value);
+      expect(convertedRead.status).toBe('success');
+      if (convertedRead.status !== 'success') return;
+
+      expect(convertedRead.metadata.software).toBe('ruined-fooocus');
+      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
+    });
   });
 
   describe('PNG → WebP conversion', () => {
