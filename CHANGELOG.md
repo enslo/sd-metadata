@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-01-24
+
+### Fixed
+
+- **NovelAI WebP Data Loss** (#79): Fixed an issue where `Software` and `Title` (DocumentName) tags were lost when converting NovelAI images to WebP. They are now correctly preserved in Exif tags.
+- **NovelAI Version Detection** (#79): Improved detection of NovelAI version strings to better support newer versions.
+
+### Changed
+
+- **Internal Refactoring** (#80): Decoupled encoding strategies from specific tool names for better maintainability (no public API changes).
+
 ## [1.4.0] - 2026-01-24
 
 ### ⚠️ BREAKING CHANGES
@@ -172,6 +183,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[1.4.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.4.1
 [1.4.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.4.0
 [1.3.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.3.0
 [1.2.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.2.0
