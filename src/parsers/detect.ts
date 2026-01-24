@@ -52,7 +52,7 @@ function detectUniqueKeywords(
   // ========================================
 
   // NovelAI: Uses "Software" chunk with "NovelAI" value
-  if (entryRecord.Software === 'NovelAI') {
+  if (entryRecord.Software?.startsWith('NovelAI')) {
     return 'novelai';
   }
 

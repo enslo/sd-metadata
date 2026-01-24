@@ -8,8 +8,8 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
-import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
-import { findSegment } from './utils';
+import { createEncodedChunk } from './chunk-encoding';
+import { findSegment, stringify } from './utils';
 
 /**
  * Convert Easy Diffusion PNG chunks to JPEG/WebP segments
@@ -55,18 +55,7 @@ export function convertEasyDiffusionSegmentsToPng(
   }
 
   // Convert each key-value pair to a chunk with dynamic selection
-  return Object.entries(parsed.value).flatMap(([keyword, value]) => {
-    const text =
-      value != null
-        ? typeof value === 'string'
-          ? value
-          : String(value)
-        : undefined;
-    if (!text) return [];
-    return createEncodedChunk(
-      keyword,
-      text,
-      getEncodingStrategy('easydiffusion'),
-    );
-  });
+  return Object.entries(parsed.value).flatMap(([keyword, value]) =>
+    createEncodedChunk(keyword, stringify(value), 'dynamic'),
+  );
 }

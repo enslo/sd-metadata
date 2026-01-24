@@ -6,12 +6,12 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
-import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
+import { createEncodedChunk } from './chunk-encoding';
 import { createTextChunk, findSegment, stringify } from './utils';
 
 /** Fixed values for NovelAI PNG chunks */
-const NOVELAI_TITLE = 'NovelAI generated image';
 const NOVELAI_SOFTWARE = 'NovelAI';
+const NOVELAI_TITLE = 'NovelAI generated image';
 
 /**
  * Convert NovelAI PNG chunks to JPEG/WebP segments
@@ -30,30 +30,37 @@ const NOVELAI_SOFTWARE = 'NovelAI';
 export function convertNovelaiPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  const comment = chunks.find((c) => c.keyword === 'Comment');
-  if (!comment) {
-    return [];
-  }
-
-  const description = chunks.find((c) => c.keyword === 'Description');
   const data = buildUserCommentJson(chunks);
-
-  // Build segments array declaratively
-  const descriptionSegment: MetadataSegment[] = description
-    ? [
-        {
-          source: { type: 'exifImageDescription' },
-          data: `\0\0\0\0${description.text}`,
-        },
-      ]
-    : [];
-
   const userCommentSegment: MetadataSegment = {
     source: { type: 'exifUserComment' },
     data: JSON.stringify(data),
   };
 
-  return [...descriptionSegment, userCommentSegment];
+  // Build segments array declaratively
+  const description = chunks.find((c) => c.keyword === 'Description');
+  const descriptionSegment: MetadataSegment | undefined = description && {
+    source: { type: 'exifImageDescription' },
+    data: `\0\0\0\0${description.text}`,
+  };
+
+  const software = chunks.find((c) => c.keyword === 'Software');
+  const softwareSegment: MetadataSegment | undefined = software && {
+    source: { type: 'exifSoftware' },
+    data: software.text,
+  };
+
+  const title = chunks.find((c) => c.keyword === 'Title');
+  const titleSegment: MetadataSegment | undefined = title && {
+    source: { type: 'exifDocumentName' },
+    data: title.text,
+  };
+
+  return [
+    userCommentSegment,
+    descriptionSegment,
+    softwareSegment,
+    titleSegment,
+  ].filter((segment): segment is MetadataSegment => Boolean(segment));
 }
 
 /**
@@ -94,8 +101,10 @@ export function convertNovelaiSegmentsToPng(
 ): PngTextChunk[] {
   const userCommentSeg = findSegment(segments, 'exifUserComment');
   const descriptionSeg = findSegment(segments, 'exifImageDescription');
+  const softwareSeg = findSegment(segments, 'exifSoftware');
+  const titleSeg = findSegment(segments, 'exifDocumentName');
 
-  return parseSegments(userCommentSeg, descriptionSeg);
+  return parseSegments(userCommentSeg, descriptionSeg, softwareSeg, titleSeg);
 }
 
 /**
@@ -104,6 +113,8 @@ export function convertNovelaiSegmentsToPng(
 function parseSegments(
   userCommentSeg: MetadataSegment | undefined,
   descriptionSeg: MetadataSegment | undefined,
+  softwareSeg: MetadataSegment | undefined,
+  titleSeg: MetadataSegment | undefined,
 ): PngTextChunk[] {
   if (!userCommentSeg || !descriptionSeg) {
     return [];
@@ -123,23 +134,18 @@ function parseSegments(
     stringify(jsonData.Description),
   );
 
-  const descriptionChunks = descriptionText
-    ? createEncodedChunk(
-        'Description',
-        descriptionText,
-        getEncodingStrategy('novelai'),
-      )
-    : [];
-
   return [
     // Title (required, use default if missing)
-    createTextChunk('Title', stringify(jsonData.Title) ?? NOVELAI_TITLE),
+    createTextChunk(
+      'Title',
+      titleSeg?.data ?? stringify(jsonData.Title) ?? NOVELAI_TITLE,
+    ),
     // Description (optional, prefer exifImageDescription over JSON)
-    ...descriptionChunks,
+    createEncodedChunk('Description', descriptionText, 'dynamic'),
     // Software (required, use default if missing)
     createTextChunk(
       'Software',
-      stringify(jsonData.Software) ?? NOVELAI_SOFTWARE,
+      softwareSeg?.data ?? stringify(jsonData.Software) ?? NOVELAI_SOFTWARE,
     ),
     // Source (optional)
     createTextChunk('Source', stringify(jsonData.Source)),

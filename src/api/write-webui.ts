@@ -5,10 +5,7 @@
  * and writes it to PNG, JPEG, or WebP images.
  */
 
-import {
-  createEncodedChunk,
-  getEncodingStrategy,
-} from '../converters/chunk-encoding';
+import { createEncodedChunk } from '../converters/chunk-encoding';
 import { formatAsWebUI } from '../serializers/a1111';
 import type {
   GenerationMetadata,
@@ -117,8 +114,7 @@ export function writeAsWebUI(
  * @returns PNG text chunks
  */
 function createPngChunks(text: string): PngTextChunk[] {
-  const strategy = getEncodingStrategy('a1111');
-  return createEncodedChunk('parameters', text, strategy);
+  return createEncodedChunk('parameters', text, 'dynamic');
 }
 
 /**

@@ -46,7 +46,9 @@ export function writeJpegMetadata(
     (s) =>
       s.source.type === 'exifUserComment' ||
       s.source.type === 'exifImageDescription' ||
-      s.source.type === 'exifMake',
+      s.source.type === 'exifMake' ||
+      s.source.type === 'exifSoftware' ||
+      s.source.type === 'exifDocumentName',
   );
 
   // Collect non-metadata segments from original JPEG

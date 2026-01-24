@@ -21,38 +21,6 @@ export type ChunkEncodingStrategy =
 /**
  * Tool-specific chunk encoding strategies
  */
-const CHUNK_ENCODING_STRATEGIES: Record<string, ChunkEncodingStrategy> = {
-  // Dynamic selection tools
-  a1111: 'dynamic',
-  forge: 'dynamic',
-  'forge-neo': 'dynamic',
-  'sd-webui': 'dynamic',
-  invokeai: 'dynamic',
-  novelai: 'dynamic',
-  'sd-next': 'dynamic',
-  easydiffusion: 'dynamic',
-
-  // Unicode escape tools (spec-compliant)
-  comfyui: 'text-unicode-escape',
-  swarmui: 'text-unicode-escape',
-  fooocus: 'text-unicode-escape',
-  'ruined-fooocus': 'text-unicode-escape',
-  'hf-space': 'text-unicode-escape',
-
-  // Raw UTF-8 tools (non-compliant but compatible)
-  'stability-matrix': 'text-utf8-raw',
-  tensorart: 'text-utf8-raw',
-};
-
-/**
- * Get encoding strategy for a tool
- *
- * @param tool - Tool name
- * @returns Encoding strategy (defaults to 'text-unicode-escape')
- */
-export function getEncodingStrategy(tool: string): ChunkEncodingStrategy {
-  return CHUNK_ENCODING_STRATEGIES[tool] ?? 'text-unicode-escape';
-}
 
 /**
  * Escape Unicode characters beyond Latin-1 for tEXt chunk
