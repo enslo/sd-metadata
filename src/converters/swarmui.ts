@@ -10,7 +10,7 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
-import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
+import { createEncodedChunk } from './chunk-encoding';
 import { findSegment } from './utils';
 
 /**
@@ -34,12 +34,10 @@ export function convertSwarmUIPngToSegments(
 
   // Parse and return the JSON directly (no wrapping in parameters key)
   const parsed = parseJson<unknown>(parametersChunk.text);
-  const data = parsed.ok ? parsed.value : parametersChunk.text;
-
   const segments: MetadataSegment[] = [
     {
       source: { type: 'exifUserComment' },
-      data: typeof data === 'string' ? data : JSON.stringify(data),
+      data: parsed.ok ? JSON.stringify(parsed.value) : parametersChunk.text,
     },
   ];
 
@@ -71,32 +69,14 @@ export function convertSwarmUISegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
   const userComment = findSegment(segments, 'exifUserComment');
-  if (!userComment) {
-    return [];
-  }
-
-  const chunks: PngTextChunk[] = [];
-
-  // Restore node graph first if present (extended format)
   const make = findSegment(segments, 'exifMake');
-  if (make) {
-    chunks.push(
-      ...createEncodedChunk(
-        'prompt',
-        make.data,
-        getEncodingStrategy('swarmui'),
-      ),
-    );
-  }
 
-  // Add parameters chunk second (always present)
-  chunks.push(
-    ...createEncodedChunk(
-      'parameters',
-      userComment.data,
-      getEncodingStrategy('swarmui'),
-    ),
-  );
+  const chunks: PngTextChunk[] = [
+    // Restore node graph first if present (extended format)
+    createEncodedChunk('prompt', make?.data, 'text-unicode-escape'),
+    // Add parameters chunk second (always present)
+    createEncodedChunk('parameters', userComment?.data, 'text-unicode-escape'),
+  ].flat();
 
   return chunks;
 }

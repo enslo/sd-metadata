@@ -175,12 +175,12 @@ const convertEasyDiffusion = createFormatConverter(
 
 const convertFooocus = createFormatConverter(
   createPngToSegments('Comment'),
-  createSegmentsToPng('Comment'),
+  createSegmentsToPng('Comment', 'text-unicode-escape'),
 );
 
 const convertRuinedFooocus = createFormatConverter(
   createPngToSegments('parameters'),
-  createSegmentsToPng('parameters'),
+  createSegmentsToPng('parameters', 'text-unicode-escape'),
 );
 
 const convertSwarmUI = createFormatConverter(
@@ -195,7 +195,7 @@ const convertInvokeAI = createFormatConverter(
 
 const convertHfSpace = createFormatConverter(
   createPngToSegments('parameters'),
-  createSegmentsToPng('parameters'),
+  createSegmentsToPng('parameters', 'text-unicode-escape'),
 );
 
 /**

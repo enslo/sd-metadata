@@ -3,7 +3,6 @@ import {
   type ChunkEncodingStrategy,
   createEncodedChunk,
   escapeUnicode,
-  getEncodingStrategy,
 } from '../../../src/converters/chunk-encoding';
 
 describe('escapeUnicode', () => {
@@ -35,24 +34,6 @@ describe('escapeUnicode', () => {
 
   it('should handle empty string', () => {
     expect(escapeUnicode('')).toBe('');
-  });
-});
-
-describe('getEncodingStrategy', () => {
-  it('should return dynamic for a1111', () => {
-    expect(getEncodingStrategy('a1111')).toBe('dynamic');
-  });
-
-  it('should return text-unicode-escape for comfyui', () => {
-    expect(getEncodingStrategy('comfyui')).toBe('text-unicode-escape');
-  });
-
-  it('should return text-utf8-raw for stability-matrix', () => {
-    expect(getEncodingStrategy('stability-matrix')).toBe('text-utf8-raw');
-  });
-
-  it('should return default text-unicode-escape for unknown tool', () => {
-    expect(getEncodingStrategy('unknown-tool')).toBe('text-unicode-escape');
   });
 });
 
