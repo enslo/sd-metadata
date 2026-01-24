@@ -10,9 +10,7 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
-import { parseJson } from '../utils/json';
-import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
-import { findSegment, stringify } from './utils';
+import { convertKvPngToSegments, convertKvSegmentsToPng } from './base-json';
 
 /**
  * Convert InvokeAI PNG chunks to JPEG/WebP segments
@@ -25,23 +23,8 @@ import { findSegment, stringify } from './utils';
 export function convertInvokeAIPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  const data: Record<string, unknown> = {};
-
-  for (const chunk of chunks) {
-    const parsed = parseJson<unknown>(chunk.text);
-    if (parsed.ok) {
-      data[chunk.keyword] = parsed.value;
-    } else {
-      data[chunk.keyword] = chunk.text;
-    }
-  }
-
-  return [
-    {
-      source: { type: 'exifUserComment' },
-      data: JSON.stringify(data),
-    },
-  ];
+  // Use generic KV converter
+  return convertKvPngToSegments(chunks);
 }
 
 /**
@@ -53,47 +36,6 @@ export function convertInvokeAIPngToSegments(
 export function convertInvokeAISegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  const userComment = findSegment(segments, 'exifUserComment');
-  if (!userComment) {
-    return [];
-  }
-
-  const parsed = parseJson<Record<string, unknown>>(userComment.data);
-  if (!parsed.ok) {
-    // Not valid JSON, store as single chunk with dynamic selection
-    return createEncodedChunk(
-      'invokeai_metadata',
-      userComment.data,
-      getEncodingStrategy('invokeai'),
-    );
-  }
-
-  // Parse saved chunks
-  const metadataText = stringify(parsed.value.invokeai_metadata);
-  const graphText = stringify(parsed.value.invokeai_graph);
-
-  // Create chunks with dynamic selection
-  const chunks = [
-    ...createEncodedChunk(
-      'invokeai_metadata',
-      metadataText,
-      getEncodingStrategy('invokeai'),
-    ),
-    ...createEncodedChunk(
-      'invokeai_graph',
-      graphText,
-      getEncodingStrategy('invokeai'),
-    ),
-  ];
-
-  if (chunks.length > 0) {
-    return chunks;
-  }
-
-  // Fallback: return as invokeai_metadata chunk
-  return createEncodedChunk(
-    'invokeai_metadata',
-    userComment.data,
-    getEncodingStrategy('invokeai'),
-  );
+  // Use generic KV converter with dynamic encoding strategy
+  return convertKvSegmentsToPng(segments, 'dynamic');
 }

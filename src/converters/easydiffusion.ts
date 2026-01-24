@@ -8,7 +8,7 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
-import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
+import { createEncodedChunk } from './chunk-encoding';
 import { findSegment } from './utils';
 
 /**
@@ -63,10 +63,6 @@ export function convertEasyDiffusionSegmentsToPng(
           : String(value)
         : undefined;
     if (!text) return [];
-    return createEncodedChunk(
-      keyword,
-      text,
-      getEncodingStrategy('easydiffusion'),
-    );
+    return createEncodedChunk(keyword, text, 'dynamic');
   });
 }

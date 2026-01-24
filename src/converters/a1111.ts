@@ -8,7 +8,7 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
-import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
+import { createEncodedChunk } from './chunk-encoding';
 import { createTextChunk, findSegment } from './utils';
 
 /**
@@ -88,7 +88,7 @@ export function convertA1111SegmentsToPng(
   const parametersChunks = createEncodedChunk(
     'parameters',
     userComment.data,
-    getEncodingStrategy('a1111'),
+    'dynamic',
   );
 
   // Preserve other standard Exif tags if present

@@ -6,7 +6,10 @@
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
-import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
+import {
+  type ChunkEncodingStrategy,
+  createEncodedChunk,
+} from './chunk-encoding';
 
 /**
  * Create a PNG-to-segments converter that extracts a single chunk by keyword
@@ -28,13 +31,13 @@ export function createPngToSegments(
 /**
  * Create a segments-to-PNG converter that writes to a single chunk keyword
  *
- * Uses getEncodingStrategy to determine encoding based on keyword (tool name).
- *
- * @param keyword - The PNG chunk keyword to write (also used as tool name for strategy)
+ * @param keyword - The PNG chunk keyword to write
+ * @param encodingStrategy - Encoding strategy to use
  * @returns Converter function
  */
 export function createSegmentsToPng(
   keyword: string,
+  encodingStrategy: ChunkEncodingStrategy,
 ): (segments: MetadataSegment[]) => PngTextChunk[] {
   return (segments) => {
     const userComment = segments.find(
@@ -42,11 +45,6 @@ export function createSegmentsToPng(
     );
     if (!userComment) return [];
 
-    // Use keyword as tool name for strategy lookup
-    return createEncodedChunk(
-      keyword,
-      userComment.data,
-      getEncodingStrategy(keyword),
-    );
+    return createEncodedChunk(keyword, userComment.data, encodingStrategy);
   };
 }
