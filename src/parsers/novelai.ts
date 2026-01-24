@@ -57,7 +57,7 @@ export function parseNovelAI(entries: MetadataEntry[]): InternalParseResult {
   const entryRecord = buildEntryRecord(entries);
 
   // Verify NovelAI format
-  if (entryRecord.Software !== 'NovelAI') {
+  if (!entryRecord.Software?.startsWith('NovelAI')) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 

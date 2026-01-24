@@ -7,9 +7,11 @@
 import type { MetadataSegment } from '../types';
 import { readUint16, readUint32 } from '../utils/binary';
 import {
+  DOCUMENT_NAME_TAG,
   EXIF_IFD_POINTER_TAG,
   IMAGE_DESCRIPTION_TAG,
   MAKE_TAG,
+  SOFTWARE_TAG,
   USER_COMMENT_TAG,
 } from '../utils/exif-constants';
 
@@ -112,6 +114,22 @@ function extractTagsFromIfd(
         segments.push({
           source: { type: 'exifMake', prefix: prefix ?? undefined },
           data: prefix ? text.slice(prefix.length + 2) : text,
+        });
+      }
+    } else if (tag === SOFTWARE_TAG) {
+      const text = decodeAsciiString(tagData);
+      if (text) {
+        segments.push({
+          source: { type: 'exifSoftware' },
+          data: text,
+        });
+      }
+    } else if (tag === DOCUMENT_NAME_TAG) {
+      const text = decodeAsciiString(tagData);
+      if (text) {
+        segments.push({
+          source: { type: 'exifDocumentName' },
+          data: text,
         });
       }
     } else if (tag === USER_COMMENT_TAG) {

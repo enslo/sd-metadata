@@ -86,6 +86,8 @@ export type MetadataSegmentSource =
   | { type: 'exifUserComment' }
   | { type: 'exifImageDescription'; prefix?: string }
   | { type: 'exifMake'; prefix?: string }
+  | { type: 'exifSoftware' }
+  | { type: 'exifDocumentName' }
   | { type: 'jpegCom' };
 
 /**
