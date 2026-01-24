@@ -81,7 +81,8 @@ function tryExpandNovelAIWebpFormat(text: string): MetadataEntry[] | null {
   if (
     typeof outer !== 'object' ||
     outer === null ||
-    outer.Software !== 'NovelAI' ||
+    (typeof outer.Software === 'string' &&
+      !outer.Software.startsWith('NovelAI')) ||
     typeof outer.Comment !== 'string'
   ) {
     return null;
@@ -113,5 +114,9 @@ function sourceToKeyword(source: MetadataSegmentSource): string {
       return source.prefix ?? 'Description';
     case 'exifMake':
       return source.prefix ?? 'Make';
+    case 'exifSoftware':
+      return 'Software';
+    case 'exifDocumentName':
+      return 'Title';
   }
 }

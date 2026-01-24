@@ -7,9 +7,11 @@
 import type { MetadataSegment } from '../types';
 import { writeUint16, writeUint32 } from '../utils/binary';
 import {
+  DOCUMENT_NAME_TAG,
   EXIF_IFD_POINTER_TAG,
   IMAGE_DESCRIPTION_TAG,
   MAKE_TAG,
+  SOFTWARE_TAG,
   USER_COMMENT_TAG,
 } from '../utils/exif-constants';
 
@@ -26,7 +28,10 @@ export function buildExifTiffData(segments: MetadataSegment[]): Uint8Array {
   // Separate segments by destination IFD
   const ifd0Segments = segments.filter(
     (s) =>
-      s.source.type === 'exifImageDescription' || s.source.type === 'exifMake',
+      s.source.type === 'exifImageDescription' ||
+      s.source.type === 'exifMake' ||
+      s.source.type === 'exifSoftware' ||
+      s.source.type === 'exifDocumentName',
   );
   const exifIfdSegments = segments.filter(
     (s) => s.source.type === 'exifUserComment',
@@ -50,6 +55,12 @@ export function buildExifTiffData(segments: MetadataSegment[]): Uint8Array {
     } else if (seg.source.type === 'exifMake') {
       const data = encodeAsciiTag(seg.data, seg.source.prefix);
       ifd0Tags.push({ tag: MAKE_TAG, type: 2, data });
+    } else if (seg.source.type === 'exifSoftware') {
+      const data = encodeAsciiTag(seg.data);
+      ifd0Tags.push({ tag: SOFTWARE_TAG, type: 2, data });
+    } else if (seg.source.type === 'exifDocumentName') {
+      const data = encodeAsciiTag(seg.data);
+      ifd0Tags.push({ tag: DOCUMENT_NAME_TAG, type: 2, data });
     }
   }
 

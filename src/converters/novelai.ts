@@ -10,8 +10,8 @@ import { createEncodedChunk, getEncodingStrategy } from './chunk-encoding';
 import { createTextChunk, findSegment, stringify } from './utils';
 
 /** Fixed values for NovelAI PNG chunks */
-const NOVELAI_TITLE = 'NovelAI generated image';
 const NOVELAI_SOFTWARE = 'NovelAI';
+const NOVELAI_TITLE = 'NovelAI generated image';
 
 /**
  * Convert NovelAI PNG chunks to JPEG/WebP segments
@@ -53,7 +53,32 @@ export function convertNovelaiPngToSegments(
     data: JSON.stringify(data),
   };
 
-  return [...descriptionSegment, userCommentSegment];
+  const software = chunks.find((c) => c.keyword === 'Software');
+  const softwareSegment: MetadataSegment[] = software
+    ? [
+        {
+          source: { type: 'exifSoftware' },
+          data: software.text,
+        },
+      ]
+    : [];
+
+  const title = chunks.find((c) => c.keyword === 'Title');
+  const titleSegment: MetadataSegment[] = title
+    ? [
+        {
+          source: { type: 'exifDocumentName' },
+          data: title.text,
+        },
+      ]
+    : [];
+
+  return [
+    ...descriptionSegment,
+    userCommentSegment,
+    ...softwareSegment,
+    ...titleSegment,
+  ];
 }
 
 /**
@@ -94,8 +119,10 @@ export function convertNovelaiSegmentsToPng(
 ): PngTextChunk[] {
   const userCommentSeg = findSegment(segments, 'exifUserComment');
   const descriptionSeg = findSegment(segments, 'exifImageDescription');
+  const softwareSeg = findSegment(segments, 'exifSoftware');
+  const titleSeg = findSegment(segments, 'exifDocumentName');
 
-  return parseSegments(userCommentSeg, descriptionSeg);
+  return parseSegments(userCommentSeg, descriptionSeg, softwareSeg, titleSeg);
 }
 
 /**
@@ -104,6 +131,8 @@ export function convertNovelaiSegmentsToPng(
 function parseSegments(
   userCommentSeg: MetadataSegment | undefined,
   descriptionSeg: MetadataSegment | undefined,
+  softwareSeg: MetadataSegment | undefined,
+  titleSeg: MetadataSegment | undefined,
 ): PngTextChunk[] {
   if (!userCommentSeg || !descriptionSeg) {
     return [];
@@ -133,13 +162,16 @@ function parseSegments(
 
   return [
     // Title (required, use default if missing)
-    createTextChunk('Title', stringify(jsonData.Title) ?? NOVELAI_TITLE),
+    createTextChunk(
+      'Title',
+      titleSeg?.data ?? stringify(jsonData.Title) ?? NOVELAI_TITLE,
+    ),
     // Description (optional, prefer exifImageDescription over JSON)
     ...descriptionChunks,
     // Software (required, use default if missing)
     createTextChunk(
       'Software',
-      stringify(jsonData.Software) ?? NOVELAI_SOFTWARE,
+      softwareSeg?.data ?? stringify(jsonData.Software) ?? NOVELAI_SOFTWARE,
     ),
     // Source (optional)
     createTextChunk('Source', stringify(jsonData.Source)),
