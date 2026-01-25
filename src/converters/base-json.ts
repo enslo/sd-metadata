@@ -11,6 +11,7 @@ import { parseJson } from '../utils/json';
 import {
   type ChunkEncodingStrategy,
   createEncodedChunk,
+  unescapeUnicode,
 } from './chunk-encoding';
 import { findSegment, stringify } from './utils';
 
@@ -67,7 +68,13 @@ export function convertKvSegmentsToPng(
 
   // Map each key back to a chunk
   // Value is stringified if it's an object/array
-  return Object.entries(parsed.value).flatMap(([keyword, value]) =>
-    createEncodedChunk(keyword, stringify(value), encodingStrategy),
-  );
+  // Unescape Unicode sequences that may have been escaped during PNG→JPEG conversion
+  return Object.entries(parsed.value).flatMap(([keyword, value]) => {
+    const text = stringify(value);
+    return createEncodedChunk(
+      keyword,
+      text !== undefined ? unescapeUnicode(text) : undefined,
+      encodingStrategy,
+    );
+  });
 }
