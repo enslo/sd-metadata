@@ -33,9 +33,32 @@ To be useful for testing and verification, sample images should:
 3. **Be representative** - Ideally include various features:
    - Different models (SD 1.5, SDXL, etc.)
    - Various parameters (steps, CFG, sampler, etc.)
-   - Special features if applicable (hires fix, LoRA, etc.)
+   - Special features if applicable (hires fix, Upscaler, etc.)
 4. **Format variety** - If the tool supports multiple formats (PNG/JPEG/WebP), samples in each format are helpful
 5. **Be original** - Images should be directly from the tool's output, not modified or re-saved
+
+#### Recommended Prompt Format
+
+For consistency across samples, please use this prompt structure:
+
+```text
+{quality tags}, general,
+1girl, solo, hatsune miku, #テスト
+```
+
+This prompt format is important because it includes:
+
+- **Line breaks** - Tests multi-line prompt parsing
+- **Non-ASCII characters** - Tests Unicode handling (the `#テスト` part contains Japanese characters)
+
+Feel free to adjust quality tags based on the model (e.g., `masterpiece, best quality` for anime models).
+
+#### Bonus: Feature Variations
+
+If possible, providing additional samples with these features would be extremely helpful:
+
+- **Hires.fix** - Upscaled images using the built-in hires.fix feature
+- **Upscaler** - Images processed with external upscalers
 
 #### How to Submit Samples
 
@@ -128,6 +151,7 @@ See existing parsers and converters as examples.
 ## Questions?
 
 If you have questions about contributing, feel free to:
+
 - [Open an issue](https://github.com/enslo/sd-metadata/issues/new)
 - Check existing issues and discussions
 
