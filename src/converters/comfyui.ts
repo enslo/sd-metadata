@@ -63,7 +63,7 @@ const tryParseExtendedFormat = (
 const tryParseSaveImagePlusFormat = (
   segments: MetadataSegment[],
 ): PngTextChunk[] | null => {
-  const chunks = convertKvSegmentsToPng(segments, 'text-unicode-escape');
+  const chunks = convertKvSegmentsToPng(segments, 'text-utf8-raw');
   return chunks.length > 0 ? chunks : null;
 };
 

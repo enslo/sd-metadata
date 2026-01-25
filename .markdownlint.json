@@ -5,5 +5,8 @@
     "siblings_only": true
   },
   "MD028": false,
+  "MD031": {
+    "list_items": false
+  },
   "MD033": false
 }
