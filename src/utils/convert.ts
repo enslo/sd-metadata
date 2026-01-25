@@ -114,9 +114,5 @@ function sourceToKeyword(source: MetadataSegmentSource): string {
       return source.prefix ?? 'Description';
     case 'exifMake':
       return source.prefix ?? 'Make';
-    case 'exifSoftware':
-      return 'Software';
-    case 'exifDocumentName':
-      return 'Title';
   }
 }

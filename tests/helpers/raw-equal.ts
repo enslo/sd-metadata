@@ -68,28 +68,12 @@ export function expectRawEqual(
       }
     }
   } else if (actual.format !== 'png' && expected.format !== 'png') {
-    // Compare segments with JSON-aware data comparison (order-independent)
+    // Compare segments with JSON-aware data comparison
     expect(actual.segments.length).toBe(expected.segments.length);
 
-    const sortSegments = (
-      segs: { source: { type: string; prefix?: string }; data: string }[],
-    ): { source: { type: string; prefix?: string }; data: string }[] => {
-      return [...segs].sort((a, b) => {
-        // Sort by source type
-        if (a.source.type !== b.source.type) {
-          return a.source.type.localeCompare(b.source.type);
-        }
-        // Then by content (to handle duplicates if any)
-        return a.data.localeCompare(b.data);
-      });
-    };
-
-    const actualSorted = sortSegments(actual.segments);
-    const expectedSorted = sortSegments(expected.segments);
-
-    for (let i = 0; i < actualSorted.length; i++) {
-      const actualSeg = actualSorted[i];
-      const expectedSeg = expectedSorted[i];
+    for (let i = 0; i < actual.segments.length; i++) {
+      const actualSeg = actual.segments[i];
+      const expectedSeg = expected.segments[i];
 
       expect(actualSeg?.source).toEqual(expectedSeg?.source);
 
@@ -125,23 +109,9 @@ export function expectNovelAIRawEqual(
 
   expect(actual.segments.length).toBe(expected.segments.length);
 
-  const sortSegments = (
-    segs: { source: { type: string; prefix?: string }; data: string }[],
-  ): { source: { type: string; prefix?: string }; data: string }[] => {
-    return [...segs].sort((a, b) => {
-      if (a.source.type !== b.source.type) {
-        return a.source.type.localeCompare(b.source.type);
-      }
-      return a.data.localeCompare(b.data);
-    });
-  };
-
-  const actualSorted = sortSegments(actual.segments);
-  const expectedSorted = sortSegments(expected.segments);
-
-  for (let i = 0; i < actualSorted.length; i++) {
-    const actualSeg = actualSorted[i];
-    const expectedSeg = expectedSorted[i];
+  for (let i = 0; i < actual.segments.length; i++) {
+    const actualSeg = actual.segments[i];
+    const expectedSeg = expected.segments[i];
 
     expect(actualSeg?.source).toEqual(expectedSeg?.source);
 
@@ -151,20 +121,9 @@ export function expectNovelAIRawEqual(
         const actualJson = JSON.parse(actualSeg.data);
         const expectedJson = JSON.parse(expectedSeg.data);
 
-        // Check all fields except Description and Software (which might vary in detail)
+        // Check all fields except Description
         for (const key of Object.keys(expectedJson)) {
           if (key !== 'Description') {
-            if (key === 'Software') {
-              // Allow mismatch if both start with NovelAI
-              const expectedSoft = String(expectedJson[key]);
-              const actualSoft = String(actualJson[key]);
-              if (
-                expectedSoft.startsWith('NovelAI') &&
-                actualSoft.startsWith('NovelAI')
-              ) {
-                continue;
-              }
-            }
             expect(actualJson[key]).toEqual(expectedJson[key]);
           }
         }
