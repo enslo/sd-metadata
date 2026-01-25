@@ -55,7 +55,7 @@ describe('formatRaw - Samples', () => {
       expect(result.status).toBe('unrecognized');
       if (result.status === 'unrecognized') {
         const formatted = formatRaw(result.raw);
-        expect(formatted).toBe('GIMPで再保存しただけ\n\nGIMP 3.0.6');
+        expect(formatted).toBe('GIMPで再保存しただけ');
       }
     });
   });

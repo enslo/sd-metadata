@@ -10,8 +10,8 @@ import { createEncodedChunk } from './chunk-encoding';
 import { createTextChunk, findSegment, stringify } from './utils';
 
 /** Fixed values for NovelAI PNG chunks */
-const NOVELAI_SOFTWARE = 'NovelAI';
 const NOVELAI_TITLE = 'NovelAI generated image';
+const NOVELAI_SOFTWARE = 'NovelAI';
 
 /**
  * Convert NovelAI PNG chunks to JPEG/WebP segments
@@ -30,12 +30,6 @@ const NOVELAI_TITLE = 'NovelAI generated image';
 export function convertNovelaiPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  const data = buildUserCommentJson(chunks);
-  const userCommentSegment: MetadataSegment = {
-    source: { type: 'exifUserComment' },
-    data: JSON.stringify(data),
-  };
-
   // Build segments array declaratively
   const description = chunks.find((c) => c.keyword === 'Description');
   const descriptionSegment: MetadataSegment | undefined = description && {
@@ -43,24 +37,15 @@ export function convertNovelaiPngToSegments(
     data: `\0\0\0\0${description.text}`,
   };
 
-  const software = chunks.find((c) => c.keyword === 'Software');
-  const softwareSegment: MetadataSegment | undefined = software && {
-    source: { type: 'exifSoftware' },
-    data: software.text,
+  const data = buildUserCommentJson(chunks);
+  const userCommentSegment: MetadataSegment = {
+    source: { type: 'exifUserComment' },
+    data: JSON.stringify(data),
   };
 
-  const title = chunks.find((c) => c.keyword === 'Title');
-  const titleSegment: MetadataSegment | undefined = title && {
-    source: { type: 'exifDocumentName' },
-    data: title.text,
-  };
-
-  return [
-    userCommentSegment,
-    descriptionSegment,
-    softwareSegment,
-    titleSegment,
-  ].filter((segment): segment is MetadataSegment => Boolean(segment));
+  return [descriptionSegment, userCommentSegment].filter(
+    (segment) => segment !== undefined,
+  );
 }
 
 /**
@@ -101,10 +86,8 @@ export function convertNovelaiSegmentsToPng(
 ): PngTextChunk[] {
   const userCommentSeg = findSegment(segments, 'exifUserComment');
   const descriptionSeg = findSegment(segments, 'exifImageDescription');
-  const softwareSeg = findSegment(segments, 'exifSoftware');
-  const titleSeg = findSegment(segments, 'exifDocumentName');
 
-  return parseSegments(userCommentSeg, descriptionSeg, softwareSeg, titleSeg);
+  return parseSegments(userCommentSeg, descriptionSeg);
 }
 
 /**
@@ -113,8 +96,6 @@ export function convertNovelaiSegmentsToPng(
 function parseSegments(
   userCommentSeg: MetadataSegment | undefined,
   descriptionSeg: MetadataSegment | undefined,
-  softwareSeg: MetadataSegment | undefined,
-  titleSeg: MetadataSegment | undefined,
 ): PngTextChunk[] {
   if (!userCommentSeg || !descriptionSeg) {
     return [];
@@ -136,16 +117,13 @@ function parseSegments(
 
   return [
     // Title (required, use default if missing)
-    createTextChunk(
-      'Title',
-      titleSeg?.data ?? stringify(jsonData.Title) ?? NOVELAI_TITLE,
-    ),
+    createTextChunk('Title', stringify(jsonData.Title) ?? NOVELAI_TITLE),
     // Description (optional, prefer exifImageDescription over JSON)
     createEncodedChunk('Description', descriptionText, 'dynamic'),
     // Software (required, use default if missing)
     createTextChunk(
       'Software',
-      softwareSeg?.data ?? stringify(jsonData.Software) ?? NOVELAI_SOFTWARE,
+      stringify(jsonData.Software) ?? NOVELAI_SOFTWARE,
     ),
     // Source (optional)
     createTextChunk('Source', stringify(jsonData.Source)),
