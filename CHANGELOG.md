@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-01-25
+
+### Fixed
+
+- **JPEG/WebP Format Conversion** (#85): Fixed metadata parsing for HF-Space, Ruined Fooocus, TensorArt, and Stability Matrix after cross-format conversion (PNG ↔ JPEG/WebP)
+  - HF-Space and Ruined Fooocus: Now correctly parsed from Comment JSON (was `unrecognized`)
+  - TensorArt and Stability Matrix: Now correctly detected from Comment JSON (was misidentified as `comfyui`)
+- **Unicode Round-trip** (#85): Non-ASCII characters (e.g., Japanese) are now preserved during PNG → JPEG/WebP → PNG conversions
+
+### Changed
+
+- **Internal Refactoring** (#86): Removed unused `exifSoftware` and `exifDocumentName` support (no public API changes). These Exif tags were not populated in real NovelAI files.
+
 ## [1.4.1] - 2026-01-24
 
 ### Fixed
@@ -183,6 +196,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[1.4.2]: https://github.com/enslo/sd-metadata/releases/tag/v1.4.2
 [1.4.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.4.1
 [1.4.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.4.0
 [1.3.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.3.0
