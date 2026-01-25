@@ -159,6 +159,10 @@ describe('Round-trip preservation', () => {
         { file: 'forge.png', tool: 'Forge' },
         { file: 'invokeai.png', tool: 'InvokeAI' },
         { file: 'swarmui-hires.png', tool: 'SwarmUI' },
+        { file: 'tensorart.png', tool: 'TensorArt' },
+        { file: 'stability-matrix.png', tool: 'Stability Matrix' },
+        { file: 'huggingface-animagine.png', tool: 'HF-Space' },
+        { file: 'ruined-fooocus.png', tool: 'Ruined Fooocus' },
       ];
 
       for (const { file, tool } of testCases) {
@@ -201,6 +205,12 @@ describe('Round-trip preservation', () => {
         { file: 'novelai-full.png', tool: 'NovelAI' },
         { file: 'comfyui.png', tool: 'ComfyUI' },
         { file: 'forge.png', tool: 'Forge' },
+        { file: 'invokeai.png', tool: 'InvokeAI' },
+        { file: 'swarmui-hires.png', tool: 'SwarmUI' },
+        { file: 'tensorart.png', tool: 'TensorArt' },
+        { file: 'stability-matrix.png', tool: 'Stability Matrix' },
+        { file: 'huggingface-animagine.png', tool: 'HF-Space' },
+        { file: 'ruined-fooocus.png', tool: 'Ruined Fooocus' },
       ];
 
       for (const { file, tool } of testCases) {

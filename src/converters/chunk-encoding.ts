@@ -40,6 +40,21 @@ export function escapeUnicode(text: string): string {
 }
 
 /**
+ * Unescape Unicode escape sequences back to actual characters
+ *
+ * Converts Unicode escape sequences back to actual Unicode characters.
+ * Example: \\u30c6\\u30b9\\u30c8 → テスト
+ *
+ * @param text - Text with Unicode escape sequences
+ * @returns Text with escape sequences converted to actual characters
+ */
+export function unescapeUnicode(text: string): string {
+  return text.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+    String.fromCharCode(Number.parseInt(hex, 16)),
+  );
+}
+
+/**
  * Check if text contains characters beyond Latin-1 range
  *
  * PNG tEXt chunks support Latin-1 (ISO 8859-1) encoding (0x00-0xFF).

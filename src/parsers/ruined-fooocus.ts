@@ -45,7 +45,9 @@ export function parseRuinedFooocus(
   const entryRecord = buildEntryRecord(entries);
 
   // Find JSON in parameters entry
-  const jsonText = entryRecord.parameters;
+  // PNG: stored in 'parameters' chunk
+  // JPEG/WebP (after conversion): stored in 'Comment' (from exifUserComment)
+  const jsonText = entryRecord.parameters ?? entryRecord.Comment;
 
   if (!jsonText || !jsonText.startsWith('{')) {
     return Result.error({ type: 'unsupportedFormat' });

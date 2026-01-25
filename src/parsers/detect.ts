@@ -113,6 +113,16 @@ function detectFromCommentJson(comment: string): GenerationSoftware | null {
       return 'invokeai';
     }
 
+    // TensorArt: Same as PNG chunk check, but from JSON
+    if ('generation_data' in parsed) {
+      return 'tensorart';
+    }
+
+    // Stability Matrix: Same as PNG chunk check, but from JSON
+    if ('smproj' in parsed) {
+      return 'stability-matrix';
+    }
+
     // ComfyUI: Has both prompt and workflow in JSON
     if ('prompt' in parsed && 'workflow' in parsed) {
       const workflow = parsed.workflow;

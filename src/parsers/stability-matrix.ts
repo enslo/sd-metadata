@@ -60,7 +60,25 @@ export function parseStabilityMatrix(
   };
 
   // Find parameters-json entry for prompt override
-  const jsonText = entryRecord['parameters-json'];
+  // PNG: stored in 'parameters-json' chunk
+  // JPEG/WebP (after conversion): stored in 'Comment' as {"parameters-json": ..., ...}
+  let jsonText = entryRecord['parameters-json'];
+
+  // Try to extract from Comment JSON (JPEG/WebP conversion case)
+  if (!jsonText && entryRecord.Comment?.startsWith('{')) {
+    const commentParsed = parseJson<Record<string, unknown>>(
+      entryRecord.Comment,
+    );
+    if (commentParsed.ok) {
+      const commentData = commentParsed.value;
+      if (typeof commentData['parameters-json'] === 'string') {
+        jsonText = commentData['parameters-json'];
+      } else if (typeof commentData['parameters-json'] === 'object') {
+        jsonText = JSON.stringify(commentData['parameters-json']);
+      }
+    }
+  }
+
   if (jsonText) {
     const parsed = parseJson<StabilityMatrixJson>(jsonText);
     if (parsed.ok) {

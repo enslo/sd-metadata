@@ -41,7 +41,31 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   const entryRecord = buildEntryRecord(entries);
 
   // Find generation_data entry
-  const dataText = entryRecord.generation_data;
+  // PNG: stored in 'generation_data' chunk
+  // JPEG/WebP (after conversion): stored in 'Comment' as {"generation_data": ..., "prompt": ...}
+  let dataText = entryRecord.generation_data;
+  let promptChunk = entryRecord.prompt;
+
+  // Try to extract from Comment JSON (JPEG/WebP conversion case)
+  if (!dataText && entryRecord.Comment?.startsWith('{')) {
+    const commentParsed = parseJson<Record<string, unknown>>(
+      entryRecord.Comment,
+    );
+    if (commentParsed.ok) {
+      const commentData = commentParsed.value;
+      if (typeof commentData.generation_data === 'string') {
+        dataText = commentData.generation_data;
+      } else if (typeof commentData.generation_data === 'object') {
+        dataText = JSON.stringify(commentData.generation_data);
+      }
+      if (typeof commentData.prompt === 'string') {
+        promptChunk = commentData.prompt;
+      } else if (typeof commentData.prompt === 'object') {
+        promptChunk = JSON.stringify(commentData.prompt);
+      }
+    }
+  }
+
   if (!dataText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
@@ -62,7 +86,6 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   const height = data.height ?? 0;
 
   // Parse nodes from prompt chunk (required for TensorArt)
-  const promptChunk = entryRecord.prompt;
   if (!promptChunk) {
     return Result.error({ type: 'unsupportedFormat' });
   }
