@@ -22,6 +22,7 @@ import {
   readUint24LE,
   readUint32BE,
   readUint32LE,
+  toUint8Array,
 } from '../utils/binary';
 import { pngChunksToEntries, segmentsToEntries } from '../utils/convert';
 
@@ -31,10 +32,11 @@ import { pngChunksToEntries, segmentsToEntries } from '../utils/convert';
  * Automatically detects the image format (PNG, JPEG, WebP) and parses
  * any embedded generation metadata.
  *
- * @param data - Image file data
+ * @param input - Image file data (Uint8Array or ArrayBuffer)
  * @returns Parse result containing metadata and raw data
  */
-export function read(data: Uint8Array): ParseResult {
+export function read(input: Uint8Array | ArrayBuffer): ParseResult {
+  const data = toUint8Array(input);
   const format = detectFormat(data);
 
   if (!format) {

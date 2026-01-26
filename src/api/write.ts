@@ -9,7 +9,7 @@ import { convertMetadata } from '../converters';
 import type { ParseResult } from '../types';
 
 import type { ImageFormat } from '../utils/binary';
-import { detectFormat } from '../utils/binary';
+import { detectFormat, toUint8Array } from '../utils/binary';
 import { writeJpegMetadata } from '../writers/jpeg';
 import { writePngMetadata } from '../writers/png';
 import { writeWebpMetadata } from '../writers/webp';
@@ -50,11 +50,15 @@ export type WriteResult =
  * if necessary. For unrecognized metadata with cross-format conversion,
  * metadata is dropped and a warning is returned.
  *
- * @param data - Target image file data
+ * @param input - Target image file data (Uint8Array or ArrayBuffer)
  * @param metadata - ParseResult from `read()`
  * @returns New image data with embedded metadata (or warning if metadata was dropped)
  */
-export function write(data: Uint8Array, metadata: ParseResult): WriteResult {
+export function write(
+  input: Uint8Array | ArrayBuffer,
+  metadata: ParseResult,
+): WriteResult {
+  const data = toUint8Array(input);
   const targetFormat = detectFormat(data);
   if (!targetFormat) {
     return { ok: false, error: { type: 'unsupportedFormat' } };

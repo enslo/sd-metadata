@@ -3,6 +3,16 @@
  */
 
 /**
+ * Convert input to Uint8Array
+ *
+ * @param input - Image data as Uint8Array or ArrayBuffer
+ * @returns Uint8Array view of the data
+ */
+export function toUint8Array(input: Uint8Array | ArrayBuffer): Uint8Array {
+  return input instanceof ArrayBuffer ? new Uint8Array(input) : input;
+}
+
+/**
  * Read 3-byte little-endian unsigned integer
  *
  * @param data - Byte array
