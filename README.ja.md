@@ -117,9 +117,7 @@ fileInput.addEventListener('change', async (e) => {
   if (!file) return;
   
   const arrayBuffer = await file.arrayBuffer();
-  const imageData = new Uint8Array(arrayBuffer);
-  
-  const result = read(imageData);
+  const result = read(arrayBuffer);
   
   if (result.status === 'success') {
     document.getElementById('tool').textContent = result.metadata.software;
@@ -137,12 +135,10 @@ fileInput.addEventListener('change', async (e) => {
 // CDNからインポート
 import { read } from 'https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@latest/dist/index.js';
 
-// 画像を取得してメタデータを読み込み
 const response = await fetch(imageUrl);
 const arrayBuffer = await response.arrayBuffer();
-const imageData = new Uint8Array(arrayBuffer);
+const result = read(arrayBuffer);
 
-const result = read(imageData);
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software);
   console.log('Prompt:', result.metadata.prompt);
@@ -335,7 +331,7 @@ if (result.status === 'success') {
 
 ## APIリファレンス
 
-### `read(data: Uint8Array): ParseResult`
+### `read(input: Uint8Array | ArrayBuffer): ParseResult`
 
 画像ファイルからメタデータを読み込み、パースします。
 
@@ -350,13 +346,13 @@ if (result.status === 'success') {
 - `{ status: 'invalid', message? }` - 破損または非対応の画像フォーマット
   - `message`: オプションのエラー説明
 
-### `write(data: Uint8Array, metadata: ParseResult): WriteResult`
+### `write(input: Uint8Array | ArrayBuffer, metadata: ParseResult): WriteResult`
 
 画像ファイルにメタデータを書き込みます。
 
 **パラメータ:**
 
-- `data` - ターゲット画像ファイルデータ（PNG、JPEG、またはWebP）
+- `input` - ターゲット画像ファイルデータ（PNG、JPEG、またはWebP）
 - `metadata` - `read()` から得られた `ParseResult`
   - `status: 'success'` または `'empty'` - 直接書き込み可能
   - `status: 'unrecognized'` - 同じフォーマット：そのまま書き込み、異なるフォーマット：warning付きでメタデータ削除
@@ -370,13 +366,13 @@ if (result.status === 'success') {
   - `'conversionFailed'`: メタデータ変換に失敗（例：互換性のないフォーマット）
   - `'writeFailed'`: 画像へのメタデータ埋め込みに失敗
 
-### `writeAsWebUI(data: Uint8Array, metadata: GenerationMetadata): WriteResult`
+### `writeAsWebUI(input: Uint8Array | ArrayBuffer, metadata: GenerationMetadata): WriteResult`
 
 SD WebUI (A1111) フォーマットで画像にメタデータを書き込みます。
 
 **パラメータ:**
 
-- `data` - ターゲット画像ファイルデータ（PNG、JPEG、またはWebP）
+- `input` - ターゲット画像ファイルデータ（PNG、JPEG、またはWebP）
 - `metadata` - 埋め込む生成メタデータ
   - 任意のツールからでも、カスタム作成でも可能
   - 自動的にWebUIフォーマットに変換される
