@@ -148,7 +148,7 @@ if (result.status === 'success') {
 > For production use, pin to a specific version instead of `@latest`:
 >
 > ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.4.2/dist/index.js
+> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.5.0/dist/index.js
 > ```
 
 ### Advanced Examples
