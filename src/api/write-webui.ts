@@ -13,7 +13,7 @@ import type {
   PngTextChunk,
 } from '../types';
 import { Result } from '../types';
-import { detectFormat } from '../utils/binary';
+import { detectFormat, toUint8Array } from '../utils/binary';
 import { writeJpegMetadata } from '../writers/jpeg';
 import { writePngMetadata } from '../writers/png';
 import { writeWebpMetadata } from '../writers/webp';
@@ -32,7 +32,7 @@ import type { WriteResult } from './write';
  * - PNG: `parameters` tEXt/iTXt chunk (encoding auto-selected based on content)
  * - JPEG/WebP: Exif UserComment field
  *
- * @param data - Target image file data (PNG, JPEG, or WebP)
+ * @param input - Target image file data (Uint8Array or ArrayBuffer)
  * @param metadata - Generation metadata to embed
  * @returns New image data with embedded metadata, or error
  *
@@ -59,9 +59,10 @@ import type { WriteResult } from './write';
  * ```
  */
 export function writeAsWebUI(
-  data: Uint8Array,
+  input: Uint8Array | ArrayBuffer,
   metadata: GenerationMetadata,
 ): WriteResult {
+  const data = toUint8Array(input);
   // Detect image format
   const format = detectFormat(data);
   if (!format) {
