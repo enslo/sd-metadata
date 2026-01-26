@@ -93,7 +93,6 @@ const { read } = require('@enslo/sd-metadata');
 import { read, write } from '@enslo/sd-metadata';
 import { readFileSync, writeFileSync } from 'fs';
 
-// Read metadata from any supported format
 const imageData = readFileSync('image.png');
 const result = read(imageData);
 
@@ -117,9 +116,7 @@ fileInput.addEventListener('change', async (e) => {
   if (!file) return;
   
   const arrayBuffer = await file.arrayBuffer();
-  const imageData = new Uint8Array(arrayBuffer);
-  
-  const result = read(imageData);
+  const result = read(arrayBuffer);
   
   if (result.status === 'success') {
     document.getElementById('tool').textContent = result.metadata.software;
@@ -137,12 +134,10 @@ For bookmarklets or userscripts (Tampermonkey, Violentmonkey, etc.), load from j
 // Import from CDN
 import { read } from 'https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@latest/dist/index.js';
 
-// Fetch image and read metadata
 const response = await fetch(imageUrl);
 const arrayBuffer = await response.arrayBuffer();
-const imageData = new Uint8Array(arrayBuffer);
+const result = read(arrayBuffer);
 
-const result = read(imageData);
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software);
   console.log('Prompt:', result.metadata.prompt);
@@ -335,7 +330,7 @@ if (result.status === 'success') {
 
 ## API Reference
 
-### `read(data: Uint8Array): ParseResult`
+### `read(input: Uint8Array | ArrayBuffer): ParseResult`
 
 Reads and parses metadata from an image file.
 
@@ -350,13 +345,13 @@ Reads and parses metadata from an image file.
 - `{ status: 'invalid', message? }` - Corrupted or unsupported image format
   - `message`: Optional error description
 
-### `write(data: Uint8Array, metadata: ParseResult): WriteResult`
+### `write(input: Uint8Array | ArrayBuffer, metadata: ParseResult): WriteResult`
 
 Writes metadata to an image file.
 
 **Parameters:**
 
-- `data` - Target image file data (PNG, JPEG, or WebP)
+- `input` - Target image file data (PNG, JPEG, or WebP)
 - `metadata` - `ParseResult` from `read()`
   - `status: 'success'` or `'empty'` - Can write directly
   - `status: 'unrecognized'` - Same format: writes as-is; Cross-format: drops metadata with warning
@@ -370,13 +365,13 @@ Writes metadata to an image file.
   - `'conversionFailed'`: Metadata conversion failed (e.g., incompatible format)
   - `'writeFailed'`: Failed to embed metadata into the image
 
-### `writeAsWebUI(data: Uint8Array, metadata: GenerationMetadata): WriteResult`
+### `writeAsWebUI(input: Uint8Array | ArrayBuffer, metadata: GenerationMetadata): WriteResult`
 
 Writes metadata to an image in SD WebUI (A1111) format.
 
 **Parameters:**
 
-- `data` - Target image file data (PNG, JPEG, or WebP)
+- `input` - Target image file data (PNG, JPEG, or WebP)
 - `metadata` - Generation metadata to embed
   - Can be from any tool or custom-created
   - Automatically converted to WebUI format
