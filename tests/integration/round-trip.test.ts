@@ -184,6 +184,9 @@ describe('Round-trip preservation', () => {
           expect(jpegRead.status).toBe('success');
           if (jpegRead.status !== 'success') return;
 
+          // Verify intermediate state: metadata should be correctly parsed in JPEG format
+          expect(jpegRead.metadata).toEqual(originalMetadata.metadata);
+
           // JPEG → PNG
           const pngRestored = write(pngOriginal, jpegRead);
           expect(pngRestored.ok).toBe(true);
@@ -232,6 +235,9 @@ describe('Round-trip preservation', () => {
           expect(webpRead.status).toBe('success');
           if (webpRead.status !== 'success') return;
 
+          // Verify intermediate state: metadata should be correctly parsed in WebP format
+          expect(webpRead.metadata).toEqual(originalMetadata.metadata);
+
           // WebP → PNG
           const pngRestored = write(pngOriginal, webpRead);
           expect(pngRestored.ok).toBe(true);
@@ -272,6 +278,9 @@ describe('Round-trip preservation', () => {
           const webpRead = read(webpWithMetadata.value);
           expect(webpRead.status).toBe('success');
           if (webpRead.status !== 'success') return;
+
+          // Verify intermediate state: metadata should be correctly parsed in WebP format
+          expect(webpRead.metadata).toEqual(originalMetadata.metadata);
 
           // WebP → JPEG
           const jpegRestored = write(jpegOriginal, webpRead);
@@ -316,6 +325,9 @@ describe('Round-trip preservation', () => {
           expect(pngRead.status).toBe('success');
           if (pngRead.status !== 'success') return;
 
+          // Verify intermediate state: metadata should be correctly parsed in PNG format
+          expect(pngRead.metadata).toEqual(originalMetadata.metadata);
+
           // PNG → JPEG
           const jpegRestored = write(jpegOriginal, pngRead);
           expect(jpegRestored.ok).toBe(true);
@@ -358,6 +370,9 @@ describe('Round-trip preservation', () => {
           const pngRead = read(pngWithMetadata.value);
           expect(pngRead.status).toBe('success');
           if (pngRead.status !== 'success') return;
+
+          // Verify intermediate state: metadata should be correctly parsed in PNG format
+          expect(pngRead.metadata).toEqual(originalMetadata.metadata);
 
           // PNG → WebP
           const webpRestored = write(webpOriginal, pngRead);
@@ -409,6 +424,9 @@ describe('Round-trip preservation', () => {
           const jpegRead = read(jpegWithMetadata.value);
           expect(jpegRead.status).toBe('success');
           if (jpegRead.status !== 'success') return;
+
+          // Verify intermediate state: metadata should be correctly parsed in JPEG format
+          expect(jpegRead.metadata).toEqual(originalMetadata.metadata);
 
           // JPEG → WebP
           const webpRestored = write(webpOriginal, jpegRead);
