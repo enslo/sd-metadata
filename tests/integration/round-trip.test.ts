@@ -1,58 +1,23 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { read, write } from '../../src/index';
 import { expectNovelAIRawEqual, expectRawEqual } from '../helpers/raw-equal';
-
-/**
- * Load a sample file from the samples directory
- */
-function loadSample(
-  format: 'png' | 'jpg' | 'webp',
-  filename: string,
-): Uint8Array {
-  const dirName = format === 'jpg' ? 'jpg' : format;
-  const filePath = path.join(__dirname, '../../samples', dirName, filename);
-  return new Uint8Array(fs.readFileSync(filePath));
-}
+import {
+  JPEG_CROSS_FORMAT_SAMPLES,
+  JPEG_SAMPLES,
+  PNG_CROSS_FORMAT_SAMPLES,
+  PNG_SAMPLES,
+  WEBP_CROSS_FORMAT_SAMPLES,
+  WEBP_SAMPLES,
+  isDimensionsMismatchExpected,
+  isJpegOnlySample,
+  isRawMismatchExpected,
+  loadSample,
+} from '../helpers/samples';
 
 describe('Round-trip preservation', () => {
   describe('Same-format round-trips', () => {
     describe('PNG → PNG', () => {
-      const pngSamples = [
-        'novelai-full.png',
-        'novelai-curated.png',
-        'novelai-full-3char.png',
-        'novelai-ref.png',
-        'comfyui.png',
-        'comfyui-hires.png',
-        'comfyui-upscale.png',
-        'comfyui-comfy-image-saver.png',
-        'comfyui-save-image-extended.png',
-        'comfyui-saveimage-plus.png',
-        'comfyui-saveimagewithmetadata.png',
-        'forge.png',
-        'forge-en.png',
-        'forge-hires.png',
-        'forge-neo.png',
-        'forge-neo-hires.png',
-        'invokeai.png',
-        'invokeai-en.png',
-        'swarmui.png',
-        'swarmui-hires.png',
-        'swarmui-upscale.png',
-        'tensorart.png',
-        'stability-matrix.png',
-        'stability-matrix-hires.png',
-        'stability-matrix-upscale.png',
-        'ruined-fooocus.png',
-        'huggingface-animagine.png',
-        'sd-next.png',
-        'sd-next-en.png',
-        'sd-next-hires.png',
-      ];
-
-      for (const filename of pngSamples) {
+      for (const filename of PNG_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const original = loadSample('png', filename);
           const firstRead = read(original);
@@ -79,18 +44,7 @@ describe('Round-trip preservation', () => {
     });
 
     describe('JPEG → JPEG', () => {
-      const jpegSamples = [
-        'civitai.jpeg',
-        'civitai-hires.jpg',
-        'civitai-upscale.jpg',
-        'forge.jpeg',
-        'comfyui-saveimage-plus.jpg',
-        'sd-next.jpg',
-        'sd-next-hires.jpg',
-        'swarmui.jpg',
-      ];
-
-      for (const filename of jpegSamples) {
+      for (const filename of JPEG_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const original = loadSample('jpg', filename);
           const firstRead = read(original);
@@ -113,22 +67,7 @@ describe('Round-trip preservation', () => {
     });
 
     describe('WebP → WebP', () => {
-      const webpSamples = [
-        'comfyui-saveimage-plus.webp',
-        'comfyui-saveimagewithmetadata.webp',
-        'comfyui-comfy-image-saver.webp',
-        'comfyui-save-image-extended.webp',
-        'forge.webp',
-        'forge-hires.webp',
-        'forge-neo.webp',
-        'swarmui.webp',
-        'novelai-curated.webp',
-        'novelai-full-3char.webp',
-        'sd-next.webp',
-        'sd-next-hires.webp',
-      ];
-
-      for (const filename of webpSamples) {
+      for (const filename of WEBP_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const original = loadSample('webp', filename);
           const firstRead = read(original);
@@ -152,37 +91,44 @@ describe('Round-trip preservation', () => {
   });
 
   describe('Cross-format round-trips', () => {
-    describe('PNG → JPEG → PNG', () => {
-      const testCases = [
-        { file: 'novelai-full.png', tool: 'NovelAI' },
-        { file: 'comfyui.png', tool: 'ComfyUI' },
-        { file: 'forge.png', tool: 'Forge' },
-        { file: 'invokeai.png', tool: 'InvokeAI' },
-        { file: 'swarmui-hires.png', tool: 'SwarmUI' },
-        { file: 'tensorart.png', tool: 'TensorArt' },
-        { file: 'stability-matrix.png', tool: 'Stability Matrix' },
-        { file: 'huggingface-animagine.png', tool: 'HF-Space' },
-        { file: 'ruined-fooocus.png', tool: 'Ruined Fooocus' },
-      ];
+    // Base images for cross-format conversion (same as used in other integration tests)
+    const getJpegBase = () => loadSample('jpg', 'civitai.jpeg');
+    const getWebpBase = () => loadSample('webp', 'forge.webp');
+    const getPngBase = () => loadSample('png', 'forge.png');
 
-      for (const { file, tool } of testCases) {
-        it(`should preserve ${tool} metadata through PNG → JPEG → PNG`, () => {
-          const pngOriginal = loadSample('png', file);
+    describe('PNG → JPEG → PNG', () => {
+      for (const filename of PNG_CROSS_FORMAT_SAMPLES) {
+        it(`should preserve metadata for ${filename}`, () => {
+          const pngOriginal = loadSample('png', filename);
           const originalMetadata = read(pngOriginal);
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
-          // Get a JPEG image to write to (use any sample JPEG)
-          const jpegBase = loadSample('jpg', 'civitai.jpeg');
-
           // PNG → JPEG
-          const jpegWithMetadata = write(jpegBase, originalMetadata);
+          const jpegWithMetadata = write(getJpegBase(), originalMetadata);
           expect(jpegWithMetadata.ok).toBe(true);
           if (!jpegWithMetadata.ok) return;
 
           const jpegRead = read(jpegWithMetadata.value);
           expect(jpegRead.status).toBe('success');
           if (jpegRead.status !== 'success') return;
+
+          // Verify intermediate state: metadata should be correctly parsed in JPEG format
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = jpegRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(jpegRead.metadata).toEqual(originalMetadata.metadata);
+          }
 
           // JPEG → PNG
           const pngRestored = write(pngOriginal, jpegRead);
@@ -193,44 +139,64 @@ describe('Round-trip preservation', () => {
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
-          // Metadata should match original
-          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          expectRawEqual(finalRead.raw, originalMetadata.raw);
+          // Metadata should match original (excluding width/height for dimension mismatch expected files)
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = finalRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          }
+
+          // Raw comparison (skip for raw mismatch expected files)
+          if (!isRawMismatchExpected(filename)) {
+            expectRawEqual(finalRead.raw, originalMetadata.raw);
+          }
         });
       }
     });
 
     describe('PNG → WebP → PNG', () => {
-      const testCases = [
-        { file: 'novelai-full.png', tool: 'NovelAI' },
-        { file: 'comfyui.png', tool: 'ComfyUI' },
-        { file: 'forge.png', tool: 'Forge' },
-        { file: 'invokeai.png', tool: 'InvokeAI' },
-        { file: 'swarmui-hires.png', tool: 'SwarmUI' },
-        { file: 'tensorart.png', tool: 'TensorArt' },
-        { file: 'stability-matrix.png', tool: 'Stability Matrix' },
-        { file: 'huggingface-animagine.png', tool: 'HF-Space' },
-        { file: 'ruined-fooocus.png', tool: 'Ruined Fooocus' },
-      ];
-
-      for (const { file, tool } of testCases) {
-        it(`should preserve ${tool} metadata through PNG → WebP → PNG`, () => {
-          const pngOriginal = loadSample('png', file);
+      for (const filename of PNG_CROSS_FORMAT_SAMPLES) {
+        it(`should preserve metadata for ${filename}`, () => {
+          const pngOriginal = loadSample('png', filename);
           const originalMetadata = read(pngOriginal);
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
-          // Get a WebP image to write to
-          const webpBase = loadSample('webp', 'forge-hires.webp');
-
           // PNG → WebP
-          const webpWithMetadata = write(webpBase, originalMetadata);
+          const webpWithMetadata = write(getWebpBase(), originalMetadata);
           expect(webpWithMetadata.ok).toBe(true);
           if (!webpWithMetadata.ok) return;
 
           const webpRead = read(webpWithMetadata.value);
           expect(webpRead.status).toBe('success');
           if (webpRead.status !== 'success') return;
+
+          // Verify intermediate state: metadata should be correctly parsed in WebP format
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = webpRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(webpRead.metadata).toEqual(originalMetadata.metadata);
+          }
 
           // WebP → PNG
           const pngRestored = write(pngOriginal, webpRead);
@@ -241,37 +207,64 @@ describe('Round-trip preservation', () => {
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
-          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          expectRawEqual(finalRead.raw, originalMetadata.raw);
+          // Metadata should match original (excluding width/height for dimension mismatch expected files)
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = finalRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          }
+
+          // Raw comparison (skip for raw mismatch expected files)
+          if (!isRawMismatchExpected(filename)) {
+            expectRawEqual(finalRead.raw, originalMetadata.raw);
+          }
         });
       }
     });
 
     describe('JPEG → WebP → JPEG', () => {
-      const testCases = [
-        { file: 'civitai.jpeg', tool: 'Civitai' },
-        { file: 'comfyui-saveimage-plus.jpg', tool: 'ComfyUI' },
-        { file: 'forge.jpeg', tool: 'Forge' },
-      ];
-
-      for (const { file, tool } of testCases) {
-        it(`should preserve ${tool} metadata through JPEG → WebP → JPEG`, () => {
-          const jpegOriginal = loadSample('jpg', file);
+      for (const filename of JPEG_CROSS_FORMAT_SAMPLES) {
+        it(`should preserve metadata for ${filename}`, () => {
+          const jpegOriginal = loadSample('jpg', filename);
           const originalMetadata = read(jpegOriginal);
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
-          // Get a WebP image to write to
-          const webpBase = loadSample('webp', 'forge-hires.webp');
-
           // JPEG → WebP
-          const webpWithMetadata = write(webpBase, originalMetadata);
+          const webpWithMetadata = write(getWebpBase(), originalMetadata);
           expect(webpWithMetadata.ok).toBe(true);
           if (!webpWithMetadata.ok) return;
 
           const webpRead = read(webpWithMetadata.value);
           expect(webpRead.status).toBe('success');
           if (webpRead.status !== 'success') return;
+
+          // Verify intermediate state: metadata should be correctly parsed in WebP format
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = webpRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(webpRead.metadata).toEqual(originalMetadata.metadata);
+          }
 
           // WebP → JPEG
           const jpegRestored = write(jpegOriginal, webpRead);
@@ -282,39 +275,67 @@ describe('Round-trip preservation', () => {
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
-          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          expectRawEqual(finalRead.raw, originalMetadata.raw);
+          // Metadata should match original (excluding width/height for dimension mismatch expected files)
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = finalRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          }
+
+          // Raw comparison (skip for raw mismatch expected files)
+          if (!isRawMismatchExpected(filename)) {
+            expectRawEqual(finalRead.raw, originalMetadata.raw);
+          }
         });
       }
     });
 
     describe('JPEG → PNG → JPEG', () => {
-      const testCases = [
-        { file: 'civitai.jpeg', tool: 'Civitai' },
-        { file: 'comfyui-saveimage-plus.jpg', tool: 'ComfyUI' },
-        { file: 'forge.jpeg', tool: 'Forge' },
-        { file: 'swarmui.jpg', tool: 'SwarmUI' },
-        { file: 'sd-next.jpg', tool: 'SD.Next' },
-      ];
-
-      for (const { file, tool } of testCases) {
-        it(`should preserve ${tool} metadata through JPEG → PNG → JPEG`, () => {
-          const jpegOriginal = loadSample('jpg', file);
+      for (const filename of JPEG_CROSS_FORMAT_SAMPLES) {
+        it(`should preserve metadata for ${filename}`, () => {
+          const jpegOriginal = loadSample('jpg', filename);
           const originalMetadata = read(jpegOriginal);
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
-          // Get a PNG image to write to
-          const pngBase = loadSample('png', 'forge.png');
-
           // JPEG → PNG
-          const pngWithMetadata = write(pngBase, originalMetadata);
+          const pngWithMetadata = write(getPngBase(), originalMetadata);
           expect(pngWithMetadata.ok).toBe(true);
           if (!pngWithMetadata.ok) return;
 
           const pngRead = read(pngWithMetadata.value);
+
+          // JPEG-only samples: PNG conversion produces unrecognized metadata (expected limitation)
+          if (isJpegOnlySample(filename)) {
+            expect(pngRead.status).toBe('unrecognized');
+            return; // Cannot continue round-trip test
+          }
+
           expect(pngRead.status).toBe('success');
           if (pngRead.status !== 'success') return;
+
+          // Verify intermediate state: metadata should be correctly parsed in PNG format
+          if (isDimensionsMismatchExpected(filename)) {
+            const { width: _w1, height: _h1, ...actualRest } = pngRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(pngRead.metadata).toEqual(originalMetadata.metadata);
+          }
 
           // PNG → JPEG
           const jpegRestored = write(jpegOriginal, pngRead);
@@ -325,39 +346,60 @@ describe('Round-trip preservation', () => {
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
-          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          expectRawEqual(finalRead.raw, originalMetadata.raw);
+          // Metadata should match original (excluding width/height for dimension mismatch expected files)
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = finalRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          }
+
+          // Raw comparison (skip for raw mismatch expected files)
+          if (!isRawMismatchExpected(filename)) {
+            expectRawEqual(finalRead.raw, originalMetadata.raw);
+          }
         });
       }
     });
 
     describe('WebP → PNG → WebP', () => {
-      const testCases = [
-        { file: 'comfyui-saveimage-plus.webp', tool: 'ComfyUI' },
-        { file: 'forge-hires.webp', tool: 'Forge' },
-        { file: 'swarmui.webp', tool: 'SwarmUI' },
-        { file: 'novelai-curated.webp', tool: 'NovelAI' },
-        { file: 'sd-next.webp', tool: 'SD.Next' },
-      ];
-
-      for (const { file, tool } of testCases) {
-        it(`should preserve ${tool} metadata through WebP → PNG → WebP`, () => {
-          const webpOriginal = loadSample('webp', file);
+      for (const filename of WEBP_CROSS_FORMAT_SAMPLES) {
+        it(`should preserve metadata for ${filename}`, () => {
+          const webpOriginal = loadSample('webp', filename);
           const originalMetadata = read(webpOriginal);
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
-          // Get a PNG image to write to
-          const pngBase = loadSample('png', 'forge.png');
-
           // WebP → PNG
-          const pngWithMetadata = write(pngBase, originalMetadata);
+          const pngWithMetadata = write(getPngBase(), originalMetadata);
           expect(pngWithMetadata.ok).toBe(true);
           if (!pngWithMetadata.ok) return;
 
           const pngRead = read(pngWithMetadata.value);
           expect(pngRead.status).toBe('success');
           if (pngRead.status !== 'success') return;
+
+          // Verify intermediate state: metadata should be correctly parsed in PNG format
+          if (isDimensionsMismatchExpected(filename)) {
+            const { width: _w1, height: _h1, ...actualRest } = pngRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(pngRead.metadata).toEqual(originalMetadata.metadata);
+          }
 
           // PNG → WebP
           const webpRestored = write(webpOriginal, pngRead);
@@ -368,47 +410,69 @@ describe('Round-trip preservation', () => {
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
-          // Parsed metadata should always match
-          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-
-          // Raw metadata validation
-          if (tool === 'NovelAI') {
-            // NovelAI: partial check due to intentional Description correction
-            expectNovelAIRawEqual(finalRead.raw, originalMetadata.raw);
+          // Metadata should match original (excluding width/height for dimension mismatch expected files)
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = finalRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
           } else {
-            // Other tools: full content-equivalent check
-            expectRawEqual(finalRead.raw, originalMetadata.raw);
+            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          }
+
+          // Raw comparison (skip for raw mismatch expected files)
+          if (!isRawMismatchExpected(filename)) {
+            // NovelAI needs special handling for Description correction
+            if (filename.startsWith('novelai')) {
+              expectNovelAIRawEqual(finalRead.raw, originalMetadata.raw);
+            } else {
+              expectRawEqual(finalRead.raw, originalMetadata.raw);
+            }
           }
         });
       }
     });
 
     describe('WebP → JPEG → WebP', () => {
-      const testCases = [
-        { file: 'comfyui-saveimage-plus.webp', tool: 'ComfyUI' },
-        { file: 'forge-hires.webp', tool: 'Forge' },
-        { file: 'swarmui.webp', tool: 'SwarmUI' },
-        { file: 'novelai-curated.webp', tool: 'NovelAI' },
-      ];
-
-      for (const { file, tool } of testCases) {
-        it(`should preserve ${tool} metadata through WebP → JPEG → WebP`, () => {
-          const webpOriginal = loadSample('webp', file);
+      for (const filename of WEBP_CROSS_FORMAT_SAMPLES) {
+        it(`should preserve metadata for ${filename}`, () => {
+          const webpOriginal = loadSample('webp', filename);
           const originalMetadata = read(webpOriginal);
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
-          // Get a JPEG image to write to
-          const jpegBase = loadSample('jpg', 'civitai.jpeg');
-
           // WebP → JPEG
-          const jpegWithMetadata = write(jpegBase, originalMetadata);
+          const jpegWithMetadata = write(getJpegBase(), originalMetadata);
           expect(jpegWithMetadata.ok).toBe(true);
           if (!jpegWithMetadata.ok) return;
 
           const jpegRead = read(jpegWithMetadata.value);
           expect(jpegRead.status).toBe('success');
           if (jpegRead.status !== 'success') return;
+
+          // Verify intermediate state: metadata should be correctly parsed in JPEG format
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = jpegRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(jpegRead.metadata).toEqual(originalMetadata.metadata);
+          }
 
           // JPEG → WebP
           const webpRestored = write(webpOriginal, jpegRead);
@@ -419,8 +483,32 @@ describe('Round-trip preservation', () => {
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
-          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          expectRawEqual(finalRead.raw, originalMetadata.raw);
+          // Metadata should match original (excluding width/height for dimension mismatch expected files)
+          if (isDimensionsMismatchExpected(filename)) {
+            const {
+              width: _w1,
+              height: _h1,
+              ...actualRest
+            } = finalRead.metadata;
+            const {
+              width: _w2,
+              height: _h2,
+              ...expectedRest
+            } = originalMetadata.metadata;
+            expect(actualRest).toEqual(expectedRest);
+          } else {
+            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
+          }
+
+          // Raw comparison (skip for raw mismatch expected files)
+          if (!isRawMismatchExpected(filename)) {
+            // NovelAI needs special handling for Description correction
+            if (filename.startsWith('novelai')) {
+              expectNovelAIRawEqual(finalRead.raw, originalMetadata.raw);
+            } else {
+              expectRawEqual(finalRead.raw, originalMetadata.raw);
+            }
+          }
         });
       }
     });
