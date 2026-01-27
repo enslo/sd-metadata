@@ -8,7 +8,6 @@ import {
   PNG_SAMPLES,
   WEBP_CROSS_FORMAT_SAMPLES,
   WEBP_SAMPLES,
-  isDimensionsMismatchExpected,
   isJpegOnlySample,
   isRawMismatchExpected,
   loadSample,
@@ -20,7 +19,7 @@ describe('Round-trip preservation', () => {
       for (const filename of PNG_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const original = loadSample('png', filename);
-          const firstRead = read(original);
+          const firstRead = read(original, { strict: true });
 
           // First read should succeed
           expect(firstRead.status).toBe('success');
@@ -32,7 +31,7 @@ describe('Round-trip preservation', () => {
           if (!written.ok) return;
 
           // Read again
-          const secondRead = read(written.value);
+          const secondRead = read(written.value, { strict: true });
           expect(secondRead.status).toBe('success');
           if (secondRead.status !== 'success') return;
 
@@ -47,7 +46,7 @@ describe('Round-trip preservation', () => {
       for (const filename of JPEG_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const original = loadSample('jpg', filename);
-          const firstRead = read(original);
+          const firstRead = read(original, { strict: true });
 
           expect(firstRead.status).toBe('success');
           if (firstRead.status !== 'success') return;
@@ -56,7 +55,7 @@ describe('Round-trip preservation', () => {
           expect(written.ok).toBe(true);
           if (!written.ok) return;
 
-          const secondRead = read(written.value);
+          const secondRead = read(written.value, { strict: true });
           expect(secondRead.status).toBe('success');
           if (secondRead.status !== 'success') return;
 
@@ -70,7 +69,7 @@ describe('Round-trip preservation', () => {
       for (const filename of WEBP_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const original = loadSample('webp', filename);
-          const firstRead = read(original);
+          const firstRead = read(original, { strict: true });
 
           expect(firstRead.status).toBe('success');
           if (firstRead.status !== 'success') return;
@@ -79,7 +78,7 @@ describe('Round-trip preservation', () => {
           expect(written.ok).toBe(true);
           if (!written.ok) return;
 
-          const secondRead = read(written.value);
+          const secondRead = read(written.value, { strict: true });
           expect(secondRead.status).toBe('success');
           if (secondRead.status !== 'success') return;
 
@@ -100,7 +99,7 @@ describe('Round-trip preservation', () => {
       for (const filename of PNG_CROSS_FORMAT_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const pngOriginal = loadSample('png', filename);
-          const originalMetadata = read(pngOriginal);
+          const originalMetadata = read(pngOriginal, { strict: true });
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
@@ -109,52 +108,24 @@ describe('Round-trip preservation', () => {
           expect(jpegWithMetadata.ok).toBe(true);
           if (!jpegWithMetadata.ok) return;
 
-          const jpegRead = read(jpegWithMetadata.value);
+          const jpegRead = read(jpegWithMetadata.value, { strict: true });
           expect(jpegRead.status).toBe('success');
           if (jpegRead.status !== 'success') return;
 
           // Verify intermediate state: metadata should be correctly parsed in JPEG format
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = jpegRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(jpegRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(jpegRead.metadata).toEqual(originalMetadata.metadata);
 
           // JPEG → PNG
           const pngRestored = write(pngOriginal, jpegRead);
           expect(pngRestored.ok).toBe(true);
           if (!pngRestored.ok) return;
 
-          const finalRead = read(pngRestored.value);
+          const finalRead = read(pngRestored.value, { strict: true });
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
           // Metadata should match original (excluding width/height for dimension mismatch expected files)
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = finalRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
 
           // Raw comparison (skip for raw mismatch expected files)
           if (!isRawMismatchExpected(filename)) {
@@ -168,7 +139,7 @@ describe('Round-trip preservation', () => {
       for (const filename of PNG_CROSS_FORMAT_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const pngOriginal = loadSample('png', filename);
-          const originalMetadata = read(pngOriginal);
+          const originalMetadata = read(pngOriginal, { strict: true });
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
@@ -177,52 +148,24 @@ describe('Round-trip preservation', () => {
           expect(webpWithMetadata.ok).toBe(true);
           if (!webpWithMetadata.ok) return;
 
-          const webpRead = read(webpWithMetadata.value);
+          const webpRead = read(webpWithMetadata.value, { strict: true });
           expect(webpRead.status).toBe('success');
           if (webpRead.status !== 'success') return;
 
           // Verify intermediate state: metadata should be correctly parsed in WebP format
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = webpRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(webpRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(webpRead.metadata).toEqual(originalMetadata.metadata);
 
           // WebP → PNG
           const pngRestored = write(pngOriginal, webpRead);
           expect(pngRestored.ok).toBe(true);
           if (!pngRestored.ok) return;
 
-          const finalRead = read(pngRestored.value);
+          const finalRead = read(pngRestored.value, { strict: true });
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
           // Metadata should match original (excluding width/height for dimension mismatch expected files)
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = finalRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
 
           // Raw comparison (skip for raw mismatch expected files)
           if (!isRawMismatchExpected(filename)) {
@@ -236,7 +179,7 @@ describe('Round-trip preservation', () => {
       for (const filename of JPEG_CROSS_FORMAT_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const jpegOriginal = loadSample('jpg', filename);
-          const originalMetadata = read(jpegOriginal);
+          const originalMetadata = read(jpegOriginal, { strict: true });
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
@@ -245,52 +188,24 @@ describe('Round-trip preservation', () => {
           expect(webpWithMetadata.ok).toBe(true);
           if (!webpWithMetadata.ok) return;
 
-          const webpRead = read(webpWithMetadata.value);
+          const webpRead = read(webpWithMetadata.value, { strict: true });
           expect(webpRead.status).toBe('success');
           if (webpRead.status !== 'success') return;
 
           // Verify intermediate state: metadata should be correctly parsed in WebP format
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = webpRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(webpRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(webpRead.metadata).toEqual(originalMetadata.metadata);
 
           // WebP → JPEG
           const jpegRestored = write(jpegOriginal, webpRead);
           expect(jpegRestored.ok).toBe(true);
           if (!jpegRestored.ok) return;
 
-          const finalRead = read(jpegRestored.value);
+          const finalRead = read(jpegRestored.value, { strict: true });
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
           // Metadata should match original (excluding width/height for dimension mismatch expected files)
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = finalRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
 
           // Raw comparison (skip for raw mismatch expected files)
           if (!isRawMismatchExpected(filename)) {
@@ -304,7 +219,7 @@ describe('Round-trip preservation', () => {
       for (const filename of JPEG_CROSS_FORMAT_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const jpegOriginal = loadSample('jpg', filename);
-          const originalMetadata = read(jpegOriginal);
+          const originalMetadata = read(jpegOriginal, { strict: true });
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
@@ -313,7 +228,7 @@ describe('Round-trip preservation', () => {
           expect(pngWithMetadata.ok).toBe(true);
           if (!pngWithMetadata.ok) return;
 
-          const pngRead = read(pngWithMetadata.value);
+          const pngRead = read(pngWithMetadata.value, { strict: true });
 
           // JPEG-only samples: PNG conversion produces unrecognized metadata (expected limitation)
           if (isJpegOnlySample(filename)) {
@@ -325,43 +240,19 @@ describe('Round-trip preservation', () => {
           if (pngRead.status !== 'success') return;
 
           // Verify intermediate state: metadata should be correctly parsed in PNG format
-          if (isDimensionsMismatchExpected(filename)) {
-            const { width: _w1, height: _h1, ...actualRest } = pngRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(pngRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(pngRead.metadata).toEqual(originalMetadata.metadata);
 
           // PNG → JPEG
           const jpegRestored = write(jpegOriginal, pngRead);
           expect(jpegRestored.ok).toBe(true);
           if (!jpegRestored.ok) return;
 
-          const finalRead = read(jpegRestored.value);
+          const finalRead = read(jpegRestored.value, { strict: true });
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
           // Metadata should match original (excluding width/height for dimension mismatch expected files)
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = finalRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
 
           // Raw comparison (skip for raw mismatch expected files)
           if (!isRawMismatchExpected(filename)) {
@@ -375,7 +266,7 @@ describe('Round-trip preservation', () => {
       for (const filename of WEBP_CROSS_FORMAT_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const webpOriginal = loadSample('webp', filename);
-          const originalMetadata = read(webpOriginal);
+          const originalMetadata = read(webpOriginal, { strict: true });
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
@@ -384,48 +275,24 @@ describe('Round-trip preservation', () => {
           expect(pngWithMetadata.ok).toBe(true);
           if (!pngWithMetadata.ok) return;
 
-          const pngRead = read(pngWithMetadata.value);
+          const pngRead = read(pngWithMetadata.value, { strict: true });
           expect(pngRead.status).toBe('success');
           if (pngRead.status !== 'success') return;
 
           // Verify intermediate state: metadata should be correctly parsed in PNG format
-          if (isDimensionsMismatchExpected(filename)) {
-            const { width: _w1, height: _h1, ...actualRest } = pngRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(pngRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(pngRead.metadata).toEqual(originalMetadata.metadata);
 
           // PNG → WebP
           const webpRestored = write(webpOriginal, pngRead);
           expect(webpRestored.ok).toBe(true);
           if (!webpRestored.ok) return;
 
-          const finalRead = read(webpRestored.value);
+          const finalRead = read(webpRestored.value, { strict: true });
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
           // Metadata should match original (excluding width/height for dimension mismatch expected files)
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = finalRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
 
           // Raw comparison (skip for raw mismatch expected files)
           if (!isRawMismatchExpected(filename)) {
@@ -444,7 +311,7 @@ describe('Round-trip preservation', () => {
       for (const filename of WEBP_CROSS_FORMAT_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const webpOriginal = loadSample('webp', filename);
-          const originalMetadata = read(webpOriginal);
+          const originalMetadata = read(webpOriginal, { strict: true });
           expect(originalMetadata.status).toBe('success');
           if (originalMetadata.status !== 'success') return;
 
@@ -453,52 +320,24 @@ describe('Round-trip preservation', () => {
           expect(jpegWithMetadata.ok).toBe(true);
           if (!jpegWithMetadata.ok) return;
 
-          const jpegRead = read(jpegWithMetadata.value);
+          const jpegRead = read(jpegWithMetadata.value, { strict: true });
           expect(jpegRead.status).toBe('success');
           if (jpegRead.status !== 'success') return;
 
           // Verify intermediate state: metadata should be correctly parsed in JPEG format
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = jpegRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(jpegRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(jpegRead.metadata).toEqual(originalMetadata.metadata);
 
           // JPEG → WebP
           const webpRestored = write(webpOriginal, jpegRead);
           expect(webpRestored.ok).toBe(true);
           if (!webpRestored.ok) return;
 
-          const finalRead = read(webpRestored.value);
+          const finalRead = read(webpRestored.value, { strict: true });
           expect(finalRead.status).toBe('success');
           if (finalRead.status !== 'success') return;
 
           // Metadata should match original (excluding width/height for dimension mismatch expected files)
-          if (isDimensionsMismatchExpected(filename)) {
-            const {
-              width: _w1,
-              height: _h1,
-              ...actualRest
-            } = finalRead.metadata;
-            const {
-              width: _w2,
-              height: _h2,
-              ...expectedRest
-            } = originalMetadata.metadata;
-            expect(actualRest).toEqual(expectedRest);
-          } else {
-            expect(finalRead.metadata).toEqual(originalMetadata.metadata);
-          }
+          expect(finalRead.metadata).toEqual(originalMetadata.metadata);
 
           // Raw comparison (skip for raw mismatch expected files)
           if (!isRawMismatchExpected(filename)) {

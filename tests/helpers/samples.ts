@@ -29,16 +29,6 @@ const RAW_MISMATCH_EXPECTED = [
 ];
 
 /**
- * Files with expected dimensions (width/height) mismatch in parsed metadata
- *
- * CivitAI upscale workflows store original generation dimensions in extraMetadata,
- * but the parser uses target image dimensions as fallback. This causes width/height
- * to differ after cross-format round-trip when the intermediate image has different
- * dimensions than the original.
- */
-const DIMENSIONS_MISMATCH_EXPECTED = ['civitai-hires'];
-
-/**
  * JPEG-only samples that cannot be converted to PNG
  *
  * These files have metadata structures that become unrecognized after PNG conversion:
@@ -75,16 +65,6 @@ function isExcluded(filename: string): boolean {
 export function isRawMismatchExpected(filename: string): boolean {
   const baseName = path.basename(filename, path.extname(filename));
   return RAW_MISMATCH_EXPECTED.some(
-    (pattern) => baseName === pattern || baseName.startsWith(`${pattern}-`),
-  );
-}
-
-/**
- * Check if a file is expected to have dimensions mismatch in parsed metadata
- */
-export function isDimensionsMismatchExpected(filename: string): boolean {
-  const baseName = path.basename(filename, path.extname(filename));
-  return DIMENSIONS_MISMATCH_EXPECTED.some(
     (pattern) => baseName === pattern || baseName.startsWith(`${pattern}-`),
   );
 }
@@ -127,8 +107,7 @@ export function listSamples(format: 'png' | 'jpg' | 'webp'): string[] {
  * List sample files suitable for cross-format conversion tests
  *
  * NOTE: This now includes ALL samples (no exclusions). Individual tests
- * should use isRawMismatchExpected() and isDimensionsMismatchExpected()
- * to conditionally skip specific comparisons.
+ * should use isRawMismatchExpected() to conditionally skip specific comparisons.
  *
  * @param format - The image format directory to scan
  * @returns Array of filenames (not full paths)
