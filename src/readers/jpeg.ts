@@ -65,7 +65,7 @@ export function readJpegMetadata(data: Uint8Array): JpegMetadataResult {
  * @param data - JPEG file data
  * @returns Offset and length of APP1 segment data, or null if not found
  */
-export function findApp1Segment(
+function findApp1Segment(
   data: Uint8Array,
 ): { offset: number; length: number } | null {
   let offset = 2; // Skip SOI marker
