@@ -76,6 +76,13 @@ function detectUniqueKeywords(
     return 'easydiffusion';
   }
 
+  // CivitAI Orchestration: Has "extraMetadata" keyword (unique to CivitAI)
+  // Note: "extraMetadata" is specific to CivitAI's Orchestration format
+  // "resource-stack" may or may not be present depending on the workflow
+  if ('extraMetadata' in entryRecord) {
+    return 'civitai';
+  }
+
   // ========================================
   // Parameters Content Patterns
   // ========================================
@@ -121,6 +128,11 @@ function detectFromCommentJson(comment: string): GenerationSoftware | null {
     // Stability Matrix: Same as PNG chunk check, but from JSON
     if ('smproj' in parsed) {
       return 'stability-matrix';
+    }
+
+    // CivitAI Orchestration: Has "extraMetadata" in JSON (unique to CivitAI)
+    if ('extraMetadata' in parsed) {
+      return 'civitai';
     }
 
     // ComfyUI: Has both prompt and workflow in JSON
@@ -247,8 +259,8 @@ function detectFromJsonFormat(json: string): GenerationSoftware | null {
     return 'easydiffusion';
   }
 
-  // Civitai: Has distinctive namespace or field
-  if (json.includes('civitai:') || json.includes('"resource-stack"')) {
+  // CivitAI: Has "civitai:" namespace prefix OR "extraMetadata" key
+  if (json.includes('civitai:') || json.includes('"extraMetadata"')) {
     return 'civitai';
   }
 

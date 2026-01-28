@@ -2,13 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { read, write } from '../../src/index';
 import { expectNovelAIRawEqual, expectRawEqual } from '../helpers/raw-equal';
 import {
-  JPEG_CROSS_FORMAT_SAMPLES,
   JPEG_SAMPLES,
-  PNG_CROSS_FORMAT_SAMPLES,
   PNG_SAMPLES,
-  WEBP_CROSS_FORMAT_SAMPLES,
   WEBP_SAMPLES,
-  isJpegOnlySample,
   isRawMismatchExpected,
   loadSample,
 } from '../helpers/samples';
@@ -96,7 +92,7 @@ describe('Round-trip preservation', () => {
     const getPngBase = () => loadSample('png', 'forge.png');
 
     describe('PNG → JPEG → PNG', () => {
-      for (const filename of PNG_CROSS_FORMAT_SAMPLES) {
+      for (const filename of PNG_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const pngOriginal = loadSample('png', filename);
           const originalMetadata = read(pngOriginal, { strict: true });
@@ -136,7 +132,7 @@ describe('Round-trip preservation', () => {
     });
 
     describe('PNG → WebP → PNG', () => {
-      for (const filename of PNG_CROSS_FORMAT_SAMPLES) {
+      for (const filename of PNG_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const pngOriginal = loadSample('png', filename);
           const originalMetadata = read(pngOriginal, { strict: true });
@@ -176,7 +172,7 @@ describe('Round-trip preservation', () => {
     });
 
     describe('JPEG → WebP → JPEG', () => {
-      for (const filename of JPEG_CROSS_FORMAT_SAMPLES) {
+      for (const filename of JPEG_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const jpegOriginal = loadSample('jpg', filename);
           const originalMetadata = read(jpegOriginal, { strict: true });
@@ -216,7 +212,7 @@ describe('Round-trip preservation', () => {
     });
 
     describe('JPEG → PNG → JPEG', () => {
-      for (const filename of JPEG_CROSS_FORMAT_SAMPLES) {
+      for (const filename of JPEG_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const jpegOriginal = loadSample('jpg', filename);
           const originalMetadata = read(jpegOriginal, { strict: true });
@@ -229,13 +225,6 @@ describe('Round-trip preservation', () => {
           if (!pngWithMetadata.ok) return;
 
           const pngRead = read(pngWithMetadata.value, { strict: true });
-
-          // JPEG-only samples: PNG conversion produces unrecognized metadata (expected limitation)
-          if (isJpegOnlySample(filename)) {
-            expect(pngRead.status).toBe('unrecognized');
-            return; // Cannot continue round-trip test
-          }
-
           expect(pngRead.status).toBe('success');
           if (pngRead.status !== 'success') return;
 
@@ -263,7 +252,7 @@ describe('Round-trip preservation', () => {
     });
 
     describe('WebP → PNG → WebP', () => {
-      for (const filename of WEBP_CROSS_FORMAT_SAMPLES) {
+      for (const filename of WEBP_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const webpOriginal = loadSample('webp', filename);
           const originalMetadata = read(webpOriginal, { strict: true });
@@ -308,7 +297,7 @@ describe('Round-trip preservation', () => {
     });
 
     describe('WebP → JPEG → WebP', () => {
-      for (const filename of WEBP_CROSS_FORMAT_SAMPLES) {
+      for (const filename of WEBP_SAMPLES) {
         it(`should preserve metadata for ${filename}`, () => {
           const webpOriginal = loadSample('webp', filename);
           const originalMetadata = read(webpOriginal, { strict: true });

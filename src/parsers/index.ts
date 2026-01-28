@@ -41,10 +41,20 @@ export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
       return parseHfSpace(entries);
 
     case 'civitai': {
-      // Civitai can use either ComfyUI JSON or A1111 text format
+      // Civitai uses ComfyUI JSON format with custom structure
       const comfyResult = parseComfyUI(entries);
-      if (comfyResult.ok) return comfyResult;
-      return parseA1111(entries);
+      if (comfyResult.ok) {
+        // Override software to preserve CivitAI detection
+        comfyResult.value.software = 'civitai';
+        return comfyResult;
+      }
+      // Fallback to A1111 format
+      const a1111Result = parseA1111(entries);
+      if (a1111Result.ok) {
+        a1111Result.value.software = 'civitai';
+        return a1111Result;
+      }
+      return a1111Result;
     }
 
     case 'comfyui': {

@@ -13,6 +13,10 @@ import type {
 import { Result } from '../types';
 import { convertA1111PngToSegments, convertA1111SegmentsToPng } from './a1111';
 import {
+  convertCivitaiPngToSegments,
+  convertCivitaiSegmentsToPng,
+} from './civitai';
+import {
   convertComfyUIPngToSegments,
   convertComfyUISegmentsToPng,
 } from './comfyui';
@@ -198,18 +202,24 @@ const convertHfSpace = createFormatConverter(
   createSegmentsToPng('parameters', 'text-unicode-escape'),
 );
 
+const convertCivitai = createFormatConverter(
+  convertCivitaiPngToSegments,
+  convertCivitaiSegmentsToPng,
+);
+
 /**
  * Lookup table: software name → converter function
  */
 const softwareConverters = {
   // NovelAI
   novelai: convertNovelai,
-  // A1111-format (sd-webui, forge, forge-neo, civitai, sd-next)
+  // A1111-format (sd-webui, forge, forge-neo, sd-next)
   'sd-webui': convertA1111,
   'sd-next': convertA1111,
   forge: convertA1111,
   'forge-neo': convertA1111,
-  civitai: convertA1111,
+  // CivitAI Orchestration format
+  civitai: convertCivitai,
   // ComfyUI-format (comfyui, tensorart, stability-matrix)
   comfyui: convertComfyUI,
   tensorart: convertComfyUI,

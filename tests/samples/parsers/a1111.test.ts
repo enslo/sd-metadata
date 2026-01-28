@@ -297,7 +297,7 @@ describe('A1111 Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        software: 'sd-webui',
+        software: 'civitai',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
         negativePrompt:
