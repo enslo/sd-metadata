@@ -469,7 +469,7 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        software: 'comfyui',
+        software: 'civitai',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
         negativePrompt:
@@ -498,7 +498,7 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       expect(meta).toEqual({
-        software: 'comfyui',
+        software: 'civitai',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト',
         negativePrompt:

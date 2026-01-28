@@ -29,20 +29,6 @@ const RAW_MISMATCH_EXPECTED = [
 ];
 
 /**
- * JPEG-only samples that cannot be converted to PNG
- *
- * These files have metadata structures that become unrecognized after PNG conversion:
- * - civitai-hires: Complex extraMetadata structure fails PNG round-trip
- * - civitai-upscale: Non-standard chunk structure incompatible with PNG format
- *
- * NOTE: Tests explicitly verify that PNG conversion produces 'unrecognized' status.
- * This is an expected limitation, not a test failure.
- *
- * TODO: Investigate and fix PNG conversion for these files
- */
-const JPEG_ONLY_SAMPLES = ['civitai-hires', 'civitai-upscale'];
-
-/**
  * Get the samples directory path for a given format
  */
 function getSamplesDir(format: 'png' | 'jpg' | 'webp'): string {
@@ -65,16 +51,6 @@ function isExcluded(filename: string): boolean {
 export function isRawMismatchExpected(filename: string): boolean {
   const baseName = path.basename(filename, path.extname(filename));
   return RAW_MISMATCH_EXPECTED.some(
-    (pattern) => baseName === pattern || baseName.startsWith(`${pattern}-`),
-  );
-}
-
-/**
- * Check if a JPEG file cannot be converted to PNG
- */
-export function isJpegOnlySample(filename: string): boolean {
-  const baseName = path.basename(filename, path.extname(filename));
-  return JPEG_ONLY_SAMPLES.some(
     (pattern) => baseName === pattern || baseName.startsWith(`${pattern}-`),
   );
 }
@@ -104,21 +80,6 @@ export function listSamples(format: 'png' | 'jpg' | 'webp'): string[] {
 }
 
 /**
- * List sample files suitable for cross-format conversion tests
- *
- * NOTE: This now includes ALL samples (no exclusions). Individual tests
- * should use isRawMismatchExpected() to conditionally skip specific comparisons.
- *
- * @param format - The image format directory to scan
- * @returns Array of filenames (not full paths)
- */
-export function listCrossFormatSamples(
-  format: 'png' | 'jpg' | 'webp',
-): string[] {
-  return listSamples(format);
-}
-
-/**
  * Load a sample file as Uint8Array
  *
  * @param format - The image format
@@ -142,12 +103,3 @@ export function loadSample(
 export const PNG_SAMPLES = listSamples('png');
 export const JPEG_SAMPLES = listSamples('jpg');
 export const WEBP_SAMPLES = listSamples('webp');
-
-/**
- * Pre-computed sample lists for cross-format tests
- *
- * These exclude files with known cross-format conversion bugs.
- */
-export const PNG_CROSS_FORMAT_SAMPLES = listCrossFormatSamples('png');
-export const JPEG_CROSS_FORMAT_SAMPLES = listCrossFormatSamples('jpg');
-export const WEBP_CROSS_FORMAT_SAMPLES = listCrossFormatSamples('webp');
