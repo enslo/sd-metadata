@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-01-29
+
+### Added
+
+- **`strict` option for `read()`** (#95): Control dimension extraction behavior
+  - When `true`, dimensions come strictly from metadata only (returns 0 if not present)
+  - When `false` (default), missing dimensions fall back to image headers
+
+### Fixed
+
+- **CivitAI detection and format conversion** (#96): CivitAI images are now correctly detected and can be converted between formats
+  - Previously, CivitAI Orchestration images were incorrectly detected as ComfyUI or SD WebUI
+  - Images using Hires fix or Upscaler on CivitAI now convert to PNG correctly (previously became `unrecognized`)
+
+### Changed
+
+- **Parser refactoring** (#96, #98): Improved code quality across all parsers
+  - Immutable patterns for better maintainability
+  - Function decomposition for ComfyUI parser
+
 ## [1.5.0] - 2026-01-26
 
 ### Added
@@ -204,6 +224,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[1.6.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.6.0
 [1.5.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.5.0
 [1.4.2]: https://github.com/enslo/sd-metadata/releases/tag/v1.4.2
 [1.4.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.4.1
