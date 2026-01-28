@@ -1,10 +1,6 @@
-import type {
-  BasicComfyUIMetadata,
-  InternalParseResult,
-  MetadataEntry,
-} from '../types';
+import type { InternalParseResult, MetadataEntry } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import { buildEntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { parseComfyUI } from './comfyui';
 
@@ -53,54 +49,27 @@ export function parseStabilityMatrix(
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  // Override software to stability-matrix
-  const metadata: Omit<BasicComfyUIMetadata, 'raw'> = {
-    ...comfyResult.value,
-    software: 'stability-matrix',
-  };
-
-  // Find parameters-json entry for prompt override
+  // Find parameters-json entry for prompt/model override
   // PNG: stored in 'parameters-json' chunk
   // JPEG/WebP (after conversion): stored in 'Comment' as {"parameters-json": ..., ...}
-  let jsonText = entryRecord['parameters-json'];
+  const jsonText =
+    entryRecord['parameters-json'] ??
+    extractFromCommentJson(entryRecord, 'parameters-json');
+  const parsed = jsonText
+    ? parseJson<StabilityMatrixJson>(jsonText)
+    : undefined;
+  const data = parsed?.ok ? parsed.value : undefined;
 
-  // Try to extract from Comment JSON (JPEG/WebP conversion case)
-  if (!jsonText && entryRecord.Comment?.startsWith('{')) {
-    const commentParsed = parseJson<Record<string, unknown>>(
-      entryRecord.Comment,
-    );
-    if (commentParsed.ok) {
-      const commentData = commentParsed.value;
-      if (typeof commentData['parameters-json'] === 'string') {
-        jsonText = commentData['parameters-json'];
-      } else if (typeof commentData['parameters-json'] === 'object') {
-        jsonText = JSON.stringify(commentData['parameters-json']);
-      }
-    }
-  }
-
-  if (jsonText) {
-    const parsed = parseJson<StabilityMatrixJson>(jsonText);
-    if (parsed.ok) {
-      const data = parsed.value;
-
-      // Override prompts from parameters-json (more complete than workflow)
-      if (data.PositivePrompt !== undefined) {
-        metadata.prompt = data.PositivePrompt;
-      }
-      if (data.NegativePrompt !== undefined) {
-        metadata.negativePrompt = data.NegativePrompt;
-      }
-
-      // Override model information from parameters-json
-      if (data.ModelName !== undefined || data.ModelHash !== undefined) {
-        metadata.model = {
-          name: data.ModelName,
-          hash: data.ModelHash,
-        };
-      }
-    }
-  }
-
-  return Result.ok(metadata);
+  return Result.ok({
+    ...comfyResult.value,
+    software: 'stability-matrix',
+    // Override prompts from parameters-json (more complete than workflow)
+    prompt: data?.PositivePrompt ?? comfyResult.value.prompt,
+    negativePrompt: data?.NegativePrompt ?? comfyResult.value.negativePrompt,
+    // Override model if either name or hash is provided
+    model:
+      data?.ModelName !== undefined || data?.ModelHash !== undefined
+        ? { name: data?.ModelName, hash: data?.ModelHash }
+        : comfyResult.value.model,
+  });
 }

@@ -26,6 +26,16 @@ import {
 } from '../utils/binary';
 import { pngChunksToEntries, segmentsToEntries } from '../utils/convert';
 
+/** Options for the read function */
+export interface ReadOptions {
+  /**
+   * When true, dimensions are taken strictly from metadata only.
+   * When false (default), missing dimensions are extracted from image headers.
+   * @default false
+   */
+  strict?: boolean;
+}
+
 /**
  * Read and parse metadata from an image
  *
@@ -33,9 +43,13 @@ import { pngChunksToEntries, segmentsToEntries } from '../utils/convert';
  * any embedded generation metadata.
  *
  * @param input - Image file data (Uint8Array or ArrayBuffer)
+ * @param options - Read options
  * @returns Parse result containing metadata and raw data
  */
-export function read(input: Uint8Array | ArrayBuffer): ParseResult {
+export function read(
+  input: Uint8Array | ArrayBuffer,
+  options?: ReadOptions,
+): ParseResult {
   const data = toUint8Array(input);
   const format = detectFormat(data);
 
@@ -64,8 +78,8 @@ export function read(input: Uint8Array | ArrayBuffer): ParseResult {
 
   const metadata = parseResult.value;
 
-  // 4. Fallback for dimensions if missing
-  if (metadata.width === 0 || metadata.height === 0) {
+  // 4. Fallback for dimensions if missing (unless strict mode)
+  if (!options?.strict && (metadata.width === 0 || metadata.height === 0)) {
     const dims = HELPERS[format].readDimensions(data);
 
     if (dims) {

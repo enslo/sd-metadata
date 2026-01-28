@@ -3,7 +3,7 @@
  */
 
 // Export core API functions
-export { read } from './api/read';
+export { read, type ReadOptions } from './api/read';
 export { write, type WriteResult, type WriteWarning } from './api/write';
 export { writeAsWebUI } from './api/write-webui';
 
@@ -14,6 +14,10 @@ export { formatRaw } from './serializers/raw';
 // Export types (minimal public API)
 export type {
   CharacterPrompt,
+  ComfyNode,
+  ComfyNodeGraph,
+  ComfyNodeInputValue,
+  ComfyNodeReference,
   GenerationMetadata,
   HiresSettings,
   ITXtChunk,

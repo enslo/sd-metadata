@@ -122,8 +122,8 @@ describe('API Integration Tests', () => {
       }
     });
 
-    describe('dimension fallback', () => {
-      it('should fall back to image dimensions when metadata lacks them', () => {
+    describe('dimension handling', () => {
+      it('should fall back to image dimensions when metadata lacks them (default)', () => {
         // Most samples should have dimensions in metadata, but the API should
         // still provide dimensions from the image format if missing
         const data = loadSample('png', 'novelai-full.png');
@@ -132,6 +132,39 @@ describe('API Integration Tests', () => {
         if (result.status === 'success') {
           expect(result.metadata.width).toBeGreaterThan(0);
           expect(result.metadata.height).toBeGreaterThan(0);
+        }
+      });
+
+      it('should not fall back when strict mode is enabled', () => {
+        // In strict mode, dimensions come only from metadata, not image headers
+        const data = loadSample('png', 'novelai-full.png');
+        const result = read(data, { strict: true });
+        expect(result.status).toBe('success');
+        // NovelAI includes dimensions in metadata, so this should still have values
+        if (result.status === 'success') {
+          expect(result.metadata.width).toBeGreaterThan(0);
+          expect(result.metadata.height).toBeGreaterThan(0);
+        }
+      });
+
+      it('should return 0 for dimensions when metadata lacks them in strict mode', () => {
+        // civitai-hires has dimensions only in image headers, not in metadata
+        const data = loadSample('jpg', 'civitai-hires.jpg');
+
+        // Default behavior: falls back to image headers
+        const defaultResult = read(data);
+        expect(defaultResult.status).toBe('success');
+        if (defaultResult.status === 'success') {
+          expect(defaultResult.metadata.width).toBeGreaterThan(0);
+          expect(defaultResult.metadata.height).toBeGreaterThan(0);
+        }
+
+        // Strict mode: no fallback, returns 0
+        const strictResult = read(data, { strict: true });
+        expect(strictResult.status).toBe('success');
+        if (strictResult.status === 'success') {
+          expect(strictResult.metadata.width).toBe(0);
+          expect(strictResult.metadata.height).toBe(0);
         }
       });
     });

@@ -2,11 +2,11 @@ import type {
   CharacterPrompt,
   InternalParseResult,
   MetadataEntry,
-  NovelAIMetadata,
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { trimObject } from '../utils/object';
 
 /**
  * NovelAI Comment JSON structure
@@ -89,48 +89,36 @@ export function parseNovelAI(entries: MetadataEntry[]): InternalParseResult {
   const negativePrompt =
     comment.v4_negative_prompt?.caption?.base_caption ?? comment.uc ?? '';
 
-  // Build metadata
-  const metadata: Omit<NovelAIMetadata, 'raw'> = {
+  // Extract V4 character prompts
+  const charCaptions = comment.v4_prompt?.caption?.char_captions;
+  const characterPrompts =
+    charCaptions && charCaptions.length > 0
+      ? charCaptions
+          .map((cc): CharacterPrompt | null => {
+            if (!cc.char_caption) return null;
+            return {
+              prompt: cc.char_caption,
+              center: cc.centers?.[0],
+            };
+          })
+          .filter((cp): cp is CharacterPrompt => cp !== null)
+      : undefined;
+
+  return Result.ok({
     software: 'novelai',
     prompt,
     negativePrompt,
     width,
     height,
-  };
-
-  // Add sampling settings if present
-  if (
-    comment.steps !== undefined ||
-    comment.scale !== undefined ||
-    comment.seed !== undefined ||
-    comment.noise_schedule !== undefined ||
-    comment.sampler !== undefined
-  ) {
-    metadata.sampling = {
+    sampling: trimObject({
       steps: comment.steps,
       cfg: comment.scale,
       seed: comment.seed,
       sampler: comment.sampler,
       scheduler: comment.noise_schedule,
-    };
-  }
-
-  // Extract V4 character prompts
-  const charCaptions = comment.v4_prompt?.caption?.char_captions;
-  if (charCaptions && charCaptions.length > 0) {
-    metadata.characterPrompts = charCaptions
-      .map((cc): CharacterPrompt | null => {
-        if (!cc.char_caption) return null;
-        return {
-          prompt: cc.char_caption,
-          center: cc.centers?.[0],
-        };
-      })
-      .filter((cp): cp is CharacterPrompt => cp !== null);
-
-    metadata.useCoords = comment.v4_prompt?.use_coords;
-    metadata.useOrder = comment.v4_prompt?.use_order;
-  }
-
-  return Result.ok(metadata);
+    }),
+    characterPrompts,
+    useCoords: characterPrompts ? comment.v4_prompt?.use_coords : undefined,
+    useOrder: characterPrompts ? comment.v4_prompt?.use_order : undefined,
+  });
 }

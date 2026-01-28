@@ -1,9 +1,6 @@
-import type {
-  InternalParseResult,
-  MetadataEntry,
-  StandardMetadata,
-} from '../types';
+import type { InternalParseResult, MetadataEntry } from '../types';
 import { Result } from '../types';
+import { trimObject } from '../utils/object';
 
 /**
  * Parse A1111-format metadata from entries
@@ -62,26 +59,11 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
   const app = settingsMap.get('App');
   const software = detectSoftwareVariant(version, app);
 
-  // Build metadata
-  const metadata: Omit<StandardMetadata, 'raw'> = {
-    software,
-    prompt,
-    negativePrompt,
-    width,
-    height,
-  };
-
-  // Add model settings
+  // Extract model settings
   const modelName = settingsMap.get('Model');
   const modelHash = settingsMap.get('Model hash');
-  if (modelName || modelHash) {
-    metadata.model = {
-      name: modelName,
-      hash: modelHash,
-    };
-  }
 
-  // Add sampling settings
+  // Extract sampling settings
   const sampler = settingsMap.get('Sampler');
   const scheduler = settingsMap.get('Schedule type');
   const steps = parseNumber(settingsMap.get('Steps'));
@@ -91,42 +73,32 @@ export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
   const seed = parseNumber(settingsMap.get('Seed'));
   const clipSkip = parseNumber(settingsMap.get('Clip skip'));
 
-  if (
-    sampler !== undefined ||
-    scheduler !== undefined ||
-    steps !== undefined ||
-    cfg !== undefined ||
-    seed !== undefined ||
-    clipSkip !== undefined
-  ) {
-    metadata.sampling = {
+  // Extract hires settings
+  const hiresScale = parseNumber(settingsMap.get('Hires upscale'));
+  const upscaler = settingsMap.get('Hires upscaler');
+  const hiresSteps = parseNumber(settingsMap.get('Hires steps'));
+  const denoise = parseNumber(settingsMap.get('Denoising strength'));
+  const hiresSize = settingsMap.get('Hires size');
+  const [hiresWidth] = parseSize(hiresSize ?? '');
+  const scale = hiresScale ?? (hiresWidth > 0 ? hiresWidth / width : undefined);
+
+  return Result.ok({
+    software,
+    prompt,
+    negativePrompt,
+    width,
+    height,
+    model: trimObject({ name: modelName, hash: modelHash }),
+    sampling: trimObject({
       sampler,
       scheduler,
       steps,
       cfg,
       seed,
       clipSkip,
-    };
-  }
-
-  // Add hires settings
-  const hiresScale = parseNumber(settingsMap.get('Hires upscale'));
-  const upscaler = settingsMap.get('Hires upscaler');
-  const hiresSteps = parseNumber(settingsMap.get('Hires steps'));
-  const denoise = parseNumber(settingsMap.get('Denoising strength'));
-  const hiresSize = settingsMap.get('Hires size');
-
-  if (
-    [hiresScale, hiresSize, upscaler, hiresSteps, denoise].some(
-      (v) => v !== undefined,
-    )
-  ) {
-    const [hiresWidth] = parseSize(hiresSize ?? '');
-    const scale = hiresScale ?? hiresWidth / width;
-    metadata.hires = { scale, upscaler, steps: hiresSteps, denoise };
-  }
-
-  return Result.ok(metadata);
+    }),
+    hires: trimObject({ scale, upscaler, steps: hiresSteps, denoise }),
+  });
 }
 
 /**
