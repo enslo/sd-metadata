@@ -97,7 +97,9 @@ export function App() {
     if (!state.parseResult) return null;
     if (state.parseResult.status === 'success') {
       return {
-        label: getSoftwareLabel(state.parseResult.metadata.software || 'Unknown'),
+        label: getSoftwareLabel(
+          state.parseResult.metadata.software || 'Unknown',
+        ),
         status: 'success',
       };
     }
