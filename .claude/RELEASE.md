@@ -1,40 +1,41 @@
----
-description: How to create and publish a new release
----
-
 # Release Workflow
 
-Complete workflow for creating and publishing a new package release.
+Workflow for publishing a new package release.
+
+For daily development workflow, see [WORKFLOW.md](./WORKFLOW.md).
 
 ## Prerequisites
 
+- All features for this release are merged to `release/vX.Y.Z`
 - All tests passing
 - Git working directory is clean
 
 ## Steps
 
-### 1. Plan the Release
+### 1. Finalize Version
 
-Determine version number using semantic versioning:
+Review the changes and determine the appropriate version:
 
 - **Patch** (x.x.N): Bug fixes only
 - **Minor** (x.N.0): New features, backward compatible
 - **Major** (N.0.0): Breaking changes
 
-### 2. Create Release Branch
-
-Create a release branch from `main`:
+If the release branch name needs to change (e.g., `release/v1.6.0` → `release/v2.0.0`):
 
 ```bash
-git checkout main
-git pull
-git checkout -b release/vX.Y.Z
-git push -u origin release/vX.Y.Z
+git checkout release/vOLD
+git branch -m release/vNEW
+git push origin -u release/vNEW
+git push origin --delete release/vOLD
 ```
 
-Replace `X.Y.Z` with your version number (e.g., `1.3.0`).
+### 2. Create Release Work Branch
 
-Feature PRs for the release should target `release/vX.Y.Z` branch (not `main`).
+```bash
+git checkout release/vX.Y.Z
+git pull
+git checkout -b chore/release-vX.Y.Z
+```
 
 ### 3. Update CHANGELOG.md
 
@@ -53,7 +54,7 @@ Add new version entry at the top:
 - Description of changes (#PR)
 ```
 
-Don't forget to add version link at the bottom:
+Add version link at the bottom:
 
 ```markdown
 [X.Y.Z]: https://github.com/enslo/sd-metadata/releases/tag/vX.Y.Z
@@ -61,19 +62,13 @@ Don't forget to add version link at the bottom:
 
 ### 4. Update package.json
 
-Update version in `package.json`:
-
 ```json
 {
   "version": "X.Y.Z"
 }
 ```
 
-### 5. Update Demo Site Package
-
-Update demo site to use the new version:
-
-Edit `demo/package.json`:
+### 5. Update demo/package.json
 
 ```json
 {
@@ -83,47 +78,50 @@ Edit `demo/package.json`:
 }
 ```
 
-> [!NOTE]
-> Demo uses exact versions (no `^` or `~`) so no lockfile update is needed.
-> Cloudflare Pages is configured with `SKIP_DEPENDENCY_INSTALL=true` and uses `npm install`.
+> Demo uses exact versions (no `^` or `~`).
 
 ### 6. Update README CDN Version
 
-Update the CDN usage example in README.md to reference the new version:
+Update the pinned version example in both README files:
+
+- `README.md`
+- `README.ja.md`
 
 ```markdown
 > https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@X.Y.Z/dist/index.js
 ```
 
-Search for `@enslo/sd-metadata@` in README.md and update the pinned version example.
-
-### 7. Commit and Create PR
+### 7. Commit and Push
 
 ```bash
 git add CHANGELOG.md package.json demo/package.json README.md
 git commit -m "chore: release vX.Y.Z"
-git push -u origin release/vX.Y.Z
+git push -u origin chore/release-vX.Y.Z
 ```
 
-Create PR:
+### 8. Create PR to Release Branch
 
 ```bash
-gh pr create --title "chore: release vX.Y.Z" --body "Release vX.Y.Z
+gh pr create --base release/vX.Y.Z --title "chore: release vX.Y.Z" --body "Release preparation for vX.Y.Z
 
 See CHANGELOG.md for details."
 ```
 
-### 8. Merge Release PR
+After review, merge the PR.
 
-After review, merge the PR:
+### 9. Create PR to Main
 
 ```bash
-gh pr merge <PR_NUMBER> --squash
+git checkout release/vX.Y.Z
+git pull
+gh pr create --base main --title "release vX.Y.Z" --body "Release vX.Y.Z
+
+See CHANGELOG.md for details."
 ```
 
-### 9. Create GitHub Release
+After review, merge the PR.
 
-Switch to main and create release:
+### 10. Create GitHub Release
 
 ```bash
 git checkout main
@@ -131,12 +129,9 @@ git pull
 gh release create vX.Y.Z --title "vX.Y.Z" --notes-file <(sed -n '/## \[X.Y.Z\]/,/## \[/p' CHANGELOG.md | head -n -1)
 ```
 
-Or manually copy CHANGELOG content to release notes.
+`gh release create` automatically creates both the Git tag and the GitHub release.
 
-**Note**: `gh release create` automatically creates both the Git tag and the GitHub release.
-No need to create the tag separately.
-
-### 10. Verify Publish & Deploy
+### 11. Verify Publish & Deploy
 
 **Automated** (triggered by release):
 
@@ -149,10 +144,11 @@ No need to create the tag separately.
 - Check demo site: <https://sd-metadata.pages.dev/>
 - Verify GitHub Actions succeeded
 
-### 11. Cleanup
+### 12. Cleanup
 
 ```bash
 git branch -d release/vX.Y.Z
+git branch -d chore/release-vX.Y.Z
 ```
 
 ## Troubleshooting
@@ -176,8 +172,8 @@ Check:
 
 ## Notes
 
-- **Never commit directly to `main`** - always use PRs
+- **Never commit directly to `main` or `release/vX.Y.Z`** - always use PRs
 - **Test locally** before creating release
 - **Version numbers** follow semantic versioning strictly
 - **CHANGELOG** should be user-facing (no internal refactorings unless significant)
-- **Demo dependencies** use exact versions (no `^` or `~`) for deterministic builds
+- **Demo dependencies** use exact versions for deterministic builds
