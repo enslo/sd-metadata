@@ -24,7 +24,11 @@ export function LanguageSwitcher() {
       class={styles.switcher}
       onClick={toggleLanguage}
       aria-label={t.languageSwitcher.ariaLabel}
-      title={currentLocale === 'en' ? t.languageSwitcher.switchToJapanese : t.languageSwitcher.switchToEnglish}
+      title={
+        currentLocale === 'en'
+          ? t.languageSwitcher.switchToJapanese
+          : t.languageSwitcher.switchToEnglish
+      }
     >
       <Languages size={20} aria-hidden="true" />
       <span>{languageLabel}</span>

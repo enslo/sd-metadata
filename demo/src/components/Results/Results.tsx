@@ -80,9 +80,7 @@ function ParsedTabContent({
   }
 
   if (parseResult.status === 'unrecognized') {
-    return (
-      <ErrorMessage message={t.results.errors.unrecognized} />
-    );
+    return <ErrorMessage message={t.results.errors.unrecognized} />;
   }
 
   return <ParsedMetadata metadata={parseResult.metadata} />;
