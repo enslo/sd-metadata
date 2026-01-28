@@ -85,11 +85,7 @@ export function convertMetadata(
   const raw = parseResult.raw;
 
   // If source and target are the same format, return as-is
-  if (
-    (raw.format === 'png' && targetFormat === 'png') ||
-    (raw.format === 'jpeg' && targetFormat === 'jpeg') ||
-    (raw.format === 'webp' && targetFormat === 'webp')
-  ) {
+  if (raw.format === targetFormat) {
     return Result.ok(raw);
   }
 

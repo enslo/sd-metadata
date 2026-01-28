@@ -6,6 +6,7 @@ import type {
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { trimObject } from '../utils/object';
 
 /**
  * HuggingFace Space JSON metadata structure
@@ -73,16 +74,16 @@ export function parseHfSpace(entries: MetadataEntry[]): InternalParseResult {
     negativePrompt: json.negative_prompt ?? '',
     width,
     height,
-    model: {
+    model: trimObject({
       name: json.Model,
       hash: json['Model hash'],
-    },
-    sampling: {
+    }),
+    sampling: trimObject({
       sampler: json.sampler,
       steps: json.num_inference_steps,
       cfg: json.guidance_scale,
       seed: json.seed,
-    },
+    }),
   };
 
   return Result.ok(metadata);

@@ -2,11 +2,11 @@ import type {
   ComfyNodeGraph,
   InternalParseResult,
   MetadataEntry,
-  SwarmUIMetadata,
 } from '../types';
 import { Result } from '../types';
 import { buildEntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { trimObject } from '../utils/object';
 
 /**
  * SwarmUI parameters JSON structure
@@ -104,60 +104,32 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
   const width = params.width ?? 0;
   const height = params.height ?? 0;
 
-  // Build metadata
-  const metadata: Omit<SwarmUIMetadata, 'raw'> = {
+  // Parse nodes from prompt chunk (PNG format) or Make field (JPEG/WebP extended format)
+  const promptSource = entryRecord.prompt || entryRecord.Make;
+  const promptParsed = promptSource ? parseJson(promptSource) : undefined;
+  const nodes = promptParsed?.ok
+    ? (promptParsed.value as ComfyNodeGraph)
+    : undefined;
+
+  return Result.ok({
     software: 'swarmui',
     prompt: params.prompt ?? '',
     negativePrompt: params.negativeprompt ?? '',
     width,
     height,
-  };
-
-  // Add nodes from prompt chunk (PNG format) or Make field (JPEG/WebP extended format)
-  const promptSource = entryRecord.prompt || entryRecord.Make;
-  if (promptSource) {
-    const promptParsed = parseJson(promptSource);
-    if (promptParsed.ok) {
-      metadata.nodes = promptParsed.value as ComfyNodeGraph;
-    }
-  }
-
-  // Add model settings
-  if (params.model) {
-    metadata.model = {
-      name: params.model,
-    };
-  }
-
-  // Add sampling settings
-  if (
-    params.seed !== undefined ||
-    params.steps !== undefined ||
-    params.cfgscale !== undefined ||
-    params.sampler !== undefined ||
-    params.scheduler !== undefined
-  ) {
-    metadata.sampling = {
+    nodes,
+    model: trimObject({ name: params.model }),
+    sampling: trimObject({
       seed: params.seed,
       steps: params.steps,
       cfg: params.cfgscale,
       sampler: params.sampler,
       scheduler: params.scheduler,
-    };
-  }
-
-  // Add hires/upscale settings
-  if (
-    params.refinerupscale !== undefined ||
-    params.refinerupscalemethod !== undefined ||
-    params.refinercontrolpercentage !== undefined
-  ) {
-    metadata.hires = {
+    }),
+    hires: trimObject({
       scale: params.refinerupscale,
       upscaler: params.refinerupscalemethod,
       denoise: params.refinercontrolpercentage,
-    };
-  }
-
-  return Result.ok(metadata);
+    }),
+  });
 }
