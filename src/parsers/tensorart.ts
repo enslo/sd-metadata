@@ -1,12 +1,12 @@
 import type {
-  BasicComfyUIMetadata,
   ComfyNodeGraph,
   InternalParseResult,
   MetadataEntry,
 } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import { buildEntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { trimObject } from '../utils/object';
 
 /**
  * TensorArt generation_data JSON structure
@@ -43,28 +43,11 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   // Find generation_data entry
   // PNG: stored in 'generation_data' chunk
   // JPEG/WebP (after conversion): stored in 'Comment' as {"generation_data": ..., "prompt": ...}
-  let dataText = entryRecord.generation_data;
-  let promptChunk = entryRecord.prompt;
-
-  // Try to extract from Comment JSON (JPEG/WebP conversion case)
-  if (!dataText && entryRecord.Comment?.startsWith('{')) {
-    const commentParsed = parseJson<Record<string, unknown>>(
-      entryRecord.Comment,
-    );
-    if (commentParsed.ok) {
-      const commentData = commentParsed.value;
-      if (typeof commentData.generation_data === 'string') {
-        dataText = commentData.generation_data;
-      } else if (typeof commentData.generation_data === 'object') {
-        dataText = JSON.stringify(commentData.generation_data);
-      }
-      if (typeof commentData.prompt === 'string') {
-        promptChunk = commentData.prompt;
-      } else if (typeof commentData.prompt === 'object') {
-        promptChunk = JSON.stringify(commentData.prompt);
-      }
-    }
-  }
+  const dataText =
+    entryRecord.generation_data ??
+    extractFromCommentJson(entryRecord, 'generation_data');
+  const promptChunk =
+    entryRecord.prompt ?? extractFromCommentJson(entryRecord, 'prompt');
 
   if (!dataText) {
     return Result.error({ type: 'unsupportedFormat' });
@@ -97,45 +80,31 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
     });
   }
 
-  // Build metadata
-  const metadata: Omit<BasicComfyUIMetadata, 'raw'> = {
+  // Compute seed (resolve -1 from KSampler node)
+  const baseSeed = data.seed ? Number(data.seed) : undefined;
+  const seed =
+    baseSeed === -1
+      ? findActualSeed(promptParsed.value as ComfyNodeGraph)
+      : baseSeed;
+
+  return Result.ok({
     software: 'tensorart',
     prompt: data.prompt ?? '',
     negativePrompt: data.negativePrompt ?? '',
     width,
     height,
     nodes: promptParsed.value as ComfyNodeGraph,
-  };
-
-  // Add model settings
-  if (data.baseModel?.modelFileName || data.baseModel?.hash) {
-    metadata.model = {
-      name: data.baseModel.modelFileName,
-      hash: data.baseModel.hash,
-    };
-  }
-
-  // Add sampling settings
-  if (
-    data.seed !== undefined ||
-    data.steps !== undefined ||
-    data.cfgScale !== undefined ||
-    data.clipSkip !== undefined
-  ) {
-    const baseSeed = data.seed ? Number(data.seed) : undefined;
-
-    metadata.sampling = {
-      seed:
-        baseSeed === -1
-          ? findActualSeed(promptParsed.value as ComfyNodeGraph)
-          : baseSeed,
+    model: trimObject({
+      name: data.baseModel?.modelFileName,
+      hash: data.baseModel?.hash,
+    }),
+    sampling: trimObject({
+      seed,
       steps: data.steps,
       cfg: data.cfgScale,
       clipSkip: data.clipSkip,
-    };
-  }
-
-  return Result.ok(metadata);
+    }),
+  });
 }
 
 /**

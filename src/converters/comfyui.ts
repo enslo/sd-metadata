@@ -26,7 +26,6 @@ import { findSegment } from './utils';
 export function convertComfyUIPngToSegments(
   chunks: PngTextChunk[],
 ): MetadataSegment[] {
-  // Use generic KV converter
   return convertKvPngToSegments(chunks);
 }
 

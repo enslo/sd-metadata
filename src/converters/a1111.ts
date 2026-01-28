@@ -25,7 +25,6 @@ export function convertA1111PngToSegments(
     return [];
   }
 
-  //Simply copy to exifUserComment
   return [
     {
       source: { type: 'exifUserComment' },
@@ -43,7 +42,6 @@ export function convertA1111PngToSegments(
 export function convertA1111SegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  // Find exifUserComment segment
   const userComment = segments.find((s) => s.source.type === 'exifUserComment');
   if (!userComment) {
     return [];

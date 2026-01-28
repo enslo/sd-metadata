@@ -61,7 +61,7 @@ export function isRawMismatchExpected(filename: string): boolean {
  * @param format - The image format directory to scan
  * @returns Array of filenames (not full paths)
  */
-export function listSamples(format: 'png' | 'jpg' | 'webp'): string[] {
+function listSamples(format: 'png' | 'jpg' | 'webp'): string[] {
   const dir = getSamplesDir(format);
   const files = fs.readdirSync(dir);
 
