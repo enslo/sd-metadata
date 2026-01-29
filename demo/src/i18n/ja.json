@@ -25,5 +25,11 @@
     "ariaLabel": "言語を切り替え",
     "switchToJapanese": "日本語に切り替え",
     "switchToEnglish": "英語に切り替え"
+  },
+  "saveFab": {
+    "buttonLabel": "メタデータ付きで画像を保存",
+    "menuLabel": "出力形式を選択",
+    "to": "から",
+    "keepMetadata": "メタデータを保持"
   }
 }
