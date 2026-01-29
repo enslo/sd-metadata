@@ -2,44 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readWebpMetadata } from '../../../src/readers/webp';
 import type { MetadataSegment } from '../../../src/types';
 import { writeWebpMetadata } from '../../../src/writers/webp';
-
-/**
- * Create a minimal valid WebP structure for testing
- */
-function createMinimalWebp(): Uint8Array {
-  return new Uint8Array([
-    // RIFF header
-    0x52,
-    0x49,
-    0x46,
-    0x46, // "RIFF"
-    0x14,
-    0x00,
-    0x00,
-    0x00, // File size - 8
-    0x57,
-    0x45,
-    0x42,
-    0x50, // "WEBP"
-    // VP8 chunk (minimal)
-    0x56,
-    0x50,
-    0x38,
-    0x20, // "VP8 "
-    0x08,
-    0x00,
-    0x00,
-    0x00, // Chunk size
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00, // Placeholder data
-  ]);
-}
+import { createMinimalWebp } from '../../helpers/minimal-images';
 
 describe('writeWebpMetadata - Unit Tests', () => {
   describe('error handling', () => {

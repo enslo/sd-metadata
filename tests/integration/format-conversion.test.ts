@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { type ParseResult, read, write } from '../../src/index';
+import {
+  createMinimalJpeg,
+  createMinimalPng,
+  createMinimalWebp,
+} from '../helpers/minimal-images';
 import { expectRawEqual } from '../helpers/raw-equal';
 import { expectRawStructure } from '../helpers/raw-structure';
 import {
@@ -15,10 +20,10 @@ import {
 const EMPTY_METADATA: ParseResult = { status: 'empty' };
 
 describe('Format conversion accuracy', () => {
-  // Base images for conversion targets
-  const getJpegBase = () => loadSample('jpg', 'civitai.jpeg');
-  const getWebpBase = () => loadSample('webp', 'forge.webp');
-  const getPngBase = () => loadSample('png', 'forge.png');
+  // Minimal images for conversion targets
+  const getJpegBase = createMinimalJpeg;
+  const getWebpBase = createMinimalWebp;
+  const getPngBase = createMinimalPng;
 
   // ============================================================================
   // Same-format conversions

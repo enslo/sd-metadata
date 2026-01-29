@@ -2,54 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readJpegMetadata } from '../../../src/readers/jpeg';
 import type { MetadataSegment } from '../../../src/types';
 import { writeJpegMetadata } from '../../../src/writers/jpeg';
-
-/**
- * Create a minimal valid JPEG structure for testing
- */
-function createMinimalJpeg(): Uint8Array {
-  // SOI + minimal APP0 (JFIF) + SOS + minimal scan data + EOI
-  return new Uint8Array([
-    // SOI
-    0xff,
-    0xd8,
-    // APP0 (JFIF marker)
-    0xff,
-    0xe0,
-    0x00,
-    0x10, // Length: 16
-    0x4a,
-    0x46,
-    0x49,
-    0x46,
-    0x00, // "JFIF\0"
-    0x01,
-    0x01, // Version 1.1
-    0x00, // No units
-    0x00,
-    0x01,
-    0x00,
-    0x01, // X/Y density: 1
-    0x00,
-    0x00, // No thumbnail
-    // SOS (Start of Scan)
-    0xff,
-    0xda,
-    0x00,
-    0x08, // Length: 8
-    0x01, // 1 component
-    0x01,
-    0x00, // Component ID, DC/AC tables
-    0x00,
-    0x3f,
-    0x00, // Spectral selection, successive approximation
-    // Minimal scan data (single DC coefficient)
-    0xff,
-    0x00, // Escaped 0xFF (valid JPEG data)
-    // EOI
-    0xff,
-    0xd9,
-  ]);
-}
+import { createMinimalJpeg } from '../../helpers/minimal-images';
 
 describe('writeJpegMetadata - Unit Tests', () => {
   describe('error handling', () => {

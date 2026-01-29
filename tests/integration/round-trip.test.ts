@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { read, write } from '../../src/index';
+import {
+  createMinimalJpeg,
+  createMinimalPng,
+  createMinimalWebp,
+} from '../helpers/minimal-images';
 import { expectNovelAIRawEqual, expectRawEqual } from '../helpers/raw-equal';
 import {
   JPEG_SAMPLES,
@@ -10,10 +15,10 @@ import {
 } from '../helpers/samples';
 
 describe('Round-trip preservation', () => {
-  // Base images for cross-format conversion
-  const getJpegBase = () => loadSample('jpg', 'civitai.jpeg');
-  const getWebpBase = () => loadSample('webp', 'forge.webp');
-  const getPngBase = () => loadSample('png', 'forge.png');
+  // Minimal images for cross-format conversion targets
+  const getJpegBase = createMinimalJpeg;
+  const getWebpBase = createMinimalWebp;
+  const getPngBase = createMinimalPng;
 
   describe('PNG → JPEG → PNG', () => {
     for (const filename of PNG_SAMPLES) {

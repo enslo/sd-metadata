@@ -2,63 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readPngMetadata } from '../../../src/readers/png';
 import type { ITXtChunk, PngTextChunk, TExtChunk } from '../../../src/types';
 import { writePngMetadata } from '../../../src/writers/png';
-
-/**
- * Create a minimal valid PNG structure for testing
- */
-function createMinimalPng(): Uint8Array {
-  // PNG signature + IHDR + IEND
-  return new Uint8Array([
-    // Signature
-    0x89,
-    0x50,
-    0x4e,
-    0x47,
-    0x0d,
-    0x0a,
-    0x1a,
-    0x0a,
-    // IHDR chunk (13 bytes data: width=1, height=1, bit depth=8, color type=6 RGBA)
-    0x00,
-    0x00,
-    0x00,
-    0x0d, // Length
-    0x49,
-    0x48,
-    0x44,
-    0x52, // "IHDR"
-    0x00,
-    0x00,
-    0x00,
-    0x01, // Width: 1
-    0x00,
-    0x00,
-    0x00,
-    0x01, // Height: 1
-    0x08,
-    0x06,
-    0x00,
-    0x00,
-    0x00, // Bit depth, color type, compression, filter, interlace
-    0x1f,
-    0x15,
-    0xc4,
-    0x89, // CRC
-    // IEND chunk
-    0x00,
-    0x00,
-    0x00,
-    0x00, // Length
-    0x49,
-    0x45,
-    0x4e,
-    0x44, // "IEND"
-    0xae,
-    0x42,
-    0x60,
-    0x82, // CRC
-  ]);
-}
+import { createMinimalPng } from '../../helpers/minimal-images';
 
 describe('writePngMetadata - Unit Tests', () => {
   describe('error handling', () => {
