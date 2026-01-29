@@ -7,6 +7,7 @@ import { DropZone } from './components/DropZone/DropZone';
 import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
 import { LanguageSwitcher } from './components/LanguageSwitcher/LanguageSwitcher';
 import { Results } from './components/Results/Results';
+import { SaveFab } from './components/SaveFab';
 import { ScrollToTop } from './components/ScrollToTop/ScrollToTop';
 import { $t } from './i18n';
 import { getSoftwareLabel } from './utils';
@@ -142,6 +143,13 @@ export function App() {
           </a>
         </p>
       </footer>
+      {state.parseResult && state.previewUrl && state.filename && (
+        <SaveFab
+          previewUrl={state.previewUrl}
+          parseResult={state.parseResult}
+          filename={state.filename}
+        />
+      )}
       <ScrollToTop />
     </>
   );
