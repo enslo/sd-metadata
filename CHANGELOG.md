@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-01-29
+
+### Fixed
+
+- **CivitAI Orchestration JPEG→PNG conversion** (#102): Store all metadata in a single `prompt` chunk instead of separating into multiple chunks, improving round-trip compatibility
+  - This fixes an issue introduced in v1.6.0 where the chunk structure was not optimal
+
 ## [1.6.0] - 2026-01-29
 
 ### Added
@@ -224,6 +231,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[1.6.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.6.1
 [1.6.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.6.0
 [1.5.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.5.0
 [1.4.2]: https://github.com/enslo/sd-metadata/releases/tag/v1.4.2
