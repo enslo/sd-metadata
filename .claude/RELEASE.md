@@ -68,19 +68,7 @@ Add version link at the bottom:
 }
 ```
 
-### 5. Update demo/package.json
-
-```json
-{
-  "dependencies": {
-    "@enslo/sd-metadata": "X.Y.Z"
-  }
-}
-```
-
-> Demo uses exact versions (no `^` or `~`).
-
-### 6. Update README CDN Version
+### 5. Update README CDN Version
 
 Update the pinned version example in both README files:
 
@@ -91,15 +79,15 @@ Update the pinned version example in both README files:
 > https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@X.Y.Z/dist/index.js
 ```
 
-### 7. Commit and Push
+### 6. Commit and Push
 
 ```bash
-git add CHANGELOG.md package.json demo/package.json README.md
+git add CHANGELOG.md package.json README.md README.ja.md
 git commit -m "chore: release vX.Y.Z"
 git push -u origin chore/release-vX.Y.Z
 ```
 
-### 8. Create PR to Release Branch
+### 7. Create PR to Release Branch
 
 ```bash
 gh pr create --base release/vX.Y.Z --title "chore: release vX.Y.Z" --body "Release preparation for vX.Y.Z
@@ -109,7 +97,7 @@ See CHANGELOG.md for details."
 
 After review, merge the PR.
 
-### 9. Create PR to Main
+### 8. Create PR to Main
 
 ```bash
 git checkout release/vX.Y.Z
@@ -121,7 +109,7 @@ See CHANGELOG.md for details."
 
 After review, merge the PR.
 
-### 10. Create GitHub Release
+### 9. Create GitHub Release
 
 ```bash
 git checkout main
@@ -131,7 +119,7 @@ gh release create vX.Y.Z --title "vX.Y.Z" --notes-file <(sed -n '/## \[X.Y.Z\]/,
 
 `gh release create` automatically creates both the Git tag and the GitHub release.
 
-### 11. Verify Publish & Deploy
+### 10. Verify Publish & Deploy
 
 **Automated** (triggered by release):
 
@@ -144,7 +132,7 @@ gh release create vX.Y.Z --title "vX.Y.Z" --notes-file <(sed -n '/## \[X.Y.Z\]/,
 - Check demo site: <https://sd-metadata.pages.dev/>
 - Verify GitHub Actions succeeded
 
-### 12. Cleanup
+### 11. Cleanup
 
 ```bash
 git branch -d release/vX.Y.Z
@@ -161,19 +149,9 @@ Check GitHub Actions logs. Common issues:
 - npm Trusted Publisher not configured
 - Package version already exists
 
-### Demo Site Not Updated
-
-Check:
-
-1. Cloudflare Pages `SKIP_DEPENDENCY_INSTALL=true` environment variable set?
-2. Build command includes `npm install`?
-3. Cloudflare Pages deployment succeeded?
-4. Browser cache cleared?
-
 ## Notes
 
 - **Never commit directly to `main` or `release/vX.Y.Z`** - always use PRs
 - **Test locally** before creating release
 - **Version numbers** follow semantic versioning strictly
 - **CHANGELOG** should be user-facing (no internal refactorings unless significant)
-- **Demo dependencies** use exact versions for deterministic builds
