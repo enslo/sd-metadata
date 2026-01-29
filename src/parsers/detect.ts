@@ -225,13 +225,19 @@ function detectComfyUIEntries(
   }
 
   // ComfyUI: Prompt chunk with workflow JSON data
-  // IMPORTANT: Check SwarmUI FIRST
+  // IMPORTANT: Check SwarmUI and CivitAI FIRST
   if ('prompt' in entryRecord) {
     const promptText = entryRecord.prompt;
     if (promptText?.startsWith('{')) {
       // SwarmUI: Must check FIRST
       if (promptText.includes(MARKERS.SWARMUI)) {
         return 'swarmui';
+      }
+
+      // CivitAI: Has extraMetadata key in prompt JSON
+      // This detects CivitAI Orchestration format where all data is in single prompt chunk
+      if (promptText.includes(`"${MARKERS.CIVITAI_EXTRA}"`)) {
+        return 'civitai';
       }
 
       // ComfyUI: Has class_type in prompt JSON

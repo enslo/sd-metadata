@@ -19,15 +19,7 @@ import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
 import { convertA1111PngToSegments, convertA1111SegmentsToPng } from './a1111';
 import { createEncodedChunk } from './chunk-encoding';
-import { findSegment, stringify } from './utils';
-
-/**
- * CivitAI-specific keys that should be preserved as separate chunks
- *
- * These keys are used for CivitAI detection in PNG format,
- * so they must remain as individual chunks (not merged into "prompt").
- */
-const CIVITAI_SPECIAL_KEYS = ['extra', 'extraMetadata', 'resource-stack'];
+import { findSegment } from './utils';
 
 /**
  * Convert CivitAI PNG chunks to JPEG/WebP segments
@@ -82,7 +74,7 @@ export function convertCivitaiPngToSegments(
  * Convert JPEG/WebP segments to CivitAI PNG chunks
  *
  * Handles BOTH CivitAI formats:
- * - Orchestration (JSON): Separate special keys, combine node data into "prompt" chunk
+ * - Orchestration (JSON): Store entire JSON in single "prompt" chunk
  * - A1111 (text): Fall back to A1111 converter
  *
  * @param segments - Metadata segments from JPEG/WebP
@@ -102,39 +94,7 @@ export function convertCivitaiSegmentsToPng(
     return convertA1111SegmentsToPng(segments);
   }
 
-  const parsed = parseJson<Record<string, unknown>>(userComment.data);
-  if (!parsed.ok) {
-    // If JSON parsing fails, try A1111 conversion
-    return convertA1111SegmentsToPng(segments);
-  }
-
-  const data = parsed.value;
-  const promptData: Record<string, unknown> = {};
-  const chunks: PngTextChunk[] = [];
-
-  // Separate CivitAI-specific keys from node data
-  for (const [key, value] of Object.entries(data)) {
-    if (CIVITAI_SPECIAL_KEYS.includes(key)) {
-      // Create separate chunk for CivitAI-specific data
-      chunks.push(
-        ...createEncodedChunk(key, stringify(value), 'text-utf8-raw'),
-      );
-    } else {
-      // Collect node data for prompt chunk
-      promptData[key] = value;
-    }
-  }
-
-  // Create "prompt" chunk with combined node data
-  if (Object.keys(promptData).length > 0) {
-    chunks.unshift(
-      ...createEncodedChunk(
-        'prompt',
-        JSON.stringify(promptData),
-        'text-utf8-raw',
-      ),
-    );
-  }
-
-  return chunks;
+  // Orchestration format: store entire JSON as single "prompt" chunk
+  // This preserves the original structure for round-trip compatibility
+  return createEncodedChunk('prompt', userComment.data, 'text-utf8-raw');
 }
