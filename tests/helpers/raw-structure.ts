@@ -100,17 +100,10 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
   // Stability Matrix: uses prompt + parameters + parameters-json + smproj
   'stability-matrix': [['prompt', 'parameters', 'parameters-json', 'smproj']],
 
-  // CivitAI: Multiple variants depending on source format
-  // - Orchestration with full metadata: prompt + resource-stack + extra + extraMetadata
-  // - Orchestration minimal: prompt + extra + extraMetadata
-  // - Orchestration simple: prompt only
-  // - A1111 format: parameters only
-  civitai: [
-    ['prompt', 'resource-stack', 'extra', 'extraMetadata'],
-    ['prompt', 'extra', 'extraMetadata'],
-    ['prompt'],
-    ['parameters'],
-  ],
+  // CivitAI: Single chunk containing all metadata
+  // - Orchestration format: all JSON in single "prompt" chunk
+  // - A1111 format: parameters chunk
+  civitai: [['prompt'], ['parameters']],
 
   // InvokeAI: invokeai_metadata + invokeai_graph
   invokeai: [['invokeai_metadata', 'invokeai_graph']],
