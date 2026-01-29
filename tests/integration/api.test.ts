@@ -3,6 +3,11 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { read, write } from '../../src/index';
 import type { ParseResult } from '../../src/types';
+import {
+  createMinimalJpeg,
+  createMinimalPng,
+  createMinimalWebp,
+} from '../helpers/minimal-images';
 
 /**
  * Load a sample file from the samples directory
@@ -201,7 +206,7 @@ describe('API Integration Tests', () => {
     describe('successful writes', () => {
       it('should write metadata to PNG', () => {
         const source = loadSample('png', 'novelai-full.png');
-        const target = loadSample('png', 'forge.png');
+        const target = createMinimalPng();
 
         const metadata = read(source);
         expect(metadata.status).toBe('success');
@@ -216,7 +221,7 @@ describe('API Integration Tests', () => {
 
       it('should write metadata to JPEG', () => {
         const source = loadSample('png', 'novelai-full.png');
-        const target = loadSample('jpg', 'civitai.jpeg');
+        const target = createMinimalJpeg();
 
         const metadata = read(source);
         expect(metadata.status).toBe('success');
@@ -231,7 +236,7 @@ describe('API Integration Tests', () => {
 
       it('should write metadata to WebP', () => {
         const source = loadSample('png', 'novelai-full.png');
-        const target = loadSample('webp', 'forge-hires.webp');
+        const target = createMinimalWebp();
 
         const metadata = read(source);
         expect(metadata.status).toBe('success');

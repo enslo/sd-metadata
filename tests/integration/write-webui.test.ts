@@ -4,6 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { writeAsWebUI } from '../../src/api/write-webui';
 import { read } from '../../src/index';
 import type { StandardMetadata } from '../../src/types';
+import {
+  createMinimalJpeg,
+  createMinimalPng,
+  createMinimalWebp,
+} from '../helpers/minimal-images';
 
 /**
  * Load a sample file from the samples directory
@@ -20,7 +25,7 @@ function loadSample(
 describe('writeAsWebUI - Integration Tests', () => {
   describe('round-trip tests', () => {
     it('should allow reading back written metadata (PNG)', () => {
-      const png = loadSample('png', 'forge.png');
+      const png = createMinimalPng();
       const metadata: StandardMetadata = {
         software: 'sd-webui',
         prompt: 'custom test prompt, masterpiece',
@@ -63,7 +68,7 @@ describe('writeAsWebUI - Integration Tests', () => {
     });
 
     it('should allow reading back written metadata (JPEG)', () => {
-      const jpeg = loadSample('jpg', 'civitai.jpeg');
+      const jpeg = createMinimalJpeg();
       const metadata: StandardMetadata = {
         software: 'sd-webui',
         prompt: 'fantasy landscape, epic',
@@ -89,7 +94,7 @@ describe('writeAsWebUI - Integration Tests', () => {
     });
 
     it('should allow reading back written metadata (WebP)', () => {
-      const webp = loadSample('webp', 'forge.webp');
+      const webp = createMinimalWebp();
       const metadata: StandardMetadata = {
         software: 'sd-webui',
         prompt: 'webp integration test',
@@ -113,7 +118,7 @@ describe('writeAsWebUI - Integration Tests', () => {
     });
 
     it('should handle multiple write-read cycles', () => {
-      const png = loadSample('png', 'forge.png');
+      const png = createMinimalPng();
       const metadata1: StandardMetadata = {
         software: 'sd-webui',
         prompt: 'first version',
@@ -163,8 +168,8 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      // Get base JPEG
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
+      // Get base JPEG (minimal image for clean write target)
+      const jpegBase = createMinimalJpeg();
 
       // Write NovelAI metadata to JPEG in WebUI format
       const writeResult = writeAsWebUI(jpegBase, readResult.metadata);
@@ -192,7 +197,7 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      const webpBase = loadSample('webp', 'forge.webp');
+      const webpBase = createMinimalWebp();
 
       const writeResult = writeAsWebUI(webpBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
@@ -213,7 +218,7 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      const pngBase = loadSample('png', 'forge.png');
+      const pngBase = createMinimalPng();
 
       const writeResult = writeAsWebUI(pngBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
@@ -235,7 +240,7 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
+      const jpegBase = createMinimalJpeg();
 
       const writeResult = writeAsWebUI(jpegBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
@@ -278,7 +283,8 @@ describe('writeAsWebUI - Integration Tests', () => {
         },
       };
 
-      const writeResult = writeAsWebUI(forgePng, modifiedMetadata);
+      // Write to minimal image (clean target)
+      const writeResult = writeAsWebUI(createMinimalPng(), modifiedMetadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -292,7 +298,7 @@ describe('writeAsWebUI - Integration Tests', () => {
     });
 
     it('should allow adding fields to minimal metadata', () => {
-      const png = loadSample('png', 'forge.png');
+      const png = createMinimalPng();
 
       // Start with minimal metadata
       const minimalMetadata: StandardMetadata = {
@@ -342,7 +348,7 @@ describe('writeAsWebUI - Integration Tests', () => {
 
   describe('Unicode and special characters', () => {
     it('should handle Unicode characters in prompts', () => {
-      const png = loadSample('png', 'forge.png');
+      const png = createMinimalPng();
       const metadata: StandardMetadata = {
         software: 'sd-webui',
         prompt: '美しい風景, masterpiece, 最高品質 🌸',
@@ -367,7 +373,7 @@ describe('writeAsWebUI - Integration Tests', () => {
     });
 
     it('should handle multiline prompts correctly', () => {
-      const png = loadSample('png', 'forge.png');
+      const png = createMinimalPng();
       const metadata: StandardMetadata = {
         software: 'sd-webui',
         prompt: 'line1\\nline2\\nline3',
@@ -398,7 +404,7 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
+      const jpegBase = createMinimalJpeg();
 
       const writeResult = writeAsWebUI(jpegBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
@@ -419,7 +425,7 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      const webpBase = loadSample('webp', 'forge.webp');
+      const webpBase = createMinimalWebp();
 
       const writeResult = writeAsWebUI(webpBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
