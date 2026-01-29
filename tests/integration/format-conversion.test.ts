@@ -1,359 +1,522 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { read, write } from '../../src/index';
+import { type ParseResult, read, write } from '../../src/index';
+import {
+  createMinimalJpeg,
+  createMinimalPng,
+  createMinimalWebp,
+} from '../helpers/minimal-images';
+import { expectRawEqual } from '../helpers/raw-equal';
+import { expectRawStructure } from '../helpers/raw-structure';
+import {
+  JPEG_SAMPLES,
+  PNG_SAMPLES,
+  WEBP_SAMPLES,
+  loadSample,
+} from '../helpers/samples';
 
 /**
- * Load a sample file from the samples directory
+ * Empty metadata for stripping all AI generation data
  */
-function loadSample(
-  format: 'png' | 'jpg' | 'webp',
-  filename: string,
-): Uint8Array {
-  const dirName = format === 'jpg' ? 'jpg' : format;
-  const filePath = path.join(__dirname, '../../samples', dirName, filename);
-  return new Uint8Array(fs.readFileSync(filePath));
-}
+const EMPTY_METADATA: ParseResult = { status: 'empty' };
 
 describe('Format conversion accuracy', () => {
-  describe('PNG → JPEG conversion', () => {
-    it('should preserve NovelAI metadata', () => {
-      const pngData = loadSample('png', 'novelai-full.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
+  // Minimal images for conversion targets
+  const getJpegBase = createMinimalJpeg;
+  const getWebpBase = createMinimalWebp;
+  const getPngBase = createMinimalPng;
 
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
+  // ============================================================================
+  // Same-format conversions
+  // ============================================================================
 
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
+  describe('PNG → PNG', () => {
+    for (const filename of PNG_SAMPLES) {
+      it(`should preserve metadata for ${filename}`, () => {
+        const original = loadSample('png', filename);
+        const parseResult = read(original, { strict: true });
+        expect(parseResult.status).toBe('success');
+        if (parseResult.status !== 'success') return;
 
-      // Verify key fields are preserved
-      expect(convertedRead.metadata.software).toBe('novelai');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
-      expect(convertedRead.metadata.width).toBe(parseResult.metadata.width);
-      expect(convertedRead.metadata.height).toBe(parseResult.metadata.height);
+        const converted = write(original, parseResult);
+        expect(converted.ok).toBe(true);
+        if (!converted.ok) return;
+
+        const convertedRead = read(converted.value, { strict: true });
+        expect(convertedRead.status).toBe('success');
+        if (convertedRead.status !== 'success') return;
+
+        // Full metadata comparison
+        expect(convertedRead.metadata).toEqual(parseResult.metadata);
+
+        // Raw structure verification
+        expectRawStructure(
+          convertedRead.raw,
+          parseResult.metadata.software,
+          'png',
+        );
+      });
+    }
+  });
+
+  describe('JPEG → JPEG', () => {
+    for (const filename of JPEG_SAMPLES) {
+      it(`should preserve metadata for ${filename}`, () => {
+        const original = loadSample('jpg', filename);
+        const parseResult = read(original, { strict: true });
+        expect(parseResult.status).toBe('success');
+        if (parseResult.status !== 'success') return;
+
+        const converted = write(original, parseResult);
+        expect(converted.ok).toBe(true);
+        if (!converted.ok) return;
+
+        const convertedRead = read(converted.value, { strict: true });
+        expect(convertedRead.status).toBe('success');
+        if (convertedRead.status !== 'success') return;
+
+        // Full metadata comparison
+        expect(convertedRead.metadata).toEqual(parseResult.metadata);
+
+        // Raw structure verification
+        expectRawStructure(
+          convertedRead.raw,
+          parseResult.metadata.software,
+          'jpeg',
+        );
+      });
+    }
+  });
+
+  describe('WebP → WebP', () => {
+    for (const filename of WEBP_SAMPLES) {
+      it(`should preserve metadata for ${filename}`, () => {
+        const original = loadSample('webp', filename);
+        const parseResult = read(original, { strict: true });
+        expect(parseResult.status).toBe('success');
+        if (parseResult.status !== 'success') return;
+
+        const converted = write(original, parseResult);
+        expect(converted.ok).toBe(true);
+        if (!converted.ok) return;
+
+        const convertedRead = read(converted.value, { strict: true });
+        expect(convertedRead.status).toBe('success');
+        if (convertedRead.status !== 'success') return;
+
+        // Full metadata comparison
+        expect(convertedRead.metadata).toEqual(parseResult.metadata);
+
+        // Raw structure verification
+        expectRawStructure(
+          convertedRead.raw,
+          parseResult.metadata.software,
+          'webp',
+        );
+      });
+    }
+  });
+
+  // ============================================================================
+  // Cross-format conversions: PNG source
+  // ============================================================================
+
+  describe('PNG → JPEG', () => {
+    for (const filename of PNG_SAMPLES) {
+      it(`should preserve metadata for ${filename}`, () => {
+        const pngData = loadSample('png', filename);
+        const parseResult = read(pngData, { strict: true });
+        expect(parseResult.status).toBe('success');
+        if (parseResult.status !== 'success') return;
+
+        const converted = write(getJpegBase(), parseResult);
+        expect(converted.ok).toBe(true);
+        if (!converted.ok) return;
+
+        const convertedRead = read(converted.value, { strict: true });
+        expect(convertedRead.status).toBe('success');
+        if (convertedRead.status !== 'success') return;
+
+        // Full metadata comparison
+        expect(convertedRead.metadata).toEqual(parseResult.metadata);
+
+        // Raw structure verification
+        expectRawStructure(
+          convertedRead.raw,
+          parseResult.metadata.software,
+          'jpeg',
+        );
+      });
+    }
+  });
+
+  describe('PNG → WebP', () => {
+    for (const filename of PNG_SAMPLES) {
+      it(`should preserve metadata for ${filename}`, () => {
+        const pngData = loadSample('png', filename);
+        const parseResult = read(pngData, { strict: true });
+        expect(parseResult.status).toBe('success');
+        if (parseResult.status !== 'success') return;
+
+        const converted = write(getWebpBase(), parseResult);
+        expect(converted.ok).toBe(true);
+        if (!converted.ok) return;
+
+        const convertedRead = read(converted.value, { strict: true });
+        expect(convertedRead.status).toBe('success');
+        if (convertedRead.status !== 'success') return;
+
+        // Full metadata comparison
+        expect(convertedRead.metadata).toEqual(parseResult.metadata);
+
+        // Raw structure verification
+        expectRawStructure(
+          convertedRead.raw,
+          parseResult.metadata.software,
+          'webp',
+        );
+      });
+    }
+  });
+
+  // ============================================================================
+  // Cross-format conversions: JPEG source
+  // ============================================================================
+
+  describe('JPEG → PNG', () => {
+    for (const filename of JPEG_SAMPLES) {
+      it(`should preserve metadata for ${filename}`, () => {
+        const jpegData = loadSample('jpg', filename);
+        const parseResult = read(jpegData, { strict: true });
+        expect(parseResult.status).toBe('success');
+        if (parseResult.status !== 'success') return;
+
+        const converted = write(getPngBase(), parseResult);
+        expect(converted.ok).toBe(true);
+        if (!converted.ok) return;
+
+        const convertedRead = read(converted.value, { strict: true });
+        expect(convertedRead.status).toBe('success');
+        if (convertedRead.status !== 'success') return;
+
+        // Full metadata comparison
+        expect(convertedRead.metadata).toEqual(parseResult.metadata);
+
+        // Raw structure verification
+        expectRawStructure(
+          convertedRead.raw,
+          parseResult.metadata.software,
+          'png',
+        );
+      });
+    }
+  });
+
+  describe('JPEG → WebP', () => {
+    for (const filename of JPEG_SAMPLES) {
+      it(`should preserve metadata for ${filename}`, () => {
+        const jpegData = loadSample('jpg', filename);
+        const parseResult = read(jpegData, { strict: true });
+        expect(parseResult.status).toBe('success');
+        if (parseResult.status !== 'success') return;
+
+        const converted = write(getWebpBase(), parseResult);
+        expect(converted.ok).toBe(true);
+        if (!converted.ok) return;
+
+        const convertedRead = read(converted.value, { strict: true });
+        expect(convertedRead.status).toBe('success');
+        if (convertedRead.status !== 'success') return;
+
+        // Full metadata comparison
+        expect(convertedRead.metadata).toEqual(parseResult.metadata);
+
+        // Raw structure verification
+        expectRawStructure(
+          convertedRead.raw,
+          parseResult.metadata.software,
+          'webp',
+        );
+      });
+    }
+  });
+
+  // ============================================================================
+  // Cross-format conversions: WebP source
+  // ============================================================================
+
+  describe('WebP → PNG', () => {
+    for (const filename of WEBP_SAMPLES) {
+      it(`should preserve metadata for ${filename}`, () => {
+        const webpData = loadSample('webp', filename);
+        const parseResult = read(webpData, { strict: true });
+        expect(parseResult.status).toBe('success');
+        if (parseResult.status !== 'success') return;
+
+        const converted = write(getPngBase(), parseResult);
+        expect(converted.ok).toBe(true);
+        if (!converted.ok) return;
+
+        const convertedRead = read(converted.value, { strict: true });
+        expect(convertedRead.status).toBe('success');
+        if (convertedRead.status !== 'success') return;
+
+        // Full metadata comparison
+        expect(convertedRead.metadata).toEqual(parseResult.metadata);
+
+        // Raw structure verification
+        expectRawStructure(
+          convertedRead.raw,
+          parseResult.metadata.software,
+          'png',
+        );
+      });
+    }
+  });
+
+  describe('WebP → JPEG', () => {
+    for (const filename of WEBP_SAMPLES) {
+      it(`should preserve metadata for ${filename}`, () => {
+        const webpData = loadSample('webp', filename);
+        const parseResult = read(webpData, { strict: true });
+        expect(parseResult.status).toBe('success');
+        if (parseResult.status !== 'success') return;
+
+        const converted = write(getJpegBase(), parseResult);
+        expect(converted.ok).toBe(true);
+        if (!converted.ok) return;
+
+        const convertedRead = read(converted.value, { strict: true });
+        expect(convertedRead.status).toBe('success');
+        if (convertedRead.status !== 'success') return;
+
+        // Full metadata comparison
+        expect(convertedRead.metadata).toEqual(parseResult.metadata);
+
+        // Raw structure verification
+        expectRawStructure(
+          convertedRead.raw,
+          parseResult.metadata.software,
+          'jpeg',
+        );
+      });
+    }
+  });
+
+  // ============================================================================
+  // Empty file conversions (no AI metadata)
+  // ============================================================================
+
+  /**
+   * Empty sample files for edge case testing
+   */
+  const EMPTY_SAMPLES = {
+    png: 'empty.png',
+    jpg: 'empty.jpg',
+    webp: 'empty.webp',
+  } as const;
+
+  describe('Empty file conversions', () => {
+    it('should maintain empty status: PNG → JPEG → WebP → PNG', () => {
+      // Start with empty PNG
+      const pngData = loadSample('png', EMPTY_SAMPLES.png);
+      const pngRead = read(pngData, { strict: true });
+      expect(pngRead.status).toBe('empty');
+
+      // PNG → JPEG
+      const jpegConverted = write(getJpegBase(), EMPTY_METADATA);
+      expect(jpegConverted.ok).toBe(true);
+      if (!jpegConverted.ok) return;
+
+      const jpegRead = read(jpegConverted.value, { strict: true });
+      expect(jpegRead.status).toBe('empty');
+
+      // JPEG → WebP
+      const webpConverted = write(getWebpBase(), EMPTY_METADATA);
+      expect(webpConverted.ok).toBe(true);
+      if (!webpConverted.ok) return;
+
+      const webpRead = read(webpConverted.value, { strict: true });
+      expect(webpRead.status).toBe('empty');
+
+      // WebP → PNG
+      const pngConverted = write(getPngBase(), EMPTY_METADATA);
+      expect(pngConverted.ok).toBe(true);
+      if (!pngConverted.ok) return;
+
+      const finalRead = read(pngConverted.value, { strict: true });
+      expect(finalRead.status).toBe('empty');
     });
 
-    it('should preserve A1111 metadata', () => {
-      const pngData = loadSample('png', 'forge.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
+    it('should maintain empty status: JPEG → PNG', () => {
+      const jpegData = loadSample('jpg', EMPTY_SAMPLES.jpg);
+      const jpegRead = read(jpegData, { strict: true });
+      expect(jpegRead.status).toBe('empty');
 
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
+      const pngConverted = write(getPngBase(), EMPTY_METADATA);
+      expect(pngConverted.ok).toBe(true);
+      if (!pngConverted.ok) return;
 
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('forge');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
+      const pngRead = read(pngConverted.value, { strict: true });
+      expect(pngRead.status).toBe('empty');
     });
 
-    it('should preserve ComfyUI metadata', () => {
-      const pngData = loadSample('png', 'comfyui.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
+    it('should maintain empty status: WebP → JPEG', () => {
+      const webpData = loadSample('webp', EMPTY_SAMPLES.webp);
+      const webpRead = read(webpData, { strict: true });
+      expect(webpRead.status).toBe('empty');
 
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
+      const jpegConverted = write(getJpegBase(), EMPTY_METADATA);
+      expect(jpegConverted.ok).toBe(true);
+      if (!jpegConverted.ok) return;
 
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('comfyui');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
-      expect(convertedRead.metadata.negativePrompt).toBe(
-        parseResult.metadata.negativePrompt,
-      );
-    });
-
-    it('should preserve InvokeAI metadata', () => {
-      const pngData = loadSample('png', 'invokeai.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
-
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
-
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('invokeai');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
-    });
-
-    it('should preserve SwarmUI metadata', () => {
-      const pngData = loadSample('png', 'swarmui-hires.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
-
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
-
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('swarmui');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
-    });
-
-    it('should preserve HF-Space metadata', () => {
-      const pngData = loadSample('png', 'huggingface-animagine.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
-
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
-
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('hf-space');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
-    });
-
-    it('should preserve Ruined Fooocus metadata', () => {
-      const pngData = loadSample('png', 'ruined-fooocus.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
-
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
-
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('ruined-fooocus');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
-    });
-
-    it('should preserve TensorArt metadata', () => {
-      const pngData = loadSample('png', 'tensorart.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
-
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
-
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('tensorart');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
-    });
-
-    it('should preserve Stability Matrix metadata', () => {
-      const pngData = loadSample('png', 'stability-matrix.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
-
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
-
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('stability-matrix');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
-    });
-
-    it('should preserve SD.Next metadata', () => {
-      const pngData = loadSample('png', 'sd-next.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
-
-      const jpegBase = loadSample('jpg', 'civitai.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
-
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('sd-next');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
+      const jpegRead = read(jpegConverted.value, { strict: true });
+      expect(jpegRead.status).toBe('empty');
     });
   });
 
-  describe('PNG → WebP conversion', () => {
-    it('should preserve NovelAI metadata', () => {
-      const pngData = loadSample('png', 'novelai-full.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
+  // ============================================================================
+  // GIMP file conversions (unrecognized metadata)
+  // ============================================================================
 
-      const webpBase = loadSample('webp', 'forge-hires.webp');
-      const converted = write(webpBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
+  /**
+   * GIMP sample files for unrecognized metadata testing
+   */
+  const GIMP_SAMPLES = {
+    png: 'gimp.png',
+    jpg: 'gimp.jpg',
+    webp: 'gimp.webp',
+  } as const;
 
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
+  describe('GIMP file conversions (unrecognized metadata)', () => {
+    // Same-format write: metadata should be preserved with raw equality
+    it('should preserve GIMP PNG metadata when writing to different PNG', () => {
+      const gimpData = loadSample('png', GIMP_SAMPLES.png);
+      const gimpRead = read(gimpData, { strict: true });
+      expect(gimpRead.status).toBe('unrecognized');
+      if (gimpRead.status !== 'unrecognized') return;
 
-      expect(convertedRead.metadata.software).toBe('novelai');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
+      // Write to different PNG file (same format)
+      const result = write(getPngBase(), gimpRead);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // No warning for same format
+      expect(result.warning).toBeUndefined();
+
+      // Metadata should be preserved
+      const reread = read(result.value, { strict: true });
+      expect(reread.status).toBe('unrecognized');
+      if (reread.status !== 'unrecognized') return;
+
+      // Raw should be equal
+      expectRawEqual(reread.raw, gimpRead.raw);
     });
 
-    it('should preserve ComfyUI metadata', () => {
-      const pngData = loadSample('png', 'comfyui.png');
-      const parseResult = read(pngData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
+    it('should preserve GIMP JPEG metadata when writing to different JPEG', () => {
+      const gimpData = loadSample('jpg', GIMP_SAMPLES.jpg);
+      const gimpRead = read(gimpData, { strict: true });
+      expect(gimpRead.status).toBe('unrecognized');
+      if (gimpRead.status !== 'unrecognized') return;
 
-      const webpBase = loadSample('webp', 'forge-hires.webp');
-      const converted = write(webpBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
+      // Write to different JPEG file (same format)
+      const result = write(getJpegBase(), gimpRead);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
 
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
+      // No warning for same format
+      expect(result.warning).toBeUndefined();
 
-      expect(convertedRead.metadata.software).toBe('comfyui');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
-    });
-  });
+      // Metadata should be preserved
+      const reread = read(result.value, { strict: true });
+      expect(reread.status).toBe('unrecognized');
+      if (reread.status !== 'unrecognized') return;
 
-  describe('JPEG → PNG conversion', () => {
-    it('should preserve A1111 metadata', () => {
-      const jpegData = loadSample('jpg', 'forge.jpeg');
-      const parseResult = read(jpegData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
-
-      const pngBase = loadSample('png', 'forge.png');
-      const converted = write(pngBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
-
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
-
-      expect(convertedRead.metadata.software).toBe('forge');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
+      // Raw should be equal
+      expectRawEqual(reread.raw, gimpRead.raw);
     });
 
-    it('should preserve ComfyUI metadata', () => {
-      const jpegData = loadSample('jpg', 'comfyui-saveimage-plus.jpg');
-      const parseResult = read(jpegData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
+    it('should preserve GIMP WebP metadata when writing to different WebP', () => {
+      const gimpData = loadSample('webp', GIMP_SAMPLES.webp);
+      const gimpRead = read(gimpData, { strict: true });
+      expect(gimpRead.status).toBe('unrecognized');
+      if (gimpRead.status !== 'unrecognized') return;
 
-      const pngBase = loadSample('png', 'comfyui.png');
-      const converted = write(pngBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
+      // Write to different WebP file (same format)
+      const result = write(getWebpBase(), gimpRead);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
 
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
+      // No warning for same format
+      expect(result.warning).toBeUndefined();
 
-      expect(convertedRead.metadata.software).toBe('comfyui');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
+      // Metadata should be preserved
+      const reread = read(result.value, { strict: true });
+      expect(reread.status).toBe('unrecognized');
+      if (reread.status !== 'unrecognized') return;
+
+      // Raw should be equal
+      expectRawEqual(reread.raw, gimpRead.raw);
     });
-  });
 
-  describe('JPEG → WebP conversion', () => {
-    it('should preserve metadata through segment copy', () => {
-      const jpegData = loadSample('jpg', 'forge.jpeg');
-      const parseResult = read(jpegData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
+    // Cross-format write: metadata should be dropped (by design)
+    it('should drop GIMP PNG metadata when converting to JPEG', () => {
+      const gimpData = loadSample('png', GIMP_SAMPLES.png);
+      const gimpRead = read(gimpData, { strict: true });
+      expect(gimpRead.status).toBe('unrecognized');
 
-      const webpBase = loadSample('webp', 'forge-hires.webp');
-      const converted = write(webpBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
+      // Write to different format (PNG → JPEG)
+      const result = write(getJpegBase(), gimpRead);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
 
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
+      // Warning should indicate metadata was dropped
+      expect(result.warning).toBeDefined();
+      expect(result.warning?.type).toBe('metadataDropped');
+      expect(result.warning?.reason).toBe('unrecognizedCrossFormat');
 
-      expect(convertedRead.metadata.software).toBe('forge');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
+      // Metadata should be empty after cross-format write
+      const reread = read(result.value, { strict: true });
+      expect(reread.status).toBe('empty');
     });
-  });
 
-  describe('WebP → PNG conversion', () => {
-    it('should preserve ComfyUI metadata', () => {
-      const webpData = loadSample('webp', 'comfyui-saveimage-plus.webp');
-      const parseResult = read(webpData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
+    it('should drop GIMP PNG metadata when converting to WebP', () => {
+      const gimpData = loadSample('png', GIMP_SAMPLES.png);
+      const gimpRead = read(gimpData, { strict: true });
+      expect(gimpRead.status).toBe('unrecognized');
 
-      const pngBase = loadSample('png', 'comfyui.png');
-      const converted = write(pngBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
+      // Write to different format (PNG → WebP)
+      const result = write(getWebpBase(), gimpRead);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
 
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
+      // Warning should indicate metadata was dropped
+      expect(result.warning).toBeDefined();
+      expect(result.warning?.type).toBe('metadataDropped');
+      expect(result.warning?.reason).toBe('unrecognizedCrossFormat');
 
-      expect(convertedRead.metadata.software).toBe('comfyui');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
+      // Metadata should be empty after cross-format write
+      const reread = read(result.value, { strict: true });
+      expect(reread.status).toBe('empty');
     });
-  });
 
-  describe('WebP → JPEG conversion', () => {
-    it('should preserve metadata through segment copy', () => {
-      const webpData = loadSample('webp', 'forge-hires.webp');
-      const parseResult = read(webpData);
-      expect(parseResult.status).toBe('success');
-      if (parseResult.status !== 'success') return;
+    it('should drop GIMP JPEG metadata when converting to PNG', () => {
+      const gimpData = loadSample('jpg', GIMP_SAMPLES.jpg);
+      const gimpRead = read(gimpData, { strict: true });
+      expect(gimpRead.status).toBe('unrecognized');
 
-      const jpegBase = loadSample('jpg', 'forge.jpeg');
-      const converted = write(jpegBase, parseResult);
-      expect(converted.ok).toBe(true);
-      if (!converted.ok) return;
+      // Write to different format (JPEG → PNG)
+      const result = write(getPngBase(), gimpRead);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
 
-      const convertedRead = read(converted.value);
-      expect(convertedRead.status).toBe('success');
-      if (convertedRead.status !== 'success') return;
+      // Warning should indicate metadata was dropped
+      expect(result.warning).toBeDefined();
+      expect(result.warning?.type).toBe('metadataDropped');
+      expect(result.warning?.reason).toBe('unrecognizedCrossFormat');
 
-      expect(convertedRead.metadata.software).toBe('forge');
-      expect(convertedRead.metadata.prompt).toBe(parseResult.metadata.prompt);
+      // Metadata should be empty after cross-format write
+      const reread = read(result.value, { strict: true });
+      expect(reread.status).toBe('empty');
     });
   });
 });

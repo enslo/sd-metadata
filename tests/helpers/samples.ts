@@ -12,21 +12,12 @@ const EXCLUDED_PATTERNS = ['empty', 'gimp'];
 /**
  * Files with expected raw metadata mismatch in cross-format round-trips
  *
- * These files don't round-trip with identical raw metadata due to DESIGN DECISIONS:
- * - comfyui-save-image-extended: save-image-extended format is converted to
- *   saveimage-plus format (by design, for ComfyUI compatibility)
- * - civitai-hires: CivitAI's extraMetadata structure doesn't preserve dimensions
- *   through format conversion (CivitAI-specific limitation)
- * - civitai-upscale: CivitAI's extra/extraMetadata chunks use non-standard
- *   keywords that don't match after round-trip (CivitAI-specific limitation)
+ * These files have intentional raw differences due to format normalization:
+ * - comfyui-save-image-extended: Converted to saveimage-plus format for ComfyUI compatibility
  *
- * NOTE: Parsed metadata (metadata) should still match - only raw comparison is skipped.
+ * Parsed metadata should still match - only raw comparison is skipped.
  */
-const RAW_MISMATCH_EXPECTED = [
-  'civitai-hires',
-  'civitai-upscale',
-  'comfyui-save-image-extended',
-];
+const RAW_MISMATCH_EXPECTED = ['comfyui-save-image-extended'];
 
 /**
  * Get the samples directory path for a given format
@@ -47,6 +38,9 @@ function isExcluded(filename: string): boolean {
 
 /**
  * Check if a file is expected to have raw metadata mismatch after cross-format round-trip
+ *
+ * Returns true for files that have intentional raw differences due to format normalization.
+ * Parsed metadata should still match - only raw comparison is skipped for these files.
  */
 export function isRawMismatchExpected(filename: string): boolean {
   const baseName = path.basename(filename, path.extname(filename));
