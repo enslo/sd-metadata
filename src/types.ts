@@ -391,6 +391,8 @@ export interface SamplingSettings {
   seed?: number;
   /** CLIP skip layers */
   clipSkip?: number;
+  /** Denoising strength (ComfyUI only, typically 1.0 for txt2img) */
+  denoise?: number;
 }
 
 /**

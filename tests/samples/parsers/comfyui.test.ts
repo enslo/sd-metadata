@@ -104,6 +104,38 @@ describe('ComfyUI Parsers - Samples', () => {
       expectComfyNodeGraph(meta.nodes);
     });
 
+    it('should parse comfyui-low-denoise.png with denoise in sampling', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-low-denoise.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, 4k, very aesthetic, ultra-detailed, (pixel art, dithering, pixelated, sprite art, 8-bit:1.2), \n1girl, solo, hatsune miku, cowboy shot, #テスト \n',
+        negativePrompt:
+          'modern, recent, old, oldest, anime, illustration, cartoon, graphic, text, painting, crayon, graphite, abstract, glitch, deformed, mutated, ugly, disfigured, long body, lowres, bad anatomy, bad hands, missing fingers, extra digits, fewer digits, cropped, very displeasing, (worst quality, bad quality:1.2), sketch, jpeg artifacts, signature, watermark, username, signature, simple background, conjoined, bad ai-generated, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'novaPixelsXL_v30.safetensors',
+        },
+        sampling: {
+          seed: 667022537790957,
+          steps: 40,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+          denoise: 0.8,
+        },
+        hires: undefined,
+        upscale: undefined,
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
     it('should parse comfyui-saveimage-plus.png', () => {
       const meta = parsePngSample<ComfyUIMetadata>(
         'comfyui-saveimage-plus.png',
@@ -580,6 +612,7 @@ describe('ComfyUI Parsers - Samples', () => {
           seed: 1311178179,
           steps: 25,
           cfg: 5,
+          denoise: 0.3,
         },
         hires: {
           upscaler: 'urn:air:other:upscaler:civitai:147759@164821',
