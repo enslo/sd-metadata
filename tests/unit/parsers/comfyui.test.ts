@@ -46,11 +46,11 @@ describe('parseComfyUI - Unit Tests', () => {
   describe('basic parsing', () => {
     it('should parse minimal ComfyUI metadata', () => {
       const prompt = {
-        PositiveCLIP_Base: {
+        '1': {
           inputs: { text: 'positive prompt' },
           class_type: 'CLIPTextEncode',
         },
-        NegativeCLIP_Base: {
+        '2': {
           inputs: { text: 'negative prompt' },
           class_type: 'CLIPTextEncode',
         },
@@ -97,7 +97,7 @@ describe('parseComfyUI - Unit Tests', () => {
   describe('node finding', () => {
     it('should find KSampler node', () => {
       const prompt = {
-        PositiveCLIP_Base: {
+        '1': {
           inputs: { text: 'positive' },
           class_type: 'CLIPTextEncode',
         },
@@ -120,7 +120,7 @@ describe('parseComfyUI - Unit Tests', () => {
 
     it('should find KSamplerAdvanced node', () => {
       const prompt = {
-        PositiveCLIP_Base: {
+        '1': {
           inputs: { text: 'positive' },
           class_type: 'CLIPTextEncode',
         },

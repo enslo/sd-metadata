@@ -32,23 +32,22 @@ import { trimObject } from '../utils/object';
 const CIVITAI_EXTENSION_KEYS = ['extra', 'extraMetadata', 'resource-stack'];
 
 /**
- * ComfyUI node type keys for metadata extraction
+ * ComfyUI node class types for metadata extraction
  *
- * These keys identify specific node types in the ComfyUI node graph.
+ * These class_type values identify specific node types in the ComfyUI node graph.
  * Arrays allow matching multiple node type variants.
  */
-const COMFYUI_NODE_KEYS = {
-  sampler: ['Sampler'],
-  positiveClip: ['PositiveCLIP_Base'],
-  negativeClip: ['NegativeCLIP_Base'],
+const CLASS_TYPES = {
+  sampler: ['KSampler', 'KSamplerAdvanced', 'SamplerCustomAdvanced'],
+  // Standard latent image nodes with width/height properties
   latentImage: ['EmptyLatentImage'],
-  checkpoint: ['CheckpointLoader_Base'],
-  hiresModelUpscale: [
-    'HiresFix_ModelUpscale_UpscaleModelLoader',
-    'PostUpscale_ModelUpscale_UpscaleModelLoader',
-  ],
-  hiresImageScale: ['HiresFix_ImageScale', 'PostUpscale_ImageScale'],
-  hiresSampler: ['HiresFix_Sampler'],
+  // rgthree latent image nodes with "dimensions" string property
+  latentImageRgthree: ['SDXL Empty Latent Image (rgthree)'],
+  checkpoint: ['CheckpointLoaderSimple', 'CheckpointLoader'],
+  hiresModelUpscale: ['UpscaleModelLoader'],
+  hiresImageScale: ['ImageScale', 'ImageScaleBy'],
+  latentUpscale: ['LatentUpscale', 'LatentUpscaleBy'],
+  vaeEncode: ['VAEEncode', 'VAEEncodeTiled'],
 } as const;
 
 /**
@@ -248,13 +247,65 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
 // =============================================================================
 
 /**
- * Find a node by key name (first match)
+ * Find a node by class_type (first match)
  */
 function findNode(
-  prompt: ComfyNodeGraph,
-  keys: readonly string[],
+  nodes: ComfyNodeGraph,
+  classTypes: readonly string[],
 ): ComfyNode | undefined {
-  return Object.entries(prompt).find(([key]) => keys.includes(key))?.[1];
+  return Object.values(nodes).find((node) =>
+    classTypes.includes(node.class_type),
+  );
+}
+
+// =============================================================================
+// Node Reference Utilities
+// =============================================================================
+
+/**
+ * Check if a value is a node reference [nodeId, outputIndex]
+ */
+function isNodeReference(value: unknown): value is [string, number] {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    (typeof value[0] === 'string' || typeof value[0] === 'number') &&
+    typeof value[1] === 'number'
+  );
+}
+
+/**
+ * Extract text from a node, following references if needed
+ *
+ * Handles various text input patterns:
+ * - CLIPTextEncode: inputs.text
+ * - Power Prompt (rgthree): inputs.prompt
+ * - DF_Text_Box (ComfyRoll): inputs.Text
+ * - Reference chains: [nodeId, outputIndex] -> trace to source
+ */
+function extractText(
+  nodes: ComfyNodeGraph,
+  nodeId: string,
+  maxDepth = 10,
+): string {
+  if (maxDepth <= 0) return '';
+
+  const node = nodes[nodeId];
+  if (!node) return '';
+
+  // Try common text input names
+  const textValue = node.inputs.text ?? node.inputs.prompt ?? node.inputs.Text;
+
+  if (typeof textValue === 'string') {
+    return textValue;
+  }
+
+  // If text is a reference, follow it
+  if (isNodeReference(textValue)) {
+    return extractText(nodes, String(textValue[0]), maxDepth - 1);
+  }
+
+  return '';
 }
 
 // =============================================================================
@@ -262,65 +313,149 @@ function findNode(
 // =============================================================================
 
 /**
- * Extract text from CLIP text encode node
+ * Extract prompt texts by tracing from sampler's positive/negative inputs
  */
-function extractText(node: ComfyNode | undefined): string {
-  return typeof node?.inputs.text === 'string' ? node.inputs.text : '';
-}
-
-/**
- * Extract prompt texts from CLIP nodes
- */
-function extractPromptTexts(prompt: ComfyNodeGraph): {
+function extractPromptTexts(nodes: ComfyNodeGraph): {
   promptText: string;
   negativeText: string;
 } {
-  const positiveClip = findNode(prompt, COMFYUI_NODE_KEYS.positiveClip);
-  const negativeClip = findNode(prompt, COMFYUI_NODE_KEYS.negativeClip);
+  // Find sampler node by class_type
+  const sampler = findNode(nodes, CLASS_TYPES.sampler);
+  if (!sampler) {
+    return { promptText: '', negativeText: '' };
+  }
+
+  // Trace positive/negative inputs from sampler
+  const positiveRef = sampler.inputs.positive;
+  const negativeRef = sampler.inputs.negative;
+
   return {
-    promptText: extractText(positiveClip),
-    negativeText: extractText(negativeClip),
+    promptText: isNodeReference(positiveRef)
+      ? extractText(nodes, String(positiveRef[0]))
+      : '',
+    negativeText: isNodeReference(negativeRef)
+      ? extractText(nodes, String(negativeRef[0]))
+      : '',
   };
 }
 
 /**
  * Extract dimensions from LatentImage node
+ *
+ * Handles two node types separately:
+ * - EmptyLatentImage: inputs.width and inputs.height as numbers
+ * - SDXL Empty Latent Image (rgthree): inputs.dimensions as string like "1024 x 1024 (square)"
  */
-function extractDimensions(prompt: ComfyNodeGraph): {
+function extractDimensions(nodes: ComfyNodeGraph): {
   width: number;
   height: number;
 } {
-  const latentImage = findNode(prompt, COMFYUI_NODE_KEYS.latentImage);
-  return {
-    width: latentImage ? Number(latentImage.inputs.width) || 0 : 0,
-    height: latentImage ? Number(latentImage.inputs.height) || 0 : 0,
-  };
+  // Try standard EmptyLatentImage first (width/height properties)
+  const standardLatent = findNode(nodes, CLASS_TYPES.latentImage);
+  if (standardLatent) {
+    const width = Number(standardLatent.inputs.width) || 0;
+    const height = Number(standardLatent.inputs.height) || 0;
+    if (width > 0 && height > 0) return { width, height };
+  }
+
+  // Try rgthree latent image (dimensions string like "1024 x 1024 (square)")
+  const rgthreeLatent = findNode(nodes, CLASS_TYPES.latentImageRgthree);
+  if (rgthreeLatent && typeof rgthreeLatent.inputs.dimensions === 'string') {
+    const match = rgthreeLatent.inputs.dimensions.match(/^(\d+)\s*x\s*(\d+)/);
+    if (match?.[1] && match[2]) {
+      return {
+        width: Number.parseInt(match[1], 10),
+        height: Number.parseInt(match[2], 10),
+      };
+    }
+  }
+
+  return { width: 0, height: 0 };
 }
 
 /**
- * Extract sampling settings from KSampler node
+ * Extract sampling settings from sampler node
  */
-function extractSamplingFromKSampler(
-  ksampler: ComfyNode | undefined,
-): SamplingSettings | undefined {
-  if (!ksampler) return undefined;
+function extractSampling(nodes: ComfyNodeGraph): SamplingSettings | undefined {
+  const sampler = findNode(nodes, CLASS_TYPES.sampler);
+  if (!sampler) return undefined;
+
+  // Handle seed which may be a reference or direct value
+  let seed = sampler.inputs.seed;
+  if (isNodeReference(seed)) {
+    // Seed is from another node (e.g., CR Seed), try to extract it
+    const seedNode = nodes[String(seed[0])];
+    seed = seedNode?.inputs.seed;
+  }
+
   return {
-    seed: ksampler.inputs.seed as number,
-    steps: ksampler.inputs.steps as number,
-    cfg: ksampler.inputs.cfg as number,
-    sampler: ksampler.inputs.sampler_name as string,
-    scheduler: ksampler.inputs.scheduler as string,
+    seed: seed as number,
+    steps: sampler.inputs.steps as number,
+    cfg: sampler.inputs.cfg as number,
+    sampler: sampler.inputs.sampler_name as string,
+    scheduler: sampler.inputs.scheduler as string,
   };
 }
 
 /**
  * Extract model name from Checkpoint node
  */
-function extractModelFromCheckpoint(
-  checkpoint: ComfyNode | undefined,
-): ModelSettings | undefined {
+function extractModel(nodes: ComfyNodeGraph): ModelSettings | undefined {
+  const checkpoint = findNode(nodes, CLASS_TYPES.checkpoint);
   if (!checkpoint?.inputs?.ckpt_name) return undefined;
   return { name: String(checkpoint.inputs.ckpt_name) };
+}
+
+/**
+ * Check if a sampler is a hires sampler by tracing its latent_image input
+ *
+ * Hires fix workflows have two patterns:
+ * 1. Image space: KSampler.latent_image → VAE Encode → Upscale Image
+ * 2. Latent space: KSampler.latent_image → LatentUpscale
+ *
+ * @param nodes - ComfyUI node graph
+ * @param sampler - Sampler node to check
+ * @returns true if this sampler is connected to an upscaled pipeline
+ */
+function isHiresSampler(nodes: ComfyNodeGraph, sampler: ComfyNode): boolean {
+  const latentImageRef = sampler.inputs.latent_image;
+  if (!isNodeReference(latentImageRef)) return false;
+
+  const inputNode = nodes[String(latentImageRef[0])];
+  if (!inputNode) return false;
+
+  // Pattern 1: Latent space upscale (LatentUpscale → KSampler)
+  const latentUpscaleTypes: readonly string[] = CLASS_TYPES.latentUpscale;
+  if (latentUpscaleTypes.includes(inputNode.class_type)) {
+    return true;
+  }
+
+  // Pattern 2: Image space upscale (ImageScale → VAEEncode → KSampler)
+  const vaeTypes: readonly string[] = CLASS_TYPES.vaeEncode;
+  if (!vaeTypes.includes(inputNode.class_type)) return false;
+
+  const pixelsRef = inputNode.inputs.pixels;
+  if (!isNodeReference(pixelsRef)) return false;
+
+  const upscaleNode = nodes[String(pixelsRef[0])];
+  if (!upscaleNode) return false;
+
+  const imageScaleTypes: readonly string[] = CLASS_TYPES.hiresImageScale;
+  return imageScaleTypes.includes(upscaleNode.class_type);
+}
+
+/**
+ * Find hires sampler node by connection pattern
+ *
+ * Detects hires fix by tracing: KSampler.latent_image → VAE Encode → Upscale Image
+ * This is more reliable than checking denoise < 1, which can be used in normal generation.
+ */
+function findHiresSampler(nodes: ComfyNodeGraph): ComfyNode | undefined {
+  const samplerTypes: readonly string[] = CLASS_TYPES.sampler;
+  return Object.values(nodes).find(
+    (node) =>
+      samplerTypes.includes(node.class_type) && isHiresSampler(nodes, node),
+  );
 }
 
 // =============================================================================
@@ -331,39 +466,39 @@ function extractModelFromCheckpoint(
  * Extract metadata from ComfyUI nodes
  *
  * Extracts prompt, dimensions, model, sampling, and hires settings
- * from standard ComfyUI node structure.
+ * from standard ComfyUI node structure using class_type-based lookup.
  *
- * @param prompt - Parsed ComfyUI prompt (node graph)
+ * @param nodes - Parsed ComfyUI prompt (node graph)
  * @returns Partial metadata from ComfyUI nodes
  */
 function extractComfyUIMetadata(
-  prompt: ComfyNodeGraph,
+  nodes: ComfyNodeGraph,
 ): PartialMetadata | undefined {
-  // Extract from specialized nodes
-  const { promptText, negativeText } = extractPromptTexts(prompt);
-  const { width, height } = extractDimensions(prompt);
-  const ksampler = findNode(prompt, COMFYUI_NODE_KEYS.sampler);
-  const checkpoint = findNode(prompt, COMFYUI_NODE_KEYS.checkpoint);
+  // Extract from nodes using class_type lookup
+  const { promptText, negativeText } = extractPromptTexts(nodes);
+  const { width, height } = extractDimensions(nodes);
 
   // Extract hires/upscale settings
-  const hiresModel = findNode(
-    prompt,
-    COMFYUI_NODE_KEYS.hiresModelUpscale,
-  )?.inputs;
-  const hiresScale = findNode(
-    prompt,
-    COMFYUI_NODE_KEYS.hiresImageScale,
-  )?.inputs;
-  const hiresSampler = findNode(prompt, COMFYUI_NODE_KEYS.hiresSampler)?.inputs;
+  const hiresModel = findNode(nodes, CLASS_TYPES.hiresModelUpscale)?.inputs;
+  // Try image scale first, then latent upscale
+  const hiresImageScale = findNode(nodes, CLASS_TYPES.hiresImageScale)?.inputs;
+  const latentUpscale = findNode(nodes, CLASS_TYPES.latentUpscale)?.inputs;
+  const hiresSampler = findHiresSampler(nodes)?.inputs;
 
   return trimObject({
     prompt: promptText || undefined,
     negativePrompt: negativeText || undefined,
     width: width > 0 ? width : undefined,
     height: height > 0 ? height : undefined,
-    model: extractModelFromCheckpoint(checkpoint),
-    sampling: extractSamplingFromKSampler(ksampler),
-    ...buildHiresOrUpscale(hiresModel, hiresScale, hiresSampler, width),
+    model: extractModel(nodes),
+    sampling: extractSampling(nodes),
+    ...buildHiresOrUpscale(
+      hiresModel,
+      hiresImageScale,
+      latentUpscale,
+      hiresSampler,
+      width,
+    ),
   });
 }
 
@@ -371,26 +506,37 @@ function extractComfyUIMetadata(
  * Build hires or upscale settings from ComfyUI nodes
  *
  * @param hiresModel - Upscale model loader node inputs
- * @param hiresScale - Image scale node inputs
+ * @param hiresImageScale - Image scale node inputs (has width property)
+ * @param latentUpscale - Latent upscale node inputs (has scale_by property)
  * @param hiresSampler - Hires sampler node inputs (optional)
  * @param baseWidth - Base image width for scale calculation
  * @returns Hires or upscale settings
  */
 function buildHiresOrUpscale(
   hiresModel: Record<string, unknown> | undefined,
-  hiresScale: Record<string, unknown> | undefined,
+  hiresImageScale: Record<string, unknown> | undefined,
+  latentUpscale: Record<string, unknown> | undefined,
   hiresSampler: Record<string, unknown> | undefined,
   baseWidth: number,
 ): Pick<PartialMetadata, 'hires' | 'upscale'> {
-  if (!hiresModel || !hiresScale) return {};
+  if (!hiresModel && !hiresImageScale && !latentUpscale) return {};
 
-  const hiresWidth = hiresScale.width as number;
-  const scale = calculateScale(hiresWidth, baseWidth);
+  // Calculate scale from either source
+  let scale: number | undefined;
+  if (latentUpscale?.scale_by !== undefined) {
+    // LatentUpscaleBy has direct scale value
+    scale = latentUpscale.scale_by as number;
+  } else if (hiresImageScale?.width !== undefined) {
+    // ImageScale has target width, need to calculate ratio
+    scale = calculateScale(hiresImageScale.width as number, baseWidth);
+  }
+
+  const upscaler = hiresModel?.model_name as string | undefined;
 
   if (hiresSampler) {
     return {
       hires: {
-        upscaler: hiresModel.model_name as string,
+        upscaler,
         scale,
         steps: hiresSampler.steps as number,
         denoise: hiresSampler.denoise as number,
@@ -398,9 +544,12 @@ function buildHiresOrUpscale(
     };
   }
 
+  // Pure upscale without sampler requires upscaler model
+  if (!upscaler) return {};
+
   return {
     upscale: {
-      upscaler: hiresModel.model_name as string,
+      upscaler,
       scale,
     },
   };
@@ -535,12 +684,49 @@ function buildCivitaiSampling(
 // =============================================================================
 
 /**
+ * Deep merge two objects, excluding undefined values
+ *
+ * Unlike spread operator, this does NOT let undefined values override defined ones.
+ * Example: mergeObjects({ scale: 1.5 }, { upscaler: 'x', scale: undefined })
+ *          = { scale: 1.5, upscaler: 'x' }
+ *
+ * @param base - Base object (lower priority)
+ * @param override - Override object (higher priority for defined values)
+ * @returns Merged object or undefined if empty
+ */
+function mergeObjects<T extends object>(
+  base: T | undefined,
+  override: T | undefined,
+): T | undefined {
+  if (!base && !override) return undefined;
+
+  const merged: Record<string, unknown> = {};
+
+  // Add base properties (excluding undefined)
+  if (base) {
+    for (const [key, value] of Object.entries(base)) {
+      if (value !== undefined) merged[key] = value;
+    }
+  }
+
+  // Add override properties (excluding undefined, these win over base)
+  if (override) {
+    for (const [key, value] of Object.entries(override)) {
+      if (value !== undefined) merged[key] = value;
+    }
+  }
+
+  return Object.keys(merged).length > 0 ? (merged as T) : undefined;
+}
+
+/**
  * Merge two partial metadata objects
  *
  * ComfyUI metadata takes priority over CivitAI fallback.
  * Handles:
  * - Required fields: defaults to empty/zero if both undefined
  * - Optional fields: omitted if undefined (not set to undefined)
+ * - Nested objects (upscale, hires): deep merge preserving defined values from both
  *
  * @param base - Base metadata (lower priority, e.g., CivitAI fallback)
  * @param override - Override metadata (higher priority, e.g., ComfyUI nodes)
@@ -550,21 +736,23 @@ function mergeMetadata(
   base: PartialMetadata | undefined,
   override: PartialMetadata | undefined,
 ): MergedMetadata {
-  // Override takes priority (ComfyUI values win if present)
-  const merged = { ...base, ...override };
+  // Deep merge for nested objects (upscale, hires)
+  // mergeObjects excludes undefined values, preserving defined values from both sources
+  const upscale = mergeObjects(base?.upscale, override?.upscale);
+  const hires = mergeObjects(base?.hires, override?.hires);
 
   return {
-    // Required fields with defaults
-    prompt: merged.prompt ?? '',
-    negativePrompt: merged.negativePrompt ?? '',
-    width: merged.width ?? 0,
-    height: merged.height ?? 0,
+    // Required fields with defaults (override takes priority)
+    prompt: override?.prompt ?? base?.prompt ?? '',
+    negativePrompt: override?.negativePrompt ?? base?.negativePrompt ?? '',
+    width: override?.width ?? base?.width ?? 0,
+    height: override?.height ?? base?.height ?? 0,
     // Optional fields - only include if defined
     ...trimObject({
-      model: merged.model,
-      sampling: merged.sampling,
-      hires: merged.hires,
-      upscale: merged.upscale,
+      model: override?.model ?? base?.model,
+      sampling: override?.sampling ?? base?.sampling,
+      hires,
+      upscale,
     }),
   };
 }

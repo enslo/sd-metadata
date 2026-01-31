@@ -227,6 +227,101 @@ describe('ComfyUI Parsers - Samples', () => {
       });
       expectComfyNodeGraph(meta.nodes);
     });
+
+    it('should parse comfyui-comfyroll.png (ComfyRoll custom nodes)', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-comfyroll.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, #テスト\n',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        // Dimensions parsed from rgthree "dimensions" string format
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiNSFWIllustrious_v140.safetensors',
+        },
+        sampling: {
+          seed: 942975376742792,
+          steps: 30,
+          cfg: 6,
+          sampler: 'euler_ancestral',
+          scheduler: 'normal',
+        },
+        // Hires detected from LatentUpscaleBy → KSampler connection pattern
+        hires: {
+          upscaler: 'ESRGAN-Remacri-4x.pth',
+          scale: 1.5000000000000002, // from LatentUpscaleBy.scale_by
+          steps: 20,
+          denoise: 0.6000000000000001,
+        },
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-group-nodes.png (group node IDs like "4:1")', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-group-nodes.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 1038684211150939,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-rgthree.png (rgthree Power Prompt)', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-rgthree.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 963381484256655,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
   });
 
   describe('WebP samples', () => {
@@ -476,16 +571,22 @@ describe('ComfyUI Parsers - Samples', () => {
           'bad quality, worst quality, worst detail, sketch, censor, \n',
         width: 1536,
         height: 1536,
-        model: undefined,
+        model: {
+          name: 'urn:air:sdxl:checkpoint:civitai:827184@2514310',
+        },
         sampling: {
           sampler: 'euler_ancestral',
+          scheduler: 'normal',
           seed: 1311178179,
           steps: 25,
           cfg: 5,
         },
-        // Note: Hires scale information is not enough in the metadata (CivitAI limitation)
-        hires: undefined,
-        upscale: undefined,
+        hires: {
+          upscaler: 'urn:air:other:upscaler:civitai:147759@164821',
+          scale: undefined,
+          steps: 25,
+          denoise: 0.3,
+        },
         nodes: expect.any(Object),
       });
       expectComfyNodeGraph(meta.nodes, ['extra', 'extraMetadata']);
@@ -514,8 +615,8 @@ describe('ComfyUI Parsers - Samples', () => {
           steps: 25,
           cfg: 5,
         },
-        hires: undefined,
         upscale: {
+          upscaler: 'urn:air:other:upscaler:civitai:147759@164821',
           scale: 1.5,
         },
         nodes: expect.any(Object),
