@@ -20,6 +20,10 @@ interface InvokeAIMetadataJson {
     name?: string;
     hash?: string;
   };
+  upscale_model?: {
+    name?: string;
+  };
+  upscale_scale?: number;
 }
 
 /**
@@ -68,6 +72,9 @@ export function parseInvokeAI(entries: EntryRecord): InternalParseResult {
   const width = data.width ?? 0;
   const height = data.height ?? 0;
 
+  // Build upscale settings if present
+  const upscale = buildUpscale(data);
+
   return Result.ok({
     software: 'invokeai',
     prompt: data.positive_prompt ?? '',
@@ -84,5 +91,26 @@ export function parseInvokeAI(entries: EntryRecord): InternalParseResult {
       cfg: data.cfg_scale,
       sampler: data.scheduler,
     }),
+    ...upscale,
   });
+}
+
+/**
+ * Build upscale settings from InvokeAI metadata
+ * - upscale_model.name: The upscaler model name
+ * - upscale_scale: The scale factor (e.g., 2 for 2x upscale)
+ */
+function buildUpscale(
+  data: InvokeAIMetadataJson,
+): { upscale: { upscaler?: string; scale?: number } } | Record<string, never> {
+  if (!data.upscale_model?.name && data.upscale_scale === undefined) {
+    return {};
+  }
+
+  const upscale = trimObject({
+    upscaler: data.upscale_model?.name,
+    scale: data.upscale_scale,
+  });
+
+  return upscale ? { upscale } : {};
 }
