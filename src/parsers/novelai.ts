@@ -66,7 +66,7 @@ export function parseNovelAI(entries: EntryRecord): InternalParseResult {
   }
 
   const parsed = parseJson<NovelAIComment>(commentText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Comment entry',

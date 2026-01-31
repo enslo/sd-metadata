@@ -30,8 +30,8 @@ export function extractFromCommentJson(
 ): string | undefined {
   if (!entryRecord.UserComment?.startsWith('{')) return undefined;
 
-  const parsed = parseJson<Record<string, unknown>>(entryRecord.UserComment);
-  if (!parsed.ok) return undefined;
+  const parsed = parseJson(entryRecord.UserComment);
+  if (!parsed.ok || parsed.type !== 'object') return undefined;
 
   const value = parsed.value[key];
   if (typeof value === 'string') return value;

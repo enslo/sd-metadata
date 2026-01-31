@@ -67,8 +67,8 @@ export function segmentsToRecord(segments: MetadataSegment[]): EntryRecord {
  * @returns Entry record if NovelAI format, null otherwise
  */
 function tryExpandNovelAIWebpFormat(text: string): EntryRecord | null {
-  const outerParsed = parseJson<Record<string, unknown>>(text);
-  if (!outerParsed.ok) {
+  const outerParsed = parseJson(text);
+  if (!outerParsed.ok || outerParsed.type !== 'object') {
     return null;
   }
 
@@ -76,8 +76,6 @@ function tryExpandNovelAIWebpFormat(text: string): EntryRecord | null {
 
   // Check if this is NovelAI WebP format
   if (
-    typeof outer !== 'object' ||
-    outer === null ||
     (typeof outer.Software === 'string' &&
       !outer.Software.startsWith('NovelAI')) ||
     typeof outer.Comment !== 'string'
@@ -86,10 +84,10 @@ function tryExpandNovelAIWebpFormat(text: string): EntryRecord | null {
   }
 
   // Parse and add inner Comment as Comment entry
-  const innerParsed = parseJson<unknown>(outer.Comment);
+  const innerParsed = parseJson(outer.Comment);
 
   return Object.freeze({
-    Software: 'NovelAI',
+    Software: typeof outer.Software === 'string' ? outer.Software : 'NovelAI',
     Comment: innerParsed.ok ? JSON.stringify(innerParsed.value) : outer.Comment,
   });
 }

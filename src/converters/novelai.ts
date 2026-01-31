@@ -101,9 +101,9 @@ function parseSegments(
     return [];
   }
 
-  const parsed = parseJson<Record<string, unknown>>(userCommentSeg.data);
-  if (!parsed.ok) {
-    // If parsing fails, treat the whole thing as Comment
+  const parsed = parseJson(userCommentSeg.data);
+  if (!parsed.ok || parsed.type !== 'object') {
+    // If parsing fails or not an object, treat the whole thing as Comment
     return createTextChunk('Comment', userCommentSeg.data);
   }
 

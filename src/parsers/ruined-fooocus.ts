@@ -47,7 +47,7 @@ export function parseRuinedFooocus(entries: EntryRecord): InternalParseResult {
 
   // Parse JSON
   const parsed = parseJson<RuinedFooocusJsonMetadata>(jsonText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Ruined Fooocus metadata',

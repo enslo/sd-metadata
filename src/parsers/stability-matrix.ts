@@ -55,7 +55,8 @@ export function parseStabilityMatrix(
   const parsed = jsonText
     ? parseJson<StabilityMatrixJson>(jsonText)
     : undefined;
-  const data = parsed?.ok ? parsed.value : undefined;
+  const data =
+    parsed?.ok && parsed.type === 'object' ? parsed.value : undefined;
 
   return Result.ok({
     ...comfyResult.value,

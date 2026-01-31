@@ -56,7 +56,7 @@ export function parseInvokeAI(entries: EntryRecord): InternalParseResult {
 
   // Parse metadata JSON
   const parsed = parseJson<InvokeAIMetadataJson>(metadataText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in invokeai_metadata entry',

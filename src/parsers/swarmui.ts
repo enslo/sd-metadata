@@ -45,10 +45,8 @@ function extractSwarmUIParameters(
     return undefined;
   }
 
-  const commentParsed = parseJson<Record<string, unknown>>(
-    entryRecord.UserComment,
-  );
-  if (!commentParsed.ok) {
+  const commentParsed = parseJson(entryRecord.UserComment);
+  if (!commentParsed.ok || commentParsed.type !== 'object') {
     return undefined;
   }
 
@@ -82,7 +80,7 @@ export function parseSwarmUI(entries: EntryRecord): InternalParseResult {
 
   // Parse parameters JSON
   const parsed = parseJson<SwarmUIParameters>(parametersText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in parameters entry',
@@ -101,10 +99,13 @@ export function parseSwarmUI(entries: EntryRecord): InternalParseResult {
 
   // Parse nodes from prompt chunk (PNG format) or Make field (JPEG/WebP extended format)
   const promptSource = entries.prompt || entries.Make;
-  const promptParsed = promptSource ? parseJson(promptSource) : undefined;
-  const nodes = promptParsed?.ok
-    ? (promptParsed.value as ComfyNodeGraph)
+  const promptParsed = promptSource
+    ? parseJson<ComfyNodeGraph>(promptSource)
     : undefined;
+  const nodes =
+    promptParsed?.ok && promptParsed.type === 'object'
+      ? promptParsed.value
+      : undefined;
 
   return Result.ok({
     software: 'swarmui',

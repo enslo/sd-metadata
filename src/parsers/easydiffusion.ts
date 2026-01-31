@@ -97,7 +97,7 @@ export function parseEasyDiffusion(entries: EntryRecord): InternalParseResult {
 
   // Parse JSON
   const parsed = parseJson<EasyDiffusionJsonMetadata>(jsonText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Easy Diffusion metadata',

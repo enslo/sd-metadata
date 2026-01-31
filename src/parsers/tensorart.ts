@@ -49,7 +49,7 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
   // Parse JSON (TensorArt appends NUL characters)
   const cleanedText = dataText.replace(/\0+$/, '');
   const parsed = parseJson<TensorArtGenerationData>(cleanedText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in generation_data entry',
@@ -65,20 +65,18 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
   if (!promptChunk) {
     return Result.error({ type: 'unsupportedFormat' });
   }
-  const promptParsed = parseJson(promptChunk);
-  if (!promptParsed.ok) {
+  const promptParsed = parseJson<ComfyNodeGraph>(promptChunk);
+  if (!promptParsed.ok || promptParsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in prompt chunk',
     });
   }
+  const nodes = promptParsed.value;
 
   // Compute seed (resolve -1 from KSampler node)
   const baseSeed = data.seed ? Number(data.seed) : undefined;
-  const seed =
-    baseSeed === -1
-      ? findActualSeed(promptParsed.value as ComfyNodeGraph)
-      : baseSeed;
+  const seed = baseSeed === -1 ? findActualSeed(nodes) : baseSeed;
 
   return Result.ok({
     software: 'tensorart',
@@ -86,7 +84,7 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
     negativePrompt: data.negativePrompt ?? '',
     width,
     height,
-    nodes: promptParsed.value as ComfyNodeGraph,
+    nodes,
     model: trimObject({
       name: data.baseModel?.modelFileName,
       hash: data.baseModel?.hash,

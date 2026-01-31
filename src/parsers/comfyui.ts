@@ -129,7 +129,7 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
   }
 
   const parsed = parseJson<ComfyNodeGraph>(promptText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in prompt entry',
@@ -225,8 +225,8 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
     // Check if it's JSON that looks like ComfyUI prompt
     if (candidate.startsWith('{')) {
       const cleaned = cleanJsonString(candidate);
-      const parsed = parseJson<Record<string, unknown>>(cleaned);
-      if (!parsed.ok) continue;
+      const parsed = parseJson(cleaned);
+      if (!parsed.ok || parsed.type !== 'object') continue;
 
       // Check if it's wrapped in {"prompt": {...}} format
       if (parsed.value.prompt && typeof parsed.value.prompt === 'object') {
@@ -426,13 +426,13 @@ function extractExtraMetadata(
   const extraMetaField = (prompt as Record<string, unknown>).extraMetadata;
   if (typeof extraMetaField === 'string') {
     const parsed = parseJson<CivitaiExtraMetadata>(extraMetaField);
-    if (parsed.ok) return parsed.value;
+    if (parsed.ok && parsed.type === 'object') return parsed.value;
   }
 
   // Fall back to separate entry (PNG format)
   if (entryRecord?.extraMetadata) {
     const parsed = parseJson<CivitaiExtraMetadata>(entryRecord.extraMetadata);
-    if (parsed.ok) return parsed.value;
+    if (parsed.ok && parsed.type === 'object') return parsed.value;
   }
 
   return undefined;

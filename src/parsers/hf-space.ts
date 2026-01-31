@@ -41,7 +41,7 @@ export function parseHfSpace(entries: EntryRecord): InternalParseResult {
 
   // Parse JSON
   const parsed = parseJson<HfSpaceJsonMetadata>(parametersText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in parameters entry',
