@@ -2,9 +2,12 @@ pre-commit:
   parallel: true
   commands:
     lint:
-      run: npm run lint
+      glob: "*.{js,ts,tsx,json}"
+      run: pnpm biome check --write {staged_files}
+      stage_fixed: true
     typecheck:
-      run: npm run typecheck
+      run: pnpm typecheck
     markdown:
       glob: "*.md"
-      run: npm run markdownlint -- {staged_files}
+      run: pnpm markdownlint {staged_files}
+      stage_fixed: true
