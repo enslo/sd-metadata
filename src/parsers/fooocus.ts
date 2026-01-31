@@ -1,10 +1,6 @@
-import type {
-  InternalParseResult,
-  MetadataEntry,
-  StandardMetadata,
-} from '../types';
+import type { InternalParseResult, StandardMetadata } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 
 /**
@@ -45,11 +41,9 @@ interface FooocusJsonMetadata {
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseFooocus(entries: MetadataEntry[]): InternalParseResult {
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseFooocus(entries: EntryRecord): InternalParseResult {
   // Find JSON in Comment entry (PNG uses Comment, JPEG uses comment)
-  const jsonText = entryRecord.Comment ?? entryRecord.comment;
+  const jsonText = entries.Comment ?? entries.comment;
 
   if (!jsonText || !jsonText.startsWith('{')) {
     return Result.error({ type: 'unsupportedFormat' });
@@ -57,7 +51,7 @@ export function parseFooocus(entries: MetadataEntry[]): InternalParseResult {
 
   // Parse JSON
   const parsed = parseJson<FooocusJsonMetadata>(jsonText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Fooocus metadata',

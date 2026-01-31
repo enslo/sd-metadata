@@ -1,10 +1,6 @@
-import type {
-  ComfyNodeGraph,
-  InternalParseResult,
-  MetadataEntry,
-} from '../types';
+import type { ComfyNodeGraph, InternalParseResult } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord, extractFromCommentJson } from '../utils/entries';
+import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 
@@ -36,18 +32,15 @@ interface TensorArtGenerationData {
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry record for easy access
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseTensorArt(entries: EntryRecord): InternalParseResult {
   // Find generation_data entry
   // PNG: stored in 'generation_data' chunk
   // JPEG/WebP (after conversion): stored in 'Comment' as {"generation_data": ..., "prompt": ...}
   const dataText =
-    entryRecord.generation_data ??
-    extractFromCommentJson(entryRecord, 'generation_data');
+    entries.generation_data ??
+    extractFromCommentJson(entries, 'generation_data');
   const promptChunk =
-    entryRecord.prompt ?? extractFromCommentJson(entryRecord, 'prompt');
+    entries.prompt ?? extractFromCommentJson(entries, 'prompt');
 
   if (!dataText) {
     return Result.error({ type: 'unsupportedFormat' });
@@ -56,7 +49,7 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   // Parse JSON (TensorArt appends NUL characters)
   const cleanedText = dataText.replace(/\0+$/, '');
   const parsed = parseJson<TensorArtGenerationData>(cleanedText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in generation_data entry',
@@ -72,20 +65,18 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
   if (!promptChunk) {
     return Result.error({ type: 'unsupportedFormat' });
   }
-  const promptParsed = parseJson(promptChunk);
-  if (!promptParsed.ok) {
+  const promptParsed = parseJson<ComfyNodeGraph>(promptChunk);
+  if (!promptParsed.ok || promptParsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in prompt chunk',
     });
   }
+  const nodes = promptParsed.value;
 
   // Compute seed (resolve -1 from KSampler node)
   const baseSeed = data.seed ? Number(data.seed) : undefined;
-  const seed =
-    baseSeed === -1
-      ? findActualSeed(promptParsed.value as ComfyNodeGraph)
-      : baseSeed;
+  const seed = baseSeed === -1 ? findActualSeed(nodes) : baseSeed;
 
   return Result.ok({
     software: 'tensorart',
@@ -93,7 +84,7 @@ export function parseTensorArt(entries: MetadataEntry[]): InternalParseResult {
     negativePrompt: data.negativePrompt ?? '',
     width,
     height,
-    nodes: promptParsed.value as ComfyNodeGraph,
+    nodes,
     model: trimObject({
       name: data.baseModel?.modelFileName,
       hash: data.baseModel?.hash,

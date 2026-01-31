@@ -27,7 +27,7 @@ export function convertKvPngToSegments(
   const data: Record<string, unknown> = {};
 
   for (const chunk of chunks) {
-    const parsed = parseJson<unknown>(chunk.text);
+    const parsed = parseJson(chunk.text);
     if (parsed.ok) {
       data[chunk.keyword] = parsed.value;
     } else {
@@ -59,9 +59,9 @@ export function convertKvSegmentsToPng(
     return [];
   }
 
-  const parsed = parseJson<Record<string, unknown>>(userComment.data);
-  if (!parsed.ok) {
-    // If not JSON, we can't blindly map keys.
+  const parsed = parseJson(userComment.data);
+  if (!parsed.ok || parsed.type !== 'object') {
+    // If not JSON object, we can't blindly map keys.
     // Return empty here, letting specific converters handle fallback if needed.
     return [];
   }

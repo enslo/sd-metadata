@@ -1,43 +1,40 @@
 import type {
-  MetadataEntry,
   MetadataSegment,
   MetadataSegmentSource,
   PngTextChunk,
 } from '../types';
+import type { EntryRecord } from './entries';
 import { parseJson } from './json';
 
 /**
- * Convert PNG text chunks to format-agnostic metadata entries
+ * Convert PNG text chunks to entry record
  *
  * @param chunks - PNG tEXt/iTXt chunks
- * @returns Array of metadata entries
+ * @returns Entry record for keyword lookup
  */
-export function pngChunksToEntries(chunks: PngTextChunk[]): MetadataEntry[] {
-  return chunks.map((chunk) => ({
-    keyword: chunk.keyword,
-    text: chunk.text,
-  }));
+export function pngChunksToRecord(chunks: PngTextChunk[]): EntryRecord {
+  return Object.freeze(
+    Object.fromEntries(chunks.map((c) => [c.keyword, c.text])),
+  );
 }
 
 /**
- * Convert JPEG/WebP metadata segments to format-agnostic entries
+ * Convert JPEG/WebP metadata segments to entry record
  *
  * Maps segment sources to conventional keywords:
  * - jpegCom → 'Comment'
- * - exifUserComment → 'Comment' (or expand if NovelAI WebP format)
- * - exifImageDescription → prefix or 'Description'
+ * - exifUserComment → 'UserComment' (or expand if NovelAI WebP format)
+ * - exifImageDescription → prefix or 'ImageDescription'
  * - exifMake → prefix or 'Make'
  *
  * Special handling for NovelAI WebP format where metadata is stored as:
  * {"Comment": "{...inner JSON...}", "Software": "NovelAI", ...}
  *
  * @param segments - Metadata segments from JPEG/WebP reader
- * @returns Array of metadata entries
+ * @returns Entry record for keyword lookup
  */
-export function segmentsToEntries(
-  segments: MetadataSegment[],
-): MetadataEntry[] {
-  const entries: MetadataEntry[] = [];
+export function segmentsToRecord(segments: MetadataSegment[]): EntryRecord {
+  const record: Record<string, string> = {};
 
   for (const segment of segments) {
     const keyword = sourceToKeyword(segment.source);
@@ -48,15 +45,15 @@ export function segmentsToEntries(
     if (segment.source.type === 'exifUserComment' && text.startsWith('{')) {
       const expanded = tryExpandNovelAIWebpFormat(text);
       if (expanded) {
-        entries.push(...expanded);
+        Object.assign(record, expanded);
         continue;
       }
     }
 
-    entries.push({ keyword, text });
+    record[keyword] = text;
   }
 
-  return entries;
+  return Object.freeze(record);
 }
 
 /**
@@ -67,11 +64,11 @@ export function segmentsToEntries(
  * - Comment: inner JSON string with actual parameters
  *
  * @param text - JSON text to try to expand
- * @returns Array of entries if NovelAI format, null otherwise
+ * @returns Entry record if NovelAI format, null otherwise
  */
-function tryExpandNovelAIWebpFormat(text: string): MetadataEntry[] | null {
-  const outerParsed = parseJson<Record<string, unknown>>(text);
-  if (!outerParsed.ok) {
+function tryExpandNovelAIWebpFormat(text: string): EntryRecord | null {
+  const outerParsed = parseJson(text);
+  if (!outerParsed.ok || outerParsed.type !== 'object') {
     return null;
   }
 
@@ -79,8 +76,6 @@ function tryExpandNovelAIWebpFormat(text: string): MetadataEntry[] | null {
 
   // Check if this is NovelAI WebP format
   if (
-    typeof outer !== 'object' ||
-    outer === null ||
     (typeof outer.Software === 'string' &&
       !outer.Software.startsWith('NovelAI')) ||
     typeof outer.Comment !== 'string'
@@ -88,17 +83,13 @@ function tryExpandNovelAIWebpFormat(text: string): MetadataEntry[] | null {
     return null;
   }
 
-  const entries: MetadataEntry[] = [{ keyword: 'Software', text: 'NovelAI' }];
-
   // Parse and add inner Comment as Comment entry
-  const innerParsed = parseJson<unknown>(outer.Comment);
+  const innerParsed = parseJson(outer.Comment);
 
-  return [
-    ...entries,
-    innerParsed.ok
-      ? { keyword: 'Comment', text: JSON.stringify(innerParsed.value) }
-      : { keyword: 'Comment', text: outer.Comment },
-  ];
+  return Object.freeze({
+    Software: typeof outer.Software === 'string' ? outer.Software : 'NovelAI',
+    Comment: innerParsed.ok ? JSON.stringify(innerParsed.value) : outer.Comment,
+  });
 }
 
 /**
@@ -109,9 +100,9 @@ function sourceToKeyword(source: MetadataSegmentSource): string {
     case 'jpegCom':
       return 'Comment';
     case 'exifUserComment':
-      return 'Comment';
+      return 'UserComment';
     case 'exifImageDescription':
-      return source.prefix ?? 'Description';
+      return source.prefix ?? 'ImageDescription';
     case 'exifMake':
       return source.prefix ?? 'Make';
   }

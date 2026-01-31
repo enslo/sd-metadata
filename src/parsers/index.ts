@@ -1,5 +1,6 @@
-import type { InternalParseResult, MetadataEntry } from '../types';
+import type { InternalParseResult } from '../types';
 import { Result } from '../types';
+import type { EntryRecord } from '../utils/entries';
 import { parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
 import { detectSoftware } from './detect';
@@ -22,7 +23,7 @@ import { parseTensorArt } from './tensorart';
  * @param entries - Format-agnostic metadata entries
  * @returns Parsed metadata or error
  */
-export function parseMetadata(entries: MetadataEntry[]): InternalParseResult {
+export function parseMetadata(entries: EntryRecord): InternalParseResult {
   // Detect software from entries
   const software = detectSoftware(entries);
 

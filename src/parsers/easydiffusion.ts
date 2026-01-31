@@ -1,10 +1,6 @@
-import type {
-  InternalParseResult,
-  MetadataEntry,
-  StandardMetadata,
-} from '../types';
+import type { InternalParseResult, StandardMetadata } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 
 /**
@@ -81,25 +77,19 @@ function extractModelName(path: string | undefined): string | undefined {
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseEasyDiffusion(
-  entries: MetadataEntry[],
-): InternalParseResult {
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseEasyDiffusion(entries: EntryRecord): InternalParseResult {
   // Check for standalone entries (PNG format)
-  if (entryRecord.negative_prompt || entryRecord['Negative Prompt']) {
+  if (entries.negative_prompt || entries['Negative Prompt']) {
     // The entire info dict is what we need to process
     // Try to reconstruct from individual entries or find a JSON source
     // For PNG, Easy Diffusion stores each field as a separate chunk
-    return parseFromEntries(entryRecord);
+    return parseFromEntries(entries);
   }
 
   // Find JSON in various possible locations
-  const jsonText =
-    (entryRecord.parameters?.startsWith('{')
-      ? entryRecord.parameters
-      : undefined) ??
-    (entryRecord.Comment?.startsWith('{') ? entryRecord.Comment : undefined);
+  const jsonText = entries.parameters?.startsWith('{')
+    ? entries.parameters
+    : entries.UserComment?.startsWith('{') && entries.UserComment;
 
   if (!jsonText) {
     return Result.error({ type: 'unsupportedFormat' });
@@ -107,7 +97,7 @@ export function parseEasyDiffusion(
 
   // Parse JSON
   const parsed = parseJson<EasyDiffusionJsonMetadata>(jsonText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Easy Diffusion metadata',

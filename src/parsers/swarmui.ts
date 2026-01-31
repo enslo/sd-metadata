@@ -1,10 +1,6 @@
-import type {
-  ComfyNodeGraph,
-  InternalParseResult,
-  MetadataEntry,
-} from '../types';
+import type { ComfyNodeGraph, InternalParseResult } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 
@@ -44,19 +40,19 @@ function extractSwarmUIParameters(
     return entryRecord.parameters;
   }
 
-  // Try to extract from Comment JSON (JPEG/WebP format)
-  if (!entryRecord.Comment) {
+  // Try to extract from UserComment JSON (JPEG/WebP format)
+  if (!entryRecord.UserComment) {
     return undefined;
   }
 
-  const commentParsed = parseJson<Record<string, unknown>>(entryRecord.Comment);
-  if (!commentParsed.ok) {
+  const commentParsed = parseJson(entryRecord.UserComment);
+  if (!commentParsed.ok || commentParsed.type !== 'object') {
     return undefined;
   }
 
   // Native WebP format: direct sui_image_params
   if ('sui_image_params' in commentParsed.value) {
-    return entryRecord.Comment; // Return as-is to preserve full structure
+    return entryRecord.UserComment; // Return as-is to preserve full structure
   }
 
   return undefined;
@@ -72,14 +68,11 @@ function extractSwarmUIParameters(
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry record for easy access
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseSwarmUI(entries: EntryRecord): InternalParseResult {
   // Find parameters entry
   // For PNG: direct keyword 'parameters'
   // For JPEG/WebP: inside Comment JSON
-  const parametersText = extractSwarmUIParameters(entryRecord);
+  const parametersText = extractSwarmUIParameters(entries);
 
   if (!parametersText) {
     return Result.error({ type: 'unsupportedFormat' });
@@ -87,7 +80,7 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
 
   // Parse parameters JSON
   const parsed = parseJson<SwarmUIParameters>(parametersText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in parameters entry',
@@ -105,11 +98,14 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
   const height = params.height ?? 0;
 
   // Parse nodes from prompt chunk (PNG format) or Make field (JPEG/WebP extended format)
-  const promptSource = entryRecord.prompt || entryRecord.Make;
-  const promptParsed = promptSource ? parseJson(promptSource) : undefined;
-  const nodes = promptParsed?.ok
-    ? (promptParsed.value as ComfyNodeGraph)
+  const promptSource = entries.prompt || entries.Make;
+  const promptParsed = promptSource
+    ? parseJson<ComfyNodeGraph>(promptSource)
     : undefined;
+  const nodes =
+    promptParsed?.ok && promptParsed.type === 'object'
+      ? promptParsed.value
+      : undefined;
 
   return Result.ok({
     software: 'swarmui',

@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { parseRuinedFooocus } from '../../../src/parsers/ruined-fooocus';
-import type { MetadataEntry } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to create Ruined Fooocus metadata entry
  */
-function createRuinedFooocusEntry(metadata: unknown): MetadataEntry[] {
-  return [{ keyword: 'parameters', text: JSON.stringify(metadata) }];
+function createRuinedFooocusEntry(metadata: unknown): EntryRecord {
+  return { parameters: JSON.stringify(metadata) };
 }
 
 describe('parseRuinedFooocus - Unit Tests', () => {
   describe('format validation', () => {
     it('should return error for missing parameters', () => {
-      const entries: MetadataEntry[] = [];
+      const entries: EntryRecord = {};
 
       const result = parseRuinedFooocus(entries);
 
@@ -23,7 +23,7 @@ describe('parseRuinedFooocus - Unit Tests', () => {
     });
 
     it('should return error for non-JSON parameters', () => {
-      const entries = [{ keyword: 'parameters', text: 'plain text' }];
+      const entries: EntryRecord = { parameters: 'plain text' };
 
       const result = parseRuinedFooocus(entries);
 
@@ -34,7 +34,7 @@ describe('parseRuinedFooocus - Unit Tests', () => {
     });
 
     it('should return error for invalid JSON', () => {
-      const entries = [{ keyword: 'parameters', text: '{invalid json}' }];
+      const entries: EntryRecord = { parameters: '{invalid json}' };
 
       const result = parseRuinedFooocus(entries);
 

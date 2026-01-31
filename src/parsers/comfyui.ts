@@ -10,13 +10,12 @@ import type {
   ComfyNodeGraph,
   HiresSettings,
   InternalParseResult,
-  MetadataEntry,
   ModelSettings,
   SamplingSettings,
   UpscaleSettings,
 } from '../types';
 import { Result } from '../types';
-import { type EntryRecord, buildEntryRecord } from '../utils/entries';
+import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 
@@ -122,17 +121,15 @@ interface MergedMetadata {
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseComfyUI(entries: EntryRecord): InternalParseResult {
   // Find and parse prompt JSON
-  const promptText = findPromptJson(entryRecord);
+  const promptText = findPromptJson(entries);
   if (!promptText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   const parsed = parseJson<ComfyNodeGraph>(promptText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in prompt entry',
@@ -155,7 +152,7 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   // Extract metadata from both sources
   const comfyMetadata = extractComfyUIMetadata(prompt);
   const civitaiMetadata = extractCivitaiMetadata(
-    extractExtraMetadata(prompt, entryRecord),
+    extractExtraMetadata(prompt, entries),
   );
 
   // Merge with ComfyUI taking priority
@@ -215,8 +212,8 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
 
   // JPEG/WebP format: may be in various entries
   const candidates = [
-    entryRecord.Comment,
-    entryRecord.Description,
+    entryRecord.UserComment,
+    entryRecord.ImageDescription,
     entryRecord.Make,
     entryRecord.Prompt, // save-image-extended uses this
     entryRecord.Workflow, // Not a prompt, but may contain nodes info
@@ -228,8 +225,8 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
     // Check if it's JSON that looks like ComfyUI prompt
     if (candidate.startsWith('{')) {
       const cleaned = cleanJsonString(candidate);
-      const parsed = parseJson<Record<string, unknown>>(cleaned);
-      if (!parsed.ok) continue;
+      const parsed = parseJson(cleaned);
+      if (!parsed.ok || parsed.type !== 'object') continue;
 
       // Check if it's wrapped in {"prompt": {...}} format
       if (parsed.value.prompt && typeof parsed.value.prompt === 'object') {
@@ -429,13 +426,13 @@ function extractExtraMetadata(
   const extraMetaField = (prompt as Record<string, unknown>).extraMetadata;
   if (typeof extraMetaField === 'string') {
     const parsed = parseJson<CivitaiExtraMetadata>(extraMetaField);
-    if (parsed.ok) return parsed.value;
+    if (parsed.ok && parsed.type === 'object') return parsed.value;
   }
 
   // Fall back to separate entry (PNG format)
   if (entryRecord?.extraMetadata) {
     const parsed = parseJson<CivitaiExtraMetadata>(entryRecord.extraMetadata);
-    if (parsed.ok) return parsed.value;
+    if (parsed.ok && parsed.type === 'object') return parsed.value;
   }
 
   return undefined;

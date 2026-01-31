@@ -24,7 +24,7 @@ import {
   readUint32LE,
   toUint8Array,
 } from '../utils/binary';
-import { pngChunksToEntries, segmentsToEntries } from '../utils/convert';
+import { pngChunksToRecord, segmentsToRecord } from '../utils/convert';
 
 /** Options for the read function */
 export interface ReadOptions {
@@ -64,11 +64,11 @@ export function read(
   }
   const raw = rawResult.raw;
 
-  // 2. Convert to agnostic entries
+  // 2. Convert to entry record
   const entries =
     raw.format === 'png'
-      ? pngChunksToEntries(raw.chunks)
-      : segmentsToEntries(raw.segments);
+      ? pngChunksToRecord(raw.chunks)
+      : segmentsToRecord(raw.segments);
 
   // 3. Parse metadata
   const parseResult = parseMetadata(entries);

@@ -1,10 +1,6 @@
-import type {
-  CharacterPrompt,
-  InternalParseResult,
-  MetadataEntry,
-} from '../types';
+import type { CharacterPrompt, InternalParseResult } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 
@@ -52,26 +48,25 @@ interface V4Prompt {
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseNovelAI(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry record for easy access
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseNovelAI(entries: EntryRecord): InternalParseResult {
   // Verify NovelAI format
-  if (!entryRecord.Software?.startsWith('NovelAI')) {
+  if (!entries.Software?.startsWith('NovelAI')) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
   // Parse Comment JSON
-  const commentText = entryRecord.Comment;
+  // NovelAI natively supports PNG and WebP, using Exif UserComment for JPEG/WebP.
+  // COM segment (→ Comment) is a fallback for non-standard converted images.
+  const commentText = entries.UserComment ?? entries.Comment;
   if (!commentText) {
     return Result.error({
       type: 'parseError',
-      message: 'Missing Comment entry',
+      message: 'Missing Comment/UserComment entry',
     });
   }
 
   const parsed = parseJson<NovelAIComment>(commentText);
-  if (!parsed.ok) {
+  if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in Comment entry',

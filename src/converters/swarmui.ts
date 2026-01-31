@@ -33,7 +33,7 @@ export function convertSwarmUIPngToSegments(
   }
 
   // Parse and return the JSON directly (no wrapping in parameters key)
-  const parsed = parseJson<unknown>(parametersChunk.text);
+  const parsed = parseJson(parametersChunk.text);
   const segments: MetadataSegment[] = [
     {
       source: { type: 'exifUserComment' },

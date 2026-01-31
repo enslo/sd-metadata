@@ -1,5 +1,5 @@
-import type { GenerationSoftware, MetadataEntry } from '../types';
-import { type EntryRecord, buildEntryRecord } from '../utils/entries';
+import type { GenerationSoftware } from '../types';
+import type { EntryRecord } from '../utils/entries';
 
 // =============================================================================
 // Detection Markers
@@ -44,20 +44,18 @@ const MARKERS = {
  * @returns Detected software or null if unknown
  */
 export function detectSoftware(
-  entries: MetadataEntry[],
+  entries: EntryRecord,
 ): GenerationSoftware | null {
-  const entryRecord = buildEntryRecord(entries);
-
   // Tier 1: Fastest - unique keywords
-  const uniqueResult = detectUniqueKeywords(entryRecord);
+  const uniqueResult = detectUniqueKeywords(entries);
   if (uniqueResult) return uniqueResult;
 
   // Tier 2: Format-specific structured detection
-  const comfyResult = detectComfyUIEntries(entryRecord);
+  const comfyResult = detectComfyUIEntries(entries);
   if (comfyResult) return comfyResult;
 
   // Tier 3: Content analysis
-  const text = entryRecord.parameters ?? entryRecord.Comment ?? '';
+  const text = entries.parameters ?? entries.UserComment ?? entries.Comment;
   if (text) {
     return detectFromTextContent(text);
   }
@@ -127,10 +125,11 @@ function detectUniqueKeywords(
   }
 
   // ========================================
-  // JPEG/WebP Comment JSON
+  // JPEG/WebP UserComment/Comment JSON
   // ========================================
 
-  const comment = entryRecord.Comment;
+  // Check UserComment (Exif) first, then Comment (JPEG COM)
+  const comment = entryRecord.UserComment ?? entryRecord.Comment;
   if (comment?.startsWith('{')) {
     return detectFromCommentJson(comment);
   }
