@@ -62,11 +62,13 @@ export function parseNovelAI(entries: MetadataEntry[]): InternalParseResult {
   }
 
   // Parse Comment JSON
-  const commentText = entryRecord.Comment;
+  // NovelAI natively supports PNG and WebP, using Exif UserComment for JPEG/WebP.
+  // COM segment (→ Comment) is a fallback for non-standard converted images.
+  const commentText = entryRecord.UserComment ?? entryRecord.Comment;
   if (!commentText) {
     return Result.error({
       type: 'parseError',
-      message: 'Missing Comment entry',
+      message: 'Missing Comment/UserComment entry',
     });
   }
 

@@ -215,8 +215,8 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
 
   // JPEG/WebP format: may be in various entries
   const candidates = [
-    entryRecord.Comment,
-    entryRecord.Description,
+    entryRecord.UserComment,
+    entryRecord.ImageDescription,
     entryRecord.Make,
     entryRecord.Prompt, // save-image-extended uses this
     entryRecord.Workflow, // Not a prompt, but may contain nodes info

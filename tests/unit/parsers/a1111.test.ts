@@ -210,11 +210,11 @@ Steps: 20, Size: 512x512, Model: model-v1, Sampler: Euler a`;
       }
     });
 
-    it('should handle JPEG Comment entry', () => {
+    it('should handle JPEG UserComment entry', () => {
       const parameters = `test
 Steps: 20, Size: 512x512`;
       const entries: MetadataEntry[] = [
-        { keyword: 'Comment', text: parameters },
+        { keyword: 'UserComment', text: parameters },
       ];
 
       const result = parseA1111(entries);
@@ -258,11 +258,11 @@ Negative prompt: negative`;
 
   describe('false positive prevention', () => {
     it('should reject retouch software metadata', () => {
-      // Simulates non-AI software metadata in JPEG COM segment
+      // Simulates non-AI software metadata in Exif UserComment
       // This should be rejected because it lacks typical AI generation markers
       const retouchSoftware = 'Photo Editor Pro v2.0';
       const entries: MetadataEntry[] = [
-        { keyword: 'Comment', text: retouchSoftware },
+        { keyword: 'UserComment', text: retouchSoftware },
       ];
 
       const result = parseA1111(entries);

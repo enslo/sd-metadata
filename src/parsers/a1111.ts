@@ -23,9 +23,9 @@ import { trimObject } from '../utils/object';
  * @returns Parsed metadata or error
  */
 export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
-  // Find parameters entry (PNG uses 'parameters', JPEG/WebP uses 'Comment')
+  // Find parameters entry (PNG uses 'parameters', JPEG/WebP uses 'UserComment')
   const parametersEntry = entries.find(
-    (e) => e.keyword === 'parameters' || e.keyword === 'Comment',
+    (e) => e.keyword === 'parameters' || e.keyword === 'UserComment',
   );
   if (!parametersEntry) {
     return Result.error({ type: 'unsupportedFormat' });

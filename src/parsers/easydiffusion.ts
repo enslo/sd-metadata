@@ -99,7 +99,9 @@ export function parseEasyDiffusion(
     (entryRecord.parameters?.startsWith('{')
       ? entryRecord.parameters
       : undefined) ??
-    (entryRecord.Comment?.startsWith('{') ? entryRecord.Comment : undefined);
+    (entryRecord.UserComment?.startsWith('{')
+      ? entryRecord.UserComment
+      : undefined);
 
   if (!jsonText) {
     return Result.error({ type: 'unsupportedFormat' });

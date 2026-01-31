@@ -39,8 +39,8 @@ export function parseHfSpace(entries: MetadataEntry[]): InternalParseResult {
 
   // Find parameters entry
   // PNG: stored in 'parameters' chunk
-  // JPEG/WebP (after conversion): stored in 'Comment' (from exifUserComment)
-  const parametersText = entryRecord.parameters ?? entryRecord.Comment;
+  // JPEG/WebP (after conversion): stored in 'UserComment' (from exifUserComment)
+  const parametersText = entryRecord.parameters ?? entryRecord.UserComment;
   if (!parametersText) {
     return Result.error({ type: 'unsupportedFormat' });
   }

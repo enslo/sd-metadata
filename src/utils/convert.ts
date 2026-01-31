@@ -24,8 +24,8 @@ export function pngChunksToEntries(chunks: PngTextChunk[]): MetadataEntry[] {
  *
  * Maps segment sources to conventional keywords:
  * - jpegCom → 'Comment'
- * - exifUserComment → 'Comment' (or expand if NovelAI WebP format)
- * - exifImageDescription → prefix or 'Description'
+ * - exifUserComment → 'UserComment' (or expand if NovelAI WebP format)
+ * - exifImageDescription → prefix or 'ImageDescription'
  * - exifMake → prefix or 'Make'
  *
  * Special handling for NovelAI WebP format where metadata is stored as:
@@ -109,9 +109,9 @@ function sourceToKeyword(source: MetadataSegmentSource): string {
     case 'jpegCom':
       return 'Comment';
     case 'exifUserComment':
-      return 'Comment';
+      return 'UserComment';
     case 'exifImageDescription':
-      return source.prefix ?? 'Description';
+      return source.prefix ?? 'ImageDescription';
     case 'exifMake':
       return source.prefix ?? 'Make';
   }

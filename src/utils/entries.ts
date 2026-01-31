@@ -25,9 +25,9 @@ export function buildEntryRecord(entries: MetadataEntry[]): EntryRecord {
 }
 
 /**
- * Extract a field from Comment JSON
+ * Extract a field from UserComment JSON
  *
- * Many parsers store metadata as JSON in the Comment entry.
+ * Many parsers store metadata as JSON in the UserComment entry.
  * This utility extracts a specific field, handling both string and object values.
  *
  * @param entryRecord - Entry record from buildEntryRecord
@@ -36,7 +36,7 @@ export function buildEntryRecord(entries: MetadataEntry[]): EntryRecord {
  *
  * @example
  * ```typescript
- * // Comment: {"generation_data": "{...}", "other": {...}}
+ * // UserComment: {"generation_data": "{...}", "other": {...}}
  * const data = extractFromCommentJson(entryRecord, 'generation_data');
  * // Returns the string value or JSON.stringify of object value
  * ```
@@ -45,9 +45,9 @@ export function extractFromCommentJson(
   entryRecord: EntryRecord,
   key: string,
 ): string | undefined {
-  if (!entryRecord.Comment?.startsWith('{')) return undefined;
+  if (!entryRecord.UserComment?.startsWith('{')) return undefined;
 
-  const parsed = parseJson<Record<string, unknown>>(entryRecord.Comment);
+  const parsed = parseJson<Record<string, unknown>>(entryRecord.UserComment);
   if (!parsed.ok) return undefined;
 
   const value = parsed.value[key];

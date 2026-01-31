@@ -57,7 +57,11 @@ export function detectSoftware(
   if (comfyResult) return comfyResult;
 
   // Tier 3: Content analysis
-  const text = entryRecord.parameters ?? entryRecord.Comment ?? '';
+  const text =
+    entryRecord.parameters ??
+    entryRecord.UserComment ??
+    entryRecord.Comment ??
+    '';
   if (text) {
     return detectFromTextContent(text);
   }
@@ -127,10 +131,11 @@ function detectUniqueKeywords(
   }
 
   // ========================================
-  // JPEG/WebP Comment JSON
+  // JPEG/WebP UserComment/Comment JSON
   // ========================================
 
-  const comment = entryRecord.Comment;
+  // Check UserComment (Exif) first, then Comment (JPEG COM)
+  const comment = entryRecord.UserComment ?? entryRecord.Comment;
   if (comment?.startsWith('{')) {
     return detectFromCommentJson(comment);
   }

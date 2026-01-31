@@ -177,13 +177,15 @@ describe('parseSwarmUI - Unit Tests', () => {
       }
     });
 
-    it('should handle Comment entry instead of parameters', () => {
+    it('should handle UserComment entry instead of parameters', () => {
       const params = {
         sui_image_params: {
           prompt: 'test',
         },
       };
-      const entries = [{ keyword: 'Comment', text: JSON.stringify(params) }];
+      const entries = [
+        { keyword: 'UserComment', text: JSON.stringify(params) },
+      ];
 
       const result = parseSwarmUI(entries);
 

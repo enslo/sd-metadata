@@ -44,19 +44,21 @@ function extractSwarmUIParameters(
     return entryRecord.parameters;
   }
 
-  // Try to extract from Comment JSON (JPEG/WebP format)
-  if (!entryRecord.Comment) {
+  // Try to extract from UserComment JSON (JPEG/WebP format)
+  if (!entryRecord.UserComment) {
     return undefined;
   }
 
-  const commentParsed = parseJson<Record<string, unknown>>(entryRecord.Comment);
+  const commentParsed = parseJson<Record<string, unknown>>(
+    entryRecord.UserComment,
+  );
   if (!commentParsed.ok) {
     return undefined;
   }
 
   // Native WebP format: direct sui_image_params
   if ('sui_image_params' in commentParsed.value) {
-    return entryRecord.Comment; // Return as-is to preserve full structure
+    return entryRecord.UserComment; // Return as-is to preserve full structure
   }
 
   return undefined;

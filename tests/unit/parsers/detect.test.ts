@@ -64,15 +64,15 @@ describe('detectSoftware - Unit Tests', () => {
       });
     });
 
-    describe('from Comment entry (JPEG/WebP)', () => {
-      it('should detect ComfyUI from Comment with prompt and workflow JSON', () => {
+    describe('from UserComment entry (JPEG/WebP)', () => {
+      it('should detect ComfyUI from UserComment with prompt and workflow JSON', () => {
         const comment = JSON.stringify({
           prompt: '{"1": {"class_type": "TestNode"}}',
           workflow: '{"nodes": []}',
         });
 
         const entries: MetadataEntry[] = [
-          { keyword: 'Comment', text: comment },
+          { keyword: 'UserComment', text: comment },
         ];
 
         const result = detectSoftware(entries);
