@@ -188,12 +188,19 @@ export function extractSampling(
     seed = seedNode?.inputs.seed;
   }
 
+  // Extract denoise only if explicitly set and less than 1.0
+  // (denoise = 1.0 is the txt2img default, not meaningful to store)
+  const rawDenoise = sampler.inputs.denoise;
+  const denoise =
+    typeof rawDenoise === 'number' && rawDenoise < 1 ? rawDenoise : undefined;
+
   return {
     seed: seed as number,
     steps: sampler.inputs.steps as number,
     cfg: sampler.inputs.cfg as number,
     sampler: sampler.inputs.sampler_name as string,
     scheduler: sampler.inputs.scheduler as string,
+    denoise,
   };
 }
 
