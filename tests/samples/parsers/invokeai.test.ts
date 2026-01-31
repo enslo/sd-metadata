@@ -33,5 +33,36 @@ describe('InvokeAI Parsers - Samples', () => {
         upscale: undefined,
       });
     });
+
+    it('should parse invokeai-hires.png with upscale settings', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'invokeai-hires.png',
+        parseInvokeAI,
+      );
+
+      expect(meta).toEqual({
+        software: 'invokeai',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト\n',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 2048,
+        height: 2048,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: 'blake3:7c1631b481e1566448f49db7e3b67a8a9d04742fa3c7d4548a0c81b619160c56',
+        },
+        sampling: {
+          seed: 1731018819,
+          steps: 24,
+          cfg: 2,
+          sampler: 'kdpm_2',
+        },
+        upscale: {
+          upscaler: 'RealESRGAN_x4plus_anime_6B',
+          scale: 2,
+        },
+      });
+    });
   });
 });
