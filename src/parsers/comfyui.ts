@@ -6,7 +6,6 @@
  */
 
 import type {
-  ComfyNode,
   ComfyNodeGraph,
   HiresSettings,
   InternalParseResult,
@@ -18,9 +17,22 @@ import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import {
+  extractCivitaiMetadata,
+  extractExtraMetadata,
+} from './comfyui-civitai';
+import {
+  CLASS_TYPES,
+  extractDimensions,
+  extractModel,
+  extractPromptTexts,
+  extractSampling,
+  findHiresSampler,
+  findNode,
+} from './comfyui-nodes';
 
 // =============================================================================
-// Types
+// Constants
 // =============================================================================
 
 /**
@@ -31,46 +43,9 @@ import { trimObject } from '../utils/object';
  */
 const CIVITAI_EXTENSION_KEYS = ['extra', 'extraMetadata', 'resource-stack'];
 
-/**
- * ComfyUI node type keys for metadata extraction
- *
- * These keys identify specific node types in the ComfyUI node graph.
- * Arrays allow matching multiple node type variants.
- */
-const COMFYUI_NODE_KEYS = {
-  sampler: ['Sampler'],
-  positiveClip: ['PositiveCLIP_Base'],
-  negativeClip: ['NegativeCLIP_Base'],
-  latentImage: ['EmptyLatentImage'],
-  checkpoint: ['CheckpointLoader_Base'],
-  hiresModelUpscale: [
-    'HiresFix_ModelUpscale_UpscaleModelLoader',
-    'PostUpscale_ModelUpscale_UpscaleModelLoader',
-  ],
-  hiresImageScale: ['HiresFix_ImageScale', 'PostUpscale_ImageScale'],
-  hiresSampler: ['HiresFix_Sampler'],
-} as const;
-
-/**
- * Civitai extraMetadata structure (nested JSON in prompt)
- */
-interface CivitaiExtraMetadata {
-  prompt?: string;
-  negativePrompt?: string;
-  cfgScale?: number;
-  sampler?: string;
-  clipSkip?: number;
-  steps?: number;
-  seed?: number;
-  width?: number;
-  height?: number;
-  baseModel?: string;
-  transformations?: Array<{
-    type?: string;
-    upscaleWidth?: number;
-    upscaleHeight?: number;
-  }>;
-}
+// =============================================================================
+// Types
+// =============================================================================
 
 /**
  * Partial metadata extracted from a single source
@@ -142,13 +117,6 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  // Build pure ComfyUI nodes (exclude CivitAI extensions)
-  const nodes: ComfyNodeGraph = Object.fromEntries(
-    Object.entries(prompt).filter(
-      ([key]) => !CIVITAI_EXTENSION_KEYS.includes(key),
-    ),
-  ) as ComfyNodeGraph;
-
   // Extract metadata from both sources
   const comfyMetadata = extractComfyUIMetadata(prompt);
   const civitaiMetadata = extractCivitaiMetadata(
@@ -160,7 +128,12 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
 
   return Result.ok({
     software: 'comfyui',
-    nodes,
+    // Build pure ComfyUI nodes (exclude CivitAI extensions)
+    nodes: Object.fromEntries(
+      Object.entries(prompt).filter(
+        ([key]) => !CIVITAI_EXTENSION_KEYS.includes(key),
+      ),
+    ),
     ...merged,
   });
 }
@@ -244,86 +217,6 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
 }
 
 // =============================================================================
-// Node Finding
-// =============================================================================
-
-/**
- * Find a node by key name (first match)
- */
-function findNode(
-  prompt: ComfyNodeGraph,
-  keys: readonly string[],
-): ComfyNode | undefined {
-  return Object.entries(prompt).find(([key]) => keys.includes(key))?.[1];
-}
-
-// =============================================================================
-// Text Extraction
-// =============================================================================
-
-/**
- * Extract text from CLIP text encode node
- */
-function extractText(node: ComfyNode | undefined): string {
-  return typeof node?.inputs.text === 'string' ? node.inputs.text : '';
-}
-
-/**
- * Extract prompt texts from CLIP nodes
- */
-function extractPromptTexts(prompt: ComfyNodeGraph): {
-  promptText: string;
-  negativeText: string;
-} {
-  const positiveClip = findNode(prompt, COMFYUI_NODE_KEYS.positiveClip);
-  const negativeClip = findNode(prompt, COMFYUI_NODE_KEYS.negativeClip);
-  return {
-    promptText: extractText(positiveClip),
-    negativeText: extractText(negativeClip),
-  };
-}
-
-/**
- * Extract dimensions from LatentImage node
- */
-function extractDimensions(prompt: ComfyNodeGraph): {
-  width: number;
-  height: number;
-} {
-  const latentImage = findNode(prompt, COMFYUI_NODE_KEYS.latentImage);
-  return {
-    width: latentImage ? Number(latentImage.inputs.width) || 0 : 0,
-    height: latentImage ? Number(latentImage.inputs.height) || 0 : 0,
-  };
-}
-
-/**
- * Extract sampling settings from KSampler node
- */
-function extractSamplingFromKSampler(
-  ksampler: ComfyNode | undefined,
-): SamplingSettings | undefined {
-  if (!ksampler) return undefined;
-  return {
-    seed: ksampler.inputs.seed as number,
-    steps: ksampler.inputs.steps as number,
-    cfg: ksampler.inputs.cfg as number,
-    sampler: ksampler.inputs.sampler_name as string,
-    scheduler: ksampler.inputs.scheduler as string,
-  };
-}
-
-/**
- * Extract model name from Checkpoint node
- */
-function extractModelFromCheckpoint(
-  checkpoint: ComfyNode | undefined,
-): ModelSettings | undefined {
-  if (!checkpoint?.inputs?.ckpt_name) return undefined;
-  return { name: String(checkpoint.inputs.ckpt_name) };
-}
-
-// =============================================================================
 // ComfyUI Metadata Extraction
 // =============================================================================
 
@@ -331,39 +224,39 @@ function extractModelFromCheckpoint(
  * Extract metadata from ComfyUI nodes
  *
  * Extracts prompt, dimensions, model, sampling, and hires settings
- * from standard ComfyUI node structure.
+ * from standard ComfyUI node structure using class_type-based lookup.
  *
- * @param prompt - Parsed ComfyUI prompt (node graph)
+ * @param nodes - Parsed ComfyUI prompt (node graph)
  * @returns Partial metadata from ComfyUI nodes
  */
 function extractComfyUIMetadata(
-  prompt: ComfyNodeGraph,
+  nodes: ComfyNodeGraph,
 ): PartialMetadata | undefined {
-  // Extract from specialized nodes
-  const { promptText, negativeText } = extractPromptTexts(prompt);
-  const { width, height } = extractDimensions(prompt);
-  const ksampler = findNode(prompt, COMFYUI_NODE_KEYS.sampler);
-  const checkpoint = findNode(prompt, COMFYUI_NODE_KEYS.checkpoint);
+  // Extract from nodes using class_type lookup
+  const { promptText, negativeText } = extractPromptTexts(nodes);
+  const { width, height } = extractDimensions(nodes);
 
   // Extract hires/upscale settings
-  const hiresModel = findNode(
-    prompt,
-    COMFYUI_NODE_KEYS.hiresModelUpscale,
-  )?.inputs;
-  const hiresScale = findNode(
-    prompt,
-    COMFYUI_NODE_KEYS.hiresImageScale,
-  )?.inputs;
-  const hiresSampler = findNode(prompt, COMFYUI_NODE_KEYS.hiresSampler)?.inputs;
+  const hiresModel = findNode(nodes, CLASS_TYPES.hiresModelUpscale)?.inputs;
+  // Try image scale first, then latent upscale
+  const hiresImageScale = findNode(nodes, CLASS_TYPES.hiresImageScale)?.inputs;
+  const latentUpscale = findNode(nodes, CLASS_TYPES.latentUpscale)?.inputs;
+  const hiresSampler = findHiresSampler(nodes)?.inputs;
 
   return trimObject({
     prompt: promptText || undefined,
     negativePrompt: negativeText || undefined,
     width: width > 0 ? width : undefined,
     height: height > 0 ? height : undefined,
-    model: extractModelFromCheckpoint(checkpoint),
-    sampling: extractSamplingFromKSampler(ksampler),
-    ...buildHiresOrUpscale(hiresModel, hiresScale, hiresSampler, width),
+    model: extractModel(nodes),
+    sampling: extractSampling(nodes),
+    ...buildHiresOrUpscale(
+      hiresModel,
+      hiresImageScale,
+      latentUpscale,
+      hiresSampler,
+      width,
+    ),
   });
 }
 
@@ -371,26 +264,37 @@ function extractComfyUIMetadata(
  * Build hires or upscale settings from ComfyUI nodes
  *
  * @param hiresModel - Upscale model loader node inputs
- * @param hiresScale - Image scale node inputs
+ * @param hiresImageScale - Image scale node inputs (has width property)
+ * @param latentUpscale - Latent upscale node inputs (has scale_by property)
  * @param hiresSampler - Hires sampler node inputs (optional)
  * @param baseWidth - Base image width for scale calculation
  * @returns Hires or upscale settings
  */
 function buildHiresOrUpscale(
   hiresModel: Record<string, unknown> | undefined,
-  hiresScale: Record<string, unknown> | undefined,
+  hiresImageScale: Record<string, unknown> | undefined,
+  latentUpscale: Record<string, unknown> | undefined,
   hiresSampler: Record<string, unknown> | undefined,
   baseWidth: number,
 ): Pick<PartialMetadata, 'hires' | 'upscale'> {
-  if (!hiresModel || !hiresScale) return {};
+  if (!hiresModel && !hiresImageScale && !latentUpscale) return {};
 
-  const hiresWidth = hiresScale.width as number;
-  const scale = calculateScale(hiresWidth, baseWidth);
+  // Calculate scale from either source
+  let scale: number | undefined;
+  if (latentUpscale?.scale_by !== undefined) {
+    // LatentUpscaleBy has direct scale value
+    scale = latentUpscale.scale_by as number;
+  } else if (hiresImageScale?.width !== undefined) {
+    // ImageScale has target width, need to calculate ratio
+    scale = calculateScale(hiresImageScale.width as number, baseWidth);
+  }
+
+  const upscaler = hiresModel?.model_name as string | undefined;
 
   if (hiresSampler) {
     return {
       hires: {
-        upscaler: hiresModel.model_name as string,
+        upscaler,
         scale,
         steps: hiresSampler.steps as number,
         denoise: hiresSampler.denoise as number,
@@ -398,134 +302,13 @@ function buildHiresOrUpscale(
     };
   }
 
+  // Pure upscale without sampler requires upscaler model
+  if (!upscaler) return {};
+
   return {
     upscale: {
-      upscaler: hiresModel.model_name as string,
+      upscaler,
       scale,
-    },
-  };
-}
-
-// =============================================================================
-// Civitai Extra Metadata
-// =============================================================================
-
-/**
- * Extract extraMetadata from ComfyUI prompt or entryRecord
- *
- * Civitai upscale workflows embed original generation params in extraMetadata field.
- * This can be:
- * 1. Inside the prompt JSON (JPEG format: single JSON with all data)
- * 2. As a separate entry (PNG format: extraMetadata as separate chunk)
- */
-function extractExtraMetadata(
-  prompt: ComfyNodeGraph,
-  entryRecord?: EntryRecord,
-): CivitaiExtraMetadata | undefined {
-  // First try to find extraMetadata inside the prompt (JPEG format)
-  const extraMetaField = (prompt as Record<string, unknown>).extraMetadata;
-  if (typeof extraMetaField === 'string') {
-    const parsed = parseJson<CivitaiExtraMetadata>(extraMetaField);
-    if (parsed.ok && parsed.type === 'object') return parsed.value;
-  }
-
-  // Fall back to separate entry (PNG format)
-  if (entryRecord?.extraMetadata) {
-    const parsed = parseJson<CivitaiExtraMetadata>(entryRecord.extraMetadata);
-    if (parsed.ok && parsed.type === 'object') return parsed.value;
-  }
-
-  return undefined;
-}
-
-// =============================================================================
-// CivitAI Metadata Extraction
-// =============================================================================
-
-/**
- * Extract metadata from CivitAI extraMetadata (fallback source)
- *
- * Used when ComfyUI nodes don't contain the expected data
- * (e.g., upscale-only workflows from Civitai).
- *
- * @param extraMeta - CivitAI extraMetadata
- * @returns Partial metadata from CivitAI extraMetadata
- */
-function extractCivitaiMetadata(
-  extraMeta: CivitaiExtraMetadata | undefined,
-): PartialMetadata | undefined {
-  if (!extraMeta) return undefined;
-
-  const upscale = buildCivitaiUpscale(extraMeta);
-  const sampling = buildCivitaiSampling(extraMeta);
-
-  return trimObject({
-    prompt: extraMeta.prompt,
-    negativePrompt: extraMeta.negativePrompt,
-    width: extraMeta.width,
-    height: extraMeta.height,
-    model: extraMeta.baseModel ? { name: extraMeta.baseModel } : undefined,
-    ...sampling,
-    ...upscale,
-  });
-}
-
-/**
- * Build upscale settings from CivitAI transformations
- *
- * CivitAI stores upscale information in extraMetadata.transformations array.
- * This extracts the upscale transformation and calculates the scale factor.
- *
- * @param extraMeta - CivitAI extraMetadata
- * @returns Upscale settings if transformation exists
- */
-function buildCivitaiUpscale(
-  extraMeta: CivitaiExtraMetadata,
-): Pick<PartialMetadata, 'upscale'> {
-  if (!extraMeta.transformations) return {};
-
-  const upscaleTransform = extraMeta.transformations.find(
-    (t) => t.type === 'upscale',
-  );
-  if (!upscaleTransform?.upscaleWidth) return {};
-
-  const scale = calculateScale(
-    upscaleTransform.upscaleWidth,
-    extraMeta.width ?? 0,
-  );
-  if (scale === undefined) return {};
-
-  return {
-    upscale: { scale },
-  };
-}
-
-/**
- * Build sampling settings from CivitAI extraMetadata
- *
- * Only creates sampling object if at least one field is defined.
- *
- * @param extraMeta - CivitAI extraMetadata
- * @returns Sampling settings if any field exists
- */
-function buildCivitaiSampling(
-  extraMeta: CivitaiExtraMetadata,
-): Pick<PartialMetadata, 'sampling'> {
-  if (
-    extraMeta.seed === undefined &&
-    extraMeta.steps === undefined &&
-    extraMeta.cfgScale === undefined &&
-    extraMeta.sampler === undefined
-  ) {
-    return {};
-  }
-
-  return {
-    sampling: {
-      seed: extraMeta.seed,
-      steps: extraMeta.steps,
-      cfg: extraMeta.cfgScale,
-      sampler: extraMeta.sampler,
     },
   };
 }
@@ -535,12 +318,49 @@ function buildCivitaiSampling(
 // =============================================================================
 
 /**
+ * Deep merge two objects, excluding undefined values
+ *
+ * Unlike spread operator, this does NOT let undefined values override defined ones.
+ * Example: mergeObjects({ scale: 1.5 }, { upscaler: 'x', scale: undefined })
+ *          = { scale: 1.5, upscaler: 'x' }
+ *
+ * @param base - Base object (lower priority)
+ * @param override - Override object (higher priority for defined values)
+ * @returns Merged object or undefined if empty
+ */
+function mergeObjects<T extends object>(
+  base: T | undefined,
+  override: T | undefined,
+): T | undefined {
+  if (!base && !override) return undefined;
+
+  const merged: Record<string, unknown> = {};
+
+  // Add base properties (excluding undefined)
+  if (base) {
+    for (const [key, value] of Object.entries(base)) {
+      if (value !== undefined) merged[key] = value;
+    }
+  }
+
+  // Add override properties (excluding undefined, these win over base)
+  if (override) {
+    for (const [key, value] of Object.entries(override)) {
+      if (value !== undefined) merged[key] = value;
+    }
+  }
+
+  return Object.keys(merged).length > 0 ? (merged as T) : undefined;
+}
+
+/**
  * Merge two partial metadata objects
  *
  * ComfyUI metadata takes priority over CivitAI fallback.
  * Handles:
  * - Required fields: defaults to empty/zero if both undefined
  * - Optional fields: omitted if undefined (not set to undefined)
+ * - Nested objects (upscale, hires): deep merge preserving defined values from both
  *
  * @param base - Base metadata (lower priority, e.g., CivitAI fallback)
  * @param override - Override metadata (higher priority, e.g., ComfyUI nodes)
@@ -550,21 +370,23 @@ function mergeMetadata(
   base: PartialMetadata | undefined,
   override: PartialMetadata | undefined,
 ): MergedMetadata {
-  // Override takes priority (ComfyUI values win if present)
-  const merged = { ...base, ...override };
+  // Deep merge for nested objects (upscale, hires)
+  // mergeObjects excludes undefined values, preserving defined values from both sources
+  const upscale = mergeObjects(base?.upscale, override?.upscale);
+  const hires = mergeObjects(base?.hires, override?.hires);
 
   return {
-    // Required fields with defaults
-    prompt: merged.prompt ?? '',
-    negativePrompt: merged.negativePrompt ?? '',
-    width: merged.width ?? 0,
-    height: merged.height ?? 0,
+    // Required fields with defaults (override takes priority)
+    prompt: override?.prompt ?? base?.prompt ?? '',
+    negativePrompt: override?.negativePrompt ?? base?.negativePrompt ?? '',
+    width: override?.width ?? base?.width ?? 0,
+    height: override?.height ?? base?.height ?? 0,
     // Optional fields - only include if defined
     ...trimObject({
-      model: merged.model,
-      sampling: merged.sampling,
-      hires: merged.hires,
-      upscale: merged.upscale,
+      model: override?.model ?? base?.model,
+      sampling: override?.sampling ?? base?.sampling,
+      hires,
+      upscale,
     }),
   };
 }
