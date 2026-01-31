@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { parseSwarmUI } from '../../../src/parsers/swarmui';
-import type { MetadataEntry } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to create SwarmUI parameters entry
  */
-function createSwarmUIEntries(params: unknown): MetadataEntry[] {
-  return [{ keyword: 'parameters', text: JSON.stringify(params) }];
+function createSwarmUIEntries(params: unknown): EntryRecord {
+  return { parameters: JSON.stringify(params) };
 }
 
 describe('parseSwarmUI - Unit Tests', () => {
   describe('format validation', () => {
     it('should return error for missing parameters', () => {
-      const entries: MetadataEntry[] = [];
+      const entries: EntryRecord = {};
 
       const result = parseSwarmUI(entries);
 
@@ -23,7 +23,7 @@ describe('parseSwarmUI - Unit Tests', () => {
     });
 
     it('should return error for invalid JSON', () => {
-      const entries = [{ keyword: 'parameters', text: 'not valid json' }];
+      const entries: EntryRecord = { parameters: 'not valid json' };
 
       const result = parseSwarmUI(entries);
 
@@ -177,13 +177,13 @@ describe('parseSwarmUI - Unit Tests', () => {
       }
     });
 
-    it('should handle Comment entry instead of parameters', () => {
+    it('should handle UserComment entry instead of parameters', () => {
       const params = {
         sui_image_params: {
           prompt: 'test',
         },
       };
-      const entries = [{ keyword: 'Comment', text: JSON.stringify(params) }];
+      const entries: EntryRecord = { UserComment: JSON.stringify(params) };
 
       const result = parseSwarmUI(entries);
 

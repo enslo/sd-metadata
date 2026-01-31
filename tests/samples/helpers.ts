@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { read } from '../../src/index';
 import { readPngMetadata } from '../../src/readers/png';
-import type { InternalParseResult, MetadataEntry } from '../../src/types';
+import type { InternalParseResult } from '../../src/types';
+import { pngChunksToRecord } from '../../src/utils/convert';
+import type { EntryRecord } from '../../src/utils/entries';
 
 /**
  * Read a PNG sample file and parse it with the given parser
@@ -14,7 +16,7 @@ import type { InternalParseResult, MetadataEntry } from '../../src/types';
  */
 export function parsePngSample<T>(
   filename: string,
-  parser: (entries: MetadataEntry[]) => InternalParseResult,
+  parser: (entries: EntryRecord) => InternalParseResult,
 ): T {
   const filePath = path.join(__dirname, '../../samples/png', filename);
   const data = fs.readFileSync(filePath);
@@ -24,7 +26,8 @@ export function parsePngSample<T>(
     throw new Error(`Failed to read PNG metadata: ${chunksResult.error}`);
   }
 
-  const result = parser(chunksResult.value);
+  const entries = pngChunksToRecord(chunksResult.value);
+  const result = parser(entries);
 
   if (!result.ok) {
     throw new Error(`Failed to parse metadata: ${result.error.type}`);

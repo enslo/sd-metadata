@@ -4,16 +4,16 @@ import { formatAsWebUI } from '../../../src/serializers/a1111';
 import type {
   ComfyUIMetadata,
   GenerationMetadata,
-  MetadataEntry,
   NovelAIMetadata,
   StandardMetadata,
 } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to parse A1111 text back to metadata for round-trip tests
  */
 function parseA1111Text(text: string): GenerationMetadata | null {
-  const entries: MetadataEntry[] = [{ keyword: 'parameters', text }];
+  const entries: EntryRecord = { parameters: text };
   const result = parseA1111(entries);
   return result.ok ? result.value : null;
 }

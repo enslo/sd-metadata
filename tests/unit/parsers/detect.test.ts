@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { detectSoftware } from '../../../src/parsers/detect';
-import type { MetadataEntry } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 describe('detectSoftware - Unit Tests', () => {
   describe('ComfyUI detection', () => {
     describe('from prompt and workflow keywords', () => {
       it('should detect ComfyUI when both prompt and workflow exist', () => {
-        const entries: MetadataEntry[] = [
-          { keyword: 'prompt', text: '{"1": {"class_type": "TestNode"}}' },
-          { keyword: 'workflow', text: '{"nodes": []}' },
-        ];
+        const entries: EntryRecord = {
+          prompt: '{"1": {"class_type": "TestNode"}}',
+          workflow: '{"nodes": []}',
+        };
 
         const result = detectSoftware(entries);
 
@@ -17,9 +17,9 @@ describe('detectSoftware - Unit Tests', () => {
       });
 
       it('should detect ComfyUI from workflow keyword only', () => {
-        const entries: MetadataEntry[] = [
-          { keyword: 'workflow', text: '{"nodes": []}' },
-        ];
+        const entries: EntryRecord = {
+          workflow: '{"nodes": []}',
+        };
 
         const result = detectSoftware(entries);
 
@@ -41,7 +41,7 @@ describe('detectSoftware - Unit Tests', () => {
           },
         });
 
-        const entries: MetadataEntry[] = [{ keyword: 'prompt', text: prompt }];
+        const entries: EntryRecord = { prompt };
 
         const result = detectSoftware(entries);
 
@@ -56,7 +56,7 @@ describe('detectSoftware - Unit Tests', () => {
           },
         });
 
-        const entries: MetadataEntry[] = [{ keyword: 'prompt', text: prompt }];
+        const entries: EntryRecord = { prompt };
 
         const result = detectSoftware(entries);
 
@@ -64,16 +64,14 @@ describe('detectSoftware - Unit Tests', () => {
       });
     });
 
-    describe('from Comment entry (JPEG/WebP)', () => {
-      it('should detect ComfyUI from Comment with prompt and workflow JSON', () => {
+    describe('from UserComment entry (JPEG/WebP)', () => {
+      it('should detect ComfyUI from UserComment with prompt and workflow JSON', () => {
         const comment = JSON.stringify({
           prompt: '{"1": {"class_type": "TestNode"}}',
           workflow: '{"nodes": []}',
         });
 
-        const entries: MetadataEntry[] = [
-          { keyword: 'Comment', text: comment },
-        ];
+        const entries: EntryRecord = { UserComment: comment };
 
         const result = detectSoftware(entries);
 
@@ -85,9 +83,7 @@ describe('detectSoftware - Unit Tests', () => {
   describe('A1111 detection', () => {
     it('should detect sd-webui from Steps and Sampler keywords', () => {
       const parameters = 'test prompt\nSteps: 20, Sampler: Euler a';
-      const entries: MetadataEntry[] = [
-        { keyword: 'parameters', text: parameters },
-      ];
+      const entries: EntryRecord = { parameters };
 
       const result = detectSoftware(entries);
 
@@ -96,9 +92,7 @@ describe('detectSoftware - Unit Tests', () => {
 
     it('should not detect non-AI metadata as sd-webui', () => {
       // This should return null, not 'sd-webui'
-      const entries: MetadataEntry[] = [
-        { keyword: 'Comment', text: 'Photo Editor Pro v2.0' },
-      ];
+      const entries: EntryRecord = { Comment: 'Photo Editor Pro v2.0' };
 
       const result = detectSoftware(entries);
 
@@ -110,7 +104,7 @@ describe('detectSoftware - Unit Tests', () => {
 
   describe('edge cases', () => {
     it('should return null for empty entries', () => {
-      const entries: MetadataEntry[] = [];
+      const entries: EntryRecord = {};
 
       const result = detectSoftware(entries);
 
@@ -118,9 +112,7 @@ describe('detectSoftware - Unit Tests', () => {
     });
 
     it('should return null for unrecognized metadata', () => {
-      const entries: MetadataEntry[] = [
-        { keyword: 'unknown', text: 'some data' },
-      ];
+      const entries: EntryRecord = { unknown: 'some data' };
 
       const result = detectSoftware(entries);
 

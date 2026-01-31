@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { parseInvokeAI } from '../../../src/parsers/invokeai';
-import type { MetadataEntry } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to create InvokeAI metadata entries
  */
-function createInvokeAIEntries(metadataJson: string): MetadataEntry[] {
-  return [{ keyword: 'invokeai_metadata', text: metadataJson }];
+function createInvokeAIEntries(metadataJson: string): EntryRecord {
+  return { invokeai_metadata: metadataJson };
 }
 
 describe('parseInvokeAI - Unit Tests', () => {
   describe('format validation', () => {
     it('should return error for missing invokeai_metadata', () => {
-      const entries: MetadataEntry[] = [];
+      const entries: EntryRecord = {};
 
       const result = parseInvokeAI(entries);
 

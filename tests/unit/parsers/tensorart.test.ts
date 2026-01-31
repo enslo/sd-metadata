@@ -1,25 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { parseTensorArt } from '../../../src/parsers/tensorart';
-import type { MetadataEntry } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to create TensorArt metadata entries
  */
-function createTensorArtEntries(generationData: unknown): MetadataEntry[] {
-  const entries: MetadataEntry[] = [
-    { keyword: 'generation_data', text: JSON.stringify(generationData) },
-    {
-      keyword: 'prompt',
-      text: JSON.stringify({ '1': { class_type: 'KSampler', inputs: {} } }),
-    },
-  ];
-  return entries;
+function createTensorArtEntries(generationData: unknown): EntryRecord {
+  return {
+    generation_data: JSON.stringify(generationData),
+    prompt: JSON.stringify({ '1': { class_type: 'KSampler', inputs: {} } }),
+  };
 }
 
 describe('parseTensorArt - Unit Tests', () => {
   describe('format validation', () => {
     it('should return error for missing generation_data', () => {
-      const entries: MetadataEntry[] = [];
+      const entries: EntryRecord = {};
 
       const result = parseTensorArt(entries);
 
@@ -30,7 +26,7 @@ describe('parseTensorArt - Unit Tests', () => {
     });
 
     it('should return error for invalid JSON', () => {
-      const entries = [{ keyword: 'generation_data', text: 'not valid json' }];
+      const entries: EntryRecord = { generation_data: 'not valid json' };
 
       const result = parseTensorArt(entries);
 
@@ -143,13 +139,10 @@ describe('parseTensorArt - Unit Tests', () => {
       // TensorArt appends NUL characters
       const data = { prompt: 'test' };
       const jsonWithNul = `${JSON.stringify(data)}\x00\x00\x00`;
-      const entries = [
-        { keyword: 'generation_data', text: jsonWithNul },
-        {
-          keyword: 'prompt',
-          text: JSON.stringify({ '1': { class_type: 'KSampler', inputs: {} } }),
-        },
-      ];
+      const entries: EntryRecord = {
+        generation_data: jsonWithNul,
+        prompt: JSON.stringify({ '1': { class_type: 'KSampler', inputs: {} } }),
+      };
 
       const result = parseTensorArt(entries);
 

@@ -47,8 +47,8 @@ export function convertCivitaiPngToSegments(
   for (const chunk of chunks) {
     if (chunk.keyword === 'prompt') {
       // Expand prompt chunk contents as top-level keys
-      const parsed = parseJson<unknown>(chunk.text);
-      if (parsed.ok && typeof parsed.value === 'object' && parsed.value) {
+      const parsed = parseJson(chunk.text);
+      if (parsed.ok && parsed.type === 'object') {
         Object.assign(data, parsed.value);
       }
     } else if (chunk.keyword === 'extraMetadata') {
@@ -57,7 +57,7 @@ export function convertCivitaiPngToSegments(
       data[chunk.keyword] = chunk.text;
     } else {
       // Other chunks: parse JSON if possible
-      const parsed = parseJson<unknown>(chunk.text);
+      const parsed = parseJson(chunk.text);
       data[chunk.keyword] = parsed.ok ? parsed.value : chunk.text;
     }
   }

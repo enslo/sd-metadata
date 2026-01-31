@@ -49,8 +49,8 @@ export function convertEasyDiffusionSegmentsToPng(
     return [];
   }
 
-  const parsed = parseJson<Record<string, unknown>>(userComment.data);
-  if (!parsed.ok) {
+  const parsed = parseJson(userComment.data);
+  if (!parsed.ok || parsed.type !== 'object') {
     return [];
   }
 

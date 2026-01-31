@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseStabilityMatrix } from '../../../src/parsers/stability-matrix';
-import type { MetadataEntry } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to create ComfyUI workflow entries for testing
@@ -62,13 +62,13 @@ function createComfyUIWorkflow(
 function createStabilityMatrixEntries(
   json: unknown,
   workflow?: unknown,
-): MetadataEntry[] {
-  const entries: MetadataEntry[] = [];
+): EntryRecord {
+  const record: Record<string, string> = {};
   if (workflow) {
-    entries.push({ keyword: 'prompt', text: JSON.stringify(workflow) });
+    record.prompt = JSON.stringify(workflow);
   }
-  entries.push({ keyword: 'parameters-json', text: JSON.stringify(json) });
-  return entries;
+  record['parameters-json'] = JSON.stringify(json);
+  return record;
 }
 
 describe('parseStabilityMatrix - Unit Tests', () => {

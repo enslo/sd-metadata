@@ -1,24 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { parseNovelAI } from '../../../src/parsers/novelai';
-import type { MetadataEntry } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to create NovelAI metadata entries
  */
-function createNovelAIEntries(commentJson: string): MetadataEntry[] {
-  return [
-    { keyword: 'Software', text: 'NovelAI' },
-    { keyword: 'Comment', text: commentJson },
-  ];
+function createNovelAIEntries(commentJson: string): EntryRecord {
+  return {
+    Software: 'NovelAI',
+    Comment: commentJson,
+  };
 }
 
 describe('parseNovelAI - Unit Tests', () => {
   describe('format validation', () => {
     it('should return error for non-NovelAI software', () => {
-      const entries: MetadataEntry[] = [
-        { keyword: 'Software', text: 'Other' },
-        { keyword: 'Comment', text: '{}' },
-      ];
+      const entries: EntryRecord = {
+        Software: 'Other',
+        Comment: '{}',
+      };
 
       const result = parseNovelAI(entries);
 
@@ -29,9 +29,7 @@ describe('parseNovelAI - Unit Tests', () => {
     });
 
     it('should return error for missing Comment', () => {
-      const entries: MetadataEntry[] = [
-        { keyword: 'Software', text: 'NovelAI' },
-      ];
+      const entries: EntryRecord = { Software: 'NovelAI' };
 
       const result = parseNovelAI(entries);
 
