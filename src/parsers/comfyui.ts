@@ -6,7 +6,6 @@
  */
 
 import type {
-  ComfyNode,
   ComfyNodeGraph,
   HiresSettings,
   InternalParseResult,
@@ -18,9 +17,22 @@ import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import {
+  extractCivitaiMetadata,
+  extractExtraMetadata,
+} from './comfyui-civitai';
+import {
+  CLASS_TYPES,
+  extractDimensions,
+  extractModel,
+  extractPromptTexts,
+  extractSampling,
+  findHiresSampler,
+  findNode,
+} from './comfyui-nodes';
 
 // =============================================================================
-// Types
+// Constants
 // =============================================================================
 
 /**
@@ -31,45 +43,9 @@ import { trimObject } from '../utils/object';
  */
 const CIVITAI_EXTENSION_KEYS = ['extra', 'extraMetadata', 'resource-stack'];
 
-/**
- * ComfyUI node class types for metadata extraction
- *
- * These class_type values identify specific node types in the ComfyUI node graph.
- * Arrays allow matching multiple node type variants.
- */
-const CLASS_TYPES = {
-  sampler: ['KSampler', 'KSamplerAdvanced', 'SamplerCustomAdvanced'],
-  // Standard latent image nodes with width/height properties
-  latentImage: ['EmptyLatentImage'],
-  // rgthree latent image nodes with "dimensions" string property
-  latentImageRgthree: ['SDXL Empty Latent Image (rgthree)'],
-  checkpoint: ['CheckpointLoaderSimple', 'CheckpointLoader'],
-  hiresModelUpscale: ['UpscaleModelLoader'],
-  hiresImageScale: ['ImageScale', 'ImageScaleBy'],
-  latentUpscale: ['LatentUpscale', 'LatentUpscaleBy'],
-  vaeEncode: ['VAEEncode', 'VAEEncodeTiled'],
-} as const;
-
-/**
- * Civitai extraMetadata structure (nested JSON in prompt)
- */
-interface CivitaiExtraMetadata {
-  prompt?: string;
-  negativePrompt?: string;
-  cfgScale?: number;
-  sampler?: string;
-  clipSkip?: number;
-  steps?: number;
-  seed?: number;
-  width?: number;
-  height?: number;
-  baseModel?: string;
-  transformations?: Array<{
-    type?: string;
-    upscaleWidth?: number;
-    upscaleHeight?: number;
-  }>;
-}
+// =============================================================================
+// Types
+// =============================================================================
 
 /**
  * Partial metadata extracted from a single source
@@ -141,13 +117,6 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  // Build pure ComfyUI nodes (exclude CivitAI extensions)
-  const nodes: ComfyNodeGraph = Object.fromEntries(
-    Object.entries(prompt).filter(
-      ([key]) => !CIVITAI_EXTENSION_KEYS.includes(key),
-    ),
-  ) as ComfyNodeGraph;
-
   // Extract metadata from both sources
   const comfyMetadata = extractComfyUIMetadata(prompt);
   const civitaiMetadata = extractCivitaiMetadata(
@@ -159,7 +128,12 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
 
   return Result.ok({
     software: 'comfyui',
-    nodes,
+    // Build pure ComfyUI nodes (exclude CivitAI extensions)
+    nodes: Object.fromEntries(
+      Object.entries(prompt).filter(
+        ([key]) => !CIVITAI_EXTENSION_KEYS.includes(key),
+      ),
+    ),
     ...merged,
   });
 }
@@ -240,222 +214,6 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
   }
 
   return undefined;
-}
-
-// =============================================================================
-// Node Finding
-// =============================================================================
-
-/**
- * Find a node by class_type (first match)
- */
-function findNode(
-  nodes: ComfyNodeGraph,
-  classTypes: readonly string[],
-): ComfyNode | undefined {
-  return Object.values(nodes).find((node) =>
-    classTypes.includes(node.class_type),
-  );
-}
-
-// =============================================================================
-// Node Reference Utilities
-// =============================================================================
-
-/**
- * Check if a value is a node reference [nodeId, outputIndex]
- */
-function isNodeReference(value: unknown): value is [string, number] {
-  return (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    (typeof value[0] === 'string' || typeof value[0] === 'number') &&
-    typeof value[1] === 'number'
-  );
-}
-
-/**
- * Extract text from a node, following references if needed
- *
- * Handles various text input patterns:
- * - CLIPTextEncode: inputs.text
- * - Power Prompt (rgthree): inputs.prompt
- * - DF_Text_Box (ComfyRoll): inputs.Text
- * - Reference chains: [nodeId, outputIndex] -> trace to source
- */
-function extractText(
-  nodes: ComfyNodeGraph,
-  nodeId: string,
-  maxDepth = 10,
-): string {
-  if (maxDepth <= 0) return '';
-
-  const node = nodes[nodeId];
-  if (!node) return '';
-
-  // Try common text input names
-  const textValue = node.inputs.text ?? node.inputs.prompt ?? node.inputs.Text;
-
-  if (typeof textValue === 'string') {
-    return textValue;
-  }
-
-  // If text is a reference, follow it
-  if (isNodeReference(textValue)) {
-    return extractText(nodes, String(textValue[0]), maxDepth - 1);
-  }
-
-  return '';
-}
-
-// =============================================================================
-// Text Extraction
-// =============================================================================
-
-/**
- * Extract prompt texts by tracing from sampler's positive/negative inputs
- */
-function extractPromptTexts(nodes: ComfyNodeGraph): {
-  promptText: string;
-  negativeText: string;
-} {
-  // Find sampler node by class_type
-  const sampler = findNode(nodes, CLASS_TYPES.sampler);
-  if (!sampler) {
-    return { promptText: '', negativeText: '' };
-  }
-
-  // Trace positive/negative inputs from sampler
-  const positiveRef = sampler.inputs.positive;
-  const negativeRef = sampler.inputs.negative;
-
-  return {
-    promptText: isNodeReference(positiveRef)
-      ? extractText(nodes, String(positiveRef[0]))
-      : '',
-    negativeText: isNodeReference(negativeRef)
-      ? extractText(nodes, String(negativeRef[0]))
-      : '',
-  };
-}
-
-/**
- * Extract dimensions from LatentImage node
- *
- * Handles two node types separately:
- * - EmptyLatentImage: inputs.width and inputs.height as numbers
- * - SDXL Empty Latent Image (rgthree): inputs.dimensions as string like "1024 x 1024 (square)"
- */
-function extractDimensions(nodes: ComfyNodeGraph): {
-  width: number;
-  height: number;
-} {
-  // Try standard EmptyLatentImage first (width/height properties)
-  const standardLatent = findNode(nodes, CLASS_TYPES.latentImage);
-  if (standardLatent) {
-    const width = Number(standardLatent.inputs.width) || 0;
-    const height = Number(standardLatent.inputs.height) || 0;
-    if (width > 0 && height > 0) return { width, height };
-  }
-
-  // Try rgthree latent image (dimensions string like "1024 x 1024 (square)")
-  const rgthreeLatent = findNode(nodes, CLASS_TYPES.latentImageRgthree);
-  if (rgthreeLatent && typeof rgthreeLatent.inputs.dimensions === 'string') {
-    const match = rgthreeLatent.inputs.dimensions.match(/^(\d+)\s*x\s*(\d+)/);
-    if (match?.[1] && match[2]) {
-      return {
-        width: Number.parseInt(match[1], 10),
-        height: Number.parseInt(match[2], 10),
-      };
-    }
-  }
-
-  return { width: 0, height: 0 };
-}
-
-/**
- * Extract sampling settings from sampler node
- */
-function extractSampling(nodes: ComfyNodeGraph): SamplingSettings | undefined {
-  const sampler = findNode(nodes, CLASS_TYPES.sampler);
-  if (!sampler) return undefined;
-
-  // Handle seed which may be a reference or direct value
-  let seed = sampler.inputs.seed;
-  if (isNodeReference(seed)) {
-    // Seed is from another node (e.g., CR Seed), try to extract it
-    const seedNode = nodes[String(seed[0])];
-    seed = seedNode?.inputs.seed;
-  }
-
-  return {
-    seed: seed as number,
-    steps: sampler.inputs.steps as number,
-    cfg: sampler.inputs.cfg as number,
-    sampler: sampler.inputs.sampler_name as string,
-    scheduler: sampler.inputs.scheduler as string,
-  };
-}
-
-/**
- * Extract model name from Checkpoint node
- */
-function extractModel(nodes: ComfyNodeGraph): ModelSettings | undefined {
-  const checkpoint = findNode(nodes, CLASS_TYPES.checkpoint);
-  if (!checkpoint?.inputs?.ckpt_name) return undefined;
-  return { name: String(checkpoint.inputs.ckpt_name) };
-}
-
-/**
- * Check if a sampler is a hires sampler by tracing its latent_image input
- *
- * Hires fix workflows have two patterns:
- * 1. Image space: KSampler.latent_image → VAE Encode → Upscale Image
- * 2. Latent space: KSampler.latent_image → LatentUpscale
- *
- * @param nodes - ComfyUI node graph
- * @param sampler - Sampler node to check
- * @returns true if this sampler is connected to an upscaled pipeline
- */
-function isHiresSampler(nodes: ComfyNodeGraph, sampler: ComfyNode): boolean {
-  const latentImageRef = sampler.inputs.latent_image;
-  if (!isNodeReference(latentImageRef)) return false;
-
-  const inputNode = nodes[String(latentImageRef[0])];
-  if (!inputNode) return false;
-
-  // Pattern 1: Latent space upscale (LatentUpscale → KSampler)
-  const latentUpscaleTypes: readonly string[] = CLASS_TYPES.latentUpscale;
-  if (latentUpscaleTypes.includes(inputNode.class_type)) {
-    return true;
-  }
-
-  // Pattern 2: Image space upscale (ImageScale → VAEEncode → KSampler)
-  const vaeTypes: readonly string[] = CLASS_TYPES.vaeEncode;
-  if (!vaeTypes.includes(inputNode.class_type)) return false;
-
-  const pixelsRef = inputNode.inputs.pixels;
-  if (!isNodeReference(pixelsRef)) return false;
-
-  const upscaleNode = nodes[String(pixelsRef[0])];
-  if (!upscaleNode) return false;
-
-  const imageScaleTypes: readonly string[] = CLASS_TYPES.hiresImageScale;
-  return imageScaleTypes.includes(upscaleNode.class_type);
-}
-
-/**
- * Find hires sampler node by connection pattern
- *
- * Detects hires fix by tracing: KSampler.latent_image → VAE Encode → Upscale Image
- * This is more reliable than checking denoise < 1, which can be used in normal generation.
- */
-function findHiresSampler(nodes: ComfyNodeGraph): ComfyNode | undefined {
-  const samplerTypes: readonly string[] = CLASS_TYPES.sampler;
-  return Object.values(nodes).find(
-    (node) =>
-      samplerTypes.includes(node.class_type) && isHiresSampler(nodes, node),
-  );
 }
 
 // =============================================================================
@@ -551,130 +309,6 @@ function buildHiresOrUpscale(
     upscale: {
       upscaler,
       scale,
-    },
-  };
-}
-
-// =============================================================================
-// Civitai Extra Metadata
-// =============================================================================
-
-/**
- * Extract extraMetadata from ComfyUI prompt or entryRecord
- *
- * Civitai upscale workflows embed original generation params in extraMetadata field.
- * This can be:
- * 1. Inside the prompt JSON (JPEG format: single JSON with all data)
- * 2. As a separate entry (PNG format: extraMetadata as separate chunk)
- */
-function extractExtraMetadata(
-  prompt: ComfyNodeGraph,
-  entryRecord?: EntryRecord,
-): CivitaiExtraMetadata | undefined {
-  // First try to find extraMetadata inside the prompt (JPEG format)
-  const extraMetaField = (prompt as Record<string, unknown>).extraMetadata;
-  if (typeof extraMetaField === 'string') {
-    const parsed = parseJson<CivitaiExtraMetadata>(extraMetaField);
-    if (parsed.ok && parsed.type === 'object') return parsed.value;
-  }
-
-  // Fall back to separate entry (PNG format)
-  if (entryRecord?.extraMetadata) {
-    const parsed = parseJson<CivitaiExtraMetadata>(entryRecord.extraMetadata);
-    if (parsed.ok && parsed.type === 'object') return parsed.value;
-  }
-
-  return undefined;
-}
-
-// =============================================================================
-// CivitAI Metadata Extraction
-// =============================================================================
-
-/**
- * Extract metadata from CivitAI extraMetadata (fallback source)
- *
- * Used when ComfyUI nodes don't contain the expected data
- * (e.g., upscale-only workflows from Civitai).
- *
- * @param extraMeta - CivitAI extraMetadata
- * @returns Partial metadata from CivitAI extraMetadata
- */
-function extractCivitaiMetadata(
-  extraMeta: CivitaiExtraMetadata | undefined,
-): PartialMetadata | undefined {
-  if (!extraMeta) return undefined;
-
-  const upscale = buildCivitaiUpscale(extraMeta);
-  const sampling = buildCivitaiSampling(extraMeta);
-
-  return trimObject({
-    prompt: extraMeta.prompt,
-    negativePrompt: extraMeta.negativePrompt,
-    width: extraMeta.width,
-    height: extraMeta.height,
-    model: extraMeta.baseModel ? { name: extraMeta.baseModel } : undefined,
-    ...sampling,
-    ...upscale,
-  });
-}
-
-/**
- * Build upscale settings from CivitAI transformations
- *
- * CivitAI stores upscale information in extraMetadata.transformations array.
- * This extracts the upscale transformation and calculates the scale factor.
- *
- * @param extraMeta - CivitAI extraMetadata
- * @returns Upscale settings if transformation exists
- */
-function buildCivitaiUpscale(
-  extraMeta: CivitaiExtraMetadata,
-): Pick<PartialMetadata, 'upscale'> {
-  if (!extraMeta.transformations) return {};
-
-  const upscaleTransform = extraMeta.transformations.find(
-    (t) => t.type === 'upscale',
-  );
-  if (!upscaleTransform?.upscaleWidth) return {};
-
-  const scale = calculateScale(
-    upscaleTransform.upscaleWidth,
-    extraMeta.width ?? 0,
-  );
-  if (scale === undefined) return {};
-
-  return {
-    upscale: { scale },
-  };
-}
-
-/**
- * Build sampling settings from CivitAI extraMetadata
- *
- * Only creates sampling object if at least one field is defined.
- *
- * @param extraMeta - CivitAI extraMetadata
- * @returns Sampling settings if any field exists
- */
-function buildCivitaiSampling(
-  extraMeta: CivitaiExtraMetadata,
-): Pick<PartialMetadata, 'sampling'> {
-  if (
-    extraMeta.seed === undefined &&
-    extraMeta.steps === undefined &&
-    extraMeta.cfgScale === undefined &&
-    extraMeta.sampler === undefined
-  ) {
-    return {};
-  }
-
-  return {
-    sampling: {
-      seed: extraMeta.seed,
-      steps: extraMeta.steps,
-      cfg: extraMeta.cfgScale,
-      sampler: extraMeta.sampler,
     },
   };
 }
