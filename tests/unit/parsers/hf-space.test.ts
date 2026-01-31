@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { parseHfSpace } from '../../../src/parsers/hf-space';
-import type { MetadataEntry } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to create HF-Space parameters entry
  */
-function createHfSpaceEntry(json: unknown): MetadataEntry[] {
-  return [{ keyword: 'parameters', text: JSON.stringify(json) }];
+function createHfSpaceEntry(json: unknown): EntryRecord {
+  return { parameters: JSON.stringify(json) };
 }
 
 describe('parseHfSpace - Unit Tests', () => {
   describe('format validation', () => {
     it('should return error for missing parameters', () => {
-      const entries: MetadataEntry[] = [];
+      const entries: EntryRecord = {};
 
       const result = parseHfSpace(entries);
 
@@ -23,9 +23,7 @@ describe('parseHfSpace - Unit Tests', () => {
     });
 
     it('should return error for invalid JSON', () => {
-      const entries: MetadataEntry[] = [
-        { keyword: 'parameters', text: 'not a json' },
-      ];
+      const entries: EntryRecord = { parameters: 'not a json' };
 
       const result = parseHfSpace(entries);
 
@@ -36,9 +34,7 @@ describe('parseHfSpace - Unit Tests', () => {
     });
 
     it('should return error for malformed JSON', () => {
-      const entries: MetadataEntry[] = [
-        { keyword: 'parameters', text: '{"prompt": "test"' }, // Missing closing brace
-      ];
+      const entries: EntryRecord = { parameters: '{"prompt": "test"' }; // Missing closing brace
 
       const result = parseHfSpace(entries);
 

@@ -98,22 +98,6 @@ export interface MetadataSegment {
   data: string;
 }
 
-// ============================================================================
-// Format-Agnostic Metadata Types
-// ============================================================================
-
-/**
- * A single metadata entry (keyword + text)
- *
- * This is a format-agnostic representation used by parsers.
- */
-export interface MetadataEntry {
-  /** Entry keyword (e.g., 'parameters', 'Comment', 'prompt') */
-  keyword: string;
-  /** Text content */
-  text: string;
-}
-
 /**
  * Raw metadata for write-back (preserves original format)
  */

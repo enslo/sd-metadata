@@ -1,10 +1,6 @@
-import type {
-  InternalParseResult,
-  MetadataEntry,
-  StandardMetadata,
-} from '../types';
+import type { InternalParseResult, StandardMetadata } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 
 /**
@@ -39,15 +35,11 @@ interface RuinedFooocusJsonMetadata {
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseRuinedFooocus(
-  entries: MetadataEntry[],
-): InternalParseResult {
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseRuinedFooocus(entries: EntryRecord): InternalParseResult {
   // Find JSON in parameters entry
   // PNG: stored in 'parameters' chunk
   // JPEG/WebP (after conversion): stored in 'UserComment' (from exifUserComment)
-  const jsonText = entryRecord.parameters ?? entryRecord.UserComment;
+  const jsonText = entries.parameters ?? entries.UserComment;
 
   if (!jsonText || !jsonText.startsWith('{')) {
     return Result.error({ type: 'unsupportedFormat' });

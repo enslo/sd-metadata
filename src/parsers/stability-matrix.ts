@@ -1,6 +1,6 @@
-import type { InternalParseResult, MetadataEntry } from '../types';
+import type { InternalParseResult } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord, extractFromCommentJson } from '../utils/entries';
+import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { parseComfyUI } from './comfyui';
 
@@ -38,11 +38,8 @@ interface StabilityMatrixJson {
  * @returns Parsed metadata or error
  */
 export function parseStabilityMatrix(
-  entries: MetadataEntry[],
+  entries: EntryRecord,
 ): InternalParseResult {
-  // Build entry record for easy access
-  const entryRecord = buildEntryRecord(entries);
-
   // First, parse as ComfyUI workflow to get base metadata
   const comfyResult = parseComfyUI(entries);
   if (!comfyResult.ok || comfyResult.value.software !== 'comfyui') {
@@ -53,8 +50,8 @@ export function parseStabilityMatrix(
   // PNG: stored in 'parameters-json' chunk
   // JPEG/WebP (after conversion): stored in 'Comment' as {"parameters-json": ..., ...}
   const jsonText =
-    entryRecord['parameters-json'] ??
-    extractFromCommentJson(entryRecord, 'parameters-json');
+    entries['parameters-json'] ??
+    extractFromCommentJson(entries, 'parameters-json');
   const parsed = jsonText
     ? parseJson<StabilityMatrixJson>(jsonText)
     : undefined;

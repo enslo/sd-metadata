@@ -1,10 +1,6 @@
-import type { InternalParseResult, MetadataEntry } from '../types';
+import type { InternalParseResult } from '../types';
 import { Result } from '../types';
-import {
-  type EntryRecord,
-  buildEntryRecord,
-  extractFromCommentJson,
-} from '../utils/entries';
+import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 
@@ -48,14 +44,11 @@ function extractInvokeAIMetadata(entryRecord: EntryRecord): string | undefined {
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseInvokeAI(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry record for easy access
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseInvokeAI(entries: EntryRecord): InternalParseResult {
   // Find invokeai_metadata entry
   // For PNG: direct keyword
   // For JPEG/WebP: inside Comment JSON
-  const metadataText = extractInvokeAIMetadata(entryRecord);
+  const metadataText = extractInvokeAIMetadata(entries);
 
   if (!metadataText) {
     return Result.error({ type: 'unsupportedFormat' });

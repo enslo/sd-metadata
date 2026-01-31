@@ -1,5 +1,6 @@
-import type { InternalParseResult, MetadataEntry } from '../types';
+import type { InternalParseResult } from '../types';
 import { Result } from '../types';
+import type { EntryRecord } from '../utils/entries';
 import { trimObject } from '../utils/object';
 
 /**
@@ -22,16 +23,12 @@ import { trimObject } from '../utils/object';
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseA1111(entries: MetadataEntry[]): InternalParseResult {
+export function parseA1111(entries: EntryRecord): InternalParseResult {
   // Find parameters entry (PNG uses 'parameters', JPEG/WebP uses 'UserComment')
-  const parametersEntry = entries.find(
-    (e) => e.keyword === 'parameters' || e.keyword === 'UserComment',
-  );
-  if (!parametersEntry) {
+  const text = entries.parameters ?? entries.UserComment;
+  if (!text) {
     return Result.error({ type: 'unsupportedFormat' });
   }
-
-  const text = parametersEntry.text;
 
   // Validate that this is AI-generated metadata by checking for typical markers
   // This prevents false positives from retouch software or other non-AI tools

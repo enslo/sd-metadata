@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseComfyUI } from '../../../src/parsers/comfyui';
-import type { MetadataEntry } from '../../../src/types';
+import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to create ComfyUI metadata entries
@@ -8,20 +8,20 @@ import type { MetadataEntry } from '../../../src/types';
 function createComfyUIEntries(
   prompt: unknown,
   workflow?: unknown,
-): MetadataEntry[] {
-  const entries: MetadataEntry[] = [
-    { keyword: 'prompt', text: JSON.stringify(prompt) },
-  ];
+): EntryRecord {
+  const record: Record<string, string> = {
+    prompt: JSON.stringify(prompt),
+  };
   if (workflow) {
-    entries.push({ keyword: 'workflow', text: JSON.stringify(workflow) });
+    record.workflow = JSON.stringify(workflow);
   }
-  return entries;
+  return record;
 }
 
 describe('parseComfyUI - Unit Tests', () => {
   describe('format validation', () => {
     it('should return error for missing prompt', () => {
-      const entries: MetadataEntry[] = [];
+      const entries: EntryRecord = {};
 
       const result = parseComfyUI(entries);
 
@@ -32,7 +32,7 @@ describe('parseComfyUI - Unit Tests', () => {
     });
 
     it('should return error for invalid JSON', () => {
-      const entries = [{ keyword: 'prompt', text: 'not valid json' }];
+      const entries: EntryRecord = { prompt: 'not valid json' };
 
       const result = parseComfyUI(entries);
 
@@ -259,14 +259,11 @@ describe('parseComfyUI - Unit Tests', () => {
       };
 
       // This simulates what the reader should produce after parsing EXIF
-      const entries: MetadataEntry[] = [
-        { keyword: 'workflow', text: JSON.stringify(workflow) },
-      ];
+      const entries: EntryRecord = { workflow: JSON.stringify(workflow) };
 
       // Verify the workflow keyword is correctly set
       // This is important for detection logic to catch workflow-only files
-      expect(entries).toHaveLength(1);
-      expect(entries[0]?.keyword).toBe('workflow');
+      expect(entries.workflow).toBeDefined();
     });
   });
 });

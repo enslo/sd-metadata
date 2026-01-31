@@ -1,10 +1,6 @@
-import type {
-  ComfyNodeGraph,
-  InternalParseResult,
-  MetadataEntry,
-} from '../types';
+import type { ComfyNodeGraph, InternalParseResult } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 
@@ -74,14 +70,11 @@ function extractSwarmUIParameters(
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
-  // Build entry record for easy access
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseSwarmUI(entries: EntryRecord): InternalParseResult {
   // Find parameters entry
   // For PNG: direct keyword 'parameters'
   // For JPEG/WebP: inside Comment JSON
-  const parametersText = extractSwarmUIParameters(entryRecord);
+  const parametersText = extractSwarmUIParameters(entries);
 
   if (!parametersText) {
     return Result.error({ type: 'unsupportedFormat' });
@@ -107,7 +100,7 @@ export function parseSwarmUI(entries: MetadataEntry[]): InternalParseResult {
   const height = params.height ?? 0;
 
   // Parse nodes from prompt chunk (PNG format) or Make field (JPEG/WebP extended format)
-  const promptSource = entryRecord.prompt || entryRecord.Make;
+  const promptSource = entries.prompt || entries.Make;
   const promptParsed = promptSource ? parseJson(promptSource) : undefined;
   const nodes = promptParsed?.ok
     ? (promptParsed.value as ComfyNodeGraph)

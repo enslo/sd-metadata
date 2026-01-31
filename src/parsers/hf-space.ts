@@ -1,10 +1,6 @@
-import type {
-  InternalParseResult,
-  MetadataEntry,
-  StandardMetadata,
-} from '../types';
+import type { InternalParseResult, StandardMetadata } from '../types';
 import { Result } from '../types';
-import { buildEntryRecord } from '../utils/entries';
+import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 
@@ -34,13 +30,11 @@ interface HfSpaceJsonMetadata {
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseHfSpace(entries: MetadataEntry[]): InternalParseResult {
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseHfSpace(entries: EntryRecord): InternalParseResult {
   // Find parameters entry
   // PNG: stored in 'parameters' chunk
   // JPEG/WebP (after conversion): stored in 'UserComment' (from exifUserComment)
-  const parametersText = entryRecord.parameters ?? entryRecord.UserComment;
+  const parametersText = entries.parameters ?? entries.UserComment;
   if (!parametersText) {
     return Result.error({ type: 'unsupportedFormat' });
   }

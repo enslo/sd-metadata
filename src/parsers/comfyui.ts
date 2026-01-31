@@ -10,13 +10,12 @@ import type {
   ComfyNodeGraph,
   HiresSettings,
   InternalParseResult,
-  MetadataEntry,
   ModelSettings,
   SamplingSettings,
   UpscaleSettings,
 } from '../types';
 import { Result } from '../types';
-import { type EntryRecord, buildEntryRecord } from '../utils/entries';
+import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 
@@ -122,11 +121,9 @@ interface MergedMetadata {
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
-export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
-  const entryRecord = buildEntryRecord(entries);
-
+export function parseComfyUI(entries: EntryRecord): InternalParseResult {
   // Find and parse prompt JSON
-  const promptText = findPromptJson(entryRecord);
+  const promptText = findPromptJson(entries);
   if (!promptText) {
     return Result.error({ type: 'unsupportedFormat' });
   }
@@ -155,7 +152,7 @@ export function parseComfyUI(entries: MetadataEntry[]): InternalParseResult {
   // Extract metadata from both sources
   const comfyMetadata = extractComfyUIMetadata(prompt);
   const civitaiMetadata = extractCivitaiMetadata(
-    extractExtraMetadata(prompt, entryRecord),
+    extractExtraMetadata(prompt, entries),
   );
 
   // Merge with ComfyUI taking priority
