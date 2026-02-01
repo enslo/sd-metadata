@@ -96,5 +96,5 @@ export function convertCivitaiSegmentsToPng(
 
   // Orchestration format: store entire JSON as single "prompt" chunk
   // This preserves the original structure for round-trip compatibility
-  return createEncodedChunk('prompt', userComment.data, 'text-utf8-raw');
+  return createEncodedChunk('prompt', userComment.data, 'text-unicode-escape');
 }

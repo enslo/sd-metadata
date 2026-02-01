@@ -4,7 +4,7 @@
  * Handles three different encoding strategies:
  * 1. dynamic: Choose tEXt/iTXt based on content (for tools like A1111, InvokeAI)
  * 2. text-unicode-escape: tEXt with Unicode escaping (for ComfyUI, SwarmUI)
- * 3. text-utf8-raw: tEXt with raw UTF-8 (for Stability Matrix, TensorArt)
+ * 3. text-utf8-raw: tEXt with raw UTF-8 (for specific chunks in Stability Matrix, TensorArt)
  */
 
 import type { PngTextChunk } from '../types';
@@ -19,8 +19,17 @@ export type ChunkEncodingStrategy =
   | 'text-utf8-raw'; // tEXt with raw UTF-8 (non-compliant but compatible)
 
 /**
- * Tool-specific chunk encoding strategies
+ * Map of chunk keywords to their encoding strategies
+ *
+ * Used when different chunks within the same software require different
+ * encoding strategies (e.g., Stability Matrix, TensorArt).
+ *
+ * The 'default' key is required and used for keywords not in the map.
  */
+export type ChunkEncodingMap = {
+  [keyword: string]: ChunkEncodingStrategy;
+  default: ChunkEncodingStrategy;
+};
 
 /**
  * Escape Unicode characters beyond Latin-1 for tEXt chunk
@@ -103,4 +112,24 @@ export function createEncodedChunk(
       return createTextChunk(keyword, text);
     }
   }
+}
+
+/**
+ * Create multiple PNG chunks with per-keyword encoding strategy
+ *
+ * Uses a ChunkEncodingMap to determine the encoding strategy for each chunk.
+ * If a keyword is not in the map, the 'default' strategy is used.
+ *
+ * @param entries - Array of [keyword, text] tuples
+ * @param encodingMap - Map of keywords to encoding strategies
+ * @returns Array of PNG text chunks
+ */
+export function createEncodedChunks(
+  entries: [string, string | undefined][],
+  encodingMap: ChunkEncodingMap,
+): PngTextChunk[] {
+  return entries.flatMap(([keyword, text]) => {
+    const strategy = encodingMap[keyword] ?? encodingMap.default;
+    return createEncodedChunk(keyword, text, strategy);
+  });
 }
