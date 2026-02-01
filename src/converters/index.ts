@@ -34,9 +34,17 @@ import {
 } from './novelai';
 import { createPngToSegments, createSegmentsToPng } from './simple-chunk';
 import {
+  convertStabilityMatrixPngToSegments,
+  convertStabilityMatrixSegmentsToPng,
+} from './stability-matrix';
+import {
   convertSwarmUIPngToSegments,
   convertSwarmUISegmentsToPng,
 } from './swarmui';
+import {
+  convertTensorArtPngToSegments,
+  convertTensorArtSegmentsToPng,
+} from './tensorart';
 
 /**
  * Convert metadata from one format to another
@@ -203,6 +211,16 @@ const convertCivitai = createFormatConverter(
   convertCivitaiSegmentsToPng,
 );
 
+const convertStabilityMatrix = createFormatConverter(
+  convertStabilityMatrixPngToSegments,
+  convertStabilityMatrixSegmentsToPng,
+);
+
+const convertTensorArt = createFormatConverter(
+  convertTensorArtPngToSegments,
+  convertTensorArtSegmentsToPng,
+);
+
 /**
  * Lookup table: software name → converter function
  */
@@ -216,10 +234,12 @@ const softwareConverters = {
   'forge-neo': convertA1111,
   // CivitAI Orchestration format
   civitai: convertCivitai,
-  // ComfyUI-format (comfyui, tensorart, stability-matrix)
+  // ComfyUI-format
   comfyui: convertComfyUI,
-  tensorart: convertComfyUI,
-  'stability-matrix': convertComfyUI,
+  // TensorArt (per-chunk encoding: generation_data uses raw UTF-8)
+  tensorart: convertTensorArt,
+  // Stability Matrix (per-chunk encoding: parameters uses raw UTF-8)
+  'stability-matrix': convertStabilityMatrix,
   // Easy Diffusion
   easydiffusion: convertEasyDiffusion,
   // Fooocus variants

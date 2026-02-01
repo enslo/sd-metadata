@@ -1,6 +1,6 @@
 {
   "name": "@enslo/sd-metadata",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "packageManager": "pnpm@10.5.2",
   "description": "Read and write AI-generated image metadata",
   "type": "module",
