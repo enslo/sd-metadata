@@ -428,6 +428,8 @@ export interface SamplingSettings {
   seed?: number;
   /** CLIP skip layers */
   clipSkip?: number;
+  /** Denoising strength (ComfyUI only). Omitted when 1.0 (txt2img default) */
+  denoise?: number;
 }
 ```
 

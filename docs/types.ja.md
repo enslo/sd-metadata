@@ -426,6 +426,8 @@ export interface SamplingSettings {
   seed?: number;
   /** CLIPスキップレイヤー */
   clipSkip?: number;
+  /** デノイズ強度（ComfyUIのみ）。1.0の場合は提供されない（txt2imgのデフォルト） */
+  denoise?: number;
 }
 ```
 
