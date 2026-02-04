@@ -80,7 +80,12 @@ export function read(
 
   // 4. Fallback for dimensions if missing (unless strict mode)
   if (!options?.strict && (metadata.width === 0 || metadata.height === 0)) {
-    const dims = HELPERS[format].readDimensions(data);
+    const dims =
+      format === 'png'
+        ? readPngDimensions(data)
+        : format === 'jpeg'
+          ? readJpegDimensions(data)
+          : readWebpDimensions(data);
 
     if (dims) {
       metadata.width = metadata.width || dims.width;
@@ -95,31 +100,6 @@ export function read(
 // Helpers
 // ============================================================================
 
-/** Format-specific helper functions */
-const HELPERS = {
-  png: {
-    readMetadata: readPngMetadata,
-    readDimensions: readPngDimensions,
-    createRaw: (chunks: PngTextChunk[]) => ({ format: 'png' as const, chunks }),
-  },
-  jpeg: {
-    readMetadata: readJpegMetadata,
-    readDimensions: readJpegDimensions,
-    createRaw: (segments: MetadataSegment[]) => ({
-      format: 'jpeg' as const,
-      segments,
-    }),
-  },
-  webp: {
-    readMetadata: readWebpMetadata,
-    readDimensions: readWebpDimensions,
-    createRaw: (segments: MetadataSegment[]) => ({
-      format: 'webp' as const,
-      segments,
-    }),
-  },
-} as const satisfies Record<ImageFormat, unknown>;
-
 /** Result type for readRawMetadata */
 type RawReadResult =
   | { status: 'success'; raw: RawMetadata }
@@ -130,7 +110,12 @@ type RawReadResult =
  * Read raw metadata from image data
  */
 function readRawMetadata(data: Uint8Array, format: ImageFormat): RawReadResult {
-  const result = HELPERS[format].readMetadata(data);
+  const result =
+    format === 'png'
+      ? readPngMetadata(data)
+      : format === 'jpeg'
+        ? readJpegMetadata(data)
+        : readWebpMetadata(data);
 
   if (!result.ok) {
     const message =
@@ -146,12 +131,12 @@ function readRawMetadata(data: Uint8Array, format: ImageFormat): RawReadResult {
   if (format === 'png') {
     return {
       status: 'success',
-      raw: HELPERS.png.createRaw(result.value as PngTextChunk[]),
+      raw: { format: 'png', chunks: result.value as PngTextChunk[] },
     };
   }
   return {
     status: 'success',
-    raw: HELPERS[format].createRaw(result.value as MetadataSegment[]),
+    raw: { format, segments: result.value as MetadataSegment[] },
   };
 }
 

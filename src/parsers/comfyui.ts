@@ -22,13 +22,13 @@ import {
   extractExtraMetadata,
 } from './comfyui-civitai';
 import {
-  CLASS_TYPES,
+  calculateScale,
+  classifyNodes,
   extractDimensions,
   extractModel,
   extractPromptTexts,
   extractSampling,
   findHiresSampler,
-  findNode,
 } from './comfyui-nodes';
 
 // =============================================================================
@@ -153,21 +153,6 @@ function cleanJsonString(json: string): string {
   return json.replace(/\0+$/, '').replace(/:\s*NaN\b/g, ': null');
 }
 
-/**
- * Calculate scale factor rounded to 2 decimal places
- *
- * @param targetWidth - Target width after scaling
- * @param baseWidth - Original base width
- * @returns Scale factor or undefined if invalid inputs
- */
-function calculateScale(
-  targetWidth: number,
-  baseWidth: number,
-): number | undefined {
-  if (baseWidth <= 0 || targetWidth <= 0) return undefined;
-  return Math.round((targetWidth / baseWidth) * 100) / 100;
-}
-
 // =============================================================================
 // Prompt Finding
 // =============================================================================
@@ -232,15 +217,20 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
 function extractComfyUIMetadata(
   nodes: ComfyNodeGraph,
 ): PartialMetadata | undefined {
-  // Extract from nodes using class_type lookup
-  const { promptText, negativeText } = extractPromptTexts(nodes);
-  const { width, height } = extractDimensions(nodes);
+  // Classify all nodes in a single pass
+  const c = classifyNodes(nodes);
 
-  // Extract hires/upscale settings
-  const hiresModel = findNode(nodes, CLASS_TYPES.hiresModelUpscale)?.inputs;
-  // Try image scale first, then latent upscale
-  const hiresImageScale = findNode(nodes, CLASS_TYPES.hiresImageScale)?.inputs;
-  const latentUpscale = findNode(nodes, CLASS_TYPES.latentUpscale)?.inputs;
+  // Extract from pre-classified nodes
+  const { promptText, negativeText } = extractPromptTexts(nodes, c.sampler);
+  const { width, height } = extractDimensions(
+    c.latentImage,
+    c.latentImageRgthree,
+  );
+
+  // Extract hires/upscale settings from pre-classified nodes
+  const hiresModel = c.hiresModelUpscale?.inputs;
+  const hiresImageScale = c.hiresImageScale?.inputs;
+  const latentUpscale = c.latentUpscale?.inputs;
   const hiresSampler = findHiresSampler(nodes)?.inputs;
 
   return trimObject({
@@ -248,8 +238,8 @@ function extractComfyUIMetadata(
     negativePrompt: negativeText || undefined,
     width: width > 0 ? width : undefined,
     height: height > 0 ? height : undefined,
-    model: extractModel(nodes),
-    sampling: extractSampling(nodes),
+    model: extractModel(c.checkpoint),
+    sampling: extractSampling(nodes, c.sampler),
     ...buildHiresOrUpscale(
       hiresModel,
       hiresImageScale,
@@ -318,38 +308,23 @@ function buildHiresOrUpscale(
 // =============================================================================
 
 /**
- * Deep merge two objects, excluding undefined values
+ * Shallow merge two objects, skipping undefined values
  *
- * Unlike spread operator, this does NOT let undefined values override defined ones.
- * Example: mergeObjects({ scale: 1.5 }, { upscaler: 'x', scale: undefined })
- *          = { scale: 1.5, upscaler: 'x' }
- *
- * @param base - Base object (lower priority)
- * @param override - Override object (higher priority for defined values)
- * @returns Merged object or undefined if empty
+ * Unlike spread, undefined in override does NOT overwrite defined base values.
+ * Returns undefined if result is empty.
  */
 function mergeObjects<T extends object>(
   base: T | undefined,
   override: T | undefined,
 ): T | undefined {
   if (!base && !override) return undefined;
-
   const merged: Record<string, unknown> = {};
-
-  // Add base properties (excluding undefined)
-  if (base) {
-    for (const [key, value] of Object.entries(base)) {
-      if (value !== undefined) merged[key] = value;
+  for (const obj of [base, override]) {
+    if (!obj) continue;
+    for (const [k, v] of Object.entries(obj)) {
+      if (v !== undefined) merged[k] = v;
     }
   }
-
-  // Add override properties (excluding undefined, these win over base)
-  if (override) {
-    for (const [key, value] of Object.entries(override)) {
-      if (value !== undefined) merged[key] = value;
-    }
-  }
-
   return Object.keys(merged).length > 0 ? (merged as T) : undefined;
 }
 

@@ -15,6 +15,7 @@ import type {
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import { calculateScale } from './comfyui-nodes';
 
 // =============================================================================
 // Types
@@ -118,17 +119,6 @@ export function extractCivitaiMetadata(
 // =============================================================================
 // Helpers
 // =============================================================================
-
-/**
- * Calculate scale factor rounded to 2 decimal places
- */
-function calculateScale(
-  targetWidth: number,
-  baseWidth: number,
-): number | undefined {
-  if (baseWidth <= 0 || targetWidth <= 0) return undefined;
-  return Math.round((targetWidth / baseWidth) * 100) / 100;
-}
 
 /**
  * Build upscale settings from CivitAI transformations
