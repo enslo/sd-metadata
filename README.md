@@ -126,9 +126,9 @@ fileInput.addEventListener('change', async (e) => {
 });
 ```
 
-### CDN Usage (Bookmarklet / Userscript)
+### CDN Usage (Userscript)
 
-For bookmarklets or userscripts (Tampermonkey, Violentmonkey, etc.), load from jsDelivr CDN:
+For userscripts (Tampermonkey, Violentmonkey, etc.), load from jsDelivr CDN:
 
 ```javascript
 // Import from CDN
@@ -148,7 +148,7 @@ if (result.status === 'success') {
 > For production use, pin to a specific version instead of `@latest`:
 >
 > ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.7.1/dist/index.js
+> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.8.0/dist/index.js
 > ```
 
 ### Advanced Examples
