@@ -13,9 +13,7 @@ import { parseJson } from './json';
  * @returns Entry record for keyword lookup
  */
 export function pngChunksToRecord(chunks: PngTextChunk[]): EntryRecord {
-  return Object.freeze(
-    Object.fromEntries(chunks.map((c) => [c.keyword, c.text])),
-  );
+  return Object.fromEntries(chunks.map((c) => [c.keyword, c.text]));
 }
 
 /**
@@ -53,7 +51,7 @@ export function segmentsToRecord(segments: MetadataSegment[]): EntryRecord {
     record[keyword] = text;
   }
 
-  return Object.freeze(record);
+  return record;
 }
 
 /**
@@ -86,10 +84,10 @@ function tryExpandNovelAIWebpFormat(text: string): EntryRecord | null {
   // Parse and add inner Comment as Comment entry
   const innerParsed = parseJson(outer.Comment);
 
-  return Object.freeze({
+  return {
     Software: typeof outer.Software === 'string' ? outer.Software : 'NovelAI',
     Comment: innerParsed.ok ? JSON.stringify(innerParsed.value) : outer.Comment,
-  });
+  };
 }
 
 /**

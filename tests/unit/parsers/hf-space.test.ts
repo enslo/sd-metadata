@@ -202,6 +202,110 @@ describe('parseHfSpace - Unit Tests', () => {
     });
   });
 
+  describe('hires extraction (use_upscaler)', () => {
+    it('should extract hires from use_upscaler object', () => {
+      const metadata = {
+        prompt: 'test',
+        resolution: '1024 x 1024',
+        use_upscaler: {
+          upscale_method: 'nearest-exact',
+          upscaler_strength: 0.7,
+          upscale_by: 1.5,
+          new_resolution: '1536 x 1536',
+        },
+      };
+      const entries = createHfSpaceEntry(metadata);
+
+      const result = parseHfSpace(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.hires).toEqual({
+          upscaler: 'nearest-exact',
+          denoise: 0.7,
+          scale: 1.5,
+        });
+      }
+    });
+
+    it('should not include hires when use_upscaler is null', () => {
+      const metadata = {
+        prompt: 'test',
+        resolution: '1024 x 1024',
+        use_upscaler: null,
+      };
+      const entries = createHfSpaceEntry(metadata);
+
+      const result = parseHfSpace(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.hires).toBeUndefined();
+      }
+    });
+
+    it('should not include hires when use_upscaler is absent', () => {
+      const metadata = {
+        prompt: 'test',
+        resolution: '1024 x 1024',
+      };
+      const entries = createHfSpaceEntry(metadata);
+
+      const result = parseHfSpace(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.hires).toBeUndefined();
+      }
+    });
+
+    it('should extract partial hires fields', () => {
+      const metadata = {
+        prompt: 'test',
+        resolution: '1024 x 1024',
+        use_upscaler: {
+          upscale_by: 2.0,
+        },
+      };
+      const entries = createHfSpaceEntry(metadata);
+
+      const result = parseHfSpace(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.hires).toEqual({
+          scale: 2.0,
+        });
+      }
+    });
+
+    it('should extract upscale_steps as hires.steps', () => {
+      const metadata = {
+        prompt: 'test',
+        resolution: '1024 x 1024',
+        use_upscaler: {
+          upscale_method: 'nearest-exact',
+          upscaler_strength: 0.5,
+          upscale_by: 1.5,
+          upscale_steps: 10,
+        },
+      };
+      const entries = createHfSpaceEntry(metadata);
+
+      const result = parseHfSpace(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.hires).toEqual({
+          upscaler: 'nearest-exact',
+          denoise: 0.5,
+          scale: 1.5,
+          steps: 10,
+        });
+      }
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle missing optional fields', () => {
       const metadata = {

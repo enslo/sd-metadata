@@ -5,6 +5,19 @@ import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 
 /**
+ * HuggingFace Space upscaler settings
+ *
+ * Present when image was upscaled during generation.
+ */
+interface HfSpaceUpscaler {
+  upscale_method?: string;
+  upscaler_strength?: number;
+  upscale_by?: number;
+  upscale_steps?: number;
+  new_resolution?: string;
+}
+
+/**
  * HuggingFace Space JSON metadata structure
  */
 interface HfSpaceJsonMetadata {
@@ -18,7 +31,7 @@ interface HfSpaceJsonMetadata {
   sampler?: string;
   Model?: string;
   'Model hash'?: string;
-  use_upscaler?: unknown;
+  use_upscaler?: HfSpaceUpscaler | null;
 }
 
 /**
@@ -78,6 +91,14 @@ export function parseHfSpace(entries: EntryRecord): InternalParseResult {
       cfg: json.guidance_scale,
       seed: json.seed,
     }),
+    hires: json.use_upscaler
+      ? trimObject({
+          upscaler: json.use_upscaler.upscale_method,
+          denoise: json.use_upscaler.upscaler_strength,
+          scale: json.use_upscaler.upscale_by,
+          steps: json.use_upscaler.upscale_steps,
+        })
+      : undefined,
   };
 
   return Result.ok(metadata);

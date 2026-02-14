@@ -162,10 +162,7 @@ function parseSettings(settings: string): Map<string, string> {
   const regex =
     /([A-Za-z][A-Za-z0-9 ]*?):\s*([^,]+?)(?=,\s*[A-Za-z][A-Za-z0-9 ]*?:|$)/g;
 
-  // Use matchAll for functional iteration
-  const matches = Array.from(settings.matchAll(regex));
-
-  for (const match of matches) {
+  for (const match of settings.matchAll(regex)) {
     const key = (match[1] ?? '').trim();
     const value = (match[2] ?? '').trim();
     result.set(key, value);

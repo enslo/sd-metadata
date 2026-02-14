@@ -127,9 +127,9 @@ fileInput.addEventListener('change', async (e) => {
 });
 ```
 
-### CDN使用（ブックマークレット / ユーザースクリプト）
+### CDN使用（ユーザースクリプト）
 
-ブックマークレットやユーザースクリプト（Tampermonkey、Violentmonkeyなど）では、jsDelivr CDNから読み込みます：
+ユーザースクリプト（Tampermonkey、Violentmonkeyなど）では、jsDelivr CDNから読み込みます：
 
 ```javascript
 // CDNからインポート
@@ -149,7 +149,7 @@ if (result.status === 'success') {
 > 本番環境では `@latest` の代わりに特定のバージョンを指定してください：
 >
 > ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.7.1/dist/index.js
+> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.8.0/dist/index.js
 > ```
 
 ### 応用例

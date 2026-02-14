@@ -1,59 +1,24 @@
-import type { InternalParseResult, StandardMetadata } from '../types';
+import type { InternalParseResult } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 
 /**
- * Easy Diffusion JSON metadata structure
+ * Easy Diffusion JSON metadata structure (for documentation)
  *
- * ⚠️ UNVERIFIED: This parser has not been verified with actual Easy Diffusion samples.
+ * UNVERIFIED: This parser has not been verified with actual Easy Diffusion samples.
  * The implementation is based on reference code from other libraries but may not be
  * fully accurate. Please report any issues if you encounter problems with Easy Diffusion
  * metadata parsing.
+ *
+ * Easy Diffusion uses two different key formats:
+ * - Format A (snake_case): prompt, negative_prompt, seed, use_stable_diffusion_model, ...
+ * - Format B (capitalized): Prompt, Negative Prompt, Seed, Stable Diffusion model, ...
  *
  * Easy Diffusion stores metadata as JSON in various entries:
  * - PNG: negative_prompt or Negative Prompt entry
  * - JPEG/WebP: Exif UserComment
  */
-interface EasyDiffusionJsonMetadata {
-  prompt?: string;
-  negative_prompt?: string;
-  Prompt?: string;
-  'Negative Prompt'?: string;
-  seed?: number;
-  Seed?: number;
-  use_stable_diffusion_model?: string;
-  'Stable Diffusion model'?: string;
-  sampler_name?: string;
-  Sampler?: string;
-  num_inference_steps?: number;
-  Steps?: number;
-  guidance_scale?: number;
-  'Guidance Scale'?: number;
-  width?: number;
-  Width?: number;
-  height?: number;
-  Height?: number;
-  clip_skip?: number;
-  'Clip Skip'?: number;
-  use_vae_model?: string;
-  'VAE model'?: string;
-}
-
-/**
- * Get value from JSON with fallback for different key formats
- *
- * Easy Diffusion uses two different key formats:
- * - Format A: prompt, negative_prompt, seed (snake_case)
- * - Format B: Prompt, Negative Prompt, Seed (capitalized)
- */
-function getValue<T>(
-  json: EasyDiffusionJsonMetadata,
-  keyA: keyof EasyDiffusionJsonMetadata,
-  keyB: keyof EasyDiffusionJsonMetadata,
-): T | undefined {
-  return (json[keyA] ?? json[keyB]) as T | undefined;
-}
 
 /**
  * Extract model name from path
@@ -80,10 +45,7 @@ function extractModelName(path: string | undefined): string | undefined {
 export function parseEasyDiffusion(entries: EntryRecord): InternalParseResult {
   // Check for standalone entries (PNG format)
   if (entries.negative_prompt || entries['Negative Prompt']) {
-    // The entire info dict is what we need to process
-    // Try to reconstruct from individual entries or find a JSON source
-    // For PNG, Easy Diffusion stores each field as a separate chunk
-    return parseFromEntries(entries);
+    return buildMetadata(entries);
   }
 
   // Find JSON in various possible locations
@@ -96,7 +58,7 @@ export function parseEasyDiffusion(entries: EntryRecord): InternalParseResult {
   }
 
   // Parse JSON
-  const parsed = parseJson<EasyDiffusionJsonMetadata>(jsonText);
+  const parsed = parseJson<Record<string, unknown>>(jsonText);
   if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
@@ -104,91 +66,47 @@ export function parseEasyDiffusion(entries: EntryRecord): InternalParseResult {
     });
   }
 
-  return parseFromJson(parsed.value);
+  return buildMetadata(parsed.value);
 }
 
 /**
- * Parse from individual PNG entries
+ * Build metadata from a key-value record
+ *
+ * Handles both PNG entries (string values) and parsed JSON (typed values)
+ * by using dual-key lookup (snake_case and Capitalized formats).
  */
-function parseFromEntries(
-  entryRecord: Record<string, string | undefined>,
-): InternalParseResult {
-  const prompt = entryRecord.prompt ?? entryRecord.Prompt ?? '';
-  const negativePrompt =
-    entryRecord.negative_prompt ??
-    entryRecord['Negative Prompt'] ??
-    entryRecord.negative_prompt ??
-    '';
-
-  const modelPath =
-    entryRecord.use_stable_diffusion_model ??
-    entryRecord['Stable Diffusion model'];
-
-  const width = Number(entryRecord.width ?? entryRecord.Width) || 0;
-  const height = Number(entryRecord.height ?? entryRecord.Height) || 0;
-
-  const metadata: Omit<StandardMetadata, 'raw'> = {
-    software: 'easydiffusion',
-    prompt: prompt.trim(),
-    negativePrompt: negativePrompt.trim(),
-    width,
-    height,
-    model: {
-      name: extractModelName(modelPath),
-      vae: entryRecord.use_vae_model ?? entryRecord['VAE model'],
-    },
-    sampling: {
-      sampler: entryRecord.sampler_name ?? entryRecord.Sampler,
-      steps:
-        Number(entryRecord.num_inference_steps ?? entryRecord.Steps) ||
-        undefined,
-      cfg:
-        Number(entryRecord.guidance_scale ?? entryRecord['Guidance Scale']) ||
-        undefined,
-      seed: Number(entryRecord.seed ?? entryRecord.Seed) || undefined,
-      clipSkip:
-        Number(entryRecord.clip_skip ?? entryRecord['Clip Skip']) || undefined,
-    },
+function buildMetadata(data: Record<string, unknown>): InternalParseResult {
+  const str = (keyA: string, keyB: string): string | undefined => {
+    const v = data[keyA] ?? data[keyB];
+    return typeof v === 'string' ? v : undefined;
+  };
+  const num = (keyA: string, keyB: string): number | undefined => {
+    const v = Number(data[keyA] ?? data[keyB]);
+    return v || undefined;
   };
 
-  return Result.ok(metadata);
-}
+  const prompt = (str('prompt', 'Prompt') ?? '').trim();
+  const negativePrompt = (
+    str('negative_prompt', 'Negative Prompt') ?? ''
+  ).trim();
+  const modelPath = str('use_stable_diffusion_model', 'Stable Diffusion model');
 
-/**
- * Parse from JSON object
- */
-function parseFromJson(json: EasyDiffusionJsonMetadata): InternalParseResult {
-  const prompt = getValue<string>(json, 'prompt', 'Prompt') ?? '';
-  const negativePrompt =
-    getValue<string>(json, 'negative_prompt', 'Negative Prompt') ?? '';
-
-  const modelPath = getValue<string>(
-    json,
-    'use_stable_diffusion_model',
-    'Stable Diffusion model',
-  );
-
-  const width = getValue<number>(json, 'width', 'Width') ?? 0;
-  const height = getValue<number>(json, 'height', 'Height') ?? 0;
-
-  const metadata: Omit<StandardMetadata, 'raw'> = {
+  return Result.ok({
     software: 'easydiffusion',
-    prompt: prompt.trim(),
-    negativePrompt: negativePrompt.trim(),
-    width,
-    height,
+    prompt,
+    negativePrompt,
+    width: num('width', 'Width') ?? 0,
+    height: num('height', 'Height') ?? 0,
     model: {
       name: extractModelName(modelPath),
-      vae: getValue<string>(json, 'use_vae_model', 'VAE model'),
+      vae: str('use_vae_model', 'VAE model'),
     },
     sampling: {
-      sampler: getValue<string>(json, 'sampler_name', 'Sampler'),
-      steps: getValue<number>(json, 'num_inference_steps', 'Steps'),
-      cfg: getValue<number>(json, 'guidance_scale', 'Guidance Scale'),
-      seed: getValue<number>(json, 'seed', 'Seed'),
-      clipSkip: getValue<number>(json, 'clip_skip', 'Clip Skip'),
+      sampler: str('sampler_name', 'Sampler'),
+      steps: num('num_inference_steps', 'Steps'),
+      cfg: num('guidance_scale', 'Guidance Scale'),
+      seed: num('seed', 'Seed'),
+      clipSkip: num('clip_skip', 'Clip Skip'),
     },
-  };
-
-  return Result.ok(metadata);
+  });
 }
