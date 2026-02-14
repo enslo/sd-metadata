@@ -175,6 +175,10 @@ function buildCharacterPromptsSection(metadata: NovelAIMetadata): string[] {
  * Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, ...
  * ```
  *
+ * @deprecated Use {@link stringify} instead. This function requires callers to
+ * check `ParseResult.status` before use. The `stringify` function handles all
+ * statuses automatically.
+ *
  * @param metadata - Generation metadata from any tool
  * @returns Human-readable text in SD WebUI format
  *
