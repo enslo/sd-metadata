@@ -14,43 +14,84 @@ import type {
 } from '../types';
 
 // =============================================================================
-// Constants
+// Node Class Type Constants
+// =============================================================================
+
+const SAMPLER_TYPES = ['KSampler', 'KSamplerAdvanced', 'SamplerCustomAdvanced'];
+const LATENT_IMAGE_TYPES = ['EmptyLatentImage'];
+const LATENT_IMAGE_RGTHREE_TYPES = ['SDXL Empty Latent Image (rgthree)'];
+const CHECKPOINT_TYPES = ['CheckpointLoaderSimple', 'CheckpointLoader'];
+const HIRES_MODEL_UPSCALE_TYPES = ['UpscaleModelLoader'];
+const HIRES_IMAGE_SCALE_TYPES = ['ImageScale', 'ImageScaleBy'];
+const LATENT_UPSCALE_TYPES = ['LatentUpscale', 'LatentUpscaleBy'];
+const VAE_ENCODE_TYPES = ['VAEEncode', 'VAEEncodeTiled'];
+
+// =============================================================================
+// Node Classification (Single-Pass)
 // =============================================================================
 
 /**
- * ComfyUI node class types for metadata extraction
+ * Pre-classified ComfyUI nodes by role
  *
- * These class_type values identify specific node types in the ComfyUI node graph.
- * Arrays allow matching multiple node type variants.
+ * Built by a single pass over the node graph.
  */
-export const CLASS_TYPES = {
-  sampler: ['KSampler', 'KSamplerAdvanced', 'SamplerCustomAdvanced'],
-  // Standard latent image nodes with width/height properties
-  latentImage: ['EmptyLatentImage'],
-  // rgthree latent image nodes with "dimensions" string property
-  latentImageRgthree: ['SDXL Empty Latent Image (rgthree)'],
-  checkpoint: ['CheckpointLoaderSimple', 'CheckpointLoader'],
-  hiresModelUpscale: ['UpscaleModelLoader'],
-  hiresImageScale: ['ImageScale', 'ImageScaleBy'],
-  latentUpscale: ['LatentUpscale', 'LatentUpscaleBy'],
-  vaeEncode: ['VAEEncode', 'VAEEncodeTiled'],
-} as const;
-
-// =============================================================================
-// Node Finding
-// =============================================================================
+export interface ClassifiedNodes {
+  sampler?: ComfyNode;
+  latentImage?: ComfyNode;
+  latentImageRgthree?: ComfyNode;
+  checkpoint?: ComfyNode;
+  hiresModelUpscale?: ComfyNode;
+  hiresImageScale?: ComfyNode;
+  latentUpscale?: ComfyNode;
+  vaeEncode?: ComfyNode;
+}
 
 /**
- * Find a node by class_type (first match)
+ * Classify all nodes in a single pass over the node graph
+ *
+ * Replaces multiple findNode() calls with one iteration.
+ * Stores the first matching node for each category.
  */
-export function findNode(
-  nodes: ComfyNodeGraph,
-  classTypes: readonly string[],
-): ComfyNode | undefined {
-  return Object.values(nodes).find((node) =>
-    classTypes.includes(node.class_type),
-  );
+export function classifyNodes(nodes: ComfyNodeGraph): ClassifiedNodes {
+  const result: ClassifiedNodes = {};
+
+  for (const node of Object.values(nodes)) {
+    const ct = node.class_type;
+
+    if (!result.sampler && SAMPLER_TYPES.includes(ct)) {
+      result.sampler = node;
+    } else if (!result.latentImage && LATENT_IMAGE_TYPES.includes(ct)) {
+      result.latentImage = node;
+    } else if (
+      !result.latentImageRgthree &&
+      LATENT_IMAGE_RGTHREE_TYPES.includes(ct)
+    ) {
+      result.latentImageRgthree = node;
+    } else if (!result.checkpoint && CHECKPOINT_TYPES.includes(ct)) {
+      result.checkpoint = node;
+    } else if (
+      !result.hiresModelUpscale &&
+      HIRES_MODEL_UPSCALE_TYPES.includes(ct)
+    ) {
+      result.hiresModelUpscale = node;
+    } else if (
+      !result.hiresImageScale &&
+      HIRES_IMAGE_SCALE_TYPES.includes(ct)
+    ) {
+      result.hiresImageScale = node;
+    } else if (!result.latentUpscale && LATENT_UPSCALE_TYPES.includes(ct)) {
+      result.latentUpscale = node;
+    } else if (!result.vaeEncode && VAE_ENCODE_TYPES.includes(ct)) {
+      result.vaeEncode = node;
+    }
+  }
+
+  return result;
 }
+
+// =============================================================================
+// Node Reference Utilities
+// =============================================================================
 
 /**
  * Check if a value is a node reference [nodeId, outputIndex]
@@ -104,13 +145,17 @@ export function extractText(
 
 /**
  * Extract prompt texts by tracing from sampler's positive/negative inputs
+ *
+ * @param nodes - Full node graph (needed for reference following)
+ * @param sampler - Pre-classified sampler node
  */
-export function extractPromptTexts(nodes: ComfyNodeGraph): {
+export function extractPromptTexts(
+  nodes: ComfyNodeGraph,
+  sampler: ComfyNode | undefined,
+): {
   promptText: string;
   negativeText: string;
 } {
-  // Find sampler node by class_type
-  const sampler = findNode(nodes, CLASS_TYPES.sampler);
   if (!sampler) {
     return { promptText: '', negativeText: '' };
   }
@@ -134,28 +179,36 @@ export function extractPromptTexts(nodes: ComfyNodeGraph): {
 // =============================================================================
 
 /**
- * Extract dimensions from LatentImage node
+ * Extract dimensions from pre-classified LatentImage nodes
  *
  * Handles two node types separately:
  * - EmptyLatentImage: inputs.width and inputs.height as numbers
  * - SDXL Empty Latent Image (rgthree): inputs.dimensions as string like "1024 x 1024 (square)"
+ *
+ * @param latentImage - Standard EmptyLatentImage node
+ * @param latentImageRgthree - rgthree SDXL latent image node
  */
-export function extractDimensions(nodes: ComfyNodeGraph): {
+export function extractDimensions(
+  latentImage: ComfyNode | undefined,
+  latentImageRgthree: ComfyNode | undefined,
+): {
   width: number;
   height: number;
 } {
   // Try standard EmptyLatentImage first (width/height properties)
-  const standardLatent = findNode(nodes, CLASS_TYPES.latentImage);
-  if (standardLatent) {
-    const width = Number(standardLatent.inputs.width) || 0;
-    const height = Number(standardLatent.inputs.height) || 0;
+  if (latentImage) {
+    const width = Number(latentImage.inputs.width) || 0;
+    const height = Number(latentImage.inputs.height) || 0;
     if (width > 0 && height > 0) return { width, height };
   }
 
   // Try rgthree latent image (dimensions string like "1024 x 1024 (square)")
-  const rgthreeLatent = findNode(nodes, CLASS_TYPES.latentImageRgthree);
-  if (rgthreeLatent && typeof rgthreeLatent.inputs.dimensions === 'string') {
-    const match = rgthreeLatent.inputs.dimensions.match(/^(\d+)\s*x\s*(\d+)/);
+  if (
+    latentImageRgthree &&
+    typeof latentImageRgthree.inputs.dimensions === 'string'
+  ) {
+    const match =
+      latentImageRgthree.inputs.dimensions.match(/^(\d+)\s*x\s*(\d+)/);
     if (match?.[1] && match[2]) {
       return {
         width: Number.parseInt(match[1], 10),
@@ -172,12 +225,15 @@ export function extractDimensions(nodes: ComfyNodeGraph): {
 // =============================================================================
 
 /**
- * Extract sampling settings from sampler node
+ * Extract sampling settings from pre-classified sampler node
+ *
+ * @param nodes - Full node graph (needed for seed reference following)
+ * @param sampler - Pre-classified sampler node
  */
 export function extractSampling(
   nodes: ComfyNodeGraph,
+  sampler: ComfyNode | undefined,
 ): SamplingSettings | undefined {
-  const sampler = findNode(nodes, CLASS_TYPES.sampler);
   if (!sampler) return undefined;
 
   // Handle seed which may be a reference or direct value
@@ -205,12 +261,34 @@ export function extractSampling(
 }
 
 /**
- * Extract model name from Checkpoint node
+ * Extract model name from pre-classified Checkpoint node
+ *
+ * @param checkpoint - Pre-classified checkpoint loader node
  */
-export function extractModel(nodes: ComfyNodeGraph): ModelSettings | undefined {
-  const checkpoint = findNode(nodes, CLASS_TYPES.checkpoint);
+export function extractModel(
+  checkpoint: ComfyNode | undefined,
+): ModelSettings | undefined {
   if (!checkpoint?.inputs?.ckpt_name) return undefined;
   return { name: String(checkpoint.inputs.ckpt_name) };
+}
+
+// =============================================================================
+// Scale Calculation
+// =============================================================================
+
+/**
+ * Calculate scale factor rounded to 2 decimal places
+ *
+ * @param targetWidth - Target width after scaling
+ * @param baseWidth - Original base width
+ * @returns Scale factor or undefined if invalid inputs
+ */
+export function calculateScale(
+  targetWidth: number,
+  baseWidth: number,
+): number | undefined {
+  if (baseWidth <= 0 || targetWidth <= 0) return undefined;
+  return Math.round((targetWidth / baseWidth) * 100) / 100;
 }
 
 // =============================================================================
@@ -221,32 +299,27 @@ export function extractModel(nodes: ComfyNodeGraph): ModelSettings | undefined {
  * Check if a sampler is a hires sampler by tracing its latent_image input
  *
  * Hires fix workflows have two patterns:
- * 1. Image space: KSampler.latent_image → VAE Encode → Upscale Image
- * 2. Latent space: KSampler.latent_image → LatentUpscale
+ * 1. Image space: KSampler.latent_image -> VAE Encode -> Upscale Image
+ * 2. Latent space: KSampler.latent_image -> LatentUpscale
  *
  * @param nodes - ComfyUI node graph
  * @param sampler - Sampler node to check
  * @returns true if this sampler is connected to an upscaled pipeline
  */
-export function isHiresSampler(
-  nodes: ComfyNodeGraph,
-  sampler: ComfyNode,
-): boolean {
+function isHiresSampler(nodes: ComfyNodeGraph, sampler: ComfyNode): boolean {
   const latentImageRef = sampler.inputs.latent_image;
   if (!isNodeReference(latentImageRef)) return false;
 
   const inputNode = nodes[String(latentImageRef[0])];
   if (!inputNode) return false;
 
-  // Pattern 1: Latent space upscale (LatentUpscale → KSampler)
-  const latentUpscaleTypes: readonly string[] = CLASS_TYPES.latentUpscale;
-  if (latentUpscaleTypes.includes(inputNode.class_type)) {
+  // Pattern 1: Latent space upscale (LatentUpscale -> KSampler)
+  if (LATENT_UPSCALE_TYPES.includes(inputNode.class_type)) {
     return true;
   }
 
-  // Pattern 2: Image space upscale (ImageScale → VAEEncode → KSampler)
-  const vaeTypes: readonly string[] = CLASS_TYPES.vaeEncode;
-  if (!vaeTypes.includes(inputNode.class_type)) return false;
+  // Pattern 2: Image space upscale (ImageScale -> VAEEncode -> KSampler)
+  if (!VAE_ENCODE_TYPES.includes(inputNode.class_type)) return false;
 
   const pixelsRef = inputNode.inputs.pixels;
   if (!isNodeReference(pixelsRef)) return false;
@@ -254,20 +327,18 @@ export function isHiresSampler(
   const upscaleNode = nodes[String(pixelsRef[0])];
   if (!upscaleNode) return false;
 
-  const imageScaleTypes: readonly string[] = CLASS_TYPES.hiresImageScale;
-  return imageScaleTypes.includes(upscaleNode.class_type);
+  return HIRES_IMAGE_SCALE_TYPES.includes(upscaleNode.class_type);
 }
 
 /**
  * Find hires sampler node by connection pattern
  *
- * Detects hires fix by tracing: KSampler.latent_image → VAE Encode → Upscale Image
+ * Detects hires fix by tracing: KSampler.latent_image -> VAE Encode -> Upscale Image
  * This is more reliable than checking denoise < 1, which can be used in normal generation.
  */
 export function findHiresSampler(nodes: ComfyNodeGraph): ComfyNode | undefined {
-  const samplerTypes: readonly string[] = CLASS_TYPES.sampler;
   return Object.values(nodes).find(
     (node) =>
-      samplerTypes.includes(node.class_type) && isHiresSampler(nodes, node),
+      SAMPLER_TYPES.includes(node.class_type) && isHiresSampler(nodes, node),
   );
 }

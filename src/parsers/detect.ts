@@ -2,36 +2,29 @@ import type { GenerationSoftware } from '../types';
 import type { EntryRecord } from '../utils/entries';
 
 // =============================================================================
-// Detection Markers
+// Detection Marker Strings
 // =============================================================================
 
-/**
- * Detection marker strings for identifying software
- *
- * Centralizes magic strings used across detection functions for maintainability.
- */
-const MARKERS = {
-  // Unique chunk keywords
-  INVOKEAI: 'invokeai_metadata',
-  TENSORART: 'generation_data',
-  STABILITY_MATRIX: 'smproj',
-  EASYDIFFUSION: 'use_stable_diffusion_model',
-  CIVITAI_EXTRA: 'extraMetadata',
+// Unique chunk keywords
+const M_INVOKEAI = 'invokeai_metadata';
+const M_TENSORART = 'generation_data';
+const M_STABILITY_MATRIX = 'smproj';
+const M_CIVITAI_EXTRA = 'extraMetadata';
 
-  // Content patterns
-  SWARMUI: 'sui_image_params',
-  SWARM_VERSION: 'swarm_version',
-  COMFYUI_NODE: 'class_type',
-  NOVELAI_SCHEDULE: 'noise_schedule',
-  NOVELAI_V4: 'v4_prompt',
-  NOVELAI_UNCOND: 'uncond_scale',
-  CIVITAI_NS: 'civitai:',
-  CIVITAI_RESOURCES: 'Civitai resources:',
-  RUINED_FOOOCUS: 'RuinedFooocus',
-  HF_MODEL: '"Model"',
-  HF_RESOLUTION: '"resolution"',
-  FOOOCUS_BASE: '"base_model"',
-} as const;
+// Content patterns
+const M_SWARMUI = 'sui_image_params';
+const M_SWARM_VERSION = 'swarm_version';
+const M_COMFYUI_NODE = 'class_type';
+const M_NOVELAI_SCHEDULE = 'noise_schedule';
+const M_NOVELAI_V4 = 'v4_prompt';
+const M_NOVELAI_UNCOND = 'uncond_scale';
+const M_CIVITAI_NS = 'civitai:';
+const M_CIVITAI_RESOURCES = 'Civitai resources:';
+const M_RUINED_FOOOCUS = 'RuinedFooocus';
+const M_EASYDIFFUSION = 'use_stable_diffusion_model';
+const M_HF_MODEL = '"Model"';
+const M_HF_RESOLUTION = '"resolution"';
+const M_FOOOCUS_BASE = '"base_model"';
 
 /**
  * Detect generation software from metadata entries
@@ -64,6 +57,22 @@ export function detectSoftware(
 }
 
 /**
+ * Detect software from unique chunk keywords
+ *
+ * Checks for presence of keys that uniquely identify software.
+ * Used for both direct entry records (PNG) and parsed JSON (JPEG/WebP conversions).
+ */
+function detectByUniqueKey(
+  record: Record<string, unknown>,
+): GenerationSoftware | null {
+  if (M_INVOKEAI in record) return 'invokeai';
+  if (M_TENSORART in record) return 'tensorart';
+  if (M_STABILITY_MATRIX in record) return 'stability-matrix';
+  if (M_CIVITAI_EXTRA in record) return 'civitai';
+  return null;
+}
+
+/**
  * Detect software from unique keywords (Tier 1)
  *
  * Fast path: checks for presence of specific keywords that uniquely
@@ -86,31 +95,13 @@ function detectUniqueKeywords(
     return 'novelai';
   }
 
-  // InvokeAI: Has unique "invokeai_metadata" chunk
-  if (MARKERS.INVOKEAI in entryRecord) {
-    return 'invokeai';
-  }
-
-  // TensorArt: Has unique "generation_data" chunk
-  if (MARKERS.TENSORART in entryRecord) {
-    return 'tensorart';
-  }
-
-  // Stability Matrix: Has unique "smproj" chunk
-  if (MARKERS.STABILITY_MATRIX in entryRecord) {
-    return 'stability-matrix';
-  }
+  // Unique key detection (InvokeAI, TensorArt, Stability Matrix, CivitAI)
+  const keyResult = detectByUniqueKey(entryRecord);
+  if (keyResult) return keyResult;
 
   // Easy Diffusion: Has "negative_prompt" or "Negative Prompt" keyword
   if ('negative_prompt' in entryRecord || 'Negative Prompt' in entryRecord) {
     return 'easydiffusion';
-  }
-
-  // CivitAI Orchestration: Has "extraMetadata" keyword (unique to CivitAI)
-  // Note: "extraMetadata" is specific to CivitAI's Orchestration format
-  // "resource-stack" may or may not be present depending on the workflow
-  if (MARKERS.CIVITAI_EXTRA in entryRecord) {
-    return 'civitai';
   }
 
   // ========================================
@@ -120,7 +111,7 @@ function detectUniqueKeywords(
   // SwarmUI: Check parameters for "sui_image_params"
   // MUST check here to catch it before ComfyUI detection
   const parameters = entryRecord.parameters;
-  if (parameters?.includes(MARKERS.SWARMUI)) {
+  if (parameters?.includes(M_SWARMUI)) {
     return 'swarmui';
   }
 
@@ -146,25 +137,9 @@ function detectFromCommentJson(comment: string): GenerationSoftware | null {
   try {
     const parsed = JSON.parse(comment) as Record<string, unknown>;
 
-    // InvokeAI: Same as PNG chunk check, but from JSON
-    if (MARKERS.INVOKEAI in parsed) {
-      return 'invokeai';
-    }
-
-    // TensorArt: Same as PNG chunk check, but from JSON
-    if (MARKERS.TENSORART in parsed) {
-      return 'tensorart';
-    }
-
-    // Stability Matrix: Same as PNG chunk check, but from JSON
-    if (MARKERS.STABILITY_MATRIX in parsed) {
-      return 'stability-matrix';
-    }
-
-    // CivitAI Orchestration: Has "extraMetadata" in JSON (unique to CivitAI)
-    if (MARKERS.CIVITAI_EXTRA in parsed) {
-      return 'civitai';
-    }
+    // Unique key detection (InvokeAI, TensorArt, Stability Matrix, CivitAI)
+    const keyResult = detectByUniqueKey(parsed);
+    if (keyResult) return keyResult;
 
     // ComfyUI: Has both prompt and workflow in JSON
     if ('prompt' in parsed && 'workflow' in parsed) {
@@ -183,17 +158,14 @@ function detectFromCommentJson(comment: string): GenerationSoftware | null {
     }
 
     // SwarmUI: Same as parameters check, but from Comment JSON
-    if (MARKERS.SWARMUI in parsed) {
+    if (M_SWARMUI in parsed) {
       return 'swarmui';
     }
 
     // SwarmUI alternative format
     if ('prompt' in parsed && 'parameters' in parsed) {
       const params = String(parsed.parameters || '');
-      if (
-        params.includes(MARKERS.SWARMUI) ||
-        params.includes(MARKERS.SWARM_VERSION)
-      ) {
+      if (params.includes(M_SWARMUI) || params.includes(M_SWARM_VERSION)) {
         return 'swarmui';
       }
     }
@@ -229,18 +201,18 @@ function detectComfyUIEntries(
     const promptText = entryRecord.prompt;
     if (promptText?.startsWith('{')) {
       // SwarmUI: Must check FIRST
-      if (promptText.includes(MARKERS.SWARMUI)) {
+      if (promptText.includes(M_SWARMUI)) {
         return 'swarmui';
       }
 
       // CivitAI: Has extraMetadata key in prompt JSON
       // This detects CivitAI Orchestration format where all data is in single prompt chunk
-      if (promptText.includes(`"${MARKERS.CIVITAI_EXTRA}"`)) {
+      if (promptText.includes(`"${M_CIVITAI_EXTRA}"`)) {
         return 'civitai';
       }
 
       // ComfyUI: Has class_type in prompt JSON
-      if (promptText.includes(MARKERS.COMFYUI_NODE)) {
+      if (promptText.includes(M_COMFYUI_NODE)) {
         return 'comfyui';
       }
     }
@@ -279,28 +251,25 @@ function detectFromJsonFormat(json: string): GenerationSoftware | null {
   // ========================================
 
   // SwarmUI: Has "sui_image_params" (unique identifier)
-  if (json.includes(MARKERS.SWARMUI)) {
+  if (json.includes(M_SWARMUI)) {
     return 'swarmui';
   }
 
   // Ruined Fooocus: Has explicit software field
   if (
-    json.includes(`"software":"${MARKERS.RUINED_FOOOCUS}"`) ||
-    json.includes(`"software": "${MARKERS.RUINED_FOOOCUS}"`)
+    json.includes(`"software":"${M_RUINED_FOOOCUS}"`) ||
+    json.includes(`"software": "${M_RUINED_FOOOCUS}"`)
   ) {
     return 'ruined-fooocus';
   }
 
   // Easy Diffusion: Has unique field name
-  if (json.includes(`"${MARKERS.EASYDIFFUSION}"`)) {
+  if (json.includes(`"${M_EASYDIFFUSION}"`)) {
     return 'easydiffusion';
   }
 
   // CivitAI: Has "civitai:" namespace prefix OR "extraMetadata" key
-  if (
-    json.includes(MARKERS.CIVITAI_NS) ||
-    json.includes(`"${MARKERS.CIVITAI_EXTRA}"`)
-  ) {
+  if (json.includes(M_CIVITAI_NS) || json.includes(`"${M_CIVITAI_EXTRA}"`)) {
     return 'civitai';
   }
 
@@ -310,23 +279,23 @@ function detectFromJsonFormat(json: string): GenerationSoftware | null {
 
   // NovelAI: Has distinctive v4_prompt or noise_schedule fields
   if (
-    json.includes(`"${MARKERS.NOVELAI_V4}"`) ||
-    json.includes(`"${MARKERS.NOVELAI_SCHEDULE}"`) ||
-    json.includes(`"${MARKERS.NOVELAI_UNCOND}"`) ||
+    json.includes(`"${M_NOVELAI_V4}"`) ||
+    json.includes(`"${M_NOVELAI_SCHEDULE}"`) ||
+    json.includes(`"${M_NOVELAI_UNCOND}"`) ||
     json.includes('"Software":"NovelAI"') ||
-    json.includes(`\\"${MARKERS.NOVELAI_SCHEDULE}\\"`) ||
-    json.includes(`\\"${MARKERS.NOVELAI_V4}\\"`)
+    json.includes(`\\"${M_NOVELAI_SCHEDULE}\\"`) ||
+    json.includes(`\\"${M_NOVELAI_V4}\\"`)
   ) {
     return 'novelai';
   }
 
   // HuggingFace Space: Combination of Model + resolution
-  if (json.includes(MARKERS.HF_MODEL) && json.includes(MARKERS.HF_RESOLUTION)) {
+  if (json.includes(M_HF_MODEL) && json.includes(M_HF_RESOLUTION)) {
     return 'hf-space';
   }
 
   // Fooocus: Has prompt + base_model combination
-  if (json.includes('"prompt"') && json.includes(MARKERS.FOOOCUS_BASE)) {
+  if (json.includes('"prompt"') && json.includes(M_FOOOCUS_BASE)) {
     return 'fooocus';
   }
 
@@ -358,7 +327,7 @@ function detectFromA1111Format(text: string): GenerationSoftware | null {
   // ========================================
 
   // SwarmUI: Has sui_image_params or swarm_version
-  if (text.includes(MARKERS.SWARMUI) || text.includes(MARKERS.SWARM_VERSION)) {
+  if (text.includes(M_SWARMUI) || text.includes(M_SWARM_VERSION)) {
     return 'swarmui';
   }
 
@@ -396,7 +365,7 @@ function detectFromA1111Format(text: string): GenerationSoftware | null {
   }
 
   // Civitai: Has resource list marker
-  if (text.includes(MARKERS.CIVITAI_RESOURCES)) {
+  if (text.includes(M_CIVITAI_RESOURCES)) {
     return 'civitai';
   }
 
