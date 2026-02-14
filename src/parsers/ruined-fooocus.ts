@@ -55,11 +55,6 @@ export function parseRuinedFooocus(entries: EntryRecord): InternalParseResult {
   }
   const json = parsed.value;
 
-  // Verify it's Ruined Fooocus format
-  if (json.software !== 'RuinedFooocus') {
-    return Result.error({ type: 'unsupportedFormat' });
-  }
-
   const metadata: Omit<StandardMetadata, 'raw'> = {
     software: 'ruined-fooocus',
     prompt: json.Prompt?.trim() ?? '',

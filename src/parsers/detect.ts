@@ -186,35 +186,37 @@ function detectComfyUIEntries(
   entryRecord: EntryRecord,
 ): GenerationSoftware | null {
   // ComfyUI: Both prompt AND workflow chunks exist
-  if ('prompt' in entryRecord && 'workflow' in entryRecord) {
+  // Checks both lowercase (PNG) and capitalized (EXIF prefix) keys
+  if (
+    ('prompt' in entryRecord && 'workflow' in entryRecord) ||
+    ('Prompt' in entryRecord && 'Workflow' in entryRecord)
+  ) {
     return 'comfyui';
   }
 
   // ComfyUI: Workflow chunk only (rare, but valid)
-  if ('workflow' in entryRecord) {
+  if ('workflow' in entryRecord || 'Workflow' in entryRecord) {
     return 'comfyui';
   }
 
   // ComfyUI: Prompt chunk with workflow JSON data
   // IMPORTANT: Check SwarmUI and CivitAI FIRST
-  if ('prompt' in entryRecord) {
-    const promptText = entryRecord.prompt;
-    if (promptText?.startsWith('{')) {
-      // SwarmUI: Must check FIRST
-      if (promptText.includes(M_SWARMUI)) {
-        return 'swarmui';
-      }
+  const promptText = entryRecord.prompt ?? entryRecord.Prompt;
+  if (promptText?.startsWith('{')) {
+    // SwarmUI: Must check FIRST
+    if (promptText.includes(M_SWARMUI)) {
+      return 'swarmui';
+    }
 
-      // CivitAI: Has extraMetadata key in prompt JSON
-      // This detects CivitAI Orchestration format where all data is in single prompt chunk
-      if (promptText.includes(`"${M_CIVITAI_EXTRA}"`)) {
-        return 'civitai';
-      }
+    // CivitAI: Has extraMetadata key in prompt JSON
+    // This detects CivitAI Orchestration format where all data is in single prompt chunk
+    if (promptText.includes(`"${M_CIVITAI_EXTRA}"`)) {
+      return 'civitai';
+    }
 
-      // ComfyUI: Has class_type in prompt JSON
-      if (promptText.includes(M_COMFYUI_NODE)) {
-        return 'comfyui';
-      }
+    // ComfyUI: Has class_type in prompt JSON
+    if (promptText.includes(M_COMFYUI_NODE)) {
+      return 'comfyui';
     }
   }
 
@@ -374,7 +376,11 @@ function detectFromA1111Format(text: string): GenerationSoftware | null {
   // ========================================
 
   // SD-WebUI (default): Has typical A1111 parameters
-  if (text.includes('Steps:') && text.includes('Sampler:')) {
+  if (
+    text.includes('Steps:') ||
+    text.includes('Sampler:') ||
+    text.includes('Negative prompt:')
+  ) {
     return 'sd-webui';
   }
 

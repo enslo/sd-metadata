@@ -49,11 +49,6 @@ interface V4Prompt {
  * @returns Parsed metadata or error
  */
 export function parseNovelAI(entries: EntryRecord): InternalParseResult {
-  // Verify NovelAI format
-  if (!entries.Software?.startsWith('NovelAI')) {
-    return Result.error({ type: 'unsupportedFormat' });
-  }
-
   // Parse Comment JSON
   // NovelAI natively supports PNG and WebP, using Exif UserComment for JPEG/WebP.
   // COM segment (→ Comment) is a fallback for non-standard converted images.

@@ -14,20 +14,6 @@ function createNovelAIEntries(commentJson: string): EntryRecord {
 
 describe('parseNovelAI - Unit Tests', () => {
   describe('format validation', () => {
-    it('should return error for non-NovelAI software', () => {
-      const entries: EntryRecord = {
-        Software: 'Other',
-        Comment: '{}',
-      };
-
-      const result = parseNovelAI(entries);
-
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe('unsupportedFormat');
-      }
-    });
-
     it('should return error for missing Comment', () => {
       const entries: EntryRecord = { Software: 'NovelAI' };
 
