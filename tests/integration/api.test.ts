@@ -107,7 +107,7 @@ describe('API Integration Tests', () => {
         },
         {
           format: 'png',
-          file: 'huggingface-animagine.png',
+          file: 'huggingface-space.png',
           software: 'hf-space',
         },
         { format: 'jpg', file: 'forge.jpeg', software: 'forge' },
