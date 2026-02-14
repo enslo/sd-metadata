@@ -22,6 +22,7 @@ import {
   extractExtraMetadata,
 } from './comfyui-civitai';
 import {
+  type ClassifiedNodes,
   calculateScale,
   classifyNodes,
   extractDimensions,
@@ -29,6 +30,7 @@ import {
   extractPromptTexts,
   extractSampling,
   findHiresSampler,
+  isNodeReference,
 } from './comfyui-nodes';
 
 // =============================================================================
@@ -227,77 +229,100 @@ function extractComfyUIMetadata(
     c.latentImageRgthree,
   );
 
-  // Extract hires/upscale settings from pre-classified nodes
-  const hiresModel = c.hiresModelUpscale?.inputs;
-  const hiresImageScale = c.hiresImageScale?.inputs;
-  const latentUpscale = c.latentUpscale?.inputs;
-  const hiresSampler = findHiresSampler(nodes)?.inputs;
+  // Find hires sampler and resolve its sampling parameters
+  const hiresSamplerNode = findHiresSampler(nodes);
+  const hiresSampling = hiresSamplerNode
+    ? extractSampling(nodes, hiresSamplerNode)
+    : undefined;
+
+  // Resolve hires scale from available sources
+  const hiresScale = resolveHiresScale(nodes, c, width);
+
+  const upscalerName = c.hiresModelUpscale?.inputs.model_name as
+    | string
+    | undefined;
 
   return trimObject({
     prompt: promptText || undefined,
     negativePrompt: negativeText || undefined,
     width: width > 0 ? width : undefined,
     height: height > 0 ? height : undefined,
-    model: extractModel(c.checkpoint),
+    model: extractModel(c.checkpoint, c.unetLoader),
     sampling: extractSampling(nodes, c.sampler),
-    ...buildHiresOrUpscale(
-      hiresModel,
-      hiresImageScale,
-      latentUpscale,
-      hiresSampler,
-      width,
-    ),
+    ...buildHiresOrUpscale(upscalerName, hiresScale, hiresSampling),
   });
 }
 
 /**
- * Build hires or upscale settings from ComfyUI nodes
+ * Resolve hires scale factor from available node sources
  *
- * @param hiresModel - Upscale model loader node inputs
- * @param hiresImageScale - Image scale node inputs (has width property)
- * @param latentUpscale - Latent upscale node inputs (has scale_by property)
- * @param hiresSampler - Hires sampler node inputs (optional)
- * @param baseWidth - Base image width for scale calculation
+ * Priority:
+ * 1. LatentUpscaleBy.scale_by (direct value)
+ * 2. ImageScale.width as node reference → source node's clip_scale (rgthree)
+ * 3. ImageScale.width as number → calculate ratio against base width
+ */
+function resolveHiresScale(
+  nodes: ComfyNodeGraph,
+  c: ClassifiedNodes,
+  baseWidth: number,
+): number | undefined {
+  const latentUpscale = c.latentUpscale?.inputs;
+  if (latentUpscale?.scale_by !== undefined) {
+    return latentUpscale.scale_by as number;
+  }
+
+  const widthInput = c.hiresImageScale?.inputs.width;
+  if (widthInput === undefined) return undefined;
+
+  // Width from a node reference (e.g. rgthree provides scaled dimensions)
+  if (isNodeReference(widthInput)) {
+    const sourceNode = nodes[String(widthInput[0])];
+    if (typeof sourceNode?.inputs.clip_scale === 'number') {
+      return sourceNode.inputs.clip_scale;
+    }
+    return undefined;
+  }
+
+  // Width as direct number value
+  if (typeof widthInput === 'number') {
+    return calculateScale(widthInput, baseWidth);
+  }
+
+  return undefined;
+}
+
+/**
+ * Build hires or upscale settings from resolved values
+ *
+ * @param upscalerName - Upscale model name (from UpscaleModelLoader)
+ * @param scale - Pre-resolved scale factor
+ * @param hiresSampling - Resolved sampling settings for hires sampler
  * @returns Hires or upscale settings
  */
 function buildHiresOrUpscale(
-  hiresModel: Record<string, unknown> | undefined,
-  hiresImageScale: Record<string, unknown> | undefined,
-  latentUpscale: Record<string, unknown> | undefined,
-  hiresSampler: Record<string, unknown> | undefined,
-  baseWidth: number,
+  upscalerName: string | undefined,
+  scale: number | undefined,
+  hiresSampling: SamplingSettings | undefined,
 ): Pick<PartialMetadata, 'hires' | 'upscale'> {
-  if (!hiresModel && !hiresImageScale && !latentUpscale) return {};
+  if (!upscalerName && scale === undefined && !hiresSampling) return {};
 
-  // Calculate scale from either source
-  let scale: number | undefined;
-  if (latentUpscale?.scale_by !== undefined) {
-    // LatentUpscaleBy has direct scale value
-    scale = latentUpscale.scale_by as number;
-  } else if (hiresImageScale?.width !== undefined) {
-    // ImageScale has target width, need to calculate ratio
-    scale = calculateScale(hiresImageScale.width as number, baseWidth);
-  }
-
-  const upscaler = hiresModel?.model_name as string | undefined;
-
-  if (hiresSampler) {
+  if (hiresSampling) {
     return {
       hires: {
-        upscaler,
+        upscaler: upscalerName,
         scale,
-        steps: hiresSampler.steps as number,
-        denoise: hiresSampler.denoise as number,
+        steps: hiresSampling.steps,
+        denoise: hiresSampling.denoise,
       },
     };
   }
 
   // Pure upscale without sampler requires upscaler model
-  if (!upscaler) return {};
+  if (!upscalerName) return {};
 
   return {
     upscale: {
-      upscaler,
+      upscaler: upscalerName,
       scale,
     },
   };
