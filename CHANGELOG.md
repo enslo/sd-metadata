@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-02-15
+
+### Fixed
+
+- **A1111 detection criteria** (#122): Fix `writeAsWebUI` round-trip for minimal metadata (no sampling settings)
+  - Detection now accepts `Steps:` OR `Sampler:` OR `Negative prompt:` (was requiring both `Steps:` AND `Sampler:`)
+
+### Changed
+
+- **Unify detection and parsing responsibilities** (#122): `detectSoftware()` is now the single source of truth for format identification
+  - Remove redundant detection guards from parsers (a1111, novelai, comfyui, fooocus, ruined-fooocus)
+  - Remove fallback parser chain from router
+
 ## [1.8.0] - 2026-02-14
 
 ### Added
@@ -279,6 +292,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[1.8.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.8.1
 [1.8.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.8.0
 [1.7.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.7.1
 [1.7.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.7.0
