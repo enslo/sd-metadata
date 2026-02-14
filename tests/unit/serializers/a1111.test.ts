@@ -446,9 +446,15 @@ describe('formatAsWebUI - Unit Tests', () => {
       const serialized = formatAsWebUI(original);
       const parsed = parseA1111Text(serialized);
 
-      // This will be null because Parser requires AI markers (Steps, Sampler, or Negative prompt)
-      // Minimal metadata with width/height: 0 won't have Size field, so parser will reject it
-      expect(parsed).toBeNull();
+      // Detection is handled by detectSoftware, so the parser accepts any text
+      // Minimal metadata round-trips with prompt preserved
+      expect(parsed).not.toBeNull();
+      if (parsed) {
+        expect(parsed.prompt).toBe('simple prompt');
+        expect(parsed.negativePrompt).toBe('');
+        expect(parsed.width).toBe(0);
+        expect(parsed.height).toBe(0);
+      }
     });
   });
 

@@ -114,11 +114,6 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
   }
   const prompt = parsed.value;
 
-  // Verify it's ComfyUI format (has class_type)
-  if (!Object.values(prompt).some((node) => 'class_type' in node)) {
-    return Result.error({ type: 'unsupportedFormat' });
-  }
-
   // Extract metadata from both sources
   const comfyMetadata = extractComfyUIMetadata(prompt);
   const civitaiMetadata = extractCivitaiMetadata(

@@ -43,33 +43,6 @@ describe('parseRuinedFooocus - Unit Tests', () => {
         expect(result.error.type).toBe('parseError');
       }
     });
-
-    it('should return error for missing software field', () => {
-      const metadata = { Prompt: 'test' };
-      const entries = createRuinedFooocusEntry(metadata);
-
-      const result = parseRuinedFooocus(entries);
-
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe('unsupportedFormat');
-      }
-    });
-
-    it('should return error for non-RuinedFooocus software', () => {
-      const metadata = {
-        Prompt: 'test',
-        software: 'Other',
-      };
-      const entries = createRuinedFooocusEntry(metadata);
-
-      const result = parseRuinedFooocus(entries);
-
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe('unsupportedFormat');
-      }
-    });
   });
 
   describe('basic parsing', () => {
