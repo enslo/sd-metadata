@@ -354,6 +354,40 @@ describe('ComfyUI Parsers - Samples', () => {
       });
       expectComfyNodeGraph(meta.nodes);
     });
+
+    it('should parse comfyui-anima.png (SamplerCustomAdvanced with hires fix)', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-anima.png',
+        parseComfyUI,
+      );
+
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt: `general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, holding sign, cowboy shot, looking at viewer, smile.\nA Beautiful and high quality anime illustrations.\nShe's holding a rectangular sign out in front of her that reads "初音ミク".\n`,
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1216,
+        height: 832,
+        model: {
+          name: 'anima-preview.safetensors',
+        },
+        sampling: {
+          seed: 662066908990052,
+          steps: 24,
+          cfg: 5,
+          sampler: 'euler',
+          scheduler: 'beta',
+        },
+        hires: {
+          upscaler: 'RealESRGAN_x4plus_anime_6B.pth',
+          scale: 1.5,
+          steps: 14,
+          denoise: 0.35000000000000003,
+        },
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
   });
 
   describe('WebP samples', () => {

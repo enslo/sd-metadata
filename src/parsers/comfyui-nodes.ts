@@ -21,6 +21,7 @@ const SAMPLER_TYPES = ['KSampler', 'KSamplerAdvanced', 'SamplerCustomAdvanced'];
 const LATENT_IMAGE_TYPES = ['EmptyLatentImage'];
 const LATENT_IMAGE_RGTHREE_TYPES = ['SDXL Empty Latent Image (rgthree)'];
 const CHECKPOINT_TYPES = ['CheckpointLoaderSimple', 'CheckpointLoader'];
+const UNET_LOADER_TYPES = ['UNETLoader'];
 const HIRES_MODEL_UPSCALE_TYPES = ['UpscaleModelLoader'];
 const HIRES_IMAGE_SCALE_TYPES = ['ImageScale', 'ImageScaleBy'];
 const LATENT_UPSCALE_TYPES = ['LatentUpscale', 'LatentUpscaleBy'];
@@ -40,6 +41,7 @@ export interface ClassifiedNodes {
   latentImage?: ComfyNode;
   latentImageRgthree?: ComfyNode;
   checkpoint?: ComfyNode;
+  unetLoader?: ComfyNode;
   hiresModelUpscale?: ComfyNode;
   hiresImageScale?: ComfyNode;
   latentUpscale?: ComfyNode;
@@ -69,6 +71,8 @@ export function classifyNodes(nodes: ComfyNodeGraph): ClassifiedNodes {
       result.latentImageRgthree = node;
     } else if (!result.checkpoint && CHECKPOINT_TYPES.includes(ct)) {
       result.checkpoint = node;
+    } else if (!result.unetLoader && UNET_LOADER_TYPES.includes(ct)) {
+      result.unetLoader = node;
     } else if (
       !result.hiresModelUpscale &&
       HIRES_MODEL_UPSCALE_TYPES.includes(ct)
@@ -92,6 +96,17 @@ export function classifyNodes(nodes: ComfyNodeGraph): ClassifiedNodes {
 // =============================================================================
 // Node Reference Utilities
 // =============================================================================
+
+/**
+ * Resolve a node reference to the target node
+ */
+function resolveNode(
+  nodes: ComfyNodeGraph,
+  ref: unknown,
+): ComfyNode | undefined {
+  if (!isNodeReference(ref)) return undefined;
+  return nodes[String(ref[0])];
+}
 
 /**
  * Check if a value is a node reference [nodeId, outputIndex]
@@ -144,6 +159,21 @@ export function extractText(
 // =============================================================================
 
 /**
+ * Resolve the node that holds positive/negative conditioning references
+ *
+ * KSampler/KSamplerAdvanced have positive/negative directly.
+ * SamplerCustomAdvanced routes through a guider node (e.g. CFGGuider).
+ */
+function resolveConditioningSource(
+  nodes: ComfyNodeGraph,
+  sampler: ComfyNode,
+): ComfyNode {
+  const guiderNode = resolveNode(nodes, sampler.inputs.guider);
+  if (guiderNode) return guiderNode;
+  return sampler;
+}
+
+/**
  * Extract prompt texts by tracing from sampler's positive/negative inputs
  *
  * @param nodes - Full node graph (needed for reference following)
@@ -160,9 +190,13 @@ export function extractPromptTexts(
     return { promptText: '', negativeText: '' };
   }
 
-  // Trace positive/negative inputs from sampler
-  const positiveRef = sampler.inputs.positive;
-  const negativeRef = sampler.inputs.negative;
+  // Resolve the node that holds positive/negative conditioning references.
+  // KSampler/KSamplerAdvanced: directly on sampler inputs
+  // SamplerCustomAdvanced: on the CFGGuider node via guider input
+  const conditioningSource = resolveConditioningSource(nodes, sampler);
+
+  const positiveRef = conditioningSource.inputs.positive;
+  const negativeRef = conditioningSource.inputs.negative;
 
   return {
     promptText: isNodeReference(positiveRef)
@@ -236,6 +270,10 @@ export function extractSampling(
 ): SamplingSettings | undefined {
   if (!sampler) return undefined;
 
+  if (sampler.class_type === 'SamplerCustomAdvanced') {
+    return extractAdvancedSampling(nodes, sampler);
+  }
+
   // Handle seed which may be a reference or direct value
   let seed = sampler.inputs.seed;
   if (isNodeReference(seed)) {
@@ -261,15 +299,56 @@ export function extractSampling(
 }
 
 /**
- * Extract model name from pre-classified Checkpoint node
+ * Extract sampling settings from SamplerCustomAdvanced
+ *
+ * Traces distributed inputs:
+ * - noise → RandomNoise → noise_seed
+ * - guider → CFGGuider → cfg
+ * - sampler → KSamplerSelect → sampler_name
+ * - sigmas → BasicScheduler → scheduler, steps, denoise
+ */
+function extractAdvancedSampling(
+  nodes: ComfyNodeGraph,
+  sampler: ComfyNode,
+): SamplingSettings {
+  const noiseNode = resolveNode(nodes, sampler.inputs.noise);
+  const guiderNode = resolveNode(nodes, sampler.inputs.guider);
+  const samplerSelectNode = resolveNode(nodes, sampler.inputs.sampler);
+  const schedulerNode = resolveNode(nodes, sampler.inputs.sigmas);
+
+  const rawDenoise = schedulerNode?.inputs.denoise;
+  const denoise =
+    typeof rawDenoise === 'number' && rawDenoise < 1 ? rawDenoise : undefined;
+
+  return {
+    seed: noiseNode?.inputs.noise_seed as number,
+    steps: schedulerNode?.inputs.steps as number,
+    cfg: guiderNode?.inputs.cfg as number,
+    sampler: samplerSelectNode?.inputs.sampler_name as string,
+    scheduler: schedulerNode?.inputs.scheduler as string,
+    denoise,
+  };
+}
+
+/**
+ * Extract model name from pre-classified model loader node
+ *
+ * Checks CheckpointLoader first, then falls back to UNETLoader.
  *
  * @param checkpoint - Pre-classified checkpoint loader node
+ * @param unetLoader - Pre-classified UNET loader node (fallback)
  */
 export function extractModel(
   checkpoint: ComfyNode | undefined,
+  unetLoader?: ComfyNode | undefined,
 ): ModelSettings | undefined {
-  if (!checkpoint?.inputs?.ckpt_name) return undefined;
-  return { name: String(checkpoint.inputs.ckpt_name) };
+  if (checkpoint?.inputs?.ckpt_name) {
+    return { name: String(checkpoint.inputs.ckpt_name) };
+  }
+  if (unetLoader?.inputs?.unet_name) {
+    return { name: String(unetLoader.inputs.unet_name) };
+  }
+  return undefined;
 }
 
 // =============================================================================
