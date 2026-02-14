@@ -15,6 +15,10 @@ import type { RawMetadata } from '../types';
  * This is useful for displaying unrecognized metadata to end users
  * without needing to manually iterate over chunks or segments.
  *
+ * @deprecated Use {@link stringify} instead. This function requires callers to
+ * check `ParseResult.status` before use. The `stringify` function handles all
+ * statuses automatically.
+ *
  * @param raw - Raw metadata from ParseResult
  * @returns Plain text content from the metadata
  *
