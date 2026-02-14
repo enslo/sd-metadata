@@ -59,11 +59,6 @@ export function parseFooocus(entries: EntryRecord): InternalParseResult {
   }
   const json = parsed.value;
 
-  // Verify it's Fooocus format (has base_model)
-  if (!json.base_model && !json.prompt) {
-    return Result.error({ type: 'unsupportedFormat' });
-  }
-
   const metadata: Omit<StandardMetadata, 'raw'> = {
     software: 'fooocus',
     prompt: json.prompt?.trim() ?? '',
