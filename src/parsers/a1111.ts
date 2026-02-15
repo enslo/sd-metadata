@@ -14,6 +14,7 @@ type A1111Software = Extract<
   | 'reforge'
   | 'easy-reforge'
   | 'civitai'
+  | 'fooocus'
 >;
 
 /**

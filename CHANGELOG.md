@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`BaseMetadata` type export**: Previously internal, now available for direct use
 - **`GenerationSoftware` type export**: String literal union of all supported software identifiers
 
+### Fixed
+
+- **Fooocus parser** (#130): Rewrite based on actual Fooocus source code analysis. The previous implementation was non-functional due to reading from the wrong metadata location. Now supports both JSON and A1111 text metadata schemes.
+
+### Changed
+
+- **Forge family detection** (#129): Distinguish between Forge Classic, Forge Neo, reForge, and EasyReforge from their Version field patterns
+
 ### Deprecated
 
 - **`writeAsWebUI()`**: Use `embed()` instead

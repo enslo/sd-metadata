@@ -102,6 +102,69 @@ describe('detectSoftware - Unit Tests', () => {
     });
   });
 
+  describe('Fooocus detection', () => {
+    describe('from fooocus_scheme chunk (PNG Tier 1)', () => {
+      it('should detect fooocus when fooocus_scheme chunk exists with "fooocus" value', () => {
+        const entries: EntryRecord = {
+          parameters: '{"prompt": "test", "base_model": "model.safetensors"}',
+          fooocus_scheme: 'fooocus',
+        };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('fooocus');
+      });
+
+      it('should detect fooocus when fooocus_scheme chunk exists with "a1111" value', () => {
+        const entries: EntryRecord = {
+          parameters: 'test prompt\nSteps: 20, Sampler: Euler a',
+          fooocus_scheme: 'a1111',
+        };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('fooocus');
+      });
+    });
+
+    describe('from Version field in A1111 text (Tier 3)', () => {
+      it('should detect fooocus from Version: Fooocus v2.5.5', () => {
+        const parameters =
+          'test prompt\nNegative prompt: bad\nSteps: 30, Sampler: dpmpp_2m_sde_gpu, CFG scale: 7.0, Seed: 12345, Version: Fooocus v2.5.5';
+        const entries: EntryRecord = { parameters };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('fooocus');
+      });
+
+      it('should detect fooocus from Version: Fooocus v2.1.0', () => {
+        const parameters = 'test prompt\nSteps: 20, Version: Fooocus v2.1.0';
+        const entries: EntryRecord = { parameters };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('fooocus');
+      });
+    });
+
+    describe('from JSON content (Tier 3 fallback)', () => {
+      it('should detect fooocus from JSON with prompt + base_model', () => {
+        const json = JSON.stringify({
+          prompt: 'a beautiful landscape',
+          negative_prompt: 'lowres',
+          base_model: 'model.safetensors',
+          guidance_scale: 7.0,
+        });
+        const entries: EntryRecord = { parameters: json };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('fooocus');
+      });
+    });
+  });
+
   describe('edge cases', () => {
     it('should return null for empty entries', () => {
       const entries: EntryRecord = {};

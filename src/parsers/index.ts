@@ -79,8 +79,17 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
     case 'easydiffusion':
       return parseEasyDiffusion(entries);
 
-    case 'fooocus':
+    case 'fooocus': {
+      // Fooocus supports two user-selectable metadata schemes:
+      // - 'fooocus': JSON format (default)
+      // - 'a1111': A1111-compatible text format
+      const scheme = entries.fooocus_scheme;
+      const content = entries.parameters ?? entries.UserComment;
+      if (scheme === 'a1111' || (content && !content.startsWith('{'))) {
+        return parseA1111(entries, 'fooocus');
+      }
       return parseFooocus(entries);
+    }
 
     case 'ruined-fooocus':
       return parseRuinedFooocus(entries);

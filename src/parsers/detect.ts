@@ -99,6 +99,11 @@ function detectUniqueKeywords(
   const keyResult = detectByUniqueKey(entryRecord);
   if (keyResult) return keyResult;
 
+  // Fooocus: Has "fooocus_scheme" chunk (PNG only)
+  if ('fooocus_scheme' in entryRecord) {
+    return 'fooocus';
+  }
+
   // Easy Diffusion: Has "negative_prompt" or "Negative Prompt" keyword
   if ('negative_prompt' in entryRecord || 'Negative Prompt' in entryRecord) {
     return 'easydiffusion';
@@ -364,6 +369,11 @@ function detectFromA1111Format(text: string): GenerationSoftware | null {
       if (/^f\d+\.\d+(\.\d+)?v\d+-v/.test(version)) return 'reforge';
       // Forge: remaining f{digit} prefix (default for current Forge)
       return 'forge';
+    }
+
+    // Fooocus: Version starts with "Fooocus"
+    if (version?.startsWith('Fooocus')) {
+      return 'fooocus';
     }
 
     // ComfyUI: Version explicitly says "ComfyUI"
