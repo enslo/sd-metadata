@@ -1,17 +1,29 @@
-import type { InternalParseResult } from '../types';
+import type { GenerationSoftware, InternalParseResult } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { trimObject } from '../utils/object';
+
+/** Software identifiers that use A1111-compatible text format */
+type A1111Software = Extract<
+  GenerationSoftware,
+  | 'sd-webui'
+  | 'sd-next'
+  | 'forge'
+  | 'forge-classic'
+  | 'forge-neo'
+  | 'reforge'
+  | 'easy-reforge'
+  | 'civitai'
+>;
 
 /**
  * Parse A1111-format metadata from entries
  *
  * A1111 format is used by:
  * - Stable Diffusion WebUI (AUTOMATIC1111)
- * - Forge
- * - Forge Neo
- * - Civitai
- * - Animagine
+ * - Forge family (Forge, Forge Classic, Forge Neo, reForge, EasyReforge)
+ * - SD.Next
+ * - Civitai (A1111 text fallback)
  *
  * Format:
  * ```
@@ -21,9 +33,13 @@ import { trimObject } from '../utils/object';
  * ```
  *
  * @param entries - Metadata entries
+ * @param software - Pre-detected software identifier from detectSoftware()
  * @returns Parsed metadata or error
  */
-export function parseA1111(entries: EntryRecord): InternalParseResult {
+export function parseA1111(
+  entries: EntryRecord,
+  software: A1111Software,
+): InternalParseResult {
   // Find parameters entry (PNG uses 'parameters', JPEG/WebP uses 'UserComment')
   const text = entries.parameters ?? entries.UserComment;
   if (!text) {
@@ -39,11 +55,6 @@ export function parseA1111(entries: EntryRecord): InternalParseResult {
   // Extract dimensions (optional, defaults to "0x0" like SD Prompt Reader)
   const size = settingsMap.get('Size') ?? '0x0';
   const [width, height] = parseSize(size);
-
-  // Determine software variant
-  const version = settingsMap.get('Version');
-  const app = settingsMap.get('App');
-  const software = detectSoftwareVariant(version, app);
 
   // Extract model settings
   const modelName = settingsMap.get('Model');
@@ -179,23 +190,4 @@ function parseNumber(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
   const num = Number.parseFloat(value);
   return Number.isNaN(num) ? undefined : num;
-}
-
-/**
- * Detect software variant from Version and App strings
- */
-function detectSoftwareVariant(
-  version: string | undefined,
-  app: string | undefined,
-): 'sd-webui' | 'sd-next' | 'forge' | 'forge-neo' {
-  // Check App field first (SD.Next uses this)
-  if (app === 'SD.Next') return 'sd-next';
-
-  // Check Version field
-  if (!version) return 'sd-webui';
-  if (version === 'neo') return 'forge-neo';
-  // Forge uses 'classic' or 'fX.Y.Z' versions (semantic version format)
-  if (version === 'classic') return 'forge';
-  if (/^f\d+\.\d+/.test(version)) return 'forge';
-  return 'sd-webui';
 }

@@ -18,7 +18,7 @@ describe('stringify - Samples', () => {
 
   describe('success samples (should match formatAsWebUI)', () => {
     it('should stringify sd-webui PNG', () => {
-      const data = loadSample('png', 'forge.png');
+      const data = loadSample('png', 'sd-webui.png');
       const result = read(data);
 
       expect(result.status).toBe('success');
@@ -48,7 +48,7 @@ describe('stringify - Samples', () => {
     });
 
     it('should stringify forge JPEG', () => {
-      const data = loadSample('jpg', 'forge-hires.jpeg');
+      const data = loadSample('jpg', 'forge-classic-hires.jpeg');
       const result = read(data);
 
       expect(result.status).toBe('success');

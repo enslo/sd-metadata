@@ -28,7 +28,8 @@ describe('API Integration Tests', () => {
         const samples = [
           'novelai-full.png',
           'comfyui.png',
-          'forge.png',
+          'sd-webui.png',
+          'forge-classic.png',
           'invokeai.png',
         ];
 
@@ -48,7 +49,8 @@ describe('API Integration Tests', () => {
       it('should read JPEG samples', () => {
         const samples = [
           'civitai.jpeg',
-          'forge.jpeg',
+          'sd-webui.jpg',
+          'forge-classic.jpeg',
           'comfyui-saveimage-plus.jpg',
         ];
 
@@ -66,7 +68,11 @@ describe('API Integration Tests', () => {
       });
 
       it('should read WebP samples', () => {
-        const samples = ['comfyui-saveimage-plus.webp', 'forge-hires.webp'];
+        const samples = [
+          'comfyui-saveimage-plus.webp',
+          'sd-webui.webp',
+          'forge-classic-hires.webp',
+        ];
 
         for (const filename of samples) {
           const data = loadSample('webp', filename);
@@ -88,31 +94,68 @@ describe('API Integration Tests', () => {
         file: string;
         software: string;
       }> = [
+        // NovelAI
         { format: 'png', file: 'novelai-full.png', software: 'novelai' },
+        // ComfyUI
         { format: 'png', file: 'comfyui.png', software: 'comfyui' },
+        // SD WebUI
+        { format: 'png', file: 'sd-webui.png', software: 'sd-webui' },
+        { format: 'jpg', file: 'sd-webui.jpg', software: 'sd-webui' },
+        { format: 'webp', file: 'sd-webui.webp', software: 'sd-webui' },
+        // Forge
         { format: 'png', file: 'forge.png', software: 'forge' },
-        { format: 'png', file: 'forge.png', software: 'forge' },
+        // Forge Classic
+        { format: 'png', file: 'forge-classic.png', software: 'forge-classic' },
+        {
+          format: 'jpg',
+          file: 'forge-classic.jpeg',
+          software: 'forge-classic',
+        },
+        {
+          format: 'webp',
+          file: 'forge-classic-hires.webp',
+          software: 'forge-classic',
+        },
+        // reForge
+        { format: 'png', file: 'reforge.png', software: 'reforge' },
+        { format: 'png', file: 'reforge-hires.png', software: 'reforge' },
+        { format: 'jpg', file: 'reforge.jpeg', software: 'reforge' },
+        { format: 'jpg', file: 'reforge-hires.jpeg', software: 'reforge' },
+        {
+          format: 'webp',
+          file: 'reforge-hires.webp',
+          software: 'reforge',
+        },
+        // EasyReforge
+        {
+          format: 'png',
+          file: 'easy-reforge.png',
+          software: 'easy-reforge',
+        },
+        // InvokeAI
         { format: 'png', file: 'invokeai.png', software: 'invokeai' },
+        // SwarmUI
         { format: 'png', file: 'swarmui-hires.png', software: 'swarmui' },
+        // TensorArt
         { format: 'png', file: 'tensorart.png', software: 'tensorart' },
+        // Stability Matrix
         {
           format: 'png',
           file: 'stability-matrix.png',
           software: 'stability-matrix',
         },
+        // Ruined Fooocus
         {
           format: 'png',
           file: 'ruined-fooocus.png',
           software: 'ruined-fooocus',
         },
+        // HF Space
         {
           format: 'png',
           file: 'huggingface-space.png',
           software: 'hf-space',
         },
-        { format: 'jpg', file: 'forge.jpeg', software: 'forge' },
-        { format: 'jpg', file: 'forge.jpeg', software: 'forge' },
-        { format: 'webp', file: 'forge-hires.webp', software: 'forge' },
       ];
 
       for (const { format, file, software } of testCases) {
