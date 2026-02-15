@@ -1,6 +1,7 @@
 import type { GenerationMetadata } from '@enslo/sd-metadata';
+import { Group, Stack, Text, Title } from '@mantine/core';
+import type { ComponentChildren } from 'preact';
 import { CopyButton } from '../CopyButton/CopyButton';
-import styles from './Results.module.css';
 
 interface ParsedMetadataProps {
   metadata: GenerationMetadata;
@@ -11,18 +12,36 @@ interface ParsedMetadataProps {
  */
 export function ParsedMetadata({ metadata }: ParsedMetadataProps) {
   return (
-    <div>
+    <Stack gap="md">
       {/* Prompt */}
       {metadata.prompt && (
         <Section title="Prompt" copyValue={metadata.prompt}>
-          <div class={styles.promptText}>{metadata.prompt}</div>
+          <Text
+            style={{
+              fontFamily: 'var(--mantine-font-family-monospace)',
+              fontSize: '0.85rem',
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.6,
+            }}
+          >
+            {metadata.prompt}
+          </Text>
         </Section>
       )}
 
       {/* Negative Prompt */}
       {metadata.negativePrompt && (
         <Section title="Negative Prompt" copyValue={metadata.negativePrompt}>
-          <div class={styles.promptText}>{metadata.negativePrompt}</div>
+          <Text
+            style={{
+              fontFamily: 'var(--mantine-font-family-monospace)',
+              fontSize: '0.85rem',
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.6,
+            }}
+          >
+            {metadata.negativePrompt}
+          </Text>
         </Section>
       )}
 
@@ -31,42 +50,55 @@ export function ParsedMetadata({ metadata }: ParsedMetadataProps) {
         metadata.characterPrompts &&
         metadata.characterPrompts.length > 0 && (
           <Section title="Character Prompts">
-            {metadata.characterPrompts.map((char, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: character prompts have no unique identifier
-              <div class={styles.characterPrompt} key={`character-${i}`}>
-                <div class={styles.characterHeader}>
-                  <span>
-                    Character {i + 1}
-                    {char.center &&
-                      ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`}
-                  </span>
-                  <CopyButton value={char.prompt} />
+            <Stack gap="sm">
+              {metadata.characterPrompts.map((char, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: character prompts have no unique identifier
+                <div key={`character-${i}`}>
+                  <Group justify="space-between" mb={4}>
+                    <Text size="sm" fw={500}>
+                      Character {i + 1}
+                      {char.center &&
+                        ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`}
+                    </Text>
+                    <CopyButton value={char.prompt} />
+                  </Group>
+                  <Text
+                    style={{
+                      fontFamily: 'var(--mantine-font-family-monospace)',
+                      fontSize: '0.85rem',
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {char.prompt}
+                  </Text>
                 </div>
-                <div class={styles.promptText}>{char.prompt}</div>
-              </div>
-            ))}
+              ))}
+            </Stack>
           </Section>
         )}
 
       {/* Generation Settings */}
       <GenerationSettings metadata={metadata} />
-    </div>
+    </Stack>
   );
 }
 
 interface SectionProps {
   title: string;
   copyValue?: string;
-  children: preact.ComponentChildren;
+  children: ComponentChildren;
 }
 
 function Section({ title, copyValue, children }: SectionProps) {
   return (
-    <div class={styles.metadataSection}>
-      <div class={styles.sectionHeader}>
-        <h4 class={styles.sectionTitle}>{title}</h4>
+    <div>
+      <Group justify="space-between" mb="xs">
+        <Title order={4} size="sm">
+          {title}
+        </Title>
         {copyValue !== undefined && <CopyButton value={copyValue} />}
-      </div>
+      </Group>
       {children}
     </div>
   );
@@ -78,15 +110,21 @@ function GenerationSettings({ metadata }: { metadata: GenerationMetadata }) {
 
   return (
     <Section title="Generation Settings">
-      {settings.map(([label, value, copyable]) => (
-        <div class={styles.metadataField} key={label}>
-          <span class={styles.fieldLabel}>{label}</span>
-          <span class={styles.fieldValue}>
-            {String(value)}
-            {copyable && <CopyButton value={String(value)} />}
-          </span>
-        </div>
-      ))}
+      <Stack gap={4}>
+        {settings.map(([label, value, copyable]) => (
+          <Group key={label} justify="space-between" wrap="nowrap">
+            <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
+              {label}
+            </Text>
+            <Group gap={4} wrap="nowrap">
+              <Text size="sm" fw={500} truncate="end">
+                {String(value)}
+              </Text>
+              {copyable && <CopyButton value={String(value)} />}
+            </Group>
+          </Group>
+        ))}
+      </Stack>
     </Section>
   );
 }

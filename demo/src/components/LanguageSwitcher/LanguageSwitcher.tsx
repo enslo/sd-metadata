@@ -1,8 +1,8 @@
+import { ActionIcon, Group, Text, Tooltip } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { Languages } from 'lucide-preact';
 import type { Locale } from '../../i18n';
 import { $locale, $t, setLocale } from '../../i18n';
-import styles from './LanguageSwitcher.module.css';
 
 /**
  * Language switcher button component
@@ -19,19 +19,27 @@ export function LanguageSwitcher() {
   const languageLabel = currentLocale === 'en' ? 'EN' : 'JA';
 
   return (
-    <button
-      type="button"
-      class={styles.switcher}
-      onClick={toggleLanguage}
-      aria-label={t.languageSwitcher.ariaLabel}
-      title={
+    <Tooltip
+      label={
         currentLocale === 'en'
           ? t.languageSwitcher.switchToJapanese
           : t.languageSwitcher.switchToEnglish
       }
     >
-      <Languages size={20} aria-hidden="true" />
-      <span>{languageLabel}</span>
-    </button>
+      <ActionIcon
+        variant="subtle"
+        size="lg"
+        onClick={toggleLanguage}
+        aria-label={t.languageSwitcher.ariaLabel}
+        style={{ position: 'fixed', top: 16, left: 16, zIndex: 100 }}
+      >
+        <Group gap={4}>
+          <Languages size={20} aria-hidden="true" />
+          <Text size="sm" fw={500}>
+            {languageLabel}
+          </Text>
+        </Group>
+      </ActionIcon>
+    </Tooltip>
   );
 }

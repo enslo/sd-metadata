@@ -1,8 +1,15 @@
+import {
+  ActionIcon,
+  Button,
+  Group,
+  Stack,
+  Text,
+  TextInput,
+} from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { Plus, Trash2 } from 'lucide-preact';
 import { useState } from 'preact/hooks';
 import { $t } from '../../i18n';
-import styles from './EmbedEditor.module.css';
 
 interface ExtrasEditorProps {
   extras: Record<string, string | number>;
@@ -68,61 +75,56 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
   };
 
   return (
-    <div class={styles.formGroup}>
-      <span class={styles.label}>{t.embedEditor.extras}</span>
-      <p
-        style={{
-          fontSize: 'var(--font-size-sm)',
-          color: 'var(--color-text-muted)',
-          margin: '0 0 0.5rem',
-        }}
-      >
-        {t.embedEditor.extrasDescription}
-      </p>
+    <Stack gap="xs">
+      <div>
+        <Text size="sm" fw={500}>
+          {t.embedEditor.extras}
+        </Text>
+        <Text size="xs" c="dimmed">
+          {t.embedEditor.extrasDescription}
+        </Text>
+      </div>
 
       {entries.map((entry) => (
-        <div class={styles.extrasRow} key={entry.id}>
-          <input
-            class={`${styles.input} ${styles.extrasKey}`}
-            type="text"
+        <Group key={entry.id} gap="xs" wrap="nowrap">
+          <TextInput
             placeholder={t.embedEditor.key}
             value={entry.key}
             aria-label={t.embedEditor.key}
-            onInput={(e) =>
-              handleKeyChange(
-                entry.id,
-                (e.currentTarget as HTMLInputElement).value,
-              )
+            onChange={(e: { currentTarget: { value: string } }) =>
+              handleKeyChange(entry.id, e.currentTarget.value)
             }
+            style={{ flex: 2 }}
           />
-          <input
-            class={`${styles.input} ${styles.extrasValue}`}
-            type="text"
+          <TextInput
             placeholder={t.embedEditor.value}
             value={entry.value}
             aria-label={t.embedEditor.value}
-            onInput={(e) =>
-              handleValueChange(
-                entry.id,
-                (e.currentTarget as HTMLInputElement).value,
-              )
+            onChange={(e: { currentTarget: { value: string } }) =>
+              handleValueChange(entry.id, e.currentTarget.value)
             }
+            style={{ flex: 3 }}
           />
-          <button
-            type="button"
-            class={styles.removeButton}
+          <ActionIcon
+            variant="subtle"
+            color="red"
             onClick={() => handleRemove(entry.id)}
             aria-label={t.embedEditor.remove}
           >
             <Trash2 size={14} />
-          </button>
-        </div>
+          </ActionIcon>
+        </Group>
       ))}
 
-      <button type="button" class={styles.addButton} onClick={handleAdd}>
-        <Plus size={14} />
+      <Button
+        variant="default"
+        size="xs"
+        leftSection={<Plus size={14} />}
+        onClick={handleAdd}
+        style={{ alignSelf: 'flex-start' }}
+      >
         {t.embedEditor.addExtra}
-      </button>
-    </div>
+      </Button>
+    </Stack>
   );
 }

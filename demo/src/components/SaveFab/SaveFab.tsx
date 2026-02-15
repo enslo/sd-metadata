@@ -1,9 +1,9 @@
 import type { ParseResult } from '@enslo/sd-metadata';
+import { ActionIcon, Affix, Group, Menu, Switch, Text } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { ChevronUp, Download } from 'lucide-preact';
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
-import styles from './SaveFab.module.css';
 import {
   type OutputFormat,
   convertAndDownload,
@@ -27,39 +27,8 @@ export function SaveFab({ previewUrl, parseResult, filename }: SaveFabProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [keepMetadata, setKeepMetadata] = useState(true);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const sourceFormat = detectFormat(filename);
-
-  // Close menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        menuOpen &&
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
-      ) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [menuOpen]);
-
-  // Close menu on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && menuOpen) {
-        setMenuOpen(false);
-        buttonRef.current?.focus();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [menuOpen]);
 
   const handleSave = useCallback(
     async (targetFormat: OutputFormat) => {
@@ -82,71 +51,65 @@ export function SaveFab({ previewUrl, parseResult, filename }: SaveFabProps) {
     [previewUrl, parseResult, filename, keepMetadata],
   );
 
-  const toggleMenu = () => {
-    if (!processing) {
-      setMenuOpen((prev) => !prev);
-    }
-  };
-
   return (
-    <div class={styles.container}>
-      {menuOpen && (
-        <div
-          ref={menuRef}
-          class={styles.menu}
-          role="menu"
-          aria-label={t.saveFab.menuLabel}
-        >
-          <div class={styles.menuHeader}>
+    <Affix position={{ bottom: 80, right: 32 }}>
+      <Menu
+        opened={menuOpen}
+        onChange={setMenuOpen}
+        position="top-end"
+        shadow="lg"
+      >
+        <Menu.Target>
+          <ActionIcon
+            size={48}
+            radius="xl"
+            color={processing ? 'indigo' : 'green'}
+            variant="filled"
+            loading={processing}
+            onClick={() => !processing && setMenuOpen((prev) => !prev)}
+            aria-label={t.saveFab.buttonLabel}
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)' }}
+          >
+            {menuOpen ? <ChevronUp size={24} /> : <Download size={24} />}
+          </ActionIcon>
+        </Menu.Target>
+
+        <Menu.Dropdown>
+          <Menu.Label>
             {getFormatLabel(sourceFormat)} {t.saveFab.to}
-          </div>
-          <div class={styles.menuDivider} />
+          </Menu.Label>
+          <Menu.Divider />
           {OUTPUT_FORMATS.map((format) => (
-            <button
+            <Menu.Item
               key={format}
-              type="button"
-              class={styles.menuItem}
-              role="menuitem"
               onClick={() => handleSave(format)}
               disabled={processing}
             >
               {getFormatLabel(format)}
-            </button>
+            </Menu.Item>
           ))}
-          <div class={styles.menuDivider} />
-          <div class={styles.toggleRow}>
-            <span class={styles.toggleLabel}>{t.saveFab.keepMetadata}</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={keepMetadata}
-              aria-label={t.saveFab.keepMetadata}
-              class={`${styles.toggle} ${keepMetadata ? styles.toggleOn : ''}`}
-              onClick={() => setKeepMetadata((prev) => !prev)}
-            >
-              <span class={styles.toggleKnob} />
-            </button>
-          </div>
-        </div>
-      )}
-      <button
-        ref={buttonRef}
-        type="button"
-        class={`${styles.fab} ${processing ? styles.processing : ''}`}
-        onClick={toggleMenu}
-        aria-label={t.saveFab.buttonLabel}
-        aria-expanded={menuOpen}
-        aria-haspopup="menu"
-        disabled={processing}
-      >
-        {processing ? (
-          <div class={styles.spinner} />
-        ) : menuOpen ? (
-          <ChevronUp size={24} />
-        ) : (
-          <Download size={24} />
-        )}
-      </button>
-    </div>
+          <Menu.Divider />
+          <Menu.Item
+            closeMenuOnClick={false}
+            component="div"
+            style={{ cursor: 'default' }}
+          >
+            <Group justify="space-between">
+              <Text size="sm">{t.saveFab.keepMetadata}</Text>
+              <Switch
+                checked={keepMetadata}
+                onChange={(e: { currentTarget: { checked: boolean } }) =>
+                  setKeepMetadata(e.currentTarget.checked)
+                }
+                size="sm"
+                aria-label={t.saveFab.keepMetadata}
+              />
+            </Group>
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+    </Affix>
   );
 }

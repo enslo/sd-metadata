@@ -1,25 +1,23 @@
 import type { ParseResult } from '@enslo/sd-metadata';
 import { stringify } from '@enslo/sd-metadata';
+import { Alert, Paper, Tabs, Text } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
 import { CopyButton } from '../CopyButton/CopyButton';
 import { ParsedMetadata } from './ParsedMetadata';
 import { ExifSegments, RawChunks } from './RawData';
-import styles from './Results.module.css';
 
 interface ResultsProps {
   parseResult: ParseResult;
 }
-
-type TabName = 'parsed' | 'plaintext' | 'raw';
 
 /**
  * Results section with parsed and raw tabs
  */
 export function Results({ parseResult }: ResultsProps) {
   const t = useStore($t);
-  const [activeTab, setActiveTab] = useState<TabName>('parsed');
+  const [activeTab, setActiveTab] = useState<string | null>('parsed');
   const [resetKey, setResetKey] = useState(0);
 
   // Reset to parsed tab when parseResult changes
@@ -32,50 +30,34 @@ export function Results({ parseResult }: ResultsProps) {
   // Handle invalid status
   if (parseResult.status === 'invalid') {
     return (
-      <div class={`${styles.error} fade-in`}>
-        <p class={styles.errorMessage}>
-          {parseResult.message ?? t.results.errors.invalid}
-        </p>
-      </div>
+      <Alert color="red" variant="light" className="fade-in">
+        {parseResult.message ?? t.results.errors.invalid}
+      </Alert>
     );
   }
 
   return (
-    <div class={`${styles.results} fade-in`}>
-      <div class={styles.tabs}>
-        <button
-          type="button"
-          class={`${styles.tab} ${activeTab === 'parsed' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('parsed')}
-        >
-          {t.results.tabs.parsed}
-        </button>
-        <button
-          type="button"
-          class={`${styles.tab} ${activeTab === 'plaintext' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('plaintext')}
-        >
-          {t.results.tabs.plaintext}
-        </button>
-        <button
-          type="button"
-          class={`${styles.tab} ${activeTab === 'raw' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('raw')}
-        >
-          {t.results.tabs.raw}
-        </button>
-      </div>
+    <Paper className="fade-in" mt="md">
+      <Tabs value={activeTab} onChange={setActiveTab}>
+        <Tabs.List>
+          <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>
+          <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
+          <Tabs.Tab value="raw">{t.results.tabs.raw}</Tabs.Tab>
+        </Tabs.List>
 
-      <div class={styles.tabContent}>
-        {activeTab === 'parsed' ? (
+        <Tabs.Panel value="parsed" pt="md">
           <ParsedTabContent parseResult={parseResult} t={t} />
-        ) : activeTab === 'plaintext' ? (
+        </Tabs.Panel>
+
+        <Tabs.Panel value="plaintext" pt="md">
           <PlainTextTabContent parseResult={parseResult} t={t} />
-        ) : (
+        </Tabs.Panel>
+
+        <Tabs.Panel value="raw" pt="md">
           <RawTabContent parseResult={parseResult} t={t} key={resetKey} />
-        )}
-      </div>
-    </div>
+        </Tabs.Panel>
+      </Tabs>
+    </Paper>
   );
 }
 
@@ -129,22 +111,32 @@ function PlainTextTabContent({
   }
 
   return (
-    <div class={styles.metadataSection}>
-      <div class={styles.sectionHeader}>
-        <h4 class={styles.sectionTitle}>{t.results.tabs.plaintext}</h4>
+    <div>
+      <div
+        style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}
+      >
         <CopyButton value={text} />
       </div>
-      <pre class={styles.plainText}>{text}</pre>
+      <pre
+        style={{
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: '0.85rem',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          lineHeight: 1.6,
+          margin: 0,
+        }}
+      >
+        {text}
+      </pre>
     </div>
   );
 }
 
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <div class={styles.metadataSection}>
-      <p style={{ color: 'var(--color-text-muted)', textAlign: 'center' }}>
-        {message}
-      </p>
-    </div>
+    <Text c="dimmed" ta="center" py="xl">
+      {message}
+    </Text>
   );
 }

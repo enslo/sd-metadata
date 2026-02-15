@@ -1,5 +1,16 @@
 import { embed } from '@enslo/sd-metadata';
 import type { EmbedMetadata, ParseResult } from '@enslo/sd-metadata';
+import {
+  Button,
+  Code,
+  Collapse,
+  Group,
+  NativeSelect,
+  Paper,
+  Stack,
+  Text,
+  UnstyledButton,
+} from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { ChevronDown, ChevronUp, Pen } from 'lucide-preact';
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
@@ -11,7 +22,6 @@ import {
   generateFilename,
   getMimeType,
 } from '../../lib/image';
-import styles from './EmbedEditor.module.css';
 import { ExtrasEditor } from './ExtrasEditor';
 import { MetadataForm } from './MetadataForm';
 
@@ -169,75 +179,100 @@ export function EmbedEditor({
     }
   }, [fileData, metadata, extras, targetFormat, filename]);
 
+  const formatData = OUTPUT_FORMATS.map((f) => ({
+    value: f,
+    label: f.toUpperCase(),
+  }));
+
   return (
-    <div class={styles.container}>
-      <button
-        type="button"
-        class={`${styles.toggleHeader} ${isExpanded ? styles.toggleHeaderExpanded : ''}`}
+    <Paper mt="lg" withBorder>
+      <UnstyledButton
+        w="100%"
+        p="md"
         onClick={() => setIsExpanded(!isExpanded)}
         aria-expanded={isExpanded}
       >
-        <Pen size={18} />
-        <span class={styles.toggleTitle}>
-          {t.embedEditor.title}
-          <span class={styles.toggleDescription}>
-            {' '}
-            — {t.embedEditor.description}
-          </span>
-        </span>
-        {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-      </button>
+        <Group gap="sm" wrap="nowrap">
+          <Pen size={18} />
+          <div style={{ flex: 1 }}>
+            <Group gap="xs">
+              <Text fw={500}>{t.embedEditor.title}</Text>
+              <Text size="sm" c="dimmed">
+                — {t.embedEditor.description}
+              </Text>
+            </Group>
+          </div>
+          {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        </Group>
+      </UnstyledButton>
 
-      {isExpanded && (
-        <div class={`${styles.content} fade-in`}>
+      <Collapse in={isExpanded}>
+        <Stack gap="md" p="md" pt={0}>
           <MetadataForm metadata={metadata} onChange={setMetadata} />
           <ExtrasEditor extras={extras} onChange={setExtras} />
 
           {/* Live Preview */}
-          <div class={styles.preview}>
-            <div class={styles.previewHeader}>
-              <h4 class={styles.previewTitle}>{t.embedEditor.preview}</h4>
-            </div>
+          <Paper p="md" radius="sm" bg="var(--mantine-color-dark-8)">
+            <Text
+              size="xs"
+              c="dimmed"
+              tt="uppercase"
+              mb="xs"
+              style={{ letterSpacing: '0.05em' }}
+            >
+              {t.embedEditor.preview}
+            </Text>
             {previewText ? (
-              <pre class={styles.previewText}>{previewText}</pre>
+              <Code
+                block
+                styles={{
+                  root: {
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.6,
+                    background: 'transparent',
+                    padding: 0,
+                  },
+                }}
+              >
+                {previewText}
+              </Code>
             ) : (
-              <p class={styles.previewEmpty}>{t.embedEditor.previewEmpty}</p>
+              <Text size="sm" c="dimmed" ta="center">
+                {t.embedEditor.previewEmpty}
+              </Text>
             )}
-          </div>
+          </Paper>
 
           {/* Actions */}
-          <div class={styles.actions}>
-            <select
-              class={styles.select}
+          <Group>
+            <NativeSelect
+              data={formatData}
               value={targetFormat}
-              onChange={(e) => {
-                setTargetFormat(
-                  (e.currentTarget as HTMLSelectElement).value as OutputFormat,
-                );
-              }}
+              onChange={(e: { currentTarget: { value: string } }) =>
+                setTargetFormat(e.currentTarget.value as OutputFormat)
+              }
               aria-label={t.embedEditor.format}
-            >
-              {OUTPUT_FORMATS.map((f) => (
-                <option key={f} value={f}>
-                  {f.toUpperCase()}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              class={styles.embedButton}
+            />
+            <Button
+              color="green"
               onClick={handleEmbed}
-              disabled={processing}
+              loading={processing}
+              style={{ flex: 1 }}
             >
               {processing
                 ? t.embedEditor.processing
                 : t.embedEditor.embedButton}
-            </button>
-          </div>
+            </Button>
+          </Group>
 
-          {error && <p class={styles.error}>{error}</p>}
-        </div>
-      )}
-    </div>
+          {error && (
+            <Text c="red" size="sm">
+              {error}
+            </Text>
+          )}
+        </Stack>
+      </Collapse>
+    </Paper>
   );
 }
