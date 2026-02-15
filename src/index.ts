@@ -5,6 +5,9 @@
 // Export core API functions
 export { read, type ReadOptions } from './api/read';
 export { write, type WriteResult, type WriteWarning } from './api/write';
+export { embed } from './api/embed';
+
+// Deprecated API functions
 export { writeAsWebUI } from './api/write-webui';
 
 // Export utility functions
@@ -21,6 +24,7 @@ export type {
   ComfyNodeGraph,
   ComfyNodeInputValue,
   ComfyNodeReference,
+  EmbedMetadata,
   GenerationMetadata,
   HiresSettings,
   ITXtChunk,
