@@ -174,8 +174,8 @@ export type GenerationSoftware =
   | 'tensorart'
   | 'stability-matrix'
   | 'invokeai'
+  | 'forge-classic'
   | 'forge-neo'
-  | 'forge'
   | 'sd-webui'
   | 'sd-next'
   | 'civitai'
@@ -332,7 +332,7 @@ export interface StandardMetadata extends BaseMetadata {
   software:
     | 'sd-webui'
     | 'sd-next'
-    | 'forge'
+    | 'forge-classic'
     | 'forge-neo'
     | 'invokeai'
     | 'civitai'

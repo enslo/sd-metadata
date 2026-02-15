@@ -22,7 +22,7 @@ export const softwareLabels: Readonly<Record<GenerationSoftware, string>> =
     tensorart: 'TensorArt',
     'stability-matrix': 'Stability Matrix',
     invokeai: 'InvokeAI',
-    forge: 'Stable Diffusion WebUI Forge',
+    'forge-classic': 'Stable Diffusion WebUI Forge',
     'forge-neo': 'Stable Diffusion WebUI Forge - Neo',
     'sd-webui': 'Stable Diffusion WebUI',
     'sd-next': 'SD.Next',

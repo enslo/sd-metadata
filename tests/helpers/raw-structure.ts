@@ -30,7 +30,7 @@ const EXPECTED_TO_JPEG_WEBP: Record<GenerationSoftware, SegmentPattern[]> = {
   // A1111-family: UserComment only
   'sd-webui': [['exifUserComment']],
   'sd-next': [['exifUserComment']],
-  forge: [['exifUserComment']],
+  'forge-classic': [['exifUserComment']],
   'forge-neo': [['exifUserComment']],
 
   // ComfyUI-family: Either saveimage-plus OR save-image-extended format
@@ -85,7 +85,7 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
   // A1111-family: parameters chunk
   'sd-webui': [['parameters']],
   'sd-next': [['parameters']],
-  forge: [['parameters']],
+  'forge-classic': [['parameters']],
   'forge-neo': [['parameters']],
 
   // ComfyUI-family: prompt + workflow chunks (or variant with extra chunks)

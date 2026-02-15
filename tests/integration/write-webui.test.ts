@@ -235,7 +235,7 @@ describe('writeAsWebUI - Integration Tests', () => {
     });
 
     it('should preserve hires settings across conversion', () => {
-      const forgePng = loadSample('png', 'forge-hires.png');
+      const forgePng = loadSample('png', 'forge-classic-hires.png');
       const readResult = read(forgePng);
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
@@ -265,7 +265,7 @@ describe('writeAsWebUI - Integration Tests', () => {
 
   describe('metadata modification tests', () => {
     it('should allow modifying existing metadata before writing', () => {
-      const forgePng = loadSample('png', 'forge.png');
+      const forgePng = loadSample('png', 'forge-classic.png');
       const readResult = read(forgePng);
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;

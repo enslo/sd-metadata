@@ -254,7 +254,7 @@ describe('convertMetadata - Unit Tests', () => {
     }> = [
       { software: 'novelai', keyword: 'Comment' },
       { software: 'sd-webui', keyword: 'parameters' },
-      { software: 'forge', keyword: 'parameters' },
+      { software: 'forge-classic', keyword: 'parameters' },
       { software: 'forge-neo', keyword: 'parameters' },
       { software: 'civitai', keyword: 'parameters' },
       { software: 'sd-next', keyword: 'parameters' },

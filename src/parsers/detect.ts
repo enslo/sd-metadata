@@ -318,7 +318,7 @@ function detectFromJsonFormat(json: string): GenerationSoftware | null {
  *
  * Priority order:
  * 1. SwarmUI indicators (check first as it has unique markers)
- * 2. Version field analysis (forge, forge-neo, comfyui variants)
+ * 2. Version field analysis (forge-classic, forge-neo, comfyui variants)
  * 3. App field (SD.Next)
  * 4. Resource markers (Civitai)
  * 5. Default A1111 format (steps + sampler)
@@ -346,9 +346,9 @@ function detectFromA1111Format(text: string): GenerationSoftware | null {
       return 'forge-neo';
     }
 
-    // Forge: Version starts with "f" followed by a digit
+    // Forge Classic: Version starts with "f" followed by a digit
     if (version?.startsWith('f') && /^f\d/.test(version)) {
-      return 'forge';
+      return 'forge-classic';
     }
 
     // ComfyUI: Version explicitly says "ComfyUI"

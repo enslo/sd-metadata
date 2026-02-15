@@ -227,10 +227,10 @@ const convertTensorArt = createFormatConverter(
 const softwareConverters = {
   // NovelAI
   novelai: convertNovelai,
-  // A1111-format (sd-webui, forge, forge-neo, sd-next)
+  // A1111-format (sd-webui, forge-classic, forge-neo, sd-next)
   'sd-webui': convertA1111,
   'sd-next': convertA1111,
-  forge: convertA1111,
+  'forge-classic': convertA1111,
   'forge-neo': convertA1111,
   // CivitAI Orchestration format
   civitai: convertCivitai,

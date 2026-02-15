@@ -141,7 +141,7 @@ Steps: 20, Size: 512x512`;
       }
     });
 
-    it('should detect forge from Version', () => {
+    it('should detect forge-classic from Version', () => {
       const parameters = `test
 Steps: 20, Size: 512x512, Version: f1.0.0`;
       const entries = createA1111Entry(parameters);
@@ -150,7 +150,7 @@ Steps: 20, Size: 512x512, Version: f1.0.0`;
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.software).toBe('forge');
+        expect(result.value.software).toBe('forge-classic');
       }
     });
 

@@ -187,15 +187,15 @@ function parseNumber(value: string | undefined): number | undefined {
 function detectSoftwareVariant(
   version: string | undefined,
   app: string | undefined,
-): 'sd-webui' | 'sd-next' | 'forge' | 'forge-neo' {
+): 'sd-webui' | 'sd-next' | 'forge-classic' | 'forge-neo' {
   // Check App field first (SD.Next uses this)
   if (app === 'SD.Next') return 'sd-next';
 
   // Check Version field
   if (!version) return 'sd-webui';
   if (version === 'neo') return 'forge-neo';
-  // Forge uses 'classic' or 'fX.Y.Z' versions (semantic version format)
-  if (version === 'classic') return 'forge';
-  if (/^f\d+\.\d+/.test(version)) return 'forge';
+  // Forge Classic uses 'classic' or 'fX.Y.Z' versions (semantic version format)
+  if (version === 'classic') return 'forge-classic';
+  if (/^f\d+\.\d+/.test(version)) return 'forge-classic';
   return 'sd-webui';
 }

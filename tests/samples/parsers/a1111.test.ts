@@ -4,12 +4,15 @@ import type { StandardMetadata } from '../../../src/types';
 import { parseConvertedSample, parsePngSample } from '../helpers';
 
 describe('A1111 Parsers - Samples', () => {
-  describe('Forge samples', () => {
-    it('should parse forge.png', () => {
-      const meta = parsePngSample<StandardMetadata>('forge.png', parseA1111);
+  describe('Forge Classic samples', () => {
+    it('should parse forge-classic.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'forge-classic.png',
+        parseA1111,
+      );
 
       expect(meta).toEqual({
-        software: 'forge',
+        software: 'forge-classic',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
         negativePrompt:
@@ -32,14 +35,14 @@ describe('A1111 Parsers - Samples', () => {
       });
     });
 
-    it('should parse forge-hires.png', () => {
+    it('should parse forge-classic-hires.png', () => {
       const meta = parsePngSample<StandardMetadata>(
-        'forge-hires.png',
+        'forge-classic-hires.png',
         parseA1111,
       );
 
       expect(meta).toEqual({
-        software: 'forge',
+        software: 'forge-classic',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
         negativePrompt:
@@ -196,11 +199,14 @@ describe('A1111 Parsers - Samples', () => {
   });
 
   describe('JPEG samples', () => {
-    it('should parse forge.jpeg', () => {
-      const meta = parseConvertedSample<StandardMetadata>('jpeg', 'forge.jpeg');
+    it('should parse forge-classic.jpeg', () => {
+      const meta = parseConvertedSample<StandardMetadata>(
+        'jpeg',
+        'forge-classic.jpeg',
+      );
 
       expect(meta).toEqual({
-        software: 'forge',
+        software: 'forge-classic',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
         negativePrompt:
@@ -223,14 +229,14 @@ describe('A1111 Parsers - Samples', () => {
       });
     });
 
-    it('should parse forge-hires.jpeg', () => {
+    it('should parse forge-classic-hires.jpeg', () => {
       const meta = parseConvertedSample<StandardMetadata>(
         'jpeg',
-        'forge-hires.jpeg',
+        'forge-classic-hires.jpeg',
       );
 
       expect(meta).toEqual({
-        software: 'forge',
+        software: 'forge-classic',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
         negativePrompt:
@@ -384,11 +390,14 @@ describe('A1111 Parsers - Samples', () => {
   });
 
   describe('WebP samples', () => {
-    it('should parse forge.webp', () => {
-      const meta = parseConvertedSample<StandardMetadata>('webp', 'forge.webp');
+    it('should parse forge-classic.webp', () => {
+      const meta = parseConvertedSample<StandardMetadata>(
+        'webp',
+        'forge-classic.webp',
+      );
 
       expect(meta).toEqual({
-        software: 'forge',
+        software: 'forge-classic',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
         negativePrompt:
@@ -412,14 +421,14 @@ describe('A1111 Parsers - Samples', () => {
       });
     });
 
-    it('should parse forge-hires.webp', () => {
+    it('should parse forge-classic-hires.webp', () => {
       const meta = parseConvertedSample<StandardMetadata>(
         'webp',
-        'forge-hires.webp',
+        'forge-classic-hires.webp',
       );
 
       expect(meta).toEqual({
-        software: 'forge',
+        software: 'forge-classic',
         prompt:
           'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
         negativePrompt:

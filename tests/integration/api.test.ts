@@ -28,7 +28,7 @@ describe('API Integration Tests', () => {
         const samples = [
           'novelai-full.png',
           'comfyui.png',
-          'forge.png',
+          'forge-classic.png',
           'invokeai.png',
         ];
 
@@ -48,7 +48,7 @@ describe('API Integration Tests', () => {
       it('should read JPEG samples', () => {
         const samples = [
           'civitai.jpeg',
-          'forge.jpeg',
+          'forge-classic.jpeg',
           'comfyui-saveimage-plus.jpg',
         ];
 
@@ -66,7 +66,10 @@ describe('API Integration Tests', () => {
       });
 
       it('should read WebP samples', () => {
-        const samples = ['comfyui-saveimage-plus.webp', 'forge-hires.webp'];
+        const samples = [
+          'comfyui-saveimage-plus.webp',
+          'forge-classic-hires.webp',
+        ];
 
         for (const filename of samples) {
           const data = loadSample('webp', filename);
@@ -90,8 +93,8 @@ describe('API Integration Tests', () => {
       }> = [
         { format: 'png', file: 'novelai-full.png', software: 'novelai' },
         { format: 'png', file: 'comfyui.png', software: 'comfyui' },
-        { format: 'png', file: 'forge.png', software: 'forge' },
-        { format: 'png', file: 'forge.png', software: 'forge' },
+        { format: 'png', file: 'forge-classic.png', software: 'forge-classic' },
+        { format: 'png', file: 'forge-classic.png', software: 'forge-classic' },
         { format: 'png', file: 'invokeai.png', software: 'invokeai' },
         { format: 'png', file: 'swarmui-hires.png', software: 'swarmui' },
         { format: 'png', file: 'tensorart.png', software: 'tensorart' },
@@ -110,9 +113,21 @@ describe('API Integration Tests', () => {
           file: 'huggingface-space.png',
           software: 'hf-space',
         },
-        { format: 'jpg', file: 'forge.jpeg', software: 'forge' },
-        { format: 'jpg', file: 'forge.jpeg', software: 'forge' },
-        { format: 'webp', file: 'forge-hires.webp', software: 'forge' },
+        {
+          format: 'jpg',
+          file: 'forge-classic.jpeg',
+          software: 'forge-classic',
+        },
+        {
+          format: 'jpg',
+          file: 'forge-classic.jpeg',
+          software: 'forge-classic',
+        },
+        {
+          format: 'webp',
+          file: 'forge-classic-hires.webp',
+          software: 'forge-classic',
+        },
       ];
 
       for (const { format, file, software } of testCases) {

@@ -1,7 +1,7 @@
 /**
  * A1111-format metadata conversion utilities
  *
- * Handles conversion for sd-webui, forge, forge-neo, and civitai.
+ * Handles conversion for sd-webui, forge-classic, forge-neo, and civitai.
  * A1111 format stores metadata as plain text in:
  * - PNG: `parameters` tEXt/iTXt chunk (dynamic selection)
  * - JPEG/WebP: Exif UserComment
