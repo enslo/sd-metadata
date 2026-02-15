@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Fooocus parser** (#130): Rewrite based on actual Fooocus source code analysis. The previous implementation was non-functional due to reading from the wrong metadata location. Now supports both JSON and A1111 text metadata schemes.
+- **Easy Diffusion parser**: Improved based on source code analysis. Removed phantom key format that never appeared in actual images, improved detection reliability, and added upscale/denoise field extraction.
 
 ### Changed
 
