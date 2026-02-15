@@ -4,6 +4,7 @@ import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import styles from './App.module.css';
 import { DropZone } from './components/DropZone/DropZone';
+import { EmbedEditor } from './components/EmbedEditor';
 import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
 import { LanguageSwitcher } from './components/LanguageSwitcher/LanguageSwitcher';
 import { Results } from './components/Results/Results';
@@ -18,6 +19,7 @@ interface AppState {
   parseResult: ParseResult | null;
   filename: string | null;
   previewUrl: string | null;
+  fileData: Uint8Array | null;
 }
 
 /**
@@ -29,6 +31,7 @@ export function App() {
     parseResult: null,
     filename: null,
     previewUrl: null,
+    fileData: null,
   });
   const [globalDragOver, setGlobalDragOver] = useState(false);
 
@@ -45,6 +48,7 @@ export function App() {
       parseResult,
       filename: file.name,
       previewUrl,
+      fileData: data,
     });
   };
 
@@ -75,6 +79,7 @@ export function App() {
             parseResult: result,
             filename: file.name,
             previewUrl: url,
+            fileData: data,
           });
         });
       }
@@ -133,6 +138,14 @@ export function App() {
         />
 
         {state.parseResult && <Results parseResult={state.parseResult} />}
+
+        {state.parseResult && state.fileData && state.filename && (
+          <EmbedEditor
+            parseResult={state.parseResult}
+            fileData={state.fileData}
+            filename={state.filename}
+          />
+        )}
       </main>
 
       <footer class={styles.footer}>

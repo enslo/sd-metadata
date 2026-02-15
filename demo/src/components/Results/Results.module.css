@@ -198,6 +198,17 @@
   margin: 0;
 }
 
+/* Plain Text */
+.plainText {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  padding: 0;
+}
+
 /* Error */
 .error {
   background: var(--color-surface);

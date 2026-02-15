@@ -12,13 +12,15 @@
   "results": {
     "tabs": {
       "parsed": "生成メタデータ",
+      "plaintext": "簡易表示",
       "raw": "生データ"
     },
     "errors": {
       "invalid": "無効な画像ファイルです",
       "noMetadata": "メタデータが見つかりません",
       "unrecognized": "メタデータが見つかりましたが、解析できません。生データタブを確認してください。",
-      "noRawData": "データがありません"
+      "noRawData": "データがありません",
+      "noPlainText": "テキスト表現がありません"
     }
   },
   "languageSwitcher": {
@@ -31,5 +33,39 @@
     "menuLabel": "出力形式を選択",
     "to": "から",
     "keepMetadata": "メタデータを保持"
+  },
+  "embedEditor": {
+    "title": "メタデータ埋め込み",
+    "description": "メタデータを編集して画像に埋め込みます",
+    "prompt": "プロンプト",
+    "negativePrompt": "ネガティブプロンプト",
+    "width": "幅",
+    "height": "高さ",
+    "model": "モデル",
+    "modelName": "モデル名",
+    "modelHash": "モデルハッシュ",
+    "sampling": "サンプリング",
+    "sampler": "サンプラー",
+    "scheduler": "スケジューラ",
+    "steps": "ステップ数",
+    "cfg": "CFGスケール",
+    "seed": "シード",
+    "clipSkip": "CLIPスキップ",
+    "hires": "Hires.fix",
+    "hiresUpscaler": "アップスケーラー",
+    "hiresScale": "スケール",
+    "hiresSteps": "ステップ数",
+    "hiresDenoise": "デノイズ",
+    "extras": "追加パラメータ",
+    "extrasDescription": "設定行に追加するキーと値のペア",
+    "addExtra": "追加",
+    "key": "キー",
+    "value": "値",
+    "remove": "削除",
+    "format": "出力形式",
+    "embedButton": "埋め込み＆ダウンロード",
+    "processing": "処理中...",
+    "preview": "プレビュー",
+    "previewEmpty": "プレビューを表示するには、少なくともプロンプトを入力してください"
   }
 }

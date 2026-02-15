@@ -1,7 +1,9 @@
 import type { ParseResult } from '@enslo/sd-metadata';
+import { stringify } from '@enslo/sd-metadata';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
+import { CopyButton } from '../CopyButton/CopyButton';
 import { ParsedMetadata } from './ParsedMetadata';
 import { ExifSegments, RawChunks } from './RawData';
 import styles from './Results.module.css';
@@ -10,7 +12,7 @@ interface ResultsProps {
   parseResult: ParseResult;
 }
 
-type TabName = 'parsed' | 'raw';
+type TabName = 'parsed' | 'plaintext' | 'raw';
 
 /**
  * Results section with parsed and raw tabs
@@ -50,6 +52,13 @@ export function Results({ parseResult }: ResultsProps) {
         </button>
         <button
           type="button"
+          class={`${styles.tab} ${activeTab === 'plaintext' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('plaintext')}
+        >
+          {t.results.tabs.plaintext}
+        </button>
+        <button
+          type="button"
           class={`${styles.tab} ${activeTab === 'raw' ? styles.tabActive : ''}`}
           onClick={() => setActiveTab('raw')}
         >
@@ -60,6 +69,8 @@ export function Results({ parseResult }: ResultsProps) {
       <div class={styles.tabContent}>
         {activeTab === 'parsed' ? (
           <ParsedTabContent parseResult={parseResult} t={t} />
+        ) : activeTab === 'plaintext' ? (
+          <PlainTextTabContent parseResult={parseResult} t={t} />
         ) : (
           <RawTabContent parseResult={parseResult} t={t} key={resetKey} />
         )}
@@ -102,6 +113,30 @@ function RawTabContent({
   }
 
   return <ExifSegments segments={parseResult.raw.segments} />;
+}
+
+function PlainTextTabContent({
+  parseResult,
+  t,
+}: {
+  parseResult: Exclude<ParseResult, { status: 'invalid' }>;
+  t: ReturnType<typeof useStore<typeof $t>>;
+}) {
+  const text = stringify(parseResult);
+
+  if (!text) {
+    return <ErrorMessage message={t.results.errors.noPlainText} />;
+  }
+
+  return (
+    <div class={styles.metadataSection}>
+      <div class={styles.sectionHeader}>
+        <h4 class={styles.sectionTitle}>{t.results.tabs.plaintext}</h4>
+        <CopyButton value={text} />
+      </div>
+      <pre class={styles.plainText}>{text}</pre>
+    </div>
+  );
 }
 
 function ErrorMessage({ message }: { message: string }) {
