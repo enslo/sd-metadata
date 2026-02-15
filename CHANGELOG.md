@@ -22,16 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`BaseMetadata` type export**: Previously internal, now available for direct use
 - **`GenerationSoftware` type export**: String literal union of all supported software identifiers
 
+### Fixed
+
+- **Fooocus parser** (#130): Rewrite based on actual Fooocus source code analysis. The previous implementation was non-functional due to reading from the wrong metadata location. Now supports both JSON and A1111 text metadata schemes.
+
 ### Changed
 
-- **Fooocus parser rewrite** (#130): Full rewrite based on source code analysis with dual-scheme support
-  - Read from `parameters` chunk (was incorrectly reading from `Comment`)
-  - Parse `resolution` string format `"(W, H)"`
-  - Map `guidance_scale` → `cfg`, add `base_model_hash`, `vae`, `clip_skip`
-  - Add `fooocus_scheme` Tier 1 detection and `Version: Fooocus` A1111 text detection
-  - Route A1111 text scheme through A1111 parser
-  - Fix converter chunk keyword (`Comment` → `parameters`)
-- **Forge family detection expansion** (#129): Detect Forge Classic, Forge Neo, reForge, and EasyReforge from Version field patterns
+- **Forge family detection** (#129): Distinguish between Forge Classic, Forge Neo, reForge, and EasyReforge from their Version field patterns
 
 ### Deprecated
 
