@@ -165,6 +165,81 @@ describe('detectSoftware - Unit Tests', () => {
     });
   });
 
+  describe('Easy Diffusion detection', () => {
+    describe('from use_stable_diffusion_model chunk (PNG Tier 1)', () => {
+      it('should detect easydiffusion when use_stable_diffusion_model chunk exists', () => {
+        const entries: EntryRecord = {
+          prompt: 'a beautiful landscape',
+          negative_prompt: 'blurry',
+          seed: '12345',
+          use_stable_diffusion_model: 'sd-v1-5',
+          sampler_name: 'euler_a',
+          num_inference_steps: '25',
+          guidance_scale: '7.5',
+          width: '512',
+          height: '512',
+        };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('easydiffusion');
+      });
+
+      it('should detect easydiffusion with minimal entries', () => {
+        const entries: EntryRecord = {
+          use_stable_diffusion_model: 'sd-v1-5',
+        };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('easydiffusion');
+      });
+    });
+
+    describe('from JSON content (Tier 3)', () => {
+      it('should detect easydiffusion from JSON with use_stable_diffusion_model', () => {
+        const json = JSON.stringify({
+          prompt: 'a cat',
+          negative_prompt: 'blurry',
+          seed: 12345,
+          use_stable_diffusion_model: 'sd-v1-5',
+          sampler_name: 'euler_a',
+        });
+        const entries: EntryRecord = { parameters: json };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('easydiffusion');
+      });
+
+      it('should detect easydiffusion from UserComment JSON', () => {
+        const json = JSON.stringify({
+          prompt: 'a dog',
+          use_stable_diffusion_model: 'model',
+          seed: 1,
+        });
+        const entries: EntryRecord = { UserComment: json };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('easydiffusion');
+      });
+    });
+
+    describe('regression: negative_prompt alone should NOT trigger detection', () => {
+      it('should not detect easydiffusion from negative_prompt without use_stable_diffusion_model', () => {
+        // negative_prompt is too generic to be a reliable detection marker
+        const entries: EntryRecord = {
+          negative_prompt: 'some value',
+        };
+
+        const result = detectSoftware(entries);
+
+        expect(result).not.toBe('easydiffusion');
+      });
+    });
+  });
+
   describe('edge cases', () => {
     it('should return null for empty entries', () => {
       const entries: EntryRecord = {};

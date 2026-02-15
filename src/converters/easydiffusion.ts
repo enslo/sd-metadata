@@ -1,9 +1,9 @@
 /**
  * Easy Diffusion metadata conversion utilities
  *
- * Easy Diffusion format stores metadata as JSON in various locations:
- * - PNG: Each field as separate chunks (negative_prompt, Negative Prompt, etc.)
- * - JPEG/WebP: JSON in exifUserComment
+ * Easy Diffusion stores metadata using snake_case keys:
+ * - PNG: Each field as a separate tEXt/iTXt chunk (e.g., `prompt`, `seed`, `sampler_name`)
+ * - JPEG/WebP: All fields as JSON in EXIF UserComment
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';

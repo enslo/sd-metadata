@@ -104,8 +104,8 @@ function detectUniqueKeywords(
     return 'fooocus';
   }
 
-  // Easy Diffusion: Has "negative_prompt" or "Negative Prompt" keyword
-  if ('negative_prompt' in entryRecord || 'Negative Prompt' in entryRecord) {
+  // Easy Diffusion: Has "use_stable_diffusion_model" keyword (unique to Easy Diffusion)
+  if ('use_stable_diffusion_model' in entryRecord) {
     return 'easydiffusion';
   }
 
