@@ -422,6 +422,20 @@ Converts a parse result to a human-readable string.
 - Copying metadata to clipboard as readable text
 - Logging or debugging parsed metadata
 
+### `softwareLabels: Record<GenerationSoftware, string>`
+
+A read-only mapping from `GenerationSoftware` identifiers to their human-readable display names.
+
+```typescript
+import { softwareLabels } from '@enslo/sd-metadata';
+
+const result = read(imageData);
+if (result.status === 'success') {
+  console.log(softwareLabels[result.metadata.software]);
+  // => "NovelAI", "ComfyUI", "Stable Diffusion WebUI", etc.
+}
+```
+
 ## Type Reference
 
 This section provides an overview of the main types. For complete type definitions, see [Type Documentation](./docs/types.md).
@@ -519,6 +533,17 @@ if (result.status === 'success') {
 
 See [Type Documentation](./docs/types.md) for detailed interface definitions of each metadata type.
 
+### `GenerationSoftware`
+
+String literal union of all supported software identifiers. Used as the key type for `softwareLabels`.
+
+```typescript
+type GenerationSoftware =
+  | 'novelai' | 'comfyui' | 'swarmui' | 'tensorart' | 'stability-matrix'
+  | 'invokeai' | 'forge-neo' | 'forge' | 'sd-webui' | 'sd-next'
+  | 'civitai' | 'hf-space' | 'easydiffusion' | 'fooocus' | 'ruined-fooocus';
+```
+
 ### `EmbedMetadata`
 
 Metadata type for the `embed()` function. Extends `BaseMetadata` with optional character prompts. Unlike `GenerationMetadata`, no `software` field is required.
@@ -547,6 +572,7 @@ type RawMetadata =
 >   EmbedMetadata,
 >   ParseResult,
 >   GenerationMetadata,
+>   GenerationSoftware,
 >   ModelSettings,
 >   SamplingSettings
 > } from '@enslo/sd-metadata';

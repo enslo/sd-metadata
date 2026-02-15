@@ -10,6 +10,7 @@ Complete type reference for `@enslo/sd-metadata`.
   - [`ParseResult`](#parseresult)
   - [`BaseMetadata`](#basemetadata)
   - [`GenerationMetadata`](#generationmetadata)
+  - [`GenerationSoftware`](#generationsoftware)
   - [`EmbedMetadata`](#embedmetadata)
   - [`RawMetadata`](#rawmetadata)
   - [`WriteResult`](#writeresult)
@@ -166,6 +167,42 @@ if (metadata.software === 'comfyui' ||
   if (metadata.nodes) {
     console.log('Has workflow:', Object.keys(metadata.nodes).length);
   }
+}
+```
+
+---
+
+### `GenerationSoftware`
+
+String literal union of all supported software identifiers. Used as the discriminator for `GenerationMetadata` and as the key type for `softwareLabels`.
+
+```typescript
+type GenerationSoftware =
+  | 'novelai'
+  | 'comfyui'
+  | 'swarmui'
+  | 'tensorart'
+  | 'stability-matrix'
+  | 'invokeai'
+  | 'forge-neo'
+  | 'forge'
+  | 'sd-webui'
+  | 'sd-next'
+  | 'civitai'
+  | 'hf-space'
+  | 'easydiffusion'
+  | 'fooocus'
+  | 'ruined-fooocus';
+```
+
+**Example:**
+
+```typescript
+import { softwareLabels } from '@enslo/sd-metadata';
+import type { GenerationSoftware } from '@enslo/sd-metadata';
+
+function displaySoftware(software: GenerationSoftware): string {
+  return softwareLabels[software];
 }
 ```
 

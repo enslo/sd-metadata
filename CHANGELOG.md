@@ -17,8 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`stringify()` function** (#125): Unified metadata formatting for display
   - Automatically selects the best representation based on `ParseResult` status
   - `success` → human-readable SD WebUI format, `unrecognized` → raw text, `empty`/`invalid` → empty string
+- **`softwareLabels` constant**: Read-only mapping from `GenerationSoftware` identifiers to human-readable display names
 - **`EmbedMetadata` type**: `BaseMetadata & Pick<NovelAIMetadata, 'characterPrompts'>`
 - **`BaseMetadata` type export**: Previously internal, now available for direct use
+- **`GenerationSoftware` type export**: String literal union of all supported software identifiers
 
 ### Deprecated
 

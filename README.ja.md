@@ -423,6 +423,20 @@ SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋
 - メタデータをクリップボードに読みやすいテキストとしてコピー
 - パース結果のログ出力やデバッグ
 
+### `softwareLabels: Record<GenerationSoftware, string>`
+
+`GenerationSoftware` の識別子から表示用の名前への読み取り専用マッピング。
+
+```typescript
+import { softwareLabels } from '@enslo/sd-metadata';
+
+const result = read(imageData);
+if (result.status === 'success') {
+  console.log(softwareLabels[result.metadata.software]);
+  // => "NovelAI", "ComfyUI", "Stable Diffusion WebUI", etc.
+}
+```
+
 ## 型リファレンス
 
 このセクションでは主要な型の概要を説明します。完全な型定義については[型ドキュメント](./docs/types.ja.md)を参照してください。
@@ -520,6 +534,17 @@ if (result.status === 'success') {
 
 各メタデータ型の詳細なインターフェース定義については[型ドキュメント](./docs/types.ja.md)を参照してください。
 
+### `GenerationSoftware`
+
+サポートされている全ソフトウェア識別子の文字列リテラルユニオン型。`softwareLabels` のキー型として使用します。
+
+```typescript
+type GenerationSoftware =
+  | 'novelai' | 'comfyui' | 'swarmui' | 'tensorart' | 'stability-matrix'
+  | 'invokeai' | 'forge-neo' | 'forge' | 'sd-webui' | 'sd-next'
+  | 'civitai' | 'hf-space' | 'easydiffusion' | 'fooocus' | 'ruined-fooocus';
+```
+
 ### `EmbedMetadata`
 
 `embed()` 関数用のメタデータ型。`BaseMetadata` にオプションのキャラクタープロンプトを追加。`GenerationMetadata` とは異なり、`software` フィールドは不要です。
@@ -548,6 +573,7 @@ type RawMetadata =
 >   EmbedMetadata,
 >   ParseResult,
 >   GenerationMetadata,
+>   GenerationSoftware,
 >   ModelSettings,
 >   SamplingSettings
 > } from '@enslo/sd-metadata';

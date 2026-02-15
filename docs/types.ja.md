@@ -10,6 +10,7 @@
   - [`ParseResult`](#parseresult)
   - [`BaseMetadata`](#basemetadata)
   - [`GenerationMetadata`](#generationmetadata)
+  - [`GenerationSoftware`](#generationsoftware)
   - [`EmbedMetadata`](#embedmetadata)
   - [`RawMetadata`](#rawmetadata)
   - [`WriteResult`](#writeresult)
@@ -166,6 +167,42 @@ if (metadata.software === 'comfyui' ||
   if (metadata.nodes) {
     console.log('Has workflow:', Object.keys(metadata.nodes).length);
   }
+}
+```
+
+---
+
+### `GenerationSoftware`
+
+サポートされている全ソフトウェア識別子の文字列リテラルユニオン型。`GenerationMetadata` の判別子として、また `softwareLabels` のキー型として使用します。
+
+```typescript
+type GenerationSoftware =
+  | 'novelai'
+  | 'comfyui'
+  | 'swarmui'
+  | 'tensorart'
+  | 'stability-matrix'
+  | 'invokeai'
+  | 'forge-neo'
+  | 'forge'
+  | 'sd-webui'
+  | 'sd-next'
+  | 'civitai'
+  | 'hf-space'
+  | 'easydiffusion'
+  | 'fooocus'
+  | 'ruined-fooocus';
+```
+
+**例：**
+
+```typescript
+import { softwareLabels } from '@enslo/sd-metadata';
+import type { GenerationSoftware } from '@enslo/sd-metadata';
+
+function displaySoftware(software: GenerationSoftware): string {
+  return softwareLabels[software];
 }
 ```
 
