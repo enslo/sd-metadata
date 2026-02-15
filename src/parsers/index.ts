@@ -33,13 +33,13 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
       return parseNovelAI(entries);
 
     case 'sd-webui':
-    case 'sd-next':
     case 'forge':
     case 'forge-classic':
     case 'forge-neo':
     case 'reforge':
     case 'easy-reforge':
-      return parseA1111(entries);
+    case 'sd-next':
+      return parseA1111(entries, software);
 
     case 'hf-space':
       return parseHfSpace(entries);
@@ -53,19 +53,15 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
         return comfyResult;
       }
       // Fallback to A1111 format
-      const a1111Result = parseA1111(entries);
-      if (a1111Result.ok) {
-        a1111Result.value.software = 'civitai';
-        return a1111Result;
-      }
-      return a1111Result;
+      return parseA1111(entries, 'civitai');
     }
 
     case 'comfyui': {
       // ComfyUI can use either JSON or A1111 text format (e.g., comfy-image-saver)
       const comfyResult = parseComfyUI(entries);
       if (comfyResult.ok) return comfyResult;
-      return parseA1111(entries);
+      // Fallback to A1111 text format (treat as sd-webui since Version is absent)
+      return parseA1111(entries, 'sd-webui');
     }
 
     case 'invokeai':

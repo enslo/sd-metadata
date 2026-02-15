@@ -14,7 +14,7 @@ import type { EntryRecord } from '../../../src/utils/entries';
  */
 function parseA1111Text(text: string): GenerationMetadata | null {
   const entries: EntryRecord = { parameters: text };
-  const result = parseA1111(entries);
+  const result = parseA1111(entries, 'sd-webui');
   return result.ok ? result.value : null;
 }
 

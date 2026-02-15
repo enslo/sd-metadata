@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { parseA1111 } from '../../../src/parsers/a1111';
+import { parseMetadata } from '../../../src/parsers';
 import type { StandardMetadata } from '../../../src/types';
 import { parseConvertedSample, parsePngSample } from '../helpers';
 
 describe('A1111 Parsers - Samples', () => {
   describe('SD WebUI samples', () => {
     it('should parse sd-webui.png', () => {
-      const meta = parsePngSample<StandardMetadata>('sd-webui.png', parseA1111);
+      const meta = parsePngSample<StandardMetadata>(
+        'sd-webui.png',
+        parseMetadata,
+      );
 
       expect(meta).toEqual({
         software: 'sd-webui',
@@ -35,7 +38,7 @@ describe('A1111 Parsers - Samples', () => {
     it('should parse sd-webui-hires.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'sd-webui-hires.png',
-        parseA1111,
+        parseMetadata,
       );
 
       expect(meta).toEqual({
@@ -70,7 +73,7 @@ describe('A1111 Parsers - Samples', () => {
 
   describe('Forge samples', () => {
     it('should parse forge.png', () => {
-      const meta = parsePngSample<StandardMetadata>('forge.png', parseA1111);
+      const meta = parsePngSample<StandardMetadata>('forge.png', parseMetadata);
 
       expect(meta).toEqual({
         software: 'forge',
@@ -101,7 +104,7 @@ describe('A1111 Parsers - Samples', () => {
     it('should parse forge-classic.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'forge-classic.png',
-        parseA1111,
+        parseMetadata,
       );
 
       expect(meta).toEqual({
@@ -131,7 +134,7 @@ describe('A1111 Parsers - Samples', () => {
     it('should parse forge-classic-hires.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'forge-classic-hires.png',
-        parseA1111,
+        parseMetadata,
       );
 
       expect(meta).toEqual({
@@ -168,7 +171,7 @@ describe('A1111 Parsers - Samples', () => {
     it('should parse forge-neo.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'forge-neo.png',
-        parseA1111,
+        parseMetadata,
       );
 
       expect(meta).toEqual({
@@ -199,7 +202,7 @@ describe('A1111 Parsers - Samples', () => {
     it('should parse forge-neo-hires.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'forge-neo-hires.png',
-        parseA1111,
+        parseMetadata,
       );
 
       expect(meta).toEqual({
@@ -235,7 +238,10 @@ describe('A1111 Parsers - Samples', () => {
 
   describe('reForge samples', () => {
     it('should parse reforge.png', () => {
-      const meta = parsePngSample<StandardMetadata>('reforge.png', parseA1111);
+      const meta = parsePngSample<StandardMetadata>(
+        'reforge.png',
+        parseMetadata,
+      );
 
       expect(meta).toEqual({
         software: 'reforge',
@@ -264,7 +270,7 @@ describe('A1111 Parsers - Samples', () => {
     it('should parse reforge-hires.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'reforge-hires.png',
-        parseA1111,
+        parseMetadata,
       );
 
       expect(meta).toEqual({
@@ -401,7 +407,7 @@ describe('A1111 Parsers - Samples', () => {
     it('should parse easy-reforge.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'easy-reforge.png',
-        parseA1111,
+        parseMetadata,
       );
 
       expect(meta).toEqual({
@@ -434,7 +440,10 @@ describe('A1111 Parsers - Samples', () => {
 
   describe('SD-Next samples', () => {
     it('should parse sd-next.png', () => {
-      const meta = parsePngSample<StandardMetadata>('sd-next.png', parseA1111);
+      const meta = parsePngSample<StandardMetadata>(
+        'sd-next.png',
+        parseMetadata,
+      );
 
       expect(meta).toEqual({
         software: 'sd-next',
@@ -462,7 +471,7 @@ describe('A1111 Parsers - Samples', () => {
     it('should parse sd-next-hires.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'sd-next-hires.png',
-        parseA1111,
+        parseMetadata,
       );
 
       expect(meta).toEqual({
