@@ -28,6 +28,7 @@ describe('API Integration Tests', () => {
         const samples = [
           'novelai-full.png',
           'comfyui.png',
+          'sd-webui.png',
           'forge-classic.png',
           'invokeai.png',
         ];
@@ -48,6 +49,7 @@ describe('API Integration Tests', () => {
       it('should read JPEG samples', () => {
         const samples = [
           'civitai.jpeg',
+          'sd-webui.jpg',
           'forge-classic.jpeg',
           'comfyui-saveimage-plus.jpg',
         ];
@@ -68,6 +70,7 @@ describe('API Integration Tests', () => {
       it('should read WebP samples', () => {
         const samples = [
           'comfyui-saveimage-plus.webp',
+          'sd-webui.webp',
           'forge-classic-hires.webp',
         ];
 
@@ -93,7 +96,7 @@ describe('API Integration Tests', () => {
       }> = [
         { format: 'png', file: 'novelai-full.png', software: 'novelai' },
         { format: 'png', file: 'comfyui.png', software: 'comfyui' },
-        { format: 'png', file: 'forge-classic.png', software: 'forge-classic' },
+        { format: 'png', file: 'sd-webui.png', software: 'sd-webui' },
         { format: 'png', file: 'forge-classic.png', software: 'forge-classic' },
         { format: 'png', file: 'invokeai.png', software: 'invokeai' },
         { format: 'png', file: 'swarmui-hires.png', software: 'swarmui' },
@@ -113,16 +116,13 @@ describe('API Integration Tests', () => {
           file: 'huggingface-space.png',
           software: 'hf-space',
         },
+        { format: 'jpg', file: 'sd-webui.jpg', software: 'sd-webui' },
         {
           format: 'jpg',
           file: 'forge-classic.jpeg',
           software: 'forge-classic',
         },
-        {
-          format: 'jpg',
-          file: 'forge-classic.jpeg',
-          software: 'forge-classic',
-        },
+        { format: 'webp', file: 'sd-webui.webp', software: 'sd-webui' },
         {
           format: 'webp',
           file: 'forge-classic-hires.webp',

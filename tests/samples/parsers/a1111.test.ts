@@ -4,6 +4,70 @@ import type { StandardMetadata } from '../../../src/types';
 import { parseConvertedSample, parsePngSample } from '../helpers';
 
 describe('A1111 Parsers - Samples', () => {
+  describe('SD WebUI samples', () => {
+    it('should parse sd-webui.png', () => {
+      const meta = parsePngSample<StandardMetadata>('sd-webui.png', parseA1111);
+
+      expect(meta).toEqual({
+        software: 'sd-webui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 7,
+          seed: 3782896554,
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+
+    it('should parse sd-webui-hires.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'sd-webui-hires.png',
+        parseA1111,
+      );
+
+      expect(meta).toEqual({
+        software: 'sd-webui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 5.5,
+          seed: 3888671826,
+        },
+        hires: {
+          scale: 1.5,
+          upscaler: 'R-ESRGAN 4x+ Anime6B',
+          steps: 10,
+          denoise: 0.3,
+        },
+        upscale: undefined,
+      });
+    });
+  });
+
   describe('Forge Classic samples', () => {
     it('should parse forge-classic.png', () => {
       const meta = parsePngSample<StandardMetadata>(
@@ -199,6 +263,36 @@ describe('A1111 Parsers - Samples', () => {
   });
 
   describe('JPEG samples', () => {
+    it('should parse sd-webui.jpg', () => {
+      const meta = parseConvertedSample<StandardMetadata>(
+        'jpeg',
+        'sd-webui.jpg',
+      );
+
+      expect(meta).toEqual({
+        software: 'sd-webui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 5.5,
+          seed: 3623174757,
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+
     it('should parse forge-classic.jpeg', () => {
       const meta = parseConvertedSample<StandardMetadata>(
         'jpeg',
@@ -390,6 +484,37 @@ describe('A1111 Parsers - Samples', () => {
   });
 
   describe('WebP samples', () => {
+    it('should parse sd-webui.webp', () => {
+      const meta = parseConvertedSample<StandardMetadata>(
+        'webp',
+        'sd-webui.webp',
+      );
+
+      expect(meta).toEqual({
+        software: 'sd-webui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 5.5,
+          seed: 1028435836,
+          clipSkip: undefined,
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+
     it('should parse forge-classic.webp', () => {
       const meta = parseConvertedSample<StandardMetadata>(
         'webp',

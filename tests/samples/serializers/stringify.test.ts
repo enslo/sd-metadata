@@ -18,7 +18,7 @@ describe('stringify - Samples', () => {
 
   describe('success samples (should match formatAsWebUI)', () => {
     it('should stringify sd-webui PNG', () => {
-      const data = loadSample('png', 'forge-classic.png');
+      const data = loadSample('png', 'sd-webui.png');
       const result = read(data);
 
       expect(result.status).toBe('success');
