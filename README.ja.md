@@ -42,9 +42,9 @@ npm install @enslo/sd-metadata
 | [TensorArt](https://tensor.art/) | ✅ | 🔄️ | 🔄️ |
 | [Stability Matrix](https://github.com/LykosAI/StabilityMatrix) | ✅ | 🔄️ | 🔄️ |
 | [HuggingFace Space](https://huggingface.co/spaces) | ✅ | 🔄️ | 🔄️ |
+| [Fooocus](https://github.com/lllyasviel/Fooocus) | ⚠️ | ⚠️ | ⚠️ |
 | [Ruined Fooocus](https://github.com/runew0lf/RuinedFooocus) | ✅ | 🔄️ | 🔄️ |
 | [Easy Diffusion](https://github.com/easydiffusion/easydiffusion) | ⚠️ | ⚠️ | ⚠️ |
-| [Fooocus](https://github.com/lllyasviel/Fooocus) | ⚠️ | ⚠️ | ⚠️ |
 
 **凡例:**
 

@@ -182,8 +182,8 @@ const convertEasyDiffusion = createFormatConverter(
 );
 
 const convertFooocus = createFormatConverter(
-  createPngToSegments('Comment'),
-  createSegmentsToPng('Comment', 'text-unicode-escape'),
+  createPngToSegments('parameters'),
+  createSegmentsToPng('parameters', 'text-unicode-escape'),
 );
 
 const convertRuinedFooocus = createFormatConverter(
