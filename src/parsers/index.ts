@@ -34,8 +34,11 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
 
     case 'sd-webui':
     case 'sd-next':
+    case 'forge':
     case 'forge-classic':
     case 'forge-neo':
+    case 'reforge':
+    case 'easy-reforge':
       return parseA1111(entries);
 
     case 'hf-space':

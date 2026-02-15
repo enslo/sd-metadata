@@ -187,15 +187,31 @@ function parseNumber(value: string | undefined): number | undefined {
 function detectSoftwareVariant(
   version: string | undefined,
   app: string | undefined,
-): 'sd-webui' | 'sd-next' | 'forge-classic' | 'forge-neo' {
+):
+  | 'sd-webui'
+  | 'sd-next'
+  | 'forge'
+  | 'forge-classic'
+  | 'forge-neo'
+  | 'reforge'
+  | 'easy-reforge' {
   // Check App field first (SD.Next uses this)
   if (app === 'SD.Next') return 'sd-next';
 
   // Check Version field
   if (!version) return 'sd-webui';
   if (version === 'neo') return 'forge-neo';
-  // Forge Classic uses 'classic' or 'fX.Y.Z' versions (semantic version format)
   if (version === 'classic') return 'forge-classic';
-  if (/^f\d+\.\d+/.test(version)) return 'forge-classic';
+
+  // Forge family: f{digit} prefix with variant-specific patterns
+  if (/^f\d/.test(version)) {
+    // EasyReforge: f{semver}-v pattern (dash directly after forge semver)
+    if (/^f\d+\.\d+(\.\d+)?-v/.test(version)) return 'easy-reforge';
+    // reForge: f{semver}v{N}-v pattern (version number then dash-v)
+    if (/^f\d+\.\d+(\.\d+)?v\d+-v/.test(version)) return 'reforge';
+    // Forge: remaining f{digit} prefix (default for current Forge)
+    return 'forge';
+  }
+
   return 'sd-webui';
 }

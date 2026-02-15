@@ -254,8 +254,11 @@ describe('convertMetadata - Unit Tests', () => {
     }> = [
       { software: 'novelai', keyword: 'Comment' },
       { software: 'sd-webui', keyword: 'parameters' },
+      { software: 'forge', keyword: 'parameters' },
       { software: 'forge-classic', keyword: 'parameters' },
       { software: 'forge-neo', keyword: 'parameters' },
+      { software: 'reforge', keyword: 'parameters' },
+      { software: 'easy-reforge', keyword: 'parameters' },
       { software: 'civitai', keyword: 'parameters' },
       { software: 'sd-next', keyword: 'parameters' },
       { software: 'ruined-fooocus', keyword: 'parameters' },

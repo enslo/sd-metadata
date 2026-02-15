@@ -141,9 +141,22 @@ Steps: 20, Size: 512x512`;
       }
     });
 
+    it('should detect forge from Version', () => {
+      const parameters = `test
+Steps: 20, Size: 512x512, Version: f2.0.1v1.10.1-previous-669-gdfdcbab6`;
+      const entries = createA1111Entry(parameters);
+
+      const result = parseA1111(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.software).toBe('forge');
+      }
+    });
+
     it('should detect forge-classic from Version', () => {
       const parameters = `test
-Steps: 20, Size: 512x512, Version: f1.0.0`;
+Steps: 20, Size: 512x512, Version: classic`;
       const entries = createA1111Entry(parameters);
 
       const result = parseA1111(entries);
@@ -164,6 +177,32 @@ Steps: 20, Size: 512x512, Version: neo`;
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.software).toBe('forge-neo');
+      }
+    });
+
+    it('should detect reforge from Version', () => {
+      const parameters = `test
+Steps: 20, Size: 512x512, Version: f1.0.0v2-v1.10.1RC-latest-2498-g5120e679`;
+      const entries = createA1111Entry(parameters);
+
+      const result = parseA1111(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.software).toBe('reforge');
+      }
+    });
+
+    it('should detect easy-reforge from Version', () => {
+      const parameters = `test
+Steps: 20, Size: 512x512, Version: f1.3.0-v1.10.1RC-latest-1038-g19395bf9`;
+      const entries = createA1111Entry(parameters);
+
+      const result = parseA1111(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.software).toBe('easy-reforge');
       }
     });
 

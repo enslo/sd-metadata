@@ -68,6 +68,35 @@ describe('A1111 Parsers - Samples', () => {
     });
   });
 
+  describe('Forge samples', () => {
+    it('should parse forge.png', () => {
+      const meta = parsePngSample<StandardMetadata>('forge.png', parseA1111);
+
+      expect(meta).toEqual({
+        software: 'forge',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'Euler',
+          scheduler: 'Karras',
+          steps: 25,
+          cfg: 5,
+          seed: 747066619,
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+  });
+
   describe('Forge Classic samples', () => {
     it('should parse forge-classic.png', () => {
       const meta = parsePngSample<StandardMetadata>(
@@ -133,7 +162,9 @@ describe('A1111 Parsers - Samples', () => {
         upscale: undefined,
       });
     });
+  });
 
+  describe('Forge Neo samples', () => {
     it('should parse forge-neo.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'forge-neo.png',
@@ -196,6 +227,205 @@ describe('A1111 Parsers - Samples', () => {
           upscaler: 'ESRGAN',
           steps: 10,
           denoise: 0.3,
+        },
+        upscale: undefined,
+      });
+    });
+  });
+
+  describe('reForge samples', () => {
+    it('should parse reforge.png', () => {
+      const meta = parsePngSample<StandardMetadata>('reforge.png', parseA1111);
+
+      expect(meta).toEqual({
+        software: 'reforge',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 6,
+          seed: 270740395,
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+
+    it('should parse reforge-hires.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'reforge-hires.png',
+        parseA1111,
+      );
+
+      expect(meta).toEqual({
+        software: 'reforge',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 6,
+          seed: 879759072,
+        },
+        hires: {
+          scale: 1.5,
+          upscaler: 'R-ESRGAN 4x+ Anime6B',
+          steps: 10,
+          denoise: 0.3,
+        },
+        upscale: undefined,
+      });
+    });
+
+    it('should parse reforge.jpeg', () => {
+      const meta = parseConvertedSample<StandardMetadata>(
+        'jpeg',
+        'reforge.jpeg',
+      );
+
+      expect(meta).toEqual({
+        software: 'reforge',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 6,
+          seed: 584157617,
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+
+    it('should parse reforge-hires.jpeg', () => {
+      const meta = parseConvertedSample<StandardMetadata>(
+        'jpeg',
+        'reforge-hires.jpeg',
+      );
+
+      expect(meta).toEqual({
+        software: 'reforge',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 6,
+          seed: 3494396176,
+        },
+        hires: {
+          scale: 1.5,
+          upscaler: 'R-ESRGAN 4x+ Anime6B',
+          steps: 10,
+          denoise: 0.3,
+        },
+        upscale: undefined,
+      });
+    });
+
+    it('should parse reforge-hires.webp', () => {
+      const meta = parseConvertedSample<StandardMetadata>(
+        'webp',
+        'reforge-hires.webp',
+      );
+
+      expect(meta).toEqual({
+        software: 'reforge',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160',
+          hash: '45a21ea00a',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 6,
+          seed: 1010990389,
+        },
+        hires: {
+          scale: 1.5,
+          upscaler: 'R-ESRGAN 4x+ Anime6B',
+          steps: 10,
+          denoise: 0.3,
+        },
+        upscale: undefined,
+      });
+    });
+  });
+
+  describe('EasyReforge samples', () => {
+    it('should parse easy-reforge.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'easy-reforge.png',
+        parseA1111,
+      );
+
+      expect(meta).toEqual({
+        software: 'easy-reforge',
+        prompt:
+          '1girl, solo, hatsune miku, テスト, \n<lora:NoobV065sHyperDmd:1> masterpiece, best quality, very aesthetic, absurdres, newest, safe',
+        negativePrompt: 'bad anatomy, worst quality, low quality',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'copycatNoob_v11',
+          hash: '6c015a2deb',
+        },
+        sampling: {
+          sampler: 'LCM',
+          scheduler: 'SGM Uniform',
+          steps: 4,
+          cfg: 1,
+          seed: 2582194946,
+        },
+        hires: {
+          scale: 1.5,
+          upscaler: 'Latent (nearest-exact)',
+          denoise: 0.6,
         },
         upscale: undefined,
       });
