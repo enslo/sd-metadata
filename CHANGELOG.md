@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-02-15
+
+### Added
+
+- **`embed()` function** (#126): Flexible metadata writing without requiring a `software` field
+  - Accepts `EmbedMetadata` type (all base generation fields + optional character prompts)
+  - Optional `extras` parameter for arbitrary key-value pairs in the settings line (e.g., `Version`, `Lora hashes`)
+  - Extras override structured fields at their original position; new keys append at the end
+  - Supports PNG (tEXt/iTXt), JPEG (Exif), and WebP (Exif)
+- **`stringify()` function** (#125): Unified metadata formatting for display
+  - Automatically selects the best representation based on `ParseResult` status
+  - `success` → human-readable SD WebUI format, `unrecognized` → raw text, `empty`/`invalid` → empty string
+- **`softwareLabels` constant**: Read-only mapping from `GenerationSoftware` identifiers to human-readable display names
+- **`EmbedMetadata` type**: `BaseMetadata & Pick<NovelAIMetadata, 'characterPrompts'>`
+- **`BaseMetadata` type export**: Previously internal, now available for direct use
+- **`GenerationSoftware` type export**: String literal union of all supported software identifiers
+
+### Deprecated
+
+- **`writeAsWebUI()`**: Use `embed()` instead
+- **`formatAsWebUI()`**: Use `stringify()` instead
+- **`formatRaw()`**: Use `stringify()` instead
+
+### Migration Guide
+
+| v1.x                            | v2.0.0                   | Notes                                |
+| ------------------------------- | ------------------------ | ------------------------------------ |
+| `writeAsWebUI(image, metadata)` | `embed(image, metadata)` | No `software` field required         |
+| `formatAsWebUI(metadata)`       | `stringify(readResult)`  | Accepts `ParseResult` directly       |
+| `formatRaw(raw)`                | `stringify(readResult)`  | Handles all statuses automatically   |
+
 ## [1.8.1] - 2026-02-15
 
 ### Fixed
@@ -292,6 +323,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[2.0.0]: https://github.com/enslo/sd-metadata/releases/tag/v2.0.0
 [1.8.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.8.1
 [1.8.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.8.0
 [1.7.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.7.1

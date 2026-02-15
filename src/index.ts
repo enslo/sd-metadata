@@ -13,12 +13,16 @@ export { writeAsWebUI } from './api/write-webui';
 // Export utility functions
 export { stringify } from './serializers/stringify';
 
+// Export constants
+export { softwareLabels } from './constants';
+
 // Deprecated utility functions (use stringify instead)
 export { formatAsWebUI } from './serializers/a1111';
 export { formatRaw } from './serializers/raw';
 
 // Export types (minimal public API)
 export type {
+  BaseMetadata,
   CharacterPrompt,
   ComfyNode,
   ComfyNodeGraph,
@@ -26,6 +30,7 @@ export type {
   ComfyNodeReference,
   EmbedMetadata,
   GenerationMetadata,
+  GenerationSoftware,
   HiresSettings,
   ITXtChunk,
   MetadataSegment,

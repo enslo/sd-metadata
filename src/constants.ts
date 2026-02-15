@@ -1,0 +1,34 @@
+import type { GenerationSoftware } from './types';
+
+/**
+ * Human-readable display labels for each generation software identifier.
+ *
+ * @example
+ * ```typescript
+ * import { softwareLabels } from '@enslo/sd-metadata';
+ *
+ * const result = read(imageData);
+ * if (result.status === 'success') {
+ *   console.log(softwareLabels[result.metadata.software]);
+ *   // => "NovelAI", "ComfyUI", "Stable Diffusion WebUI", etc.
+ * }
+ * ```
+ */
+export const softwareLabels: Readonly<Record<GenerationSoftware, string>> =
+  Object.freeze({
+    novelai: 'NovelAI',
+    comfyui: 'ComfyUI',
+    swarmui: 'SwarmUI',
+    tensorart: 'TensorArt',
+    'stability-matrix': 'Stability Matrix',
+    invokeai: 'InvokeAI',
+    forge: 'Stable Diffusion WebUI Forge',
+    'forge-neo': 'Stable Diffusion WebUI Forge - Neo',
+    'sd-webui': 'Stable Diffusion WebUI',
+    'sd-next': 'SD.Next',
+    civitai: 'Civitai',
+    'hf-space': 'Hugging Face Space',
+    easydiffusion: 'Easy Diffusion',
+    fooocus: 'Fooocus',
+    'ruined-fooocus': 'Ruined Fooocus',
+  });
