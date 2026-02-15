@@ -191,7 +191,7 @@ export type GenerationSoftware =
 /**
  * Base metadata fields shared by all tools
  */
-interface BaseMetadata {
+export interface BaseMetadata {
   /** Positive prompt */
   prompt: string;
   /** Negative prompt */
@@ -362,6 +362,16 @@ export type GenerationMetadata =
   | NovelAIMetadata
   | ComfyUIMetadata
   | StandardMetadata;
+
+/**
+ * Metadata type for the embed() API
+ *
+ * Includes all base generation fields plus optional character prompts.
+ * Unlike GenerationMetadata, this type does not require a `software` field,
+ * making it suitable for user-created metadata.
+ */
+export type EmbedMetadata = BaseMetadata &
+  Pick<NovelAIMetadata, 'characterPrompts'>;
 
 /**
  * Model settings

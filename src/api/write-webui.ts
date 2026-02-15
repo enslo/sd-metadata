@@ -57,6 +57,9 @@ import type { WriteResult } from './write';
  *   writeFileSync('output.png', result.value);
  * }
  * ```
+ *
+ * @deprecated Use {@link embed} instead. The embed function accepts EmbedMetadata
+ * (no software field required) and supports custom extras in the settings line.
  */
 export function writeAsWebUI(
   input: Uint8Array | ArrayBuffer,
