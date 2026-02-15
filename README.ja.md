@@ -149,7 +149,7 @@ if (result.status === 'success') {
 > 本番環境では `@latest` の代わりに特定のバージョンを指定してください：
 >
 > ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.8.1/dist/index.js
+> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.0.0/dist/index.js
 > ```
 
 ### 応用例
@@ -264,16 +264,14 @@ if (result.ok) {
 </details>
 
 <details>
-<summary>WebUIフォーマットでメタデータを書き込む</summary>
+<summary>カスタムメタデータの埋め込み</summary>
 
-SD WebUI (A1111) フォーマットでカスタムメタデータを作成して埋め込み：
+A1111フォーマットでカスタムメタデータを作成して埋め込み：
 
 ```typescript
-import { writeAsWebUI } from '@enslo/sd-metadata';
+import { embed } from '@enslo/sd-metadata';
 
-// カスタムメタデータをゼロから作成
 const metadata = {
-  software: 'sd-webui',
   prompt: 'masterpiece, best quality, 1girl',
   negativePrompt: 'lowres, bad quality',
   width: 512,
@@ -288,44 +286,60 @@ const metadata = {
 };
 
 // 任意の画像フォーマット（PNG、JPEG、WebP）に書き込み
-const result = writeAsWebUI(imageData, metadata);
+const result = embed(imageData, metadata);
 if (result.ok) {
   writeFileSync('output.png', result.value);
 }
 ```
 
+`extras` で設定行に任意のキーバリューを追加できます：
+
+```typescript
+const result = embed(imageData, metadata, {
+  Version: 'v1.10.0',
+  'Lora hashes': 'abc123',
+});
+```
+
 > [!TIP]
-> `writeAsWebUI` は以下の場合に特に便利です：
->
-> - プログラムで生成した画像に生成パラメータを埋め込みたい場合
-> - ツール固有フォーマットからWebUI互換フォーマットにメタデータを変換する場合
-> - WebUIで読み取り可能なメタデータを出力するツールを構築する場合
+> extras のキーが構造化フィールド（例：`Steps`）と一致する場合、extras の値が元の位置で構造化フィールドを上書きします。新しいキーは末尾に追加されます。
+
+`EmbedMetadata` はすべての `GenerationMetadata` バリアントのサブセットなので、パース結果のメタデータをそのまま渡せます — `characterPrompts` を持つ NovelAI も含めて：
+
+```typescript
+import { read, embed } from '@enslo/sd-metadata';
+
+const result = read(novelaiPng);
+if (result.status === 'success') {
+  // NovelAI（や他のツール）のメタデータをそのまま利用可能
+  const output = embed(blankJpeg, result.metadata);
+}
+```
 
 </details>
 
 <details>
 <summary>表示用にメタデータをフォーマット</summary>
 
-**どのツールのメタデータであっても**、統一されたWebUIフォーマットのテキストに変換できます。ツール間の差異（NovelAI、ComfyUI、Forgeなど）を吸収し、一貫したテキスト形式に正規化します：
+`ParseResult` を読みやすい文字列に変換します。ステータスに応じて最適な表現を自動選択します：
 
 ```typescript
-import { read, formatAsWebUI } from '@enslo/sd-metadata';
+import { read, stringify } from '@enslo/sd-metadata';
 
 const result = read(imageData);
-if (result.status === 'success') {
-  // どのツールでもOK: NovelAI, ComfyUI, Forge, InvokeAI, etc.
-  const text = formatAsWebUI(result.metadata);
+const text = stringify(result);
+if (text) {
   console.log(text);
-  
-  // 常に統一されたWebUIフォーマットで出力:
+
+  // 'success' の場合: WebUIフォーマットで出力:
   // masterpiece, best quality, 1girl
   // Negative prompt: lowres, bad quality
   // Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: model.safetensors
+  //
+  // 'unrecognized' の場合: 生のメタデータテキストを出力
+  // 'empty' / 'invalid' の場合: 空文字列を返す
 }
 ```
-
-> [!NOTE]
-> どのツールで生成された画像であっても、`formatAsWebUI` は共通の生成パラメータを抽出し、標準化された形式に整形します。ツール固有のフォーマットを意識することなく、ユーザーにメタデータを表示するのに最適です。
 
 </details>
 
@@ -366,16 +380,15 @@ if (result.status === 'success') {
   - `'conversionFailed'`: メタデータ変換に失敗（例：互換性のないフォーマット）
   - `'writeFailed'`: 画像へのメタデータ埋め込みに失敗
 
-### `writeAsWebUI(input: Uint8Array | ArrayBuffer, metadata: GenerationMetadata): WriteResult`
+### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata, extras?: Record<string, string | number>): WriteResult`
 
-SD WebUI (A1111) フォーマットで画像にメタデータを書き込みます。
+SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋め込みます。
 
 **パラメータ:**
 
 - `input` - ターゲット画像ファイルデータ（PNG、JPEG、またはWebP）
-- `metadata` - 埋め込む生成メタデータ
-  - 任意のツールからでも、カスタム作成でも可能
-  - 自動的にWebUIフォーマットに変換される
+- `metadata` - 埋め込む `EmbedMetadata`
+- `extras` - 設定行に追加する任意のキーバリュー（オプション）
 
 **戻り値:**
 
@@ -390,67 +403,25 @@ SD WebUI (A1111) フォーマットで画像にメタデータを書き込みま
 - 他のツールからWebUI互換フォーマットにメタデータを変換
 - WebUIで読み取り可能なメタデータを出力するアプリケーションの構築
 
-### `formatAsWebUI(metadata: GenerationMetadata): string`
+### `stringify(result: ParseResult): string`
 
-メタデータをSD WebUI (A1111) フォーマットのテキストにフォーマットします。
-
-**パラメータ:**
-
-- `metadata` - 任意のツールからの生成メタデータ
-
-**戻り値:**
-
-- WebUIフォーマットの文字列（プレーンテキスト）
-
-**出力フォーマット:**
-
-```text
-positive prompt
-[NovelAIのキャラクタープロンプト]
-Negative prompt: negative prompt
-Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, ...
-```
-
-**ユースケース:**
-
-- ユーザーに一貫したフォーマットでメタデータを表示
-- 生成パラメータをテキストとしてコピー
-- 生成設定のログ出力やデバッグ
-
-### `formatRaw(raw: RawMetadata): string`
-
-生のメタデータをプレーンテキストとしてフォーマットします。
+パース結果を読みやすい文字列に変換します。
 
 **パラメータ:**
 
-- `raw` - `ParseResult` から得られた生のメタデータ（`result.raw`）
+- `result` - `read()` から得られた `ParseResult`
 
 **戻り値:**
 
-- メタデータのプレーンテキスト内容（複数エントリは空行で区切られる）
+- `success` → WebUIフォーマットのテキスト
+- `unrecognized` → 生のメタデータのプレーンテキスト
+- `empty` / `invalid` → 空文字列
 
 **ユースケース:**
 
-- 認識できないメタデータをユーザーに表示
-- 生のメタデータ内容の素早い確認
-- パース失敗時のフォールバック表示
-
-**例:**
-
-```typescript
-import { read, formatAsWebUI, formatRaw } from '@enslo/sd-metadata';
-
-const result = read(imageData);
-
-switch (result.status) {
-  case 'success':
-    console.log(formatAsWebUI(result.metadata));
-    break;
-  case 'unrecognized':
-    console.log(formatRaw(result.raw));
-    break;
-}
-```
+- 画像ビューアやギャラリーでの生成パラメータ表示
+- メタデータをクリップボードに読みやすいテキストとしてコピー
+- パース結果のログ出力やデバッグ
 
 ## 型リファレンス
 
@@ -468,22 +439,26 @@ type ParseResult =
   | { status: 'invalid'; message?: string };
 ```
 
+### `BaseMetadata`
+
+全メタデータ型で共有される共通フィールド。このインターフェースは `EmbedMetadata` の基盤でもあります。
+
+```typescript
+interface BaseMetadata {
+  prompt: string;
+  negativePrompt: string;
+  width: number;
+  height: number;
+  model?: ModelSettings;
+  sampling?: SamplingSettings;
+  hires?: HiresSettings;
+  upscale?: UpscaleSettings;
+}
+```
+
 ### `GenerationMetadata`
 
-`read()` 関数が返す統一されたメタデータ構造。`software` フィールドで区別される3つのメタデータ型のユニオン型です。
-
-**共通フィールド（全タイプで利用可能）:**
-
-全てのメタデータ型にはこれらの基本フィールドが含まれます：
-
-- `prompt: string` - ポジティブプロンプトテキスト
-- `negativePrompt: string` - ネガティブプロンプトテキスト
-- `width: number` - 画像の幅（ピクセル）
-- `height: number` - 画像の高さ（ピクセル）
-- `model?: ModelSettings` - モデル情報（name、hash、VAE）
-- `sampling?: SamplingSettings` - サンプリングパラメータ（seed、steps、CFG、sampler、scheduler、clipSkip）
-- `hires?: HiresSettings` - Hires.fix設定（適用されている場合）
-- `upscale?: UpscaleSettings` - アップスケール設定（適用されている場合）
+`read()` 関数が返す統一されたメタデータ構造。`software` フィールドで区別される3つのメタデータ型のユニオン型です。全タイプが `BaseMetadata` を拡張しています。
 
 **メタデータ型のバリアント:**
 
@@ -545,6 +520,14 @@ if (result.status === 'success') {
 
 各メタデータ型の詳細なインターフェース定義については[型ドキュメント](./docs/types.ja.md)を参照してください。
 
+### `EmbedMetadata`
+
+`embed()` 関数用のメタデータ型。`BaseMetadata` にオプションのキャラクタープロンプトを追加。`GenerationMetadata` とは異なり、`software` フィールドは不要です。
+
+```typescript
+type EmbedMetadata = BaseMetadata & Pick<NovelAIMetadata, 'characterPrompts'>;
+```
+
 ### `RawMetadata`
 
 ラウンドトリップ変換のために元のメタデータ構造を保持します。
@@ -560,11 +543,13 @@ type RawMetadata =
 > TypeScriptユーザー向け：全ての型はエクスポートされており、インポートして使用できます。
 >
 > ```typescript
-> import type { 
->   ParseResult, 
->   GenerationMetadata, 
->   ModelSettings, 
->   SamplingSettings 
+> import type {
+>   BaseMetadata,
+>   EmbedMetadata,
+>   ParseResult,
+>   GenerationMetadata,
+>   ModelSettings,
+>   SamplingSettings
 > } from '@enslo/sd-metadata';
 > ```
 >

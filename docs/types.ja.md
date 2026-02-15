@@ -8,7 +8,9 @@
 
 - [コア型](#コア型)
   - [`ParseResult`](#parseresult)
+  - [`BaseMetadata`](#basemetadata)
   - [`GenerationMetadata`](#generationmetadata)
+  - [`EmbedMetadata`](#embedmetadata)
   - [`RawMetadata`](#rawmetadata)
   - [`WriteResult`](#writeresult)
 - [メタデータ型](#メタデータ型)
@@ -89,9 +91,49 @@ switch (result.status) {
 
 ---
 
+### `BaseMetadata`
+
+全メタデータ型で共有される共通フィールド。`GenerationMetadata` の各バリアントと `EmbedMetadata` の基盤です。
+
+```typescript
+export interface BaseMetadata {
+  /** ポジティブプロンプト */
+  prompt: string;
+  /** ネガティブプロンプト */
+  negativePrompt: string;
+  /** 画像の幅（ピクセル） */
+  width: number;
+  /** 画像の高さ（ピクセル） */
+  height: number;
+  /** モデル設定 */
+  model?: ModelSettings;
+  /** サンプリング設定 */
+  sampling?: SamplingSettings;
+  /** Hires.fix設定（適用されている場合） */
+  hires?: HiresSettings;
+  /** アップスケール設定（適用されている場合） */
+  upscale?: UpscaleSettings;
+}
+```
+
+**例：**
+
+```typescript
+import type { BaseMetadata } from '@enslo/sd-metadata';
+
+// 共通の生成フィールドのみ必要な場合にBaseMetadataを使用
+function displayMetadata(meta: BaseMetadata) {
+  console.log('Prompt:', meta.prompt);
+  console.log('Size:', meta.width, 'x', meta.height);
+  console.log('Model:', meta.model?.name);
+}
+```
+
+---
+
 ### `GenerationMetadata`
 
-統一されたメタデータ構造。サポートされている全てのメタデータ型のユニオン型。
+統一されたメタデータ構造。サポートされている全てのメタデータ型のユニオン型。全バリアントが `BaseMetadata` を拡張しています。
 
 ```typescript
 type GenerationMetadata =
@@ -125,6 +167,34 @@ if (metadata.software === 'comfyui' ||
     console.log('Has workflow:', Object.keys(metadata.nodes).length);
   }
 }
+```
+
+---
+
+### `EmbedMetadata`
+
+`embed()` 関数用のメタデータ型。`BaseMetadata` にオプションのNovelAIキャラクタープロンプトを追加。`GenerationMetadata` とは異なり、`software` フィールドは不要です。
+
+```typescript
+export type EmbedMetadata = BaseMetadata & Pick<NovelAIMetadata, 'characterPrompts'>;
+```
+
+**例：**
+
+```typescript
+import { embed } from '@enslo/sd-metadata';
+import type { EmbedMetadata } from '@enslo/sd-metadata';
+
+const metadata: EmbedMetadata = {
+  prompt: 'masterpiece, 1girl',
+  negativePrompt: 'lowres',
+  width: 512,
+  height: 768,
+  sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
+  model: { name: 'model.safetensors' },
+};
+
+const result = embed(imageData, metadata, { Version: 'v1.0' });
 ```
 
 ---
@@ -245,28 +315,10 @@ export interface StandardMetadata extends BaseMetadata {
     | 'easydiffusion'
     | 'fooocus'
     | 'ruined-fooocus';
-
-  // 共通フィールド（内部のBaseMetadataから継承）
-  /** ポジティブプロンプト */
-  prompt: string;
-  /** ネガティブプロンプト */
-  negativePrompt: string;
-  /** 画像の幅（ピクセル） */
-  width: number;
-  /** 画像の高さ（ピクセル） */
-  height: number;
-  /** モデル設定 */
-  model?: ModelSettings;
-  /** サンプリング設定 */
-  sampling?: SamplingSettings;
-  /** Hires.fix設定（適用されている場合） */
-  hires?: HiresSettings;
-  /** アップスケール設定（適用されている場合） */
-  upscale?: UpscaleSettings;
 }
 ```
 
-これは最も一般的なメタデータ型です。NovelAIのキャラクタープロンプトやComfyUIのノードグラフのようなツール固有の拡張なしのベースライン生成メタデータを表します。SD WebUI、Forge、InvokeAIなど多くのツールがこの最小限の構造を使用します。
+`BaseMetadata` の全フィールドを継承します。最も一般的なメタデータ型で、ツール固有の拡張なしのベースライン生成メタデータを表します。SD WebUI、Forge、InvokeAIなど多くのツールがこの構造を使用します。
 
 **例：**
 

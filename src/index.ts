@@ -19,6 +19,7 @@ export { formatRaw } from './serializers/raw';
 
 // Export types (minimal public API)
 export type {
+  BaseMetadata,
   CharacterPrompt,
   ComfyNode,
   ComfyNodeGraph,
