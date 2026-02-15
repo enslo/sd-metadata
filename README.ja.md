@@ -29,10 +29,15 @@ npm install @enslo/sd-metadata
 | ------ | :---: | :----: | :----: |
 | [NovelAI](https://novelai.net/) * | ✅ | 🔄️ | ✅ |
 | [ComfyUI](https://github.com/comfyanonymous/ComfyUI) * | ✅ | 🔄️ | 🔄️ |
-| [AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui) | ⚠️ | ⚠️ | ⚠️ |
-| [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) / [Forge Neo](https://github.com/neggles/sd-webui-forge-neoforge) | ✅ | ✅ | ✅ |
+| [Stable Diffusion WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) | ✅ | ✅ | ✅ |
+| [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) | ✅ | ✅ | ✅ |
+| [Forge Classic](https://github.com/Haoming02/sd-webui-forge-classic/tree/classic) | ✅ | ✅ | ✅ |
+| [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) | ✅ | ✅ | ✅ |
+| [reForge](https://github.com/Panchovix/stable-diffusion-webui-reForge) | ✅ | ✅ | ✅ |
+| [EasyReforge](https://github.com/Zuntan03/EasyReforge) | ✅ | ✅ | ✅ |
+| [SD.Next](https://github.com/vladmandic/automatic) | ✅ | ✅ | ✅ |
 | [InvokeAI](https://github.com/invoke-ai/InvokeAI) | ✅ | 🔄️ | 🔄️ |
-| [SwarmUI](https://github.com/Stability-AI/StableSwarmUI) * | ✅ | ✅ | ✅ |
+| [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI) * | ✅ | ✅ | ✅ |
 | [Civitai](https://civitai.com/) | ⚠️ | ✅ | ⚠️ |
 | [TensorArt](https://tensor.art/) | ✅ | 🔄️ | 🔄️ |
 | [Stability Matrix](https://github.com/LykosAI/StabilityMatrix) | ✅ | 🔄️ | 🔄️ |
@@ -487,7 +492,7 @@ interface BaseMetadata {
   - `nodes: ComfyNodeGraph`（comfyui/tensorart/stability-matrixでは必須）
   - `nodes?: ComfyNodeGraph`（swarmuiではオプション - PNGフォーマットのみ）
 
-- **`StandardMetadata`** (`software: 'sd-webui' | 'forge' | 'invokeai' | 'civitai' | ...`)  
+- **`StandardMetadata`** (`software: 'sd-webui' | 'forge' | 'forge-classic' | 'reforge' | 'invokeai' | ...`)
   ツール固有の拡張なしのベースラインメタデータ。ほとんどのSD WebUIベースのツールで使用。
 
 **型定義:**
@@ -541,8 +546,9 @@ if (result.status === 'success') {
 ```typescript
 type GenerationSoftware =
   | 'novelai' | 'comfyui' | 'swarmui' | 'tensorart' | 'stability-matrix'
-  | 'invokeai' | 'forge-neo' | 'forge' | 'sd-webui' | 'sd-next'
-  | 'civitai' | 'hf-space' | 'easydiffusion' | 'fooocus' | 'ruined-fooocus';
+  | 'sd-webui' | 'forge' | 'forge-classic' | 'forge-neo' 
+  | 'reforge'| 'easy-reforge' | 'sd-next' | 'civitai' | 'hf-space'
+  | 'invokeai' | 'easydiffusion' | 'fooocus' | 'ruined-fooocus';
 ```
 
 ### `EmbedMetadata`

@@ -147,7 +147,7 @@ type GenerationMetadata =
 
 | メタデータ型 | `software` 値 |
 | ------------- | ----------------- |
-| `StandardMetadata` | `'sd-webui'` \| `'forge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'sd-next'` \| `'forge-neo'` |
+| `StandardMetadata` | `'sd-webui'` \| `'sd-next'` \| `'forge'` \| `'forge-classic'` \| `'forge-neo'` \| `'reforge'` \| `'easy-reforge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` |
 | `NovelAIMetadata` | `'novelai'` |
 | `ComfyUIMetadata` | `'comfyui'` \| `'tensorart'` \| `'stability-matrix'` \| `'swarmui'` |
 
@@ -184,9 +184,12 @@ type GenerationSoftware =
   | 'tensorart'
   | 'stability-matrix'
   | 'invokeai'
-  | 'forge-neo'
-  | 'forge'
   | 'sd-webui'
+  | 'forge'
+  | 'forge-classic'
+  | 'forge-neo'
+  | 'reforge'
+  | 'easy-reforge'
   | 'sd-next'
   | 'civitai'
   | 'hf-space'
@@ -343,9 +346,12 @@ export type WriteWarning = {
 export interface StandardMetadata extends BaseMetadata {
   software:
     | 'sd-webui'
-    | 'sd-next'
     | 'forge'
+    | 'forge-classic'
     | 'forge-neo'
+    | 'reforge'
+    | 'easy-reforge'
+    | 'sd-next'
     | 'invokeai'
     | 'civitai'
     | 'hf-space'
@@ -355,7 +361,7 @@ export interface StandardMetadata extends BaseMetadata {
 }
 ```
 
-`BaseMetadata` の全フィールドを継承します。最も一般的なメタデータ型で、ツール固有の拡張なしのベースライン生成メタデータを表します。SD WebUI、Forge、InvokeAIなど多くのツールがこの構造を使用します。
+`BaseMetadata` の全フィールドを継承します。最も一般的なメタデータ型で、ツール固有の拡張なしのベースライン生成メタデータを表します。SD WebUI、Forgeファミリー（Forge、Forge Classic、Forge Neo、reForge、EasyReforge）、SD.Next、InvokeAIなど多くのツールがこの構造を使用します。
 
 **例：**
 

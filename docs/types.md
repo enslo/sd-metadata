@@ -147,7 +147,7 @@ type GenerationMetadata =
 
 | Metadata Type | `software` values |
 | ------------- | ----------------- |
-| `StandardMetadata` | `'sd-webui'` \| `'forge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'sd-next'` \| `'forge-neo'` |
+| `StandardMetadata` | `'sd-webui'` \| `'sd-next'` \| `'forge'` \| `'forge-classic'` \| `'forge-neo'` \| `'reforge'` \| `'easy-reforge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` |
 | `NovelAIMetadata` | `'novelai'` |
 | `ComfyUIMetadata` | `'comfyui'` \| `'tensorart'` \| `'stability-matrix'` \| `'swarmui'` |
 
@@ -184,9 +184,12 @@ type GenerationSoftware =
   | 'tensorart'
   | 'stability-matrix'
   | 'invokeai'
-  | 'forge-neo'
-  | 'forge'
   | 'sd-webui'
+  | 'forge'
+  | 'forge-classic'
+  | 'forge-neo'
+  | 'reforge'
+  | 'easy-reforge'
   | 'sd-next'
   | 'civitai'
   | 'hf-space'
@@ -343,9 +346,12 @@ Standard parameters format used by most SD tools.
 export interface StandardMetadata extends BaseMetadata {
   software:
     | 'sd-webui'
-    | 'sd-next'
     | 'forge'
+    | 'forge-classic'
     | 'forge-neo'
+    | 'reforge'
+    | 'easy-reforge'
+    | 'sd-next'
     | 'invokeai'
     | 'civitai'
     | 'hf-space'
@@ -355,7 +361,7 @@ export interface StandardMetadata extends BaseMetadata {
 }
 ```
 
-Inherits all fields from `BaseMetadata`. This is the most common metadata type, representing baseline generation metadata without tool-specific extensions. Many tools use this structure, including SD WebUI, Forge, InvokeAI, and others.
+Inherits all fields from `BaseMetadata`. This is the most common metadata type, representing baseline generation metadata without tool-specific extensions. Many tools use this structure, including SD WebUI, Forge family (Forge, Forge Classic, Forge Neo, reForge, EasyReforge), SD.Next, InvokeAI, and others.
 
 **Example:**
 
