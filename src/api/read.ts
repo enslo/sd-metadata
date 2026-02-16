@@ -15,19 +15,10 @@ import type {
   ParseResult,
   PngTextChunk,
   RawMetadata,
+  ReadOptions,
 } from '../types';
 import { type ImageFormat, detectFormat, toUint8Array } from '../utils/binary';
 import { pngChunksToRecord, segmentsToRecord } from '../utils/convert';
-
-/** Options for the read function */
-export interface ReadOptions {
-  /**
-   * When true, dimensions are taken strictly from metadata only.
-   * When false (default), missing dimensions are extracted from image headers.
-   * @default false
-   */
-  strict?: boolean;
-}
 
 /**
  * Read and parse metadata from an image

@@ -12,67 +12,43 @@ export const Result = {
 };
 
 // ============================================================================
-// PNG Metadata Types
+// PNG Text Chunk Types
 // ============================================================================
-
-/**
- * Error types for PNG reading
- */
-export type PngReadError =
-  | { type: 'invalidSignature' }
-  | { type: 'corruptedChunk'; message: string };
-
-/**
- * Result type for PNG metadata reading
- */
-export type PngMetadataResult = Result<PngTextChunk[], PngReadError>;
-
-/**
- * Error types for PNG writing
- */
-type PngWriteError = { type: 'invalidSignature' } | { type: 'noIhdrChunk' };
-
-/**
- * Result type for PNG metadata writing
- */
-export type PngWriteResult = Result<Uint8Array, PngWriteError>;
-
-// ============================================================================
-// JPEG Writer Types
-// ============================================================================
-
-/**
- * Error types for JPEG writing
- */
-type JpegWriteError =
-  | { type: 'invalidSignature' }
-  | { type: 'corruptedStructure'; message: string };
-
-/**
- * Result type for JPEG metadata writing
- */
-export type JpegWriteResult = Result<Uint8Array, JpegWriteError>;
-
-// ============================================================================
-// WebP Writer Types
-// ============================================================================
-
-/**
- * Error types for WebP writing
- */
-type WebpWriteError =
-  | { type: 'invalidSignature' }
-  | { type: 'invalidRiffStructure'; message: string };
-
-/**
- * Result type for WebP metadata writing
- */
-export type WebpWriteResult = Result<Uint8Array, WebpWriteError>;
 
 /**
  * PNG text chunk (tEXt or iTXt)
  */
 export type PngTextChunk = TExtChunk | ITXtChunk;
+
+/**
+ * tEXt chunk (Latin-1 encoded text)
+ */
+export interface TExtChunk {
+  type: 'tEXt';
+  /** Chunk keyword (e.g., 'parameters', 'Comment') */
+  keyword: string;
+  /** Text content */
+  text: string;
+}
+
+/**
+ * iTXt chunk (UTF-8 encoded international text)
+ */
+export interface ITXtChunk {
+  type: 'iTXt';
+  /** Chunk keyword */
+  keyword: string;
+  /** Compression flag (0=uncompressed, 1=compressed) */
+  compressionFlag: number;
+  /** Compression method (0=zlib/deflate) */
+  compressionMethod: number;
+  /** Language tag (BCP 47) */
+  languageTag: string;
+  /** Translated keyword */
+  translatedKeyword: string;
+  /** Text content */
+  text: string;
+}
 
 // ============================================================================
 // Exif Metadata Types (shared between JPEG/WebP)
@@ -106,63 +82,9 @@ export type RawMetadata =
   | { format: 'jpeg'; segments: MetadataSegment[] }
   | { format: 'webp'; segments: MetadataSegment[] };
 
-/**
- * Error types for JPEG reading
- */
-type JpegReadError =
-  | { type: 'invalidSignature' }
-  | { type: 'parseError'; message: string };
-
-/**
- * Result type for JPEG metadata reading
- */
-export type JpegMetadataResult = Result<MetadataSegment[], JpegReadError>;
-
 // ============================================================================
-// WebP Metadata Types
+// Generation Software
 // ============================================================================
-
-/**
- * Error types for WebP reading
- */
-type WebpReadError =
-  | { type: 'invalidSignature' }
-  | { type: 'parseError'; message: string };
-
-/**
- * Result type for WebP metadata reading
- */
-export type WebpMetadataResult = Result<MetadataSegment[], WebpReadError>;
-
-/**
- * tEXt chunk (Latin-1 encoded text)
- */
-export interface TExtChunk {
-  type: 'tEXt';
-  /** Chunk keyword (e.g., 'parameters', 'Comment') */
-  keyword: string;
-  /** Text content */
-  text: string;
-}
-
-/**
- * iTXt chunk (UTF-8 encoded international text)
- */
-export interface ITXtChunk {
-  type: 'iTXt';
-  /** Chunk keyword */
-  keyword: string;
-  /** Compression flag (0=uncompressed, 1=compressed) */
-  compressionFlag: number;
-  /** Compression method (0=zlib/deflate) */
-  compressionMethod: number;
-  /** Language tag (BCP 47) */
-  languageTag: string;
-  /** Translated keyword */
-  translatedKeyword: string;
-  /** Text content */
-  text: string;
-}
 
 /**
  * Known AI image generation software
@@ -241,6 +163,7 @@ export interface CharacterPrompt {
  *
  * These tools use ComfyUI-compatible workflow format.
  */
+
 /**
  * ComfyUI node reference (for node outputs)
  *
@@ -383,6 +306,10 @@ export type EmbedMetadata = BaseMetadata &
     extras?: Record<string, string | number>;
   };
 
+// ============================================================================
+// Settings Types
+// ============================================================================
+
 /**
  * Model settings
  */
@@ -439,17 +366,9 @@ export interface UpscaleSettings {
   scale?: number;
 }
 
-/**
- * Parse error types
- */
-type ParseError =
-  | { type: 'unsupportedFormat' }
-  | { type: 'parseError'; message: string };
-
-/**
- * Result type for internal parsers
- */
-export type InternalParseResult = Result<GenerationMetadata, ParseError>;
+// ============================================================================
+// Parse Result
+// ============================================================================
 
 /**
  * Parse result with 4-status design
@@ -466,24 +385,42 @@ export type ParseResult =
   | { status: 'invalid'; message?: string };
 
 // ============================================================================
-// Metadata Conversion Types
+// API Types
 // ============================================================================
 
 /**
- * Target format for metadata conversion
+ * Options for the read function
  */
-export type ConversionTargetFormat = 'png' | 'jpeg' | 'webp';
+export interface ReadOptions {
+  /**
+   * When true, dimensions are taken strictly from metadata only.
+   * When false (default), missing dimensions are extracted from image headers.
+   * @default false
+   */
+  strict?: boolean;
+}
 
 /**
- * Conversion error types
+ * Warning types for write operations
  */
-type ConversionError =
-  | { type: 'unsupportedSoftware'; software: string }
-  | { type: 'invalidParseResult'; status: string }
-  | { type: 'missingRawData' }
-  | { type: 'parseError'; message: string };
+export type WriteWarning = {
+  type: 'metadataDropped';
+  reason: 'unrecognizedCrossFormat';
+};
 
 /**
- * Result type for metadata conversion
+ * Error types for write operations
  */
-export type ConversionResult = Result<RawMetadata, ConversionError>;
+type WriteError =
+  | { type: 'unsupportedFormat' }
+  | { type: 'conversionFailed'; message: string }
+  | { type: 'writeFailed'; message: string };
+
+/**
+ * Result of the write operation
+ *
+ * Success case may include a warning when metadata was intentionally dropped.
+ */
+export type WriteResult =
+  | { ok: true; value: Uint8Array; warning?: WriteWarning }
+  | { ok: false; error: WriteError };

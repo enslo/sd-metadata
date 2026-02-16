@@ -1,7 +1,8 @@
-import type { GenerationSoftware, InternalParseResult } from '../types';
+import type { GenerationSoftware } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { trimObject } from '../utils/object';
+import type { InternalParseResult } from './types';
 
 /** Software identifiers that use A1111-compatible text format */
 type A1111Software = Extract<

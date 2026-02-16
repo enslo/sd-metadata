@@ -1,7 +1,8 @@
-import type { InternalParseResult, StandardMetadata } from '../types';
+import type { StandardMetadata } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import type { InternalParseResult } from './types';
 
 /**
  * Ruined Fooocus JSON metadata structure

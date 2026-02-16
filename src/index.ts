@@ -3,8 +3,8 @@
  */
 
 // Export core API functions
-export { read, type ReadOptions } from './api/read';
-export { write, type WriteResult, type WriteWarning } from './api/write';
+export { read } from './api/read';
+export { write } from './api/write';
 export { embed } from './api/embed';
 
 // Export utility functions
@@ -40,7 +40,10 @@ export type {
   ParseResult,
   PngTextChunk,
   RawMetadata,
+  ReadOptions,
   SamplingSettings,
   TExtChunk,
   UpscaleSettings,
+  WriteResult,
+  WriteWarning,
 } from './types';

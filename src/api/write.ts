@@ -6,42 +6,13 @@
  */
 
 import { convertMetadata } from '../converters';
-import type { ParseResult } from '../types';
+import type { ParseResult, WriteResult } from '../types';
 
 import type { ImageFormat } from '../utils/binary';
 import { detectFormat, toUint8Array } from '../utils/binary';
 import { writeJpegMetadata } from '../writers/jpeg';
 import { writePngMetadata } from '../writers/png';
 import { writeWebpMetadata } from '../writers/webp';
-
-// ============================================================================
-// Public API
-// ============================================================================
-
-/**
- * Warning types for write operations
- */
-export type WriteWarning = {
-  type: 'metadataDropped';
-  reason: 'unrecognizedCrossFormat';
-};
-
-/**
- * Error types for write operations
- */
-type WriteError =
-  | { type: 'unsupportedFormat' }
-  | { type: 'conversionFailed'; message: string }
-  | { type: 'writeFailed'; message: string };
-
-/**
- * Result of the write operation
- *
- * Success case may include a warning when metadata was intentionally dropped.
- */
-export type WriteResult =
-  | { ok: true; value: Uint8Array; warning?: WriteWarning }
-  | { ok: false; error: WriteError };
 
 /**
  * Write metadata to an image

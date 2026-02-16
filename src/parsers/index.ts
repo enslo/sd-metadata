@@ -1,4 +1,3 @@
-import type { InternalParseResult } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseA1111 } from './a1111';
@@ -13,6 +12,7 @@ import { parseRuinedFooocus } from './ruined-fooocus';
 import { parseStabilityMatrix } from './stability-matrix';
 import { parseSwarmUI } from './swarmui';
 import { parseTensorArt } from './tensorart';
+import type { InternalParseResult } from './types';
 
 /**
  * Parse metadata entries to unified format

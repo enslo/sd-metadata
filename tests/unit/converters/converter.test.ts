@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { convertMetadata } from '../../../src/converters';
 import type {
-  ConversionTargetFormat,
   GenerationMetadata,
   MetadataSegment,
   ParseResult,
@@ -324,7 +323,7 @@ describe('convertMetadata - Unit Tests', () => {
         chunks,
       });
 
-      const formats: ConversionTargetFormat[] = ['png', 'jpeg', 'webp'];
+      const formats: Array<'png' | 'jpeg' | 'webp'> = ['png', 'jpeg', 'webp'];
       for (const format of formats) {
         const result = convertMetadata(parseResult, format);
         expect(result.ok).toBe(true);

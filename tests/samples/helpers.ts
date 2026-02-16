@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { read } from '../../src/index';
+import type { InternalParseResult } from '../../src/parsers/types';
 import { readPngMetadata } from '../../src/readers/png';
-import type { InternalParseResult } from '../../src/types';
 import { pngChunksToRecord } from '../../src/utils/convert';
 import type { EntryRecord } from '../../src/utils/entries';
 

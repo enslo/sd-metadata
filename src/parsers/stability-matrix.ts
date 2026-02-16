@@ -1,8 +1,8 @@
-import type { InternalParseResult } from '../types';
 import { Result } from '../types';
 import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { parseComfyUI } from './comfyui';
+import type { InternalParseResult } from './types';
 
 /**
  * Stability Matrix parameters-json structure

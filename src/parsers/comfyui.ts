@@ -8,7 +8,6 @@
 import type {
   ComfyNodeGraph,
   HiresSettings,
-  InternalParseResult,
   ModelSettings,
   SamplingSettings,
   UpscaleSettings,
@@ -32,6 +31,7 @@ import {
   findHiresSampler,
   isNodeReference,
 } from './comfyui-nodes';
+import type { InternalParseResult } from './types';
 
 // =============================================================================
 // Constants
