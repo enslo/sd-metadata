@@ -13,10 +13,9 @@ export { stringify } from './api/stringify';
 // Export constants
 export { softwareLabels } from './constants';
 
-// Deprecated API functions
-export { writeAsWebUI } from './api/write-webui';
-
-// Deprecated utility functions (use stringify instead)
+// Deprecated functions (use embed/stringify instead)
+/** @deprecated Use {@link embed} instead */
+export { embed as writeAsWebUI } from './api/embed';
 /** @deprecated Use {@link stringify} instead */
 export { buildEmbedText as formatAsWebUI } from './api/stringify';
 /** @deprecated Use {@link stringify} instead */

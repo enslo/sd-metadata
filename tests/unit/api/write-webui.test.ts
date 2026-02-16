@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { writeAsWebUI } from '../../../src/api/write-webui';
-import { read } from '../../../src/index';
+import { read, writeAsWebUI } from '../../../src/index';
 import type {
   ComfyUIMetadata,
   NovelAIMetadata,

@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { writeAsWebUI } from '../../src/api/write-webui';
-import { read } from '../../src/index';
+import { read, writeAsWebUI } from '../../src/index';
 import type { StandardMetadata } from '../../src/types';
 import {
   createMinimalJpeg,
