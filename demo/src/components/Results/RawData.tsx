@@ -1,6 +1,7 @@
 import type { RawMetadata } from '@enslo/sd-metadata';
 import { Accordion, Badge, Group } from '@mantine/core';
 import { formatJson } from '../../utils';
+import { ContentPanel } from './ContentPanel';
 
 // Type aliases derived from RawMetadata
 type PngTextChunk = Extract<RawMetadata, { format: 'png' }>['chunks'][number];
@@ -27,7 +28,7 @@ export function RawChunks({ chunks }: RawChunksProps) {
   const defaultValues = chunks.map((c) => c.keyword);
 
   return (
-    <Accordion multiple defaultValue={defaultValues}>
+    <Accordion multiple variant="separated" defaultValue={defaultValues}>
       {chunks.map((chunk) => {
         const { formatted, isJson } = formatJson(getChunkText(chunk));
         return (
@@ -46,18 +47,20 @@ export function RawChunks({ chunks }: RawChunksProps) {
               </Group>
             </Accordion.Control>
             <Accordion.Panel>
-              <pre
-                style={{
-                  fontFamily: 'var(--mantine-font-family-monospace)',
-                  fontSize: '0.8rem',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  lineHeight: 1.5,
-                  margin: 0,
-                }}
-              >
-                {formatted}
-              </pre>
+              <ContentPanel>
+                <pre
+                  style={{
+                    fontFamily: 'var(--mantine-font-family-monospace)',
+                    fontSize: '0.8rem',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}
+                >
+                  {formatted}
+                </pre>
+              </ContentPanel>
             </Accordion.Panel>
           </Accordion.Item>
         );
@@ -77,7 +80,7 @@ export function ExifSegments({ segments }: ExifSegmentsProps) {
   const defaultValues = segments.map((s) => s.source.type);
 
   return (
-    <Accordion multiple defaultValue={defaultValues}>
+    <Accordion multiple variant="separated" defaultValue={defaultValues}>
       {segments.map((segment) => {
         const { formatted, isJson } = formatJson(segment.data);
         const sourceLabel = getSourceLabel(segment.source);
@@ -94,18 +97,20 @@ export function ExifSegments({ segments }: ExifSegmentsProps) {
               </Group>
             </Accordion.Control>
             <Accordion.Panel>
-              <pre
-                style={{
-                  fontFamily: 'var(--mantine-font-family-monospace)',
-                  fontSize: '0.8rem',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  lineHeight: 1.5,
-                  margin: 0,
-                }}
-              >
-                {formatted}
-              </pre>
+              <ContentPanel>
+                <pre
+                  style={{
+                    fontFamily: 'var(--mantine-font-family-monospace)',
+                    fontSize: '0.8rem',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}
+                >
+                  {formatted}
+                </pre>
+              </ContentPanel>
             </Accordion.Panel>
           </Accordion.Item>
         );

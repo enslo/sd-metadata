@@ -1,14 +1,6 @@
 import { embed, stringify } from '@enslo/sd-metadata';
 import type { EmbedMetadata, ParseResult } from '@enslo/sd-metadata';
-import {
-  Button,
-  Code,
-  Group,
-  NativeSelect,
-  Paper,
-  Stack,
-  Text,
-} from '@mantine/core';
+import { Button, Code, Group, NativeSelect, Stack, Text } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
@@ -19,6 +11,7 @@ import {
   generateFilename,
   getMimeType,
 } from '../../lib/image';
+import { ContentPanel } from '../Results/ContentPanel';
 import { ExtrasEditor } from './ExtrasEditor';
 import { MetadataForm } from './MetadataForm';
 
@@ -107,7 +100,7 @@ export function EmbedEditor({
       <ExtrasEditor extras={extras} onChange={setExtras} />
 
       {/* Live Preview */}
-      <Paper p="md" radius="sm" bg="var(--mantine-color-dark-8)">
+      <ContentPanel>
         <Text
           size="xs"
           c="dimmed"
@@ -137,7 +130,7 @@ export function EmbedEditor({
             {t.embedEditor.previewEmpty}
           </Text>
         )}
-      </Paper>
+      </ContentPanel>
 
       {/* Actions */}
       <Group>

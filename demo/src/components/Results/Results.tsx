@@ -4,8 +4,8 @@ import { Alert, Paper, Tabs, Text } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
-import { CopyButton } from '../CopyButton/CopyButton';
 import { EmbedEditor } from '../EmbedEditor';
+import { ContentPanel } from './ContentPanel';
 import { ParsedMetadata } from './ParsedMetadata';
 import { ExifSegments, RawChunks } from './RawData';
 
@@ -123,12 +123,7 @@ function PlainTextTabContent({
   }
 
   return (
-    <div>
-      <div
-        style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}
-      >
-        <CopyButton value={text} />
-      </div>
+    <ContentPanel>
       <pre
         style={{
           fontFamily: 'var(--mantine-font-family-monospace)',
@@ -141,7 +136,7 @@ function PlainTextTabContent({
       >
         {text}
       </pre>
-    </div>
+    </ContentPanel>
   );
 }
 

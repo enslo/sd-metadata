@@ -1,9 +1,10 @@
 import type { CharacterPrompt, GenerationMetadata } from '@enslo/sd-metadata';
-import { Group, Stack, Text, Title } from '@mantine/core';
+import { Divider, Group, Stack, Text, Title } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import type { ComponentChildren } from 'preact';
 import { $t } from '../../i18n';
 import { CopyButton } from '../CopyButton/CopyButton';
+import { ContentPanel } from './ContentPanel';
 
 interface ParsedMetadataProps {
   metadata: GenerationMetadata;
@@ -101,7 +102,7 @@ interface SectionProps {
 
 function Section({ title, copyValue, children }: SectionProps) {
   return (
-    <div>
+    <ContentPanel>
       <Group justify="space-between" mb="xs">
         <Title order={4} size="sm">
           {title}
@@ -109,7 +110,7 @@ function Section({ title, copyValue, children }: SectionProps) {
         {copyValue !== undefined && <CopyButton value={copyValue} />}
       </Group>
       {children}
-    </div>
+    </ContentPanel>
   );
 }
 
@@ -122,19 +123,22 @@ function GenerationSettings({ metadata }: { metadata: GenerationMetadata }) {
 
   return (
     <Section title={t.fields.generationSettings}>
-      <Stack gap={4}>
-        {settings.map(([label, value, copyable]) => (
-          <Group key={label} justify="space-between" wrap="nowrap">
-            <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
-              {label}
-            </Text>
-            <Group gap={4} wrap="nowrap">
-              <Text size="sm" fw={500} truncate="end">
-                {String(value)}
+      <Stack gap={0}>
+        {settings.map(([label, value, copyable], i) => (
+          <div key={label}>
+            {i > 0 && <Divider />}
+            <Group justify="space-between" wrap="nowrap" py={6}>
+              <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
+                {label}
               </Text>
-              {copyable && <CopyButton value={String(value)} />}
+              <Group gap={4} wrap="nowrap">
+                <Text size="sm" fw={500} truncate="end">
+                  {String(value)}
+                </Text>
+                {copyable && <CopyButton value={String(value)} />}
+              </Group>
             </Group>
-          </Group>
+          </div>
         ))}
       </Stack>
     </Section>
