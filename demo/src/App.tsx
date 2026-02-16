@@ -7,7 +7,6 @@ import { DropZone } from './components/DropZone/DropZone';
 import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
 import { LanguageSwitcher } from './components/LanguageSwitcher/LanguageSwitcher';
 import { Results } from './components/Results/Results';
-import { SaveBar } from './components/SaveBar';
 import { ScrollToTop } from './components/ScrollToTop/ScrollToTop';
 import { $t } from './i18n';
 import { getSoftwareLabel } from './utils';
@@ -138,21 +137,17 @@ export function App() {
           globalDragOver={globalDragOver}
         />
 
-        {state.parseResult && state.previewUrl && state.filename && (
-          <SaveBar
-            parseResult={state.parseResult}
-            previewUrl={state.previewUrl}
-            filename={state.filename}
-          />
-        )}
-
-        {state.parseResult && state.fileData && state.filename && (
-          <Results
-            parseResult={state.parseResult}
-            fileData={state.fileData}
-            filename={state.filename}
-          />
-        )}
+        {state.parseResult &&
+          state.fileData &&
+          state.filename &&
+          state.previewUrl && (
+            <Results
+              parseResult={state.parseResult}
+              fileData={state.fileData}
+              filename={state.filename}
+              previewUrl={state.previewUrl}
+            />
+          )}
       </main>
 
       <Divider mt="lg" mb="md" />

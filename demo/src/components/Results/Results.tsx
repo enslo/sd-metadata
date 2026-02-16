@@ -5,6 +5,7 @@ import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
 import { EmbedEditor } from '../EmbedEditor';
+import { SaveBar } from '../SaveBar';
 import { ContentPanel } from './ContentPanel';
 import { ParsedMetadata } from './ParsedMetadata';
 import { ExifSegments, RawChunks } from './RawData';
@@ -13,12 +14,18 @@ interface ResultsProps {
   parseResult: ParseResult;
   fileData: Uint8Array;
   filename: string;
+  previewUrl: string;
 }
 
 /**
  * Results section with parsed, plaintext, raw, and embed tabs
  */
-export function Results({ parseResult, fileData, filename }: ResultsProps) {
+export function Results({
+  parseResult,
+  fileData,
+  filename,
+  previewUrl,
+}: ResultsProps) {
   const t = useStore($t);
   const [activeTab, setActiveTab] = useState<string | null>('parsed');
   const [resetKey, setResetKey] = useState(0);
@@ -41,7 +48,7 @@ export function Results({ parseResult, fileData, filename }: ResultsProps) {
 
   return (
     <Paper className="fade-in" mt="md">
-      <Tabs variant="outline" value={activeTab} onChange={setActiveTab}>
+      <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
           <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>
           <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
@@ -69,6 +76,14 @@ export function Results({ parseResult, fileData, filename }: ResultsProps) {
           />
         </Tabs.Panel>
       </Tabs>
+
+      {activeTab !== 'embed' && (
+        <SaveBar
+          parseResult={parseResult}
+          previewUrl={previewUrl}
+          filename={filename}
+        />
+      )}
     </Paper>
   );
 }
