@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatRaw } from '../../../src/serializers/raw';
+import { formatRaw } from '../../../src/api/stringify';
 import type { RawMetadata } from '../../../src/types';
 
 describe('formatRaw - Unit Tests', () => {

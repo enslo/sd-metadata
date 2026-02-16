@@ -8,7 +8,7 @@ export { write, type WriteResult, type WriteWarning } from './api/write';
 export { embed } from './api/embed';
 
 // Export utility functions
-export { stringify } from './serializers/stringify';
+export { stringify } from './api/stringify';
 
 // Export constants
 export { softwareLabels } from './constants';
@@ -17,8 +17,10 @@ export { softwareLabels } from './constants';
 export { writeAsWebUI } from './api/write-webui';
 
 // Deprecated utility functions (use stringify instead)
-export { formatAsWebUI } from './serializers/a1111';
-export { formatRaw } from './serializers/raw';
+/** @deprecated Use {@link stringify} instead */
+export { buildEmbedText as formatAsWebUI } from './api/stringify';
+/** @deprecated Use {@link stringify} instead */
+export { formatRaw } from './api/stringify';
 
 // Export types (minimal public API)
 export type {

@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { formatRaw } from '../../../src/api/stringify';
+import { stringify } from '../../../src/api/stringify';
 import { read } from '../../../src/index';
-import { formatRaw } from '../../../src/serializers/raw';
-import { stringify } from '../../../src/serializers/stringify';
 
 describe('stringify - Samples', () => {
   const loadSample = (format: 'png' | 'jpg' | 'webp', filename: string) => {

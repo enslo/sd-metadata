@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildEmbedText } from '../../../src/serializers/embed';
+import { buildEmbedText } from '../../../src/api/stringify';
 import type { EmbedMetadata } from '../../../src/types';
 
 describe('buildEmbedText - Unit Tests', () => {

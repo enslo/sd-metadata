@@ -7,7 +7,6 @@
  */
 
 import { createEncodedChunk } from '../converters/chunk-encoding';
-import { buildEmbedText } from '../serializers/embed';
 import type { EmbedMetadata, GenerationMetadata } from '../types';
 import { Result } from '../types';
 import type { ImageFormat } from '../utils/binary';
@@ -15,6 +14,7 @@ import { detectFormat, toUint8Array } from '../utils/binary';
 import { writeJpegMetadata } from '../writers/jpeg';
 import { writePngMetadata } from '../writers/png';
 import { writeWebpMetadata } from '../writers/webp';
+import { buildEmbedText } from './stringify';
 import type { WriteResult } from './write';
 
 /**

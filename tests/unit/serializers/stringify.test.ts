@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildEmbedText } from '../../../src/serializers/embed';
-import { formatRaw } from '../../../src/serializers/raw';
-import { stringify } from '../../../src/serializers/stringify';
+import { buildEmbedText } from '../../../src/api/stringify';
+import { formatRaw } from '../../../src/api/stringify';
+import { stringify } from '../../../src/api/stringify';
 import type {
   EmbedMetadata,
   ParseResult,
