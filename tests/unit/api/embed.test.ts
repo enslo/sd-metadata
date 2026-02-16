@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { embed } from '../../../src/api/embed';
 import { read } from '../../../src/index';
-import type { EmbedMetadata } from '../../../src/types';
+import type {
+  ComfyUIMetadata,
+  EmbedMetadata,
+  NovelAIMetadata,
+  StandardMetadata,
+} from '../../../src/types';
 
 /**
  * Create a minimal valid PNG structure for testing
@@ -170,6 +175,246 @@ describe('embed - Unit Tests', () => {
             const rawText = readResult.raw.chunks.map((c) => c.text).join('\n');
             expect(rawText).toContain('Version: v1.10.0');
           }
+        }
+      }
+    });
+  });
+
+  describe('non-ASCII encoding', () => {
+    it('should write non-ASCII metadata as iTXt chunk in PNG', () => {
+      const png = createMinimalPng();
+      const metadata: EmbedMetadata = {
+        prompt: '素晴らしい, 1girl, かわいい',
+        negativePrompt: 'lowres',
+        width: 512,
+        height: 512,
+      };
+
+      const result = embed(png, metadata);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const readResult = read(result.value);
+        expect(readResult.status).toBe('success');
+        if (readResult.status === 'success') {
+          expect(readResult.metadata.prompt).toBe(
+            '素晴らしい, 1girl, かわいい',
+          );
+        }
+      }
+    });
+  });
+
+  describe('GenerationMetadata input', () => {
+    it('should convert NovelAI metadata to WebUI format', () => {
+      const png = createMinimalPng();
+      const metadata: NovelAIMetadata = {
+        software: 'novelai',
+        prompt: 'main prompt',
+        negativePrompt: 'bad quality',
+        width: 1024,
+        height: 1024,
+        characterPrompts: [
+          {
+            prompt: '1girl, hatsune miku',
+            center: { x: 0.5, y: 0.3 },
+          },
+        ],
+        sampling: {
+          steps: 28,
+          seed: 123456,
+        },
+      };
+
+      const result = embed(png, metadata);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const readResult = read(result.value);
+        expect(readResult.status).toBe('success');
+        if (readResult.status === 'success') {
+          expect(readResult.metadata.software).toBe('sd-webui');
+          expect(readResult.metadata.prompt).toContain('main prompt');
+          expect(readResult.metadata.sampling?.seed).toBe(123456);
+        }
+      }
+    });
+
+    it('should convert ComfyUI metadata to WebUI format', () => {
+      const png = createMinimalPng();
+      const metadata: ComfyUIMetadata = {
+        software: 'comfyui',
+        prompt: 'comfy prompt',
+        negativePrompt: 'comfy negative',
+        width: 512,
+        height: 512,
+        nodes: {
+          '1': {
+            class_type: 'KSampler',
+            inputs: { seed: 9999, steps: 30 },
+          },
+        },
+        sampling: {
+          seed: 9999,
+          steps: 30,
+        },
+      };
+
+      const result = embed(png, metadata);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const readResult = read(result.value);
+        expect(readResult.status).toBe('success');
+        if (readResult.status === 'success') {
+          expect(readResult.metadata.software).toBe('sd-webui');
+          expect(readResult.metadata.prompt).toBe('comfy prompt');
+          expect(readResult.metadata.sampling?.seed).toBe(9999);
+        }
+      }
+    });
+
+    it('should pass through StandardMetadata as-is', () => {
+      const png = createMinimalPng();
+      const metadata: StandardMetadata = {
+        software: 'sd-webui',
+        prompt: 'original webui',
+        negativePrompt: 'bad',
+        width: 512,
+        height: 512,
+        sampling: {
+          steps: 25,
+          sampler: 'DPM++ 2M',
+          seed: 777,
+        },
+      };
+
+      const result = embed(png, metadata);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const readResult = read(result.value);
+        expect(readResult.status).toBe('success');
+        if (readResult.status === 'success') {
+          expect(readResult.metadata.software).toBe('sd-webui');
+          expect(readResult.metadata.prompt).toBe('original webui');
+          expect(readResult.metadata.sampling?.sampler).toBe('DPM++ 2M');
+        }
+      }
+    });
+  });
+
+  describe('hires settings', () => {
+    it('should round-trip metadata with hires settings', () => {
+      const png = createMinimalPng();
+      const metadata: EmbedMetadata = {
+        prompt: 'fantasy landscape, epic, dramatic lighting',
+        negativePrompt: 'lowres, bad anatomy, ugly',
+        width: 1024,
+        height: 768,
+        model: {
+          name: 'my-custom-model-v2.safetensors',
+          hash: 'deadbeef1234',
+        },
+        sampling: {
+          steps: 35,
+          sampler: 'Euler a',
+          scheduler: 'Karras',
+          cfg: 8.5,
+          seed: 424242,
+          clipSkip: 2,
+        },
+        hires: {
+          scale: 2,
+          upscaler: 'R-ESRGAN 4x+',
+          steps: 15,
+          denoise: 0.45,
+        },
+      };
+
+      const result = embed(png, metadata);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const readResult = read(result.value);
+        expect(readResult.status).toBe('success');
+        if (readResult.status === 'success') {
+          const meta = readResult.metadata;
+          expect(meta.prompt).toBe(
+            'fantasy landscape, epic, dramatic lighting',
+          );
+          expect(meta.model?.name).toBe('my-custom-model-v2.safetensors');
+          expect(meta.sampling?.steps).toBe(35);
+          expect(meta.sampling?.cfg).toBe(8.5);
+          expect(meta.sampling?.seed).toBe(424242);
+          expect(meta.sampling?.clipSkip).toBe(2);
+          expect(meta.hires?.scale).toBe(2);
+          expect(meta.hires?.upscaler).toBe('R-ESRGAN 4x+');
+        }
+      }
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty prompt', () => {
+      const png = createMinimalPng();
+      const metadata: EmbedMetadata = {
+        prompt: '',
+        negativePrompt: 'bad',
+        width: 512,
+        height: 512,
+        sampling: { steps: 20 },
+      };
+
+      const result = embed(png, metadata);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const readResult = read(result.value);
+        expect(readResult.status).toBe('success');
+      }
+    });
+
+    it('should handle multiline prompts', () => {
+      const png = createMinimalPng();
+      const metadata: EmbedMetadata = {
+        prompt: 'line1\nline2\nline3',
+        negativePrompt: 'neg1\nneg2',
+        width: 512,
+        height: 512,
+      };
+
+      const result = embed(png, metadata);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const readResult = read(result.value);
+        expect(readResult.status).toBe('success');
+        if (readResult.status === 'success') {
+          expect(readResult.metadata.prompt).toContain('line1');
+          expect(readResult.metadata.prompt).toContain('line2');
+        }
+      }
+    });
+
+    it('should handle zero seed', () => {
+      const png = createMinimalPng();
+      const metadata: EmbedMetadata = {
+        prompt: 'test',
+        negativePrompt: 'bad',
+        width: 512,
+        height: 512,
+        sampling: { seed: 0, steps: 20 },
+      };
+
+      const result = embed(png, metadata);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const readResult = read(result.value);
+        expect(readResult.status).toBe('success');
+        if (readResult.status === 'success') {
+          expect(readResult.metadata.sampling?.seed).toBe(0);
         }
       }
     });
