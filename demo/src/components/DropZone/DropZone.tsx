@@ -30,6 +30,7 @@ export function DropZone({
   previewUrl,
   filename,
   softwareInfo,
+  globalDragOver,
 }: DropZoneProps) {
   const t = useStore($t);
 
@@ -47,6 +48,18 @@ export function DropZone({
       accept={IMAGE_MIME_TYPE}
       multiple={false}
       aria-label={t.dropzone.uploadLabel}
+      styles={{
+        root: {
+          transition: 'all 200ms ease',
+          ...(globalDragOver
+            ? {
+                transform: 'scale(1.02)',
+                borderColor: 'var(--mantine-color-indigo-5)',
+                backgroundColor: 'var(--mantine-color-indigo-light)',
+              }
+            : {}),
+        },
+      }}
     >
       {hasPreview ? (
         <Group wrap="nowrap" gap="lg" align="center">
