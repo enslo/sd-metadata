@@ -61,7 +61,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
     <Stack gap="sm">
       {/* Prompt */}
       <Textarea
-        label={t.embedEditor.prompt}
+        label={t.fields.prompt}
         value={metadata.prompt}
         onChange={(e: { currentTarget: { value: string } }) =>
           onChange({ ...metadata, prompt: val(e) })
@@ -75,7 +75,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
 
       {/* Negative Prompt */}
       <Textarea
-        label={t.embedEditor.negativePrompt}
+        label={t.fields.negativePrompt}
         value={metadata.negativePrompt}
         onChange={(e: { currentTarget: { value: string } }) =>
           onChange({ ...metadata, negativePrompt: val(e) })
@@ -90,7 +90,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
       {/* Width / Height */}
       <Group grow>
         <NumberInput
-          label={t.embedEditor.width}
+          label={t.fields.width}
           min={0}
           step={1}
           value={metadata.width}
@@ -99,7 +99,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
           }
         />
         <NumberInput
-          label={t.embedEditor.height}
+          label={t.fields.height}
           min={0}
           step={1}
           value={metadata.height}
@@ -117,11 +117,11 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
       >
         {/* Model */}
         <Accordion.Item value="model">
-          <Accordion.Control>{t.embedEditor.model}</Accordion.Control>
+          <Accordion.Control>{t.fields.model}</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="sm">
               <TextInput
-                label={t.embedEditor.modelName}
+                label={t.fields.modelName}
                 value={metadata.model?.name ?? ''}
                 onChange={(e: { currentTarget: { value: string } }) =>
                   onChange({
@@ -134,7 +134,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                 }
               />
               <TextInput
-                label={t.embedEditor.modelHash}
+                label={t.fields.modelHash}
                 value={metadata.model?.hash ?? ''}
                 onChange={(e: { currentTarget: { value: string } }) =>
                   onChange({
@@ -152,12 +152,12 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
 
         {/* Sampling */}
         <Accordion.Item value="sampling">
-          <Accordion.Control>{t.embedEditor.sampling}</Accordion.Control>
+          <Accordion.Control>{t.fields.sampling}</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="sm">
               <Group grow>
                 <TextInput
-                  label={t.embedEditor.sampler}
+                  label={t.fields.sampler}
                   value={metadata.sampling?.sampler ?? ''}
                   onChange={(e: { currentTarget: { value: string } }) =>
                     onChange({
@@ -170,7 +170,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                   }
                 />
                 <TextInput
-                  label={t.embedEditor.scheduler}
+                  label={t.fields.scheduler}
                   value={metadata.sampling?.scheduler ?? ''}
                   onChange={(e: { currentTarget: { value: string } }) =>
                     onChange({
@@ -185,7 +185,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               </Group>
               <Group grow>
                 <NumberInput
-                  label={t.embedEditor.steps}
+                  label={t.fields.steps}
                   min={1}
                   value={metadata.sampling?.steps ?? ''}
                   onChange={(v: string | number) =>
@@ -196,7 +196,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                   }
                 />
                 <NumberInput
-                  label={t.embedEditor.cfg}
+                  label={t.fields.cfg}
                   min={0}
                   step={0.5}
                   decimalScale={1}
@@ -211,7 +211,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               </Group>
               <Group grow>
                 <NumberInput
-                  label={t.embedEditor.seed}
+                  label={t.fields.seed}
                   min={0}
                   value={metadata.sampling?.seed ?? ''}
                   onChange={(v: string | number) =>
@@ -222,7 +222,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                   }
                 />
                 <NumberInput
-                  label={t.embedEditor.clipSkip}
+                  label={t.fields.clipSkip}
                   min={1}
                   value={metadata.sampling?.clipSkip ?? ''}
                   onChange={(v: string | number) =>
@@ -239,11 +239,11 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
 
         {/* Hires.fix */}
         <Accordion.Item value="hires">
-          <Accordion.Control>{t.embedEditor.hires}</Accordion.Control>
+          <Accordion.Control>{t.fields.hires}</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="sm">
               <TextInput
-                label={t.embedEditor.hiresUpscaler}
+                label={t.fields.upscaler}
                 value={metadata.hires?.upscaler ?? ''}
                 onChange={(e: { currentTarget: { value: string } }) =>
                   onChange({
@@ -257,7 +257,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               />
               <Group grow>
                 <NumberInput
-                  label={t.embedEditor.hiresScale}
+                  label={t.fields.scale}
                   min={1}
                   step={0.1}
                   decimalScale={2}
@@ -270,7 +270,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                   }
                 />
                 <NumberInput
-                  label={t.embedEditor.hiresSteps}
+                  label={t.fields.steps}
                   min={1}
                   value={metadata.hires?.steps ?? ''}
                   onChange={(v: string | number) =>
@@ -282,7 +282,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                 />
               </Group>
               <NumberInput
-                label={t.embedEditor.hiresDenoise}
+                label={t.fields.denoise}
                 min={0}
                 max={1}
                 step={0.05}

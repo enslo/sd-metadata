@@ -4,7 +4,6 @@ import { Anchor, Container, Divider, Text, Title } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { DropZone } from './components/DropZone/DropZone';
-import { EmbedEditor } from './components/EmbedEditor';
 import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
 import { LanguageSwitcher } from './components/LanguageSwitcher/LanguageSwitcher';
 import { Results } from './components/Results/Results';
@@ -70,7 +69,6 @@ export function App() {
       setGlobalDragOver(false);
       const file = e.dataTransfer?.files[0];
       if (file) {
-        // Inline file handling to avoid dependency issues
         const url = URL.createObjectURL(file);
         file.arrayBuffer().then((buffer) => {
           const data = new Uint8Array(buffer);
@@ -140,10 +138,8 @@ export function App() {
           globalDragOver={globalDragOver}
         />
 
-        {state.parseResult && <Results parseResult={state.parseResult} />}
-
         {state.parseResult && state.fileData && state.filename && (
-          <EmbedEditor
+          <Results
             parseResult={state.parseResult}
             fileData={state.fileData}
             filename={state.filename}

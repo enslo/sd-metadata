@@ -1,6 +1,8 @@
-import type { GenerationMetadata } from '@enslo/sd-metadata';
+import type { CharacterPrompt, GenerationMetadata } from '@enslo/sd-metadata';
 import { Group, Stack, Text, Title } from '@mantine/core';
+import { useStore } from '@nanostores/preact';
 import type { ComponentChildren } from 'preact';
+import { $t } from '../../i18n';
 import { CopyButton } from '../CopyButton/CopyButton';
 
 interface ParsedMetadataProps {
@@ -11,11 +13,13 @@ interface ParsedMetadataProps {
  * Display parsed generation metadata
  */
 export function ParsedMetadata({ metadata }: ParsedMetadataProps) {
+  const t = useStore($t);
+
   return (
     <Stack gap="md">
       {/* Prompt */}
       {metadata.prompt && (
-        <Section title="Prompt" copyValue={metadata.prompt}>
+        <Section title={t.fields.prompt} copyValue={metadata.prompt}>
           <Text
             style={{
               fontFamily: 'var(--mantine-font-family-monospace)',
@@ -31,7 +35,10 @@ export function ParsedMetadata({ metadata }: ParsedMetadataProps) {
 
       {/* Negative Prompt */}
       {metadata.negativePrompt && (
-        <Section title="Negative Prompt" copyValue={metadata.negativePrompt}>
+        <Section
+          title={t.fields.negativePrompt}
+          copyValue={metadata.negativePrompt}
+        >
           <Text
             style={{
               fontFamily: 'var(--mantine-font-family-monospace)',
@@ -49,31 +56,33 @@ export function ParsedMetadata({ metadata }: ParsedMetadataProps) {
       {metadata.software === 'novelai' &&
         metadata.characterPrompts &&
         metadata.characterPrompts.length > 0 && (
-          <Section title="Character Prompts">
+          <Section title={t.fields.characterPrompts}>
             <Stack gap="sm">
-              {metadata.characterPrompts.map((char, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: character prompts have no unique identifier
-                <div key={`character-${i}`}>
-                  <Group justify="space-between" mb={4}>
-                    <Text size="sm" fw={500}>
-                      Character {i + 1}
-                      {char.center &&
-                        ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`}
+              {metadata.characterPrompts.map(
+                (char: CharacterPrompt, i: number) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: character prompts have no unique identifier
+                  <div key={`character-${i}`}>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm" fw={500}>
+                        Character {i + 1}
+                        {char.center &&
+                          ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`}
+                      </Text>
+                      <CopyButton value={char.prompt} />
+                    </Group>
+                    <Text
+                      style={{
+                        fontFamily: 'var(--mantine-font-family-monospace)',
+                        fontSize: '0.85rem',
+                        whiteSpace: 'pre-wrap',
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {char.prompt}
                     </Text>
-                    <CopyButton value={char.prompt} />
-                  </Group>
-                  <Text
-                    style={{
-                      fontFamily: 'var(--mantine-font-family-monospace)',
-                      fontSize: '0.85rem',
-                      whiteSpace: 'pre-wrap',
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {char.prompt}
-                  </Text>
-                </div>
-              ))}
+                  </div>
+                ),
+              )}
             </Stack>
           </Section>
         )}
@@ -104,12 +113,15 @@ function Section({ title, copyValue, children }: SectionProps) {
   );
 }
 
+type FieldLabels = ReturnType<typeof useStore<typeof $t>>['fields'];
+
 function GenerationSettings({ metadata }: { metadata: GenerationMetadata }) {
-  const settings = buildSettingsList(metadata);
+  const t = useStore($t);
+  const settings = buildSettingsList(metadata, t.fields);
   if (settings.length === 0) return null;
 
   return (
-    <Section title="Generation Settings">
+    <Section title={t.fields.generationSettings}>
       <Stack gap={4}>
         {settings.map(([label, value, copyable]) => (
           <Group key={label} justify="space-between" wrap="nowrap">
@@ -134,47 +146,48 @@ function GenerationSettings({ metadata }: { metadata: GenerationMetadata }) {
  */
 function buildSettingsList(
   metadata: GenerationMetadata,
+  f: FieldLabels,
 ): [string, unknown, boolean][] {
   const settings: [string, unknown, boolean][] = [];
 
   // Model
   if (metadata.model) {
     if (metadata.model.name)
-      settings.push(['Model', metadata.model.name, false]);
+      settings.push([f.model, metadata.model.name, false]);
     if (metadata.model.hash)
-      settings.push(['Model Hash', metadata.model.hash, false]);
+      settings.push([f.modelHash, metadata.model.hash, false]);
   }
 
   // Sampling
   if (metadata.sampling) {
     const s = metadata.sampling;
-    if (s.sampler) settings.push(['Sampler', s.sampler, false]);
-    if (s.scheduler) settings.push(['Scheduler', s.scheduler, false]);
-    if (s.steps) settings.push(['Steps', s.steps, false]);
-    if (s.cfg) settings.push(['CFG Scale', s.cfg, false]);
-    if (s.seed) settings.push(['Seed', s.seed, true]);
-    if (s.clipSkip) settings.push(['CLIP Skip', s.clipSkip, false]);
+    if (s.sampler) settings.push([f.sampler, s.sampler, false]);
+    if (s.scheduler) settings.push([f.scheduler, s.scheduler, false]);
+    if (s.steps) settings.push([f.steps, s.steps, false]);
+    if (s.cfg) settings.push([f.cfg, s.cfg, false]);
+    if (s.seed) settings.push([f.seed, s.seed, true]);
+    if (s.clipSkip) settings.push([f.clipSkip, s.clipSkip, false]);
   }
 
   // Hires/Upscale
   if (metadata.hires) {
     const hr = metadata.hires;
-    if (hr.upscaler) settings.push(['Upscaler', hr.upscaler, false]);
-    if (hr.scale) settings.push(['Hires Scale', hr.scale, false]);
-    if (hr.steps) settings.push(['Hires Steps', hr.steps, false]);
-    if (hr.denoise) settings.push(['Hires Denoise', hr.denoise, false]);
+    if (hr.upscaler) settings.push([f.upscaler, hr.upscaler, false]);
+    if (hr.scale) settings.push([f.hiresScale, hr.scale, false]);
+    if (hr.steps) settings.push([f.hiresSteps, hr.steps, false]);
+    if (hr.denoise) settings.push([f.hiresDenoise, hr.denoise, false]);
   }
 
   // Upscale (post-generation)
   if (metadata.upscale) {
     const u = metadata.upscale;
-    if (u.upscaler) settings.push(['Upscaler', u.upscaler, false]);
-    if (u.scale) settings.push(['Upscale Factor', u.scale, false]);
+    if (u.upscaler) settings.push([f.upscaler, u.upscaler, false]);
+    if (u.scale) settings.push([f.upscaleFactor, u.scale, false]);
   }
 
   // Image Size
-  settings.push(['Width', metadata.width, false]);
-  settings.push(['Height', metadata.height, false]);
+  settings.push([f.width, metadata.width, false]);
+  settings.push([f.height, metadata.height, false]);
 
   return settings;
 }

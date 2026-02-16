@@ -11,9 +11,10 @@
   },
   "results": {
     "tabs": {
-      "parsed": "Parsed Metadata",
+      "parsed": "Metadata",
       "plaintext": "Plain Text",
-      "raw": "Raw Data"
+      "raw": "Raw Data",
+      "embed": "Edit"
     },
     "errors": {
       "invalid": "Invalid image file",
@@ -23,22 +24,11 @@
       "noPlainText": "No text representation available"
     }
   },
-  "languageSwitcher": {
-    "ariaLabel": "Switch language",
-    "switchToJapanese": "Switch to Japanese",
-    "switchToEnglish": "Switch to English"
-  },
-  "saveFab": {
-    "buttonLabel": "Save image with metadata",
-    "menuLabel": "Select output format",
-    "to": "to",
-    "keepMetadata": "Keep metadata"
-  },
-  "embedEditor": {
-    "title": "Embed Metadata",
-    "description": "Edit and embed metadata into the image",
+  "fields": {
     "prompt": "Prompt",
     "negativePrompt": "Negative Prompt",
+    "characterPrompts": "Character Prompts",
+    "generationSettings": "Generation Settings",
     "width": "Width",
     "height": "Height",
     "model": "Model",
@@ -52,10 +42,26 @@
     "seed": "Seed",
     "clipSkip": "CLIP Skip",
     "hires": "Hires.fix",
-    "hiresUpscaler": "Upscaler",
-    "hiresScale": "Scale",
-    "hiresSteps": "Steps",
-    "hiresDenoise": "Denoise",
+    "upscaler": "Upscaler",
+    "scale": "Scale",
+    "denoise": "Denoise",
+    "hiresScale": "Hires Scale",
+    "hiresSteps": "Hires Steps",
+    "hiresDenoise": "Hires Denoise",
+    "upscaleFactor": "Upscale Factor"
+  },
+  "languageSwitcher": {
+    "label": "EN",
+    "ariaLabel": "Switch language",
+    "description": "日本語に切り替え"
+  },
+  "saveFab": {
+    "buttonLabel": "Save image with metadata",
+    "menuLabel": "Select output format",
+    "to": "to",
+    "keepMetadata": "Keep metadata"
+  },
+  "embedEditor": {
     "extras": "Extras",
     "extrasDescription": "Additional key-value pairs for the settings line",
     "addExtra": "Add",
