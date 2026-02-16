@@ -1,9 +1,16 @@
-import type { MetadataSegment, WebpWriteResult } from '../types';
+import type { MetadataSegment } from '../types';
 import { Result } from '../types';
 import { arraysEqual, writeUint32LE } from '../utils/binary';
 import { buildExifTiffData } from './exif';
 
 import { isWebp } from '../utils/binary';
+
+// Internal types (co-located with writer)
+type WebpWriteError =
+  | { type: 'invalidSignature' }
+  | { type: 'invalidRiffStructure'; message: string };
+
+type WebpWriteResult = Result<Uint8Array, WebpWriteError>;
 
 /** WebP file signature: "RIFF" */
 const RIFF_SIGNATURE = new Uint8Array([0x52, 0x49, 0x46, 0x46]);

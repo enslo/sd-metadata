@@ -1,8 +1,8 @@
-import type { InternalParseResult } from '../types';
 import { Result } from '../types';
 import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import type { InternalParseResult } from './types';
 
 /**
  * InvokeAI metadata JSON structure

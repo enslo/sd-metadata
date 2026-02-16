@@ -1,8 +1,15 @@
-import type { JpegWriteResult, MetadataSegment } from '../types';
+import type { MetadataSegment } from '../types';
 import { Result } from '../types';
 import { buildExifTiffData } from './exif';
 
 import { isJpeg } from '../utils/binary';
+
+// Internal types (co-located with writer)
+type JpegWriteError =
+  | { type: 'invalidSignature' }
+  | { type: 'corruptedStructure'; message: string };
+
+type JpegWriteResult = Result<Uint8Array, JpegWriteError>;
 
 /** APP1 marker */
 const APP1_MARKER = 0xe1;

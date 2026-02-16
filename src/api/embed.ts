@@ -9,13 +9,13 @@
 import { createEncodedChunk } from '../converters/chunk-encoding';
 import type { EmbedMetadata, GenerationMetadata } from '../types';
 import { Result } from '../types';
+import type { WriteResult } from '../types';
 import type { ImageFormat } from '../utils/binary';
 import { detectFormat, toUint8Array } from '../utils/binary';
 import { writeJpegMetadata } from '../writers/jpeg';
 import { writePngMetadata } from '../writers/png';
 import { writeWebpMetadata } from '../writers/webp';
 import { buildEmbedText } from './stringify';
-import type { WriteResult } from './write';
 
 /**
  * Embed metadata into an image

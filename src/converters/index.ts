@@ -4,13 +4,9 @@
  * Provides functions to convert metadata between different image formats.
  */
 
-import type {
-  ConversionResult,
-  ConversionTargetFormat,
-  ParseResult,
-  RawMetadata,
-} from '../types';
+import type { ParseResult, RawMetadata } from '../types';
 import { Result } from '../types';
+
 import { convertA1111PngToSegments, convertA1111SegmentsToPng } from './a1111';
 import {
   convertCivitaiPngToSegments,
@@ -45,6 +41,16 @@ import {
   convertTensorArtPngToSegments,
   convertTensorArtSegmentsToPng,
 } from './tensorart';
+
+// Internal types
+type ConversionTargetFormat = 'png' | 'jpeg' | 'webp';
+
+type ConversionError =
+  | { type: 'missingRawData' }
+  | { type: 'invalidParseResult'; status: string }
+  | { type: 'unsupportedSoftware'; software: string };
+
+type ConversionResult = Result<RawMetadata, ConversionError>;
 
 /**
  * Convert metadata from one format to another

@@ -1,8 +1,9 @@
-import type { ComfyNodeGraph, InternalParseResult } from '../types';
+import type { ComfyNodeGraph } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import type { InternalParseResult } from './types';
 
 /**
  * SwarmUI parameters JSON structure
