@@ -7,6 +7,11 @@
   padding: 0;
 }
 
+/* Prevent layout shift from scrollbar appearing/disappearing */
+html {
+  overflow-y: scroll;
+}
+
 /* Fade-in animation */
 @keyframes fadeIn {
   from {

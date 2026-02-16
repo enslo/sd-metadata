@@ -77,7 +77,12 @@ export function DropZone({
               {filename}
             </Text>
             <Group justify="space-between" align="center">
-              <Badge color={badgeColor} variant="filled" size="md">
+              <Badge
+                color={badgeColor}
+                variant="filled"
+                size="lg"
+                style={{ textTransform: 'none' }}
+              >
                 {softwareInfo?.label || t.dropzone.unknown}
               </Badge>
               <Text size="xs" c="dimmed">

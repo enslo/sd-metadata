@@ -1,5 +1,5 @@
 import type { CharacterPrompt, GenerationMetadata } from '@enslo/sd-metadata';
-import { Divider, Group, Stack, Text, Title } from '@mantine/core';
+import { Divider, Group, Stack, Text } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import type { ComponentChildren } from 'preact';
 import { $t } from '../../i18n';
@@ -64,7 +64,15 @@ export function ParsedMetadata({ metadata }: ParsedMetadataProps) {
                   // biome-ignore lint/suspicious/noArrayIndexKey: character prompts have no unique identifier
                   <div key={`character-${i}`}>
                     <Group justify="space-between" mb={4}>
-                      <Text size="sm" fw={500}>
+                      <Text
+                        size="xs"
+                        fw={700}
+                        c="dimmed"
+                        style={{
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                        }}
+                      >
                         Character {i + 1}
                         {char.center &&
                           ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`}
@@ -104,9 +112,14 @@ function Section({ title, copyValue, children }: SectionProps) {
   return (
     <ContentPanel>
       <Group justify="space-between" mb="xs">
-        <Title order={4} size="sm">
+        <Text
+          size="xs"
+          fw={700}
+          c="dimmed"
+          style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+        >
           {title}
-        </Title>
+        </Text>
         {copyValue !== undefined && <CopyButton value={copyValue} />}
       </Group>
       {children}
