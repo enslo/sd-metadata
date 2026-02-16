@@ -64,6 +64,11 @@
     "saveButton": "Save",
     "processing": "Processing..."
   },
+  "themeToggle": {
+    "ariaLabel": "Toggle color theme",
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode"
+  },
   "embedEditor": {
     "extras": "Extras",
     "extrasDescription": "Additional key-value pairs for the settings line",

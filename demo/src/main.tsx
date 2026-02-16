@@ -20,7 +20,7 @@ initLocale();
 const root = document.getElementById('app');
 if (root) {
   render(
-    <MantineProvider theme={theme} forceColorScheme="dark">
+    <MantineProvider theme={theme} defaultColorScheme="dark">
       <App />
     </MantineProvider>,
     root,

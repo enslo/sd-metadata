@@ -1,6 +1,14 @@
 import { read } from '@enslo/sd-metadata';
 import type { ParseResult } from '@enslo/sd-metadata';
-import { Anchor, Container, Divider, Stack, Text, Title } from '@mantine/core';
+import {
+  Anchor,
+  Container,
+  Divider,
+  Group,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { DropZone } from './components/DropZone/DropZone';
@@ -8,6 +16,7 @@ import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
 import { LanguageSwitcher } from './components/LanguageSwitcher/LanguageSwitcher';
 import { Results } from './components/Results/Results';
 import { ScrollToTop } from './components/ScrollToTop/ScrollToTop';
+import { ThemeToggle } from './components/ThemeToggle/ThemeToggle';
 import { $t } from './i18n';
 import { getSoftwareLabel } from './utils';
 
@@ -118,7 +127,21 @@ export function App() {
 
   return (
     <Container size={1000} py="xl">
-      <LanguageSwitcher />
+      <Group
+        gap={0}
+        className="toolbar-fixed"
+        bg="var(--mantine-color-body)"
+        style={{
+          position: 'fixed',
+          top: 8,
+          left: 8,
+          zIndex: 100,
+          borderRadius: 'var(--mantine-radius-md)',
+        }}
+      >
+        <LanguageSwitcher />
+        <ThemeToggle />
+      </Group>
       <GitHubCorner url={GITHUB_URL} />
 
       <Stack gap="lg">

@@ -64,6 +64,11 @@
     "saveButton": "保存",
     "processing": "処理中..."
   },
+  "themeToggle": {
+    "ariaLabel": "カラーテーマを切り替え",
+    "switchToLight": "ライトモードに切り替え",
+    "switchToDark": "ダークモードに切り替え"
+  },
   "embedEditor": {
     "extras": "追加パラメータ",
     "extrasDescription": "設定行に追加するキーと値のペア",

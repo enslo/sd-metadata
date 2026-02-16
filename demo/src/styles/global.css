@@ -22,3 +22,11 @@
 .fade-in {
   animation: fadeIn 0.3s ease;
 }
+
+/* Shrink top-left toolbar on small screens */
+@media (max-width: 480px) {
+  .toolbar-fixed {
+    transform: scale(0.85);
+    transform-origin: top left;
+  }
+}
