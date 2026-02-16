@@ -7,7 +7,7 @@ import { DropZone } from './components/DropZone/DropZone';
 import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
 import { LanguageSwitcher } from './components/LanguageSwitcher/LanguageSwitcher';
 import { Results } from './components/Results/Results';
-import { SaveFab } from './components/SaveFab';
+import { SaveBar } from './components/SaveBar';
 import { ScrollToTop } from './components/ScrollToTop/ScrollToTop';
 import { $t } from './i18n';
 import { getSoftwareLabel } from './utils';
@@ -138,6 +138,14 @@ export function App() {
           globalDragOver={globalDragOver}
         />
 
+        {state.parseResult && state.previewUrl && state.filename && (
+          <SaveBar
+            parseResult={state.parseResult}
+            previewUrl={state.previewUrl}
+            filename={state.filename}
+          />
+        )}
+
         {state.parseResult && state.fileData && state.filename && (
           <Results
             parseResult={state.parseResult}
@@ -157,13 +165,6 @@ export function App() {
         </Text>
       </footer>
 
-      {state.parseResult && state.previewUrl && state.filename && (
-        <SaveFab
-          previewUrl={state.previewUrl}
-          parseResult={state.parseResult}
-          filename={state.filename}
-        />
-      )}
       <ScrollToTop />
     </Container>
   );

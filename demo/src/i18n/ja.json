@@ -55,11 +55,14 @@
     "ariaLabel": "言語を切り替え",
     "description": "Switch to English"
   },
-  "saveFab": {
-    "buttonLabel": "メタデータ付きで画像を保存",
-    "menuLabel": "出力形式を選択",
-    "to": "から",
-    "keepMetadata": "メタデータを保持"
+  "saveBar": {
+    "keepMetadata": "メタデータを保持",
+    "metadataFormat": "メタデータ形式",
+    "metadataFormatOriginal": "オリジナル",
+    "metadataFormatA1111": "A1111",
+    "outputFormat": "出力形式",
+    "saveButton": "保存",
+    "processing": "処理中..."
   },
   "embedEditor": {
     "extras": "追加パラメータ",

@@ -55,11 +55,14 @@
     "ariaLabel": "Switch language",
     "description": "日本語に切り替え"
   },
-  "saveFab": {
-    "buttonLabel": "Save image with metadata",
-    "menuLabel": "Select output format",
-    "to": "to",
-    "keepMetadata": "Keep metadata"
+  "saveBar": {
+    "keepMetadata": "Keep metadata",
+    "metadataFormat": "Metadata format",
+    "metadataFormatOriginal": "Original",
+    "metadataFormatA1111": "A1111",
+    "outputFormat": "Output format",
+    "saveButton": "Save",
+    "processing": "Processing..."
   },
   "embedEditor": {
     "extras": "Extras",

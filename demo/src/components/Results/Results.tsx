@@ -41,7 +41,7 @@ export function Results({ parseResult, fileData, filename }: ResultsProps) {
 
   return (
     <Paper className="fade-in" mt="md">
-      <Tabs value={activeTab} onChange={setActiveTab}>
+      <Tabs variant="outline" value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
           <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>
           <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
