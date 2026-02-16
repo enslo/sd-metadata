@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { writeAsWebUI } from '../../src/api/write-webui';
+import { embed } from '../../src/api/embed';
 import { read } from '../../src/index';
 import type { StandardMetadata } from '../../src/types';
 import {
@@ -22,7 +22,7 @@ function loadSample(
   return new Uint8Array(fs.readFileSync(filePath));
 }
 
-describe('writeAsWebUI - Integration Tests', () => {
+describe('embed - Integration Tests', () => {
   describe('round-trip tests', () => {
     it('should allow reading back written metadata (PNG)', () => {
       const png = createMinimalPng();
@@ -44,17 +44,14 @@ describe('writeAsWebUI - Integration Tests', () => {
         },
       };
 
-      // Write metadata
-      const writeResult = writeAsWebUI(png, metadata);
+      const writeResult = embed(png, metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
-      // Read back
       const readResult = read(writeResult.value);
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      // Verify metadata matches
       expect(readResult.metadata.software).toBe('sd-webui');
       expect(readResult.metadata.prompt).toBe(
         'custom test prompt, masterpiece',
@@ -81,7 +78,7 @@ describe('writeAsWebUI - Integration Tests', () => {
         },
       };
 
-      const writeResult = writeAsWebUI(jpeg, metadata);
+      const writeResult = embed(jpeg, metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -106,7 +103,7 @@ describe('writeAsWebUI - Integration Tests', () => {
         },
       };
 
-      const writeResult = writeAsWebUI(webp, metadata);
+      const writeResult = embed(webp, metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -129,7 +126,7 @@ describe('writeAsWebUI - Integration Tests', () => {
       };
 
       // First write
-      const write1 = writeAsWebUI(png, metadata1);
+      const write1 = embed(png, metadata1);
       expect(write1.ok).toBe(true);
       if (!write1.ok) return;
 
@@ -149,7 +146,7 @@ describe('writeAsWebUI - Integration Tests', () => {
         sampling: { seed: 222, steps: 20 },
       };
 
-      const write2 = writeAsWebUI(write1.value, metadata2);
+      const write2 = embed(write1.value, metadata2);
       expect(write2.ok).toBe(true);
       if (!write2.ok) return;
 
@@ -168,24 +165,18 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      // Get base JPEG (minimal image for clean write target)
       const jpegBase = createMinimalJpeg();
 
-      // Write NovelAI metadata to JPEG in WebUI format
-      const writeResult = writeAsWebUI(jpegBase, readResult.metadata);
+      const writeResult = embed(jpegBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
-      // Read back
       const jpegRead = read(writeResult.value);
       expect(jpegRead.status).toBe('success');
       if (jpegRead.status !== 'success') return;
 
-      // Should be WebUI format now
       expect(jpegRead.metadata.software).toBe('sd-webui');
-      // Main prompt should be preserved
       expect(jpegRead.metadata.prompt).toBe(readResult.metadata.prompt);
-      // Sampling info should be preserved
       expect(jpegRead.metadata.sampling?.seed).toBe(
         readResult.metadata.sampling?.seed,
       );
@@ -199,7 +190,7 @@ describe('writeAsWebUI - Integration Tests', () => {
 
       const webpBase = createMinimalWebp();
 
-      const writeResult = writeAsWebUI(webpBase, readResult.metadata);
+      const writeResult = embed(webpBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -208,7 +199,6 @@ describe('writeAsWebUI - Integration Tests', () => {
       if (webpRead.status !== 'success') return;
 
       expect(webpRead.metadata.software).toBe('sd-webui');
-      // Prompt content is preserved (trailing space is normalized)
       expect(webpRead.metadata.prompt).toContain('hatsune miku');
     });
 
@@ -220,7 +210,7 @@ describe('writeAsWebUI - Integration Tests', () => {
 
       const pngBase = createMinimalPng();
 
-      const writeResult = writeAsWebUI(pngBase, readResult.metadata);
+      const writeResult = embed(pngBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -228,9 +218,7 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(pngRead.status).toBe('success');
       if (pngRead.status !== 'success') return;
 
-      // Should preserve main prompt (character prompts are embedded separately)
       expect(pngRead.metadata.prompt).toContain(readResult.metadata.prompt);
-      // Character prompts should be embedded in the text format
       expect(pngRead.metadata.software).toBe('sd-webui');
     });
 
@@ -242,7 +230,7 @@ describe('writeAsWebUI - Integration Tests', () => {
 
       const jpegBase = createMinimalJpeg();
 
-      const writeResult = writeAsWebUI(jpegBase, readResult.metadata);
+      const writeResult = embed(jpegBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -250,7 +238,6 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(jpegRead.status).toBe('success');
       if (jpegRead.status !== 'success') return;
 
-      // Hires settings should be preserved
       expect(jpegRead.metadata.hires).toBeDefined();
       if (jpegRead.metadata.hires && readResult.metadata.hires) {
         expect(jpegRead.metadata.hires.scale).toBe(
@@ -270,7 +257,6 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      //Modify metadata - use explicit typing to avoid spread type issues
       const modifiedMetadata: StandardMetadata = {
         software: 'sd-webui',
         prompt: `MODIFIED: ${readResult.metadata.prompt}`,
@@ -283,8 +269,7 @@ describe('writeAsWebUI - Integration Tests', () => {
         },
       };
 
-      // Write to minimal image (clean target)
-      const writeResult = writeAsWebUI(createMinimalPng(), modifiedMetadata);
+      const writeResult = embed(createMinimalPng(), modifiedMetadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -300,7 +285,6 @@ describe('writeAsWebUI - Integration Tests', () => {
     it('should allow adding fields to minimal metadata', () => {
       const png = createMinimalPng();
 
-      // Start with minimal metadata
       const minimalMetadata: StandardMetadata = {
         software: 'sd-webui',
         prompt: 'minimal',
@@ -309,11 +293,10 @@ describe('writeAsWebUI - Integration Tests', () => {
         height: 512,
       };
 
-      const write1 = writeAsWebUI(png, minimalMetadata);
+      const write1 = embed(png, minimalMetadata);
       expect(write1.ok).toBe(true);
       if (!write1.ok) return;
 
-      // Add more fields
       const enhancedMetadata: StandardMetadata = {
         ...minimalMetadata,
         model: {
@@ -332,7 +315,7 @@ describe('writeAsWebUI - Integration Tests', () => {
         },
       };
 
-      const write2 = writeAsWebUI(write1.value, enhancedMetadata);
+      const write2 = embed(write1.value, enhancedMetadata);
       expect(write2.ok).toBe(true);
       if (!write2.ok) return;
 
@@ -357,7 +340,7 @@ describe('writeAsWebUI - Integration Tests', () => {
         height: 512,
       };
 
-      const writeResult = writeAsWebUI(png, metadata);
+      const writeResult = embed(png, metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -368,7 +351,6 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.metadata.prompt).toBe(
         '美しい風景, masterpiece, 最高品質 🌸',
       );
-      // Negative prompt may include Size if it has no other content
       expect(readResult.metadata.negativePrompt).toContain('低解像度, 悪い');
     });
 
@@ -382,7 +364,7 @@ describe('writeAsWebUI - Integration Tests', () => {
         height: 512,
       };
 
-      const writeResult = writeAsWebUI(png, metadata);
+      const writeResult = embed(png, metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -390,7 +372,6 @@ describe('writeAsWebUI - Integration Tests', () => {
       expect(readResult.status).toBe('success');
       if (readResult.status !== 'success') return;
 
-      // Line endings should be normalized to \\n
       expect(readResult.metadata.prompt).toContain('line1');
       expect(readResult.metadata.prompt).toContain('line2');
       expect(readResult.metadata.prompt).toContain('line3');
@@ -406,7 +387,7 @@ describe('writeAsWebUI - Integration Tests', () => {
 
       const jpegBase = createMinimalJpeg();
 
-      const writeResult = writeAsWebUI(jpegBase, readResult.metadata);
+      const writeResult = embed(jpegBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 
@@ -427,7 +408,7 @@ describe('writeAsWebUI - Integration Tests', () => {
 
       const webpBase = createMinimalWebp();
 
-      const writeResult = writeAsWebUI(webpBase, readResult.metadata);
+      const writeResult = embed(webpBase, readResult.metadata);
       expect(writeResult.ok).toBe(true);
       if (!writeResult.ok) return;
 

@@ -1,40 +1,39 @@
 /**
  * Embed API for sd-metadata
  *
- * Flexible metadata writing that accepts EmbedMetadata (no software field
- * required) and optional extras for custom settings line entries.
- * Writes metadata in A1111 format to PNG, JPEG, or WebP images.
+ * Write user-created or parsed metadata in A1111 format to PNG, JPEG,
+ * or WebP images. Accepts both EmbedMetadata (custom metadata composed
+ * by the user) and GenerationMetadata (parsed output from AI tools).
  */
 
 import { createEncodedChunk } from '../converters/chunk-encoding';
-import { buildEmbedText } from '../serializers/embed';
-import type { EmbedMetadata } from '../types';
+import type { EmbedMetadata, GenerationMetadata } from '../types';
 import { Result } from '../types';
 import type { ImageFormat } from '../utils/binary';
 import { detectFormat, toUint8Array } from '../utils/binary';
 import { writeJpegMetadata } from '../writers/jpeg';
 import { writePngMetadata } from '../writers/png';
 import { writeWebpMetadata } from '../writers/webp';
+import { buildEmbedText } from './stringify';
 import type { WriteResult } from './write';
 
 /**
  * Embed metadata into an image
  *
- * Converts the provided EmbedMetadata (and optional extras) to A1111 plain
- * text format and embeds it into the image. Unlike writeAsWebUI, this function
- * does not require a `software` field, making it ideal for user-created metadata.
+ * Converts the provided metadata to A1111 plain text format and embeds it
+ * into the image. Accepts {@link EmbedMetadata} for user-created custom metadata, or
+ * {@link GenerationMetadata} for re-embedding parsed output from any AI tool.
  *
- * Extras allow adding arbitrary key-value pairs to the settings line.
- * If an extras key matches a structured field (e.g., "Steps"), the extras
- * value overrides the structured value at its original position.
+ * Extras (`metadata.extras`) allow adding arbitrary key-value pairs to the
+ * settings line. If an extras key matches a structured field (e.g., "Steps"),
+ * the extras value overrides the structured value at its original position.
  *
  * The metadata is stored differently based on image format:
  * - PNG: `parameters` tEXt/iTXt chunk (encoding auto-selected based on content)
  * - JPEG/WebP: Exif UserComment field
  *
  * @param input - Target image file data (Uint8Array or ArrayBuffer)
- * @param metadata - Metadata to embed (no software field required)
- * @param extras - Optional key-value pairs for the settings line
+ * @param metadata - Metadata to embed (EmbedMetadata or GenerationMetadata)
  * @returns New image data with embedded metadata, or error
  *
  * @example
@@ -51,9 +50,9 @@ import type { WriteResult } from './write';
  * };
  *
  * // Embed with custom extras
- * const result = embed(imageData, metadata, {
- *   Version: 'v1.10.0',
- *   'Lora hashes': 'abc123',
+ * const result = embed(imageData, {
+ *   ...metadata,
+ *   extras: { Version: 'v1.10.0', 'Lora hashes': 'abc123' },
  * });
  *
  * if (result.ok) {
@@ -63,8 +62,7 @@ import type { WriteResult } from './write';
  */
 export function embed(
   input: Uint8Array | ArrayBuffer,
-  metadata: EmbedMetadata,
-  extras?: Record<string, string | number>,
+  metadata: EmbedMetadata | GenerationMetadata,
 ): WriteResult {
   const data = toUint8Array(input);
 
@@ -75,7 +73,7 @@ export function embed(
   }
 
   // Build A1111-format text
-  const text = buildEmbedText(metadata, extras);
+  const text = buildEmbedText(metadata);
 
   // Write format-specific metadata
   const writeResult = writeForFormat(format, data, text);

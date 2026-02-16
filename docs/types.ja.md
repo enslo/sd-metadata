@@ -213,10 +213,13 @@ function displaySoftware(software: GenerationSoftware): string {
 
 ### `EmbedMetadata`
 
-`embed()` 関数用のメタデータ型。`BaseMetadata` にオプションのNovelAIキャラクタープロンプトを追加。`GenerationMetadata` とは異なり、`software` フィールドは不要です。
+`embed()` と `stringify()` で使用するユーザー作成カスタムメタデータ型。`GenerationMetadata` が既知のAIツールからのパース結果を表すのに対し、`EmbedMetadata` はユーザーが独自にメタデータを組み立てるための型です。`BaseMetadata` にオプションのNovelAIキャラクタープロンプトと設定行への任意キーバリュー（`extras`）を追加。
 
 ```typescript
-export type EmbedMetadata = BaseMetadata & Pick<NovelAIMetadata, 'characterPrompts'>;
+export type EmbedMetadata = BaseMetadata &
+  Pick<NovelAIMetadata, 'characterPrompts'> & {
+    extras?: Record<string, string | number>;
+  };
 ```
 
 **例：**
@@ -232,9 +235,10 @@ const metadata: EmbedMetadata = {
   height: 768,
   sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
   model: { name: 'model.safetensors' },
+  extras: { Version: 'v1.0' },
 };
 
-const result = embed(imageData, metadata, { Version: 'v1.0' });
+const result = embed(imageData, metadata);
 ```
 
 ---

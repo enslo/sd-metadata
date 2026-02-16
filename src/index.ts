@@ -7,18 +7,19 @@ export { read, type ReadOptions } from './api/read';
 export { write, type WriteResult, type WriteWarning } from './api/write';
 export { embed } from './api/embed';
 
-// Deprecated API functions
-export { writeAsWebUI } from './api/write-webui';
-
 // Export utility functions
-export { stringify } from './serializers/stringify';
+export { stringify } from './api/stringify';
 
 // Export constants
 export { softwareLabels } from './constants';
 
-// Deprecated utility functions (use stringify instead)
-export { formatAsWebUI } from './serializers/a1111';
-export { formatRaw } from './serializers/raw';
+// Deprecated functions (use embed/stringify instead)
+/** @deprecated Use {@link embed} instead */
+export { embed as writeAsWebUI } from './api/embed';
+/** @deprecated Use {@link stringify} instead */
+export { buildEmbedText as formatAsWebUI } from './api/stringify';
+/** @deprecated Use {@link stringify} instead */
+export { formatRaw } from './api/stringify';
 
 // Export types (minimal public API)
 export type {
