@@ -1,6 +1,6 @@
 import { read } from '@enslo/sd-metadata';
 import type { ParseResult } from '@enslo/sd-metadata';
-import { Anchor, Container, Divider, Text, Title } from '@mantine/core';
+import { Anchor, Container, Divider, Stack, Text, Title } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { DropZone } from './components/DropZone/DropZone';
@@ -121,44 +121,46 @@ export function App() {
       <LanguageSwitcher />
       <GitHubCorner url={GITHUB_URL} />
 
-      <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <Title order={1} c="indigo" mb="xs">
-          sd-metadata
-        </Title>
-        <Text c="dimmed">{t.app.description}</Text>
-      </header>
+      <Stack gap="lg">
+        <Stack component="header" gap={0} align="center">
+          <Title order={1} c="indigo">
+            sd-metadata
+          </Title>
+          <Text c="dimmed">{t.app.description}</Text>
+        </Stack>
 
-      <main>
-        <DropZone
-          onFileSelect={handleFileSelect}
-          previewUrl={state.previewUrl}
-          filename={state.filename}
-          softwareInfo={getSoftwareLabelForDisplay()}
-          globalDragOver={globalDragOver}
-        />
+        <Stack component="main" gap="md">
+          <DropZone
+            onFileSelect={handleFileSelect}
+            previewUrl={state.previewUrl}
+            filename={state.filename}
+            softwareInfo={getSoftwareLabelForDisplay()}
+            globalDragOver={globalDragOver}
+          />
 
-        {state.parseResult &&
-          state.fileData &&
-          state.filename &&
-          state.previewUrl && (
-            <Results
-              parseResult={state.parseResult}
-              fileData={state.fileData}
-              filename={state.filename}
-              previewUrl={state.previewUrl}
-            />
-          )}
-      </main>
+          {state.parseResult &&
+            state.fileData &&
+            state.filename &&
+            state.previewUrl && (
+              <Results
+                parseResult={state.parseResult}
+                fileData={state.fileData}
+                filename={state.filename}
+                previewUrl={state.previewUrl}
+              />
+            )}
+        </Stack>
 
-      <Divider mt="lg" mb="md" />
-      <footer style={{ textAlign: 'center' }}>
-        <Text size="sm" c="dimmed">
-          Powered by{' '}
-          <Anchor href={GITHUB_URL} target="_blank" rel="noreferrer">
-            @enslo/sd-metadata
-          </Anchor>
-        </Text>
-      </footer>
+        <Divider />
+        <footer style={{ textAlign: 'center' }}>
+          <Text size="sm" c="dimmed">
+            Powered by{' '}
+            <Anchor href={GITHUB_URL} target="_blank" rel="noreferrer">
+              @enslo/sd-metadata
+            </Anchor>
+          </Text>
+        </footer>
+      </Stack>
 
       <ScrollToTop />
     </Container>

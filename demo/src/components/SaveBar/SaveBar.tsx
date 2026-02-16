@@ -105,7 +105,7 @@ export function SaveBar({ parseResult, previewUrl, filename }: SaveBarProps) {
   ];
 
   return (
-    <Group mt="md" mb="xl" gap="md" align="center">
+    <Group gap="md" align="center">
       <Switch
         checked={keepMetadata}
         onChange={(e: { currentTarget: { checked: boolean } }) =>

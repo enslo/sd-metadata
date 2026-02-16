@@ -1,6 +1,6 @@
 import type { ParseResult } from '@enslo/sd-metadata';
 import { stringify } from '@enslo/sd-metadata';
-import { Alert, Paper, Tabs, Text } from '@mantine/core';
+import { Alert, Paper, Stack, Tabs, Text } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
@@ -47,43 +47,45 @@ export function Results({
   }
 
   return (
-    <Paper className="fade-in" mt="md">
-      <Tabs value={activeTab} onChange={setActiveTab}>
-        <Tabs.List>
-          <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>
-          <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
-          <Tabs.Tab value="raw">{t.results.tabs.raw}</Tabs.Tab>
-          <Tabs.Tab value="embed">{t.results.tabs.embed}</Tabs.Tab>
-        </Tabs.List>
+    <Paper className="fade-in">
+      <Stack gap="md">
+        <Tabs value={activeTab} onChange={setActiveTab}>
+          <Tabs.List mb="md">
+            <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>
+            <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
+            <Tabs.Tab value="raw">{t.results.tabs.raw}</Tabs.Tab>
+            <Tabs.Tab value="embed">{t.results.tabs.embed}</Tabs.Tab>
+          </Tabs.List>
 
-        <Tabs.Panel value="parsed" pt="md">
-          <ParsedTabContent parseResult={parseResult} t={t} />
-        </Tabs.Panel>
+          <Tabs.Panel value="parsed">
+            <ParsedTabContent parseResult={parseResult} t={t} />
+          </Tabs.Panel>
 
-        <Tabs.Panel value="plaintext" pt="md">
-          <PlainTextTabContent parseResult={parseResult} t={t} />
-        </Tabs.Panel>
+          <Tabs.Panel value="plaintext">
+            <PlainTextTabContent parseResult={parseResult} t={t} />
+          </Tabs.Panel>
 
-        <Tabs.Panel value="raw" pt="md">
-          <RawTabContent parseResult={parseResult} t={t} key={resetKey} />
-        </Tabs.Panel>
+          <Tabs.Panel value="raw">
+            <RawTabContent parseResult={parseResult} t={t} key={resetKey} />
+          </Tabs.Panel>
 
-        <Tabs.Panel value="embed" pt="md">
-          <EmbedEditor
+          <Tabs.Panel value="embed">
+            <EmbedEditor
+              parseResult={parseResult}
+              fileData={fileData}
+              filename={filename}
+            />
+          </Tabs.Panel>
+        </Tabs>
+
+        {activeTab !== 'embed' && (
+          <SaveBar
             parseResult={parseResult}
-            fileData={fileData}
+            previewUrl={previewUrl}
             filename={filename}
           />
-        </Tabs.Panel>
-      </Tabs>
-
-      {activeTab !== 'embed' && (
-        <SaveBar
-          parseResult={parseResult}
-          previewUrl={previewUrl}
-          filename={filename}
-        />
-      )}
+        )}
+      </Stack>
     </Paper>
   );
 }
