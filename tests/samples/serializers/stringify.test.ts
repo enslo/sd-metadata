@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { read } from '../../../src/index';
-import { formatAsWebUI } from '../../../src/serializers/a1111';
 import { formatRaw } from '../../../src/serializers/raw';
 import { stringify } from '../../../src/serializers/stringify';
 
@@ -16,14 +15,14 @@ describe('stringify - Samples', () => {
     return fs.readFileSync(filePath);
   };
 
-  describe('success samples (should match formatAsWebUI)', () => {
+  describe('success samples (stringify(result) === stringify(result.metadata))', () => {
     it('should stringify sd-webui PNG', () => {
       const data = loadSample('png', 'sd-webui.png');
       const result = read(data);
 
       expect(result.status).toBe('success');
       if (result.status === 'success') {
-        expect(stringify(result)).toBe(formatAsWebUI(result.metadata));
+        expect(stringify(result)).toBe(stringify(result.metadata));
       }
     });
 
@@ -33,7 +32,7 @@ describe('stringify - Samples', () => {
 
       expect(result.status).toBe('success');
       if (result.status === 'success') {
-        expect(stringify(result)).toBe(formatAsWebUI(result.metadata));
+        expect(stringify(result)).toBe(stringify(result.metadata));
       }
     });
 
@@ -43,7 +42,7 @@ describe('stringify - Samples', () => {
 
       expect(result.status).toBe('success');
       if (result.status === 'success') {
-        expect(stringify(result)).toBe(formatAsWebUI(result.metadata));
+        expect(stringify(result)).toBe(stringify(result.metadata));
       }
     });
 
@@ -53,7 +52,7 @@ describe('stringify - Samples', () => {
 
       expect(result.status).toBe('success');
       if (result.status === 'success') {
-        expect(stringify(result)).toBe(formatAsWebUI(result.metadata));
+        expect(stringify(result)).toBe(stringify(result.metadata));
       }
     });
 
@@ -63,7 +62,7 @@ describe('stringify - Samples', () => {
 
       expect(result.status).toBe('success');
       if (result.status === 'success') {
-        expect(stringify(result)).toBe(formatAsWebUI(result.metadata));
+        expect(stringify(result)).toBe(stringify(result.metadata));
       }
     });
   });

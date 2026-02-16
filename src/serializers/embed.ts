@@ -82,7 +82,7 @@ function buildSettingsLine(
 // ============================================================================
 
 /**
- * Build A1111-format text from EmbedMetadata and optional extras
+ * Build A1111-format text from EmbedMetadata
  *
  * Output structure:
  * 1. Positive prompt (line-ending normalized)
@@ -90,14 +90,10 @@ function buildSettingsLine(
  * 3. Negative prompt (if non-empty)
  * 4. Settings line (structured fields + extras)
  *
- * @param metadata - Embed metadata
- * @param extras - Optional key-value pairs for the settings line
+ * @param metadata - Embed metadata (extras included via `metadata.extras`)
  * @returns A1111-format plain text
  */
-export function buildEmbedText(
-  metadata: EmbedMetadata,
-  extras?: Record<string, string | number>,
-): string {
+export function buildEmbedText(metadata: EmbedMetadata): string {
   return [
     normalizeLineEndings(metadata.prompt),
     metadata.characterPrompts?.length
@@ -106,7 +102,7 @@ export function buildEmbedText(
     metadata.negativePrompt
       ? `Negative prompt: ${normalizeLineEndings(metadata.negativePrompt)}`
       : undefined,
-    buildSettingsLine(metadata, extras) || undefined,
+    buildSettingsLine(metadata, metadata.extras) || undefined,
   ]
     .filter((s): s is string => s !== undefined)
     .join('\n');

@@ -1,22 +1,12 @@
 /**
- * WebUI (A1111) format writer for sd-metadata
+ * Deprecated WebUI (A1111) format writer for sd-metadata
  *
- * Converts any GenerationMetadata to SD WebUI (A1111) plain text format
- * and writes it to PNG, JPEG, or WebP images.
+ * @deprecated Use {@link embed} from `@enslo/sd-metadata` instead.
+ * This module is retained for backward compatibility only.
  */
 
-import { createEncodedChunk } from '../converters/chunk-encoding';
-import { formatAsWebUI } from '../serializers/a1111';
-import type {
-  GenerationMetadata,
-  MetadataSegment,
-  PngTextChunk,
-} from '../types';
-import { Result } from '../types';
-import { detectFormat, toUint8Array } from '../utils/binary';
-import { writeJpegMetadata } from '../writers/jpeg';
-import { writePngMetadata } from '../writers/png';
-import { writeWebpMetadata } from '../writers/webp';
+import type { GenerationMetadata } from '../types';
+import { embed } from './embed';
 import type { WriteResult } from './write';
 
 /**
@@ -58,80 +48,13 @@ import type { WriteResult } from './write';
  * }
  * ```
  *
- * @deprecated Use {@link embed} instead. The embed function accepts EmbedMetadata
- * (no software field required) and supports custom extras in the settings line.
+ * @deprecated Use {@link embed} instead. The embed function accepts both
+ * user-created {@link EmbedMetadata} and {@link GenerationMetadata}, with support for custom
+ * extras in the settings line.
  */
 export function writeAsWebUI(
   input: Uint8Array | ArrayBuffer,
   metadata: GenerationMetadata,
 ): WriteResult {
-  const data = toUint8Array(input);
-  // Detect image format
-  const format = detectFormat(data);
-  if (!format) {
-    return Result.error({ type: 'unsupportedFormat' });
-  }
-
-  // Convert metadata to A1111 plain text format
-  const text = formatAsWebUI(metadata);
-
-  // Create format-specific metadata structures
-  let writeResult:
-    | import('../types').PngWriteResult
-    | import('../types').JpegWriteResult
-    | import('../types').WebpWriteResult;
-
-  if (format === 'png') {
-    // PNG: Create parameters chunk with dynamic encoding
-    const chunks = createPngChunks(text);
-    writeResult = writePngMetadata(data, chunks);
-  } else if (format === 'jpeg') {
-    // JPEG: Create Exif UserComment segment
-    const segments = createExifSegments(text);
-    writeResult = writeJpegMetadata(data, segments);
-  } else if (format === 'webp') {
-    // WebP: Create Exif UserComment segment
-    const segments = createExifSegments(text);
-    writeResult = writeWebpMetadata(data, segments);
-  } else {
-    // Shouldn't reach here due to detectFormat check above
-    return Result.error({ type: 'unsupportedFormat' });
-  }
-
-  // Handle write errors
-  if (!writeResult.ok) {
-    return Result.error({
-      type: 'writeFailed',
-      message: writeResult.error.type,
-    });
-  }
-
-  return Result.ok(writeResult.value);
-}
-
-/**
- * Create PNG text chunks for SD WebUI format
- *
- * Uses dynamic encoding strategy (tEXt for ASCII, iTXt for non-ASCII).
- *
- * @param text - A1111-format plain text
- * @returns PNG text chunks
- */
-function createPngChunks(text: string): PngTextChunk[] {
-  return createEncodedChunk('parameters', text, 'dynamic');
-}
-
-/**
- * Create Exif UserComment segment for JPEG/WebP
- *
- * @param text - A1111-format plain text
- * @returns Metadata segment array
- */
-function createExifSegments(text: string): MetadataSegment[] {
-  return [
-    {
-      source: { type: 'exifUserComment' },
-      data: text,
-    },
-  ];
+  return embed(input, metadata);
 }

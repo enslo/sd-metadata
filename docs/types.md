@@ -213,10 +213,13 @@ function displaySoftware(software: GenerationSoftware): string {
 
 ### `EmbedMetadata`
 
-Metadata type for the `embed()` function. Extends `BaseMetadata` with optional NovelAI character prompts. Unlike `GenerationMetadata`, no `software` field is required.
+User-created custom metadata for the `embed()` and `stringify()` functions. While `GenerationMetadata` represents parsed output from a known AI tool, `EmbedMetadata` is designed for composing metadata from scratch. Extends `BaseMetadata` with optional NovelAI character prompts and arbitrary key-value extras for the settings line.
 
 ```typescript
-export type EmbedMetadata = BaseMetadata & Pick<NovelAIMetadata, 'characterPrompts'>;
+export type EmbedMetadata = BaseMetadata &
+  Pick<NovelAIMetadata, 'characterPrompts'> & {
+    extras?: Record<string, string | number>;
+  };
 ```
 
 **Example:**
@@ -232,9 +235,10 @@ const metadata: EmbedMetadata = {
   height: 768,
   sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
   model: { name: 'model.safetensors' },
+  extras: { Version: 'v1.0' },
 };
 
-const result = embed(imageData, metadata, { Version: 'v1.0' });
+const result = embed(imageData, metadata);
 ```
 
 ---

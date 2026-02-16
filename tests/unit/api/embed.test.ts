@@ -122,9 +122,9 @@ describe('embed - Unit Tests', () => {
     it('should preserve extras in raw data when round-tripped', () => {
       const png = createMinimalPng();
 
-      const result = embed(png, baseMetadata, {
-        Version: 'v1.10.0',
-        'Lora hashes': 'abc123',
+      const result = embed(png, {
+        ...baseMetadata,
+        extras: { Version: 'v1.10.0', 'Lora hashes': 'abc123' },
       });
 
       expect(result.ok).toBe(true);
@@ -156,8 +156,9 @@ describe('embed - Unit Tests', () => {
         sampling: { steps: 20 },
       };
 
-      const result = embed(png, minimalMetadata, {
-        Version: 'v1.10.0',
+      const result = embed(png, {
+        ...minimalMetadata,
+        extras: { Version: 'v1.10.0' },
       });
 
       expect(result.ok).toBe(true);

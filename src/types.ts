@@ -370,14 +370,18 @@ export type GenerationMetadata =
   | StandardMetadata;
 
 /**
- * Metadata type for the embed() API
+ * User-created custom metadata for the embed() and stringify() APIs
  *
- * Includes all base generation fields plus optional character prompts.
- * Unlike GenerationMetadata, this type does not require a `software` field,
- * making it suitable for user-created metadata.
+ * While {@link GenerationMetadata} represents parsed output from a known AI tool,
+ * EmbedMetadata is designed for users to compose their own metadata from
+ * scratch. Includes all base generation fields plus optional character
+ * prompts and extras for the settings line.
  */
 export type EmbedMetadata = BaseMetadata &
-  Pick<NovelAIMetadata, 'characterPrompts'>;
+  Pick<NovelAIMetadata, 'characterPrompts'> & {
+    /** Additional key-value pairs for the settings line */
+    extras?: Record<string, string | number>;
+  };
 
 /**
  * Model settings

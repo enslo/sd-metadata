@@ -300,9 +300,12 @@ if (result.ok) {
 `extras` で設定行に任意のキーバリューを追加できます：
 
 ```typescript
-const result = embed(imageData, metadata, {
-  Version: 'v1.10.0',
-  'Lora hashes': 'abc123',
+const result = embed(imageData, {
+  ...metadata,
+  extras: {
+    Version: 'v1.10.0',
+    'Lora hashes': 'abc123',
+  },
 });
 ```
 
@@ -385,15 +388,14 @@ if (text) {
   - `'conversionFailed'`: メタデータ変換に失敗（例：互換性のないフォーマット）
   - `'writeFailed'`: 画像へのメタデータ埋め込みに失敗
 
-### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata, extras?: Record<string, string | number>): WriteResult`
+### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata | GenerationMetadata): WriteResult`
 
 SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋め込みます。
 
 **パラメータ:**
 
 - `input` - ターゲット画像ファイルデータ（PNG、JPEG、またはWebP）
-- `metadata` - 埋め込む `EmbedMetadata`
-- `extras` - 設定行に追加する任意のキーバリュー（オプション）
+- `metadata` - 埋め込む `EmbedMetadata` または `GenerationMetadata`（`extras` で任意のキーバリューを追加可能）
 
 **戻り値:**
 
@@ -408,25 +410,25 @@ SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋
 - 他のツールからWebUI互換フォーマットにメタデータを変換
 - WebUIで読み取り可能なメタデータを出力するアプリケーションの構築
 
-### `stringify(result: ParseResult): string`
+### `stringify(input: ParseResult | EmbedMetadata | GenerationMetadata): string`
 
-パース結果を読みやすい文字列に変換します。
+メタデータを読みやすい文字列に変換します。`ParseResult`、`EmbedMetadata`、`GenerationMetadata` のいずれも受け付けます。
 
 **パラメータ:**
 
-- `result` - `read()` から得られた `ParseResult`
+- `input` - `ParseResult`、`EmbedMetadata`、または `GenerationMetadata`
 
 **戻り値:**
 
-- `success` → WebUIフォーマットのテキスト
-- `unrecognized` → 生のメタデータのプレーンテキスト
-- `empty` / `invalid` → 空文字列
+- `ParseResult` の場合: `success` → WebUIフォーマット、`unrecognized` → 生テキスト、`empty`/`invalid` → 空文字列
+- `EmbedMetadata` / `GenerationMetadata` の場合: WebUIフォーマットのテキスト
 
 **ユースケース:**
 
 - 画像ビューアやギャラリーでの生成パラメータ表示
 - メタデータをクリップボードに読みやすいテキストとしてコピー
 - パース結果のログ出力やデバッグ
+- `EmbedMetadata` の事前プレビュー（埋め込み前の確認用）
 
 ### `softwareLabels: Record<GenerationSoftware, string>`
 
@@ -553,10 +555,13 @@ type GenerationSoftware =
 
 ### `EmbedMetadata`
 
-`embed()` 関数用のメタデータ型。`BaseMetadata` にオプションのキャラクタープロンプトを追加。`GenerationMetadata` とは異なり、`software` フィールドは不要です。
+`embed()` と `stringify()` で使用するユーザー作成カスタムメタデータ型。`GenerationMetadata` が既知のAIツールからのパース結果を表すのに対し、`EmbedMetadata` はユーザーが独自にメタデータを組み立てるための型です。`BaseMetadata` にオプションのキャラクタープロンプトと設定行への任意キーバリュー（`extras`）を追加。
 
 ```typescript
-type EmbedMetadata = BaseMetadata & Pick<NovelAIMetadata, 'characterPrompts'>;
+type EmbedMetadata = BaseMetadata &
+  Pick<NovelAIMetadata, 'characterPrompts'> & {
+    extras?: Record<string, string | number>;
+  };
 ```
 
 ### `RawMetadata`

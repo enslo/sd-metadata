@@ -142,9 +142,9 @@ describe('buildEmbedText - Unit Tests', () => {
         },
       };
 
-      const result = buildEmbedText(metadata, {
-        Version: 'v1.10.0',
-        'Lora hashes': 'abc123',
+      const result = buildEmbedText({
+        ...metadata,
+        extras: { Version: 'v1.10.0', 'Lora hashes': 'abc123' },
       });
 
       const expected = [
@@ -168,9 +168,9 @@ describe('buildEmbedText - Unit Tests', () => {
         },
       };
 
-      const result = buildEmbedText(metadata, {
-        Steps: 30,
-        Version: 'v1.0',
+      const result = buildEmbedText({
+        ...metadata,
+        extras: { Steps: 30, Version: 'v1.0' },
       });
 
       // Steps: 30 should be at position 1 (where structured Steps would be)
@@ -197,10 +197,9 @@ describe('buildEmbedText - Unit Tests', () => {
         },
       };
 
-      const result = buildEmbedText(metadata, {
-        Steps: 30,
-        Seed: 999,
-        Version: 'v1.0',
+      const result = buildEmbedText({
+        ...metadata,
+        extras: { Steps: 30, Seed: 999, Version: 'v1.0' },
       });
 
       const expected = [
@@ -219,10 +218,9 @@ describe('buildEmbedText - Unit Tests', () => {
         height: 0,
       };
 
-      const result = buildEmbedText(metadata, {
-        Steps: 20,
-        Sampler: 'DPM++ 2M',
-        Version: 'v1.0',
+      const result = buildEmbedText({
+        ...metadata,
+        extras: { Steps: 20, Sampler: 'DPM++ 2M', Version: 'v1.0' },
       });
 
       const expected = [
@@ -242,7 +240,7 @@ describe('buildEmbedText - Unit Tests', () => {
         sampling: { steps: 20 },
       };
 
-      const withEmpty = buildEmbedText(metadata, {});
+      const withEmpty = buildEmbedText({ ...metadata, extras: {} });
       const withoutExtras = buildEmbedText(metadata);
 
       expect(withEmpty).toBe(withoutExtras);
@@ -256,9 +254,9 @@ describe('buildEmbedText - Unit Tests', () => {
         height: 0,
       };
 
-      const result = buildEmbedText(metadata, {
-        Steps: 20,
-        'CFG scale': 7.5,
+      const result = buildEmbedText({
+        ...metadata,
+        extras: { Steps: 20, 'CFG scale': 7.5 },
       });
 
       const expected = ['test', 'Steps: 20, CFG scale: 7.5'].join('\n');

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { formatAsWebUI } from '../../../src/serializers/a1111';
+import { buildEmbedText } from '../../../src/serializers/embed';
 import { formatRaw } from '../../../src/serializers/raw';
 import { stringify } from '../../../src/serializers/stringify';
 import type {
+  EmbedMetadata,
   ParseResult,
   RawMetadata,
   StandardMetadata,
@@ -10,7 +11,7 @@ import type {
 
 describe('stringify - Unit Tests', () => {
   describe('success status', () => {
-    it('should produce same output as formatAsWebUI', () => {
+    it('should produce same output as buildEmbedText', () => {
       const metadata: StandardMetadata = {
         software: 'sd-webui',
         prompt: 'masterpiece, 1girl',
@@ -34,7 +35,7 @@ describe('stringify - Unit Tests', () => {
       };
       const result: ParseResult = { status: 'success', metadata, raw };
 
-      expect(stringify(result)).toBe(formatAsWebUI(metadata));
+      expect(stringify(result)).toBe(buildEmbedText(metadata));
     });
 
     it('should handle minimal metadata', () => {
@@ -51,7 +52,51 @@ describe('stringify - Unit Tests', () => {
       };
       const result: ParseResult = { status: 'success', metadata, raw };
 
-      expect(stringify(result)).toBe(formatAsWebUI(metadata));
+      expect(stringify(result)).toBe(buildEmbedText(metadata));
+    });
+  });
+
+  describe('EmbedMetadata input', () => {
+    it('should produce same output as buildEmbedText for EmbedMetadata', () => {
+      const metadata: EmbedMetadata = {
+        prompt: 'masterpiece, 1girl',
+        negativePrompt: 'lowres',
+        width: 512,
+        height: 768,
+        sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
+      };
+
+      expect(stringify(metadata)).toBe(buildEmbedText(metadata));
+    });
+
+    it('should include extras in output', () => {
+      const metadata: EmbedMetadata = {
+        prompt: 'test',
+        negativePrompt: '',
+        width: 512,
+        height: 512,
+        sampling: { steps: 20 },
+        extras: { Version: 'v1.10.0' },
+      };
+
+      const result = stringify(metadata);
+
+      expect(result).toContain('Version: v1.10.0');
+    });
+  });
+
+  describe('GenerationMetadata input', () => {
+    it('should accept GenerationMetadata directly', () => {
+      const metadata: StandardMetadata = {
+        software: 'sd-webui',
+        prompt: 'masterpiece',
+        negativePrompt: '',
+        width: 512,
+        height: 768,
+        sampling: { steps: 20, sampler: 'Euler a' },
+      };
+
+      expect(stringify(metadata)).toBe(buildEmbedText(metadata));
     });
   });
 

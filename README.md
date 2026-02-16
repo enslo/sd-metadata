@@ -299,9 +299,9 @@ if (result.ok) {
 You can also add arbitrary key-value pairs to the settings line with `extras`:
 
 ```typescript
-const result = embed(imageData, metadata, {
-  Version: 'v1.10.0',
-  'Lora hashes': 'abc123',
+const result = embed(imageData, {
+  ...metadata,
+  extras: { Version: 'v1.10.0', 'Lora hashes': 'abc123' },
 });
 ```
 
@@ -384,15 +384,14 @@ Writes metadata to an image file.
   - `'conversionFailed'`: Metadata conversion failed (e.g., incompatible format)
   - `'writeFailed'`: Failed to embed metadata into the image
 
-### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata, extras?: Record<string, string | number>): WriteResult`
+### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata | GenerationMetadata): WriteResult`
 
 Embeds custom metadata into an image in SD WebUI (A1111) format.
 
 **Parameters:**
 
 - `input` - Target image file data (PNG, JPEG, or WebP)
-- `metadata` - `EmbedMetadata` to embed
-- `extras` - Optional key-value pairs for the settings line
+- `metadata` - `EmbedMetadata` or `GenerationMetadata` to embed (use `extras` field for custom settings)
 
 **Returns:**
 
@@ -407,19 +406,22 @@ Embeds custom metadata into an image in SD WebUI (A1111) format.
 - Converting metadata from other tools to WebUI-compatible format
 - Building applications that output WebUI-readable metadata
 
-### `stringify(result: ParseResult): string`
+### `stringify(input: ParseResult | EmbedMetadata | GenerationMetadata): string`
 
-Converts a parse result to a human-readable string.
+Converts metadata to a human-readable string.
 
 **Parameters:**
 
-- `result` - `ParseResult` from `read()`
+- `input` - One of:
+  - `ParseResult` from `read()` — selects best representation based on status
+  - `EmbedMetadata` or `GenerationMetadata` — formats as A1111 text directly
 
 **Returns:**
 
-- `success` → Human-readable text in WebUI format
-- `unrecognized` → Raw metadata as plain text
-- `empty` / `invalid` → Empty string
+- `ParseResult` with `success` → Human-readable text in WebUI format
+- `ParseResult` with `unrecognized` → Raw metadata as plain text
+- `ParseResult` with `empty` / `invalid` → Empty string
+- `EmbedMetadata` / `GenerationMetadata` → Human-readable text in WebUI format
 
 **Use cases:**
 
@@ -552,10 +554,13 @@ type GenerationSoftware =
 
 ### `EmbedMetadata`
 
-Metadata type for the `embed()` function. Extends `BaseMetadata` with optional character prompts. Unlike `GenerationMetadata`, no `software` field is required.
+User-created custom metadata for the `embed()` and `stringify()` functions. While `GenerationMetadata` represents parsed output from a known AI tool, `EmbedMetadata` is designed for composing metadata from scratch. Extends `BaseMetadata` with optional character prompts and extras.
 
 ```typescript
-type EmbedMetadata = BaseMetadata & Pick<NovelAIMetadata, 'characterPrompts'>;
+type EmbedMetadata = BaseMetadata &
+  Pick<NovelAIMetadata, 'characterPrompts'> & {
+    extras?: Record<string, string | number>;
+  };
 ```
 
 ### `RawMetadata`
