@@ -25,6 +25,7 @@
     "lint:fix": "biome check --write .",
     "markdownlint": "markdownlint --fix",
     "typecheck": "tsc --noEmit",
+    "demo": "pnpm --filter demo dev",
     "prepare": "lefthook install"
   },
   "repository": {
