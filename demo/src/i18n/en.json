@@ -11,25 +11,75 @@
   },
   "results": {
     "tabs": {
-      "parsed": "Parsed Metadata",
-      "raw": "Raw Data"
+      "parsed": "Metadata",
+      "plaintext": "Plain Text",
+      "raw": "Raw Data",
+      "embed": "Edit"
     },
     "errors": {
       "invalid": "Invalid image file",
       "noMetadata": "No metadata found in this image",
       "unrecognized": "Metadata found but format not recognized. Check Raw Data tab.",
-      "noRawData": "No data available"
+      "noRawData": "No data available",
+      "noPlainText": "No text representation available"
     }
   },
-  "languageSwitcher": {
-    "ariaLabel": "Switch language",
-    "switchToJapanese": "Switch to Japanese",
-    "switchToEnglish": "Switch to English"
+  "fields": {
+    "prompt": "Prompt",
+    "negativePrompt": "Negative Prompt",
+    "characterPrompts": "Character Prompts",
+    "generationSettings": "Generation Settings",
+    "width": "Width",
+    "height": "Height",
+    "model": "Model",
+    "modelName": "Model Name",
+    "modelHash": "Model Hash",
+    "sampling": "Sampling",
+    "sampler": "Sampler",
+    "scheduler": "Scheduler",
+    "steps": "Steps",
+    "cfg": "CFG Scale",
+    "seed": "Seed",
+    "clipSkip": "CLIP Skip",
+    "hires": "Hires.fix",
+    "upscaler": "Upscaler",
+    "scale": "Scale",
+    "denoise": "Denoise",
+    "hiresScale": "Hires Scale",
+    "hiresSteps": "Hires Steps",
+    "hiresDenoise": "Hires Denoise",
+    "upscaleFactor": "Upscale Factor"
   },
-  "saveFab": {
-    "buttonLabel": "Save image with metadata",
-    "menuLabel": "Select output format",
-    "to": "to",
-    "keepMetadata": "Keep metadata"
+  "languageSwitcher": {
+    "label": "EN",
+    "ariaLabel": "Switch language",
+    "description": "日本語に切り替え"
+  },
+  "saveBar": {
+    "keepMetadata": "Keep metadata",
+    "metadataFormat": "Metadata format",
+    "metadataFormatOriginal": "Original",
+    "metadataFormatA1111": "A1111",
+    "outputFormat": "Output format",
+    "saveButton": "Save",
+    "processing": "Processing..."
+  },
+  "themeToggle": {
+    "ariaLabel": "Toggle color theme",
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode"
+  },
+  "embedEditor": {
+    "extras": "Extras",
+    "extrasDescription": "Additional key-value pairs for the settings line",
+    "addExtra": "Add",
+    "key": "Key",
+    "value": "Value",
+    "remove": "Remove",
+    "format": "Output Format",
+    "embedButton": "Embed & Download",
+    "processing": "Processing...",
+    "preview": "Preview",
+    "previewEmpty": "Fill in at least a prompt to see a preview"
   }
 }

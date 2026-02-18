@@ -1,14 +1,22 @@
 import { read } from '@enslo/sd-metadata';
 import type { ParseResult } from '@enslo/sd-metadata';
+import {
+  Anchor,
+  Container,
+  Divider,
+  Group,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
-import styles from './App.module.css';
 import { DropZone } from './components/DropZone/DropZone';
 import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
 import { LanguageSwitcher } from './components/LanguageSwitcher/LanguageSwitcher';
 import { Results } from './components/Results/Results';
-import { SaveFab } from './components/SaveFab';
 import { ScrollToTop } from './components/ScrollToTop/ScrollToTop';
+import { ThemeToggle } from './components/ThemeToggle/ThemeToggle';
 import { $t } from './i18n';
 import { getSoftwareLabel } from './utils';
 
@@ -18,6 +26,7 @@ interface AppState {
   parseResult: ParseResult | null;
   filename: string | null;
   previewUrl: string | null;
+  fileData: Uint8Array | null;
 }
 
 /**
@@ -29,6 +38,7 @@ export function App() {
     parseResult: null,
     filename: null,
     previewUrl: null,
+    fileData: null,
   });
   const [globalDragOver, setGlobalDragOver] = useState(false);
 
@@ -45,6 +55,7 @@ export function App() {
       parseResult,
       filename: file.name,
       previewUrl,
+      fileData: data,
     });
   };
 
@@ -66,7 +77,6 @@ export function App() {
       setGlobalDragOver(false);
       const file = e.dataTransfer?.files[0];
       if (file) {
-        // Inline file handling to avoid dependency issues
         const url = URL.createObjectURL(file);
         file.arrayBuffer().then((buffer) => {
           const data = new Uint8Array(buffer);
@@ -75,6 +85,7 @@ export function App() {
             parseResult: result,
             filename: file.name,
             previewUrl: url,
+            fileData: data,
           });
         });
       }
@@ -115,42 +126,66 @@ export function App() {
   };
 
   return (
-    <>
-      <LanguageSwitcher />
+    <Container size={1000} py="xl">
+      <Group
+        gap={0}
+        className="toolbar-fixed"
+        bg="var(--mantine-color-body)"
+        style={{
+          position: 'fixed',
+          top: 8,
+          left: 8,
+          zIndex: 100,
+          borderRadius: 'var(--mantine-radius-md)',
+        }}
+      >
+        <LanguageSwitcher />
+        <ThemeToggle />
+      </Group>
       <GitHubCorner url={GITHUB_URL} />
-      <header class={styles.header}>
-        <h1 class={styles.title}>sd-metadata</h1>
-        <p class={styles.description}>{t.app.description}</p>
-      </header>
 
-      <main>
-        <DropZone
-          onFileSelect={handleFileSelect}
-          previewUrl={state.previewUrl}
-          filename={state.filename}
-          softwareInfo={getSoftwareLabelForDisplay()}
-          globalDragOver={globalDragOver}
-        />
+      <Stack gap="lg">
+        <Stack component="header" gap={0} align="center">
+          <Title order={1} c="indigo">
+            sd-metadata
+          </Title>
+          <Text c="dimmed">{t.app.description}</Text>
+        </Stack>
 
-        {state.parseResult && <Results parseResult={state.parseResult} />}
-      </main>
+        <Stack component="main" gap="md">
+          <DropZone
+            onFileSelect={handleFileSelect}
+            previewUrl={state.previewUrl}
+            filename={state.filename}
+            softwareInfo={getSoftwareLabelForDisplay()}
+            globalDragOver={globalDragOver}
+          />
 
-      <footer class={styles.footer}>
-        <p>
-          Powered by{' '}
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-            @enslo/sd-metadata
-          </a>
-        </p>
-      </footer>
-      {state.parseResult && state.previewUrl && state.filename && (
-        <SaveFab
-          previewUrl={state.previewUrl}
-          parseResult={state.parseResult}
-          filename={state.filename}
-        />
-      )}
+          {state.parseResult &&
+            state.fileData &&
+            state.filename &&
+            state.previewUrl && (
+              <Results
+                parseResult={state.parseResult}
+                fileData={state.fileData}
+                filename={state.filename}
+                previewUrl={state.previewUrl}
+              />
+            )}
+        </Stack>
+
+        <Divider />
+        <footer style={{ textAlign: 'center' }}>
+          <Text size="sm" c="dimmed">
+            Powered by{' '}
+            <Anchor href={GITHUB_URL} target="_blank" rel="noreferrer">
+              @enslo/sd-metadata
+            </Anchor>
+          </Text>
+        </footer>
+      </Stack>
+
       <ScrollToTop />
-    </>
+    </Container>
   );
 }

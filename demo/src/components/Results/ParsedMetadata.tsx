@@ -1,6 +1,10 @@
-import type { GenerationMetadata } from '@enslo/sd-metadata';
+import type { CharacterPrompt, GenerationMetadata } from '@enslo/sd-metadata';
+import { Divider, Group, Stack, Text } from '@mantine/core';
+import { useStore } from '@nanostores/preact';
+import type { ComponentChildren } from 'preact';
+import { $t } from '../../i18n';
 import { CopyButton } from '../CopyButton/CopyButton';
-import styles from './Results.module.css';
+import { ContentPanel } from './ContentPanel';
 
 interface ParsedMetadataProps {
   metadata: GenerationMetadata;
@@ -10,19 +14,42 @@ interface ParsedMetadataProps {
  * Display parsed generation metadata
  */
 export function ParsedMetadata({ metadata }: ParsedMetadataProps) {
+  const t = useStore($t);
+
   return (
-    <div>
+    <Stack gap="md">
       {/* Prompt */}
       {metadata.prompt && (
-        <Section title="Prompt" copyValue={metadata.prompt}>
-          <div class={styles.promptText}>{metadata.prompt}</div>
+        <Section title={t.fields.prompt} copyValue={metadata.prompt}>
+          <Text
+            style={{
+              fontFamily: 'var(--mantine-font-family-monospace)',
+              fontSize: '0.85rem',
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.6,
+            }}
+          >
+            {metadata.prompt}
+          </Text>
         </Section>
       )}
 
       {/* Negative Prompt */}
       {metadata.negativePrompt && (
-        <Section title="Negative Prompt" copyValue={metadata.negativePrompt}>
-          <div class={styles.promptText}>{metadata.negativePrompt}</div>
+        <Section
+          title={t.fields.negativePrompt}
+          copyValue={metadata.negativePrompt}
+        >
+          <Text
+            style={{
+              fontFamily: 'var(--mantine-font-family-monospace)',
+              fontSize: '0.85rem',
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.6,
+            }}
+          >
+            {metadata.negativePrompt}
+          </Text>
         </Section>
       )}
 
@@ -30,63 +57,103 @@ export function ParsedMetadata({ metadata }: ParsedMetadataProps) {
       {metadata.software === 'novelai' &&
         metadata.characterPrompts &&
         metadata.characterPrompts.length > 0 && (
-          <Section title="Character Prompts">
-            {metadata.characterPrompts.map((char, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: character prompts have no unique identifier
-              <div class={styles.characterPrompt} key={`character-${i}`}>
-                <div class={styles.characterHeader}>
-                  <span>
-                    Character {i + 1}
-                    {char.center &&
-                      ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`}
-                  </span>
-                  <CopyButton value={char.prompt} />
-                </div>
-                <div class={styles.promptText}>{char.prompt}</div>
-              </div>
-            ))}
+          <Section title={t.fields.characterPrompts}>
+            <Stack gap="sm">
+              {metadata.characterPrompts.map(
+                (char: CharacterPrompt, i: number) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: character prompts have no unique identifier
+                  <div key={`character-${i}`}>
+                    <Group justify="space-between" mb={4}>
+                      <Text
+                        size="xs"
+                        fw={700}
+                        c="dimmed"
+                        style={{
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                        }}
+                      >
+                        Character {i + 1}
+                        {char.center &&
+                          ` (${(char.center.x * 100).toFixed(0)}%, ${(char.center.y * 100).toFixed(0)}%)`}
+                      </Text>
+                      <CopyButton value={char.prompt} />
+                    </Group>
+                    <Text
+                      style={{
+                        fontFamily: 'var(--mantine-font-family-monospace)',
+                        fontSize: '0.85rem',
+                        whiteSpace: 'pre-wrap',
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {char.prompt}
+                    </Text>
+                  </div>
+                ),
+              )}
+            </Stack>
           </Section>
         )}
 
       {/* Generation Settings */}
       <GenerationSettings metadata={metadata} />
-    </div>
+    </Stack>
   );
 }
 
 interface SectionProps {
   title: string;
   copyValue?: string;
-  children: preact.ComponentChildren;
+  children: ComponentChildren;
 }
 
 function Section({ title, copyValue, children }: SectionProps) {
   return (
-    <div class={styles.metadataSection}>
-      <div class={styles.sectionHeader}>
-        <h4 class={styles.sectionTitle}>{title}</h4>
+    <ContentPanel>
+      <Group justify="space-between" mb="xs">
+        <Text
+          size="xs"
+          fw={700}
+          c="dimmed"
+          style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+        >
+          {title}
+        </Text>
         {copyValue !== undefined && <CopyButton value={copyValue} />}
-      </div>
+      </Group>
       {children}
-    </div>
+    </ContentPanel>
   );
 }
 
+type FieldLabels = ReturnType<typeof useStore<typeof $t>>['fields'];
+
 function GenerationSettings({ metadata }: { metadata: GenerationMetadata }) {
-  const settings = buildSettingsList(metadata);
+  const t = useStore($t);
+  const settings = buildSettingsList(metadata, t.fields);
   if (settings.length === 0) return null;
 
   return (
-    <Section title="Generation Settings">
-      {settings.map(([label, value, copyable]) => (
-        <div class={styles.metadataField} key={label}>
-          <span class={styles.fieldLabel}>{label}</span>
-          <span class={styles.fieldValue}>
-            {String(value)}
-            {copyable && <CopyButton value={String(value)} />}
-          </span>
-        </div>
-      ))}
+    <Section title={t.fields.generationSettings}>
+      <Stack gap={0}>
+        {settings.map(([label, value, copyable], i) => (
+          <div key={label}>
+            {i > 0 && <Divider />}
+            <Group justify="space-between" wrap="nowrap" py={6}>
+              <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
+                {label}
+              </Text>
+              <Group gap={4} wrap="nowrap">
+                <Text size="sm" fw={500} truncate="end">
+                  {String(value)}
+                </Text>
+                {copyable && <CopyButton value={String(value)} />}
+              </Group>
+            </Group>
+          </div>
+        ))}
+      </Stack>
     </Section>
   );
 }
@@ -96,47 +163,48 @@ function GenerationSettings({ metadata }: { metadata: GenerationMetadata }) {
  */
 function buildSettingsList(
   metadata: GenerationMetadata,
+  f: FieldLabels,
 ): [string, unknown, boolean][] {
   const settings: [string, unknown, boolean][] = [];
 
   // Model
   if (metadata.model) {
     if (metadata.model.name)
-      settings.push(['Model', metadata.model.name, false]);
+      settings.push([f.model, metadata.model.name, false]);
     if (metadata.model.hash)
-      settings.push(['Model Hash', metadata.model.hash, false]);
+      settings.push([f.modelHash, metadata.model.hash, false]);
   }
 
   // Sampling
   if (metadata.sampling) {
     const s = metadata.sampling;
-    if (s.sampler) settings.push(['Sampler', s.sampler, false]);
-    if (s.scheduler) settings.push(['Scheduler', s.scheduler, false]);
-    if (s.steps) settings.push(['Steps', s.steps, false]);
-    if (s.cfg) settings.push(['CFG Scale', s.cfg, false]);
-    if (s.seed) settings.push(['Seed', s.seed, true]);
-    if (s.clipSkip) settings.push(['CLIP Skip', s.clipSkip, false]);
+    if (s.sampler) settings.push([f.sampler, s.sampler, false]);
+    if (s.scheduler) settings.push([f.scheduler, s.scheduler, false]);
+    if (s.steps) settings.push([f.steps, s.steps, false]);
+    if (s.cfg) settings.push([f.cfg, s.cfg, false]);
+    if (s.seed) settings.push([f.seed, s.seed, true]);
+    if (s.clipSkip) settings.push([f.clipSkip, s.clipSkip, false]);
   }
 
   // Hires/Upscale
   if (metadata.hires) {
     const hr = metadata.hires;
-    if (hr.upscaler) settings.push(['Upscaler', hr.upscaler, false]);
-    if (hr.scale) settings.push(['Hires Scale', hr.scale, false]);
-    if (hr.steps) settings.push(['Hires Steps', hr.steps, false]);
-    if (hr.denoise) settings.push(['Hires Denoise', hr.denoise, false]);
+    if (hr.upscaler) settings.push([f.upscaler, hr.upscaler, false]);
+    if (hr.scale) settings.push([f.hiresScale, hr.scale, false]);
+    if (hr.steps) settings.push([f.hiresSteps, hr.steps, false]);
+    if (hr.denoise) settings.push([f.hiresDenoise, hr.denoise, false]);
   }
 
   // Upscale (post-generation)
   if (metadata.upscale) {
     const u = metadata.upscale;
-    if (u.upscaler) settings.push(['Upscaler', u.upscaler, false]);
-    if (u.scale) settings.push(['Upscale Factor', u.scale, false]);
+    if (u.upscaler) settings.push([f.upscaler, u.upscaler, false]);
+    if (u.scale) settings.push([f.upscaleFactor, u.scale, false]);
   }
 
   // Image Size
-  settings.push(['Width', metadata.width, false]);
-  settings.push(['Height', metadata.height, false]);
+  settings.push([f.width, metadata.width, false]);
+  settings.push([f.height, metadata.height, false]);
 
   return settings;
 }

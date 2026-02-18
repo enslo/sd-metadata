@@ -1,35 +1,30 @@
+import { ActionIcon, Affix, Transition } from '@mantine/core';
+import { useWindowScroll } from '@mantine/hooks';
 import { ArrowUp } from 'lucide-preact';
-import { useEffect, useState } from 'preact/hooks';
-import styles from './ScrollToTop.module.css';
 
 /**
  * Floating action button to scroll to top of page
  * Only visible when scrolled down
  */
 export function ScrollToTop() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setVisible(window.scrollY > 200);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const [scroll, scrollTo] = useWindowScroll();
 
   return (
-    <button
-      type="button"
-      class={`${styles.fab} ${visible ? styles.fabVisible : ''}`}
-      onClick={scrollToTop}
-      aria-label="Scroll to top"
-    >
-      <ArrowUp size={24} />
-    </button>
+    <Affix position={{ bottom: 20, right: 20 }} zIndex={100}>
+      <Transition transition="slide-up" mounted={scroll.y > 200}>
+        {(transitionStyles) => (
+          <ActionIcon
+            variant="filled"
+            size="xl"
+            radius="xl"
+            aria-label="Scroll to top"
+            style={transitionStyles}
+            onClick={() => scrollTo({ y: 0 })}
+          >
+            <ArrowUp size={24} />
+          </ActionIcon>
+        )}
+      </Transition>
+    </Affix>
   );
 }

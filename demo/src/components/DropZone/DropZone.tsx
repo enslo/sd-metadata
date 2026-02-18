@@ -1,8 +1,8 @@
+import { Badge, Group, Image, Stack, Text } from '@mantine/core';
+import { Dropzone, IMAGE_MIME_TYPE } from '@mantine/dropzone';
 import { useStore } from '@nanostores/preact';
 import { Upload } from 'lucide-preact';
-import { useRef, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
-import styles from './DropZone.module.css';
 
 interface DropZoneProps {
   onFileSelect: (file: File) => void;
@@ -15,6 +15,13 @@ interface DropZoneProps {
   globalDragOver?: boolean;
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  success: 'indigo',
+  empty: 'gray',
+  unrecognized: 'yellow',
+  invalid: 'red',
+};
+
 /**
  * File drop zone with image preview
  */
@@ -23,102 +30,80 @@ export function DropZone({
   previewUrl,
   filename,
   softwareInfo,
-  globalDragOver = false,
+  globalDragOver,
 }: DropZoneProps) {
   const t = useStore($t);
-  const [dragOver, setDragOver] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleClick = () => inputRef.current?.click();
-
-  const handleDragOver = (e: DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const handleDragLeave = (e: DragEvent) => {
-    if (e.relatedTarget === null) {
-      setDragOver(false);
-    }
-  };
-
-  const handleDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer?.files[0];
-    if (file) onFileSelect(file);
-  };
-
-  const handleChange = (e: Event) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
+  const handleDrop = (files: File[]) => {
+    const file = files[0];
     if (file) onFileSelect(file);
   };
 
   const hasPreview = previewUrl !== null;
-  const isDragOver = dragOver || globalDragOver;
-
-  const dropZoneClass = [
-    styles.dropZone,
-    isDragOver && styles.dragOver,
-    hasPreview && styles.hasPreview,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const badgeColor = STATUS_COLORS[softwareInfo?.status ?? ''] ?? 'indigo';
 
   return (
-    <div
-      class={dropZoneClass}
-      onClick={handleClick}
-      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
+    <Dropzone
       onDrop={handleDrop}
-      tabIndex={0}
-      // biome-ignore lint/a11y/useSemanticElements: drop zone needs large clickable area
-      role="button"
+      accept={IMAGE_MIME_TYPE}
+      multiple={false}
       aria-label={t.dropzone.uploadLabel}
+      styles={{
+        root: {
+          transition: 'all 200ms ease',
+          ...(globalDragOver
+            ? {
+                transform: 'scale(1.02)',
+                borderColor: 'var(--mantine-color-indigo-5)',
+                backgroundColor: 'var(--mantine-color-indigo-light)',
+              }
+            : {}),
+        },
+      }}
     >
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        hidden
-        onChange={handleChange}
-      />
-
       {hasPreview ? (
-        <div class={styles.preview}>
-          <img src={previewUrl} alt={t.dropzone.preview} />
-          <div class={styles.previewRight}>
-            <div class={styles.imageInfo}>
-              <h3 class={styles.filename} title={filename ?? ''}>
-                {filename}
-              </h3>
-            </div>
-            <div class={styles.infoRow}>
-              <span
-                class={`${styles.softwareBadge} ${
-                  softwareInfo?.status === 'empty'
-                    ? styles.badgeEmpty
-                    : softwareInfo?.status === 'unrecognized'
-                      ? styles.badgeUnrecognized
-                      : softwareInfo?.status === 'invalid'
-                        ? styles.badgeInvalid
-                        : ''
-                }`}
+        <Group wrap="nowrap" gap="lg" align="center">
+          <Image
+            src={previewUrl}
+            alt={t.dropzone.preview}
+            maw={150}
+            mah={150}
+            radius="md"
+            fit="cover"
+            style={{ flexShrink: 0 }}
+          />
+          <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
+            <Text fw={500} truncate="end" title={filename ?? ''}>
+              {filename}
+            </Text>
+            <Group justify="space-between" align="center">
+              <Badge
+                color={badgeColor}
+                variant="filled"
+                size="lg"
+                style={{ textTransform: 'none' }}
               >
                 {softwareInfo?.label || t.dropzone.unknown}
-              </span>
-              <span class={styles.changeHint}>{t.dropzone.changeHint}</span>
-            </div>
-          </div>
-        </div>
+              </Badge>
+              <Text size="xs" c="dimmed">
+                {t.dropzone.changeHint}
+              </Text>
+            </Group>
+          </Stack>
+        </Group>
       ) : (
-        <div class={styles.content}>
-          <Upload size={48} aria-hidden="true" />
-          <p>{t.dropzone.placeholder}</p>
-        </div>
+        <Stack
+          align="center"
+          gap="md"
+          py="xl"
+          style={{ pointerEvents: 'none' }}
+        >
+          <Dropzone.Idle>
+            <Upload size={48} />
+          </Dropzone.Idle>
+          <Text c="dimmed">{t.dropzone.placeholder}</Text>
+        </Stack>
       )}
-    </div>
+    </Dropzone>
   );
 }

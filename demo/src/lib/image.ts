@@ -1,5 +1,8 @@
-import { write } from '@enslo/sd-metadata';
-import type { ParseResult } from '@enslo/sd-metadata';
+/**
+ * Shared image conversion utilities
+ *
+ * Extracted from SaveFab for reuse by EmbedEditor and other components.
+ */
 
 export type OutputFormat = 'png' | 'jpeg' | 'webp';
 
@@ -28,7 +31,7 @@ export function getFormatLabel(format: OutputFormat): string {
 /**
  * Get MIME type for format
  */
-function getMimeType(format: OutputFormat): string {
+export function getMimeType(format: OutputFormat): string {
   const mimeTypes: Record<OutputFormat, string> = {
     png: 'image/png',
     jpeg: 'image/jpeg',
@@ -40,7 +43,7 @@ function getMimeType(format: OutputFormat): string {
 /**
  * Get file extension for format
  */
-function getExtension(format: OutputFormat): string {
+export function getExtension(format: OutputFormat): string {
   const extensions: Record<OutputFormat, string> = {
     png: '.png',
     jpeg: '.jpg',
@@ -52,7 +55,9 @@ function getExtension(format: OutputFormat): string {
 /**
  * Load image from URL into canvas
  */
-async function loadImageToCanvas(url: string): Promise<HTMLCanvasElement> {
+export async function loadImageToCanvas(
+  url: string,
+): Promise<HTMLCanvasElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -75,7 +80,7 @@ async function loadImageToCanvas(url: string): Promise<HTMLCanvasElement> {
 /**
  * Convert canvas to blob
  */
-async function canvasToBlob(
+export async function canvasToBlob(
   canvas: HTMLCanvasElement,
   format: OutputFormat,
   quality = 0.95,
@@ -98,7 +103,7 @@ async function canvasToBlob(
 /**
  * Convert blob to Uint8Array
  */
-async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
+export async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
   const buffer = await blob.arrayBuffer();
   return new Uint8Array(buffer);
 }
@@ -106,7 +111,7 @@ async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
 /**
  * Trigger file download
  */
-function downloadBlob(blob: Blob, filename: string): void {
+export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -118,51 +123,31 @@ function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /**
- * Generate output filename
+ * Generate output filename with optional suffix
  */
-function generateFilename(
+export function generateFilename(
   originalFilename: string,
   targetFormat: OutputFormat,
+  suffix = '',
 ): string {
   const baseName = originalFilename.replace(/\.[^.]+$/, '');
-  return `${baseName}${getExtension(targetFormat)}`;
+  return `${baseName}${suffix}${getExtension(targetFormat)}`;
 }
 
 /**
- * Convert image and download with optional metadata
+ * Convert image data to a different format via canvas
  */
-export async function convertAndDownload(
-  previewUrl: string,
-  parseResult: ParseResult,
-  filename: string,
+export async function convertImageFormat(
+  data: Uint8Array,
   targetFormat: OutputFormat,
-  keepMetadata: boolean,
-): Promise<void> {
-  // Step 1: Load image and convert to target format
-  const canvas = await loadImageToCanvas(previewUrl);
-  const convertedBlob = await canvasToBlob(canvas, targetFormat);
-  const convertedData = await blobToUint8Array(convertedBlob);
-  const outputFilename = generateFilename(filename, targetFormat);
-
-  // Step 2: Write metadata (or empty to strip metadata)
-  const metadataToWrite: ParseResult = keepMetadata
-    ? parseResult
-    : { status: 'empty' };
-  const writeResult = write(convertedData, metadataToWrite);
-
-  if (!writeResult.ok) {
-    throw new Error(`Failed to write metadata: ${writeResult.error.type}`);
-  }
-
-  // Step 3: Create final blob and download
-  // Use slice() to create a new Uint8Array with a proper ArrayBuffer type
-  const finalBlob = new Blob([writeResult.value.slice()], {
-    type: getMimeType(targetFormat),
-  });
-  downloadBlob(finalBlob, outputFilename);
-
-  // Log warning if metadata was dropped
-  if (writeResult.warning) {
-    console.warn('Metadata warning:', writeResult.warning);
+): Promise<Uint8Array> {
+  const blob = new Blob([data.slice()]);
+  const url = URL.createObjectURL(blob);
+  try {
+    const canvas = await loadImageToCanvas(url);
+    const convertedBlob = await canvasToBlob(canvas, targetFormat);
+    return await blobToUint8Array(convertedBlob);
+  } finally {
+    URL.revokeObjectURL(url);
   }
 }

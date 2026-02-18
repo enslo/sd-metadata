@@ -1,6 +1,7 @@
 import type { RawMetadata } from '@enslo/sd-metadata';
+import { Accordion, Badge, Group } from '@mantine/core';
 import { formatJson } from '../../utils';
-import styles from './Results.module.css';
+import { ContentPanel } from './ContentPanel';
 
 // Type aliases derived from RawMetadata
 type PngTextChunk = Extract<RawMetadata, { format: 'png' }>['chunks'][number];
@@ -24,24 +25,47 @@ function getChunkText(chunk: PngTextChunk): string {
  * Display raw PNG text chunks as accordion
  */
 export function RawChunks({ chunks }: RawChunksProps) {
+  const defaultValues = chunks.map((c) => c.keyword);
+
   return (
-    <div class={styles.rawData}>
+    <Accordion multiple variant="separated" defaultValue={defaultValues}>
       {chunks.map((chunk) => {
         const { formatted, isJson } = formatJson(getChunkText(chunk));
         return (
-          <details class={styles.rawChunk} open key={chunk.keyword}>
-            <summary class={styles.rawChunkHeader}>
-              <span class={styles.chunkInfo}>
-                <span class={styles.chunkKeyword}>{chunk.keyword}</span>
-                <span class={styles.chunkBadge}>{chunk.type}</span>
-                {isJson && <span class={styles.chunkBadge}>JSON</span>}
-              </span>
-            </summary>
-            <pre class={styles.chunkContent}>{formatted}</pre>
-          </details>
+          <Accordion.Item value={chunk.keyword} key={chunk.keyword}>
+            <Accordion.Control>
+              <Group gap="xs">
+                <span>{chunk.keyword}</span>
+                <Badge size="xs" variant="light">
+                  {chunk.type}
+                </Badge>
+                {isJson && (
+                  <Badge size="xs" variant="light" color="teal">
+                    JSON
+                  </Badge>
+                )}
+              </Group>
+            </Accordion.Control>
+            <Accordion.Panel>
+              <ContentPanel>
+                <pre
+                  style={{
+                    fontFamily: 'var(--mantine-font-family-monospace)',
+                    fontSize: '0.8rem',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}
+                >
+                  {formatted}
+                </pre>
+              </ContentPanel>
+            </Accordion.Panel>
+          </Accordion.Item>
         );
       })}
-    </div>
+    </Accordion>
   );
 }
 
@@ -53,24 +77,45 @@ interface ExifSegmentsProps {
  * Display EXIF metadata segments as accordion
  */
 export function ExifSegments({ segments }: ExifSegmentsProps) {
+  const defaultValues = segments.map((s) => s.source.type);
+
   return (
-    <div class={styles.rawData}>
+    <Accordion multiple variant="separated" defaultValue={defaultValues}>
       {segments.map((segment) => {
         const { formatted, isJson } = formatJson(segment.data);
         const sourceLabel = getSourceLabel(segment.source);
         return (
-          <details class={styles.rawChunk} open key={segment.source}>
-            <summary class={styles.rawChunkHeader}>
-              <span class={styles.chunkInfo}>
-                <span class={styles.chunkKeyword}>{sourceLabel}</span>
-                {isJson && <span class={styles.chunkBadge}>JSON</span>}
-              </span>
-            </summary>
-            <pre class={styles.chunkContent}>{formatted}</pre>
-          </details>
+          <Accordion.Item value={segment.source.type} key={segment.source.type}>
+            <Accordion.Control>
+              <Group gap="xs">
+                <span>{sourceLabel}</span>
+                {isJson && (
+                  <Badge size="xs" variant="light" color="teal">
+                    JSON
+                  </Badge>
+                )}
+              </Group>
+            </Accordion.Control>
+            <Accordion.Panel>
+              <ContentPanel>
+                <pre
+                  style={{
+                    fontFamily: 'var(--mantine-font-family-monospace)',
+                    fontSize: '0.8rem',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}
+                >
+                  {formatted}
+                </pre>
+              </ContentPanel>
+            </Accordion.Panel>
+          </Accordion.Item>
         );
       })}
-    </div>
+    </Accordion>
   );
 }
 
