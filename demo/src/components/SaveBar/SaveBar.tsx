@@ -5,11 +5,11 @@ import { useStore } from '@nanostores/preact';
 import { useCallback, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
 import {
-  type OutputFormat,
   convertImageFormat,
   downloadBlob,
   generateFilename,
   getMimeType,
+  type OutputFormat,
 } from '../../lib/image';
 
 interface SaveBarProps {

@@ -61,7 +61,6 @@ export function ParsedMetadata({ metadata }: ParsedMetadataProps) {
             <Stack gap="sm">
               {metadata.characterPrompts.map(
                 (char: CharacterPrompt, i: number) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: character prompts have no unique identifier
                   <div key={`character-${i}`}>
                     <Group justify="space-between" mb={4}>
                       <Text

@@ -1,5 +1,5 @@
-import { read } from '@enslo/sd-metadata';
 import type { ParseResult } from '@enslo/sd-metadata';
+import { read } from '@enslo/sd-metadata';
 import {
   Anchor,
   Container,

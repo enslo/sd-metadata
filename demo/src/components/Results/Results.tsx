@@ -31,7 +31,6 @@ export function Results({
   const [resetKey, setResetKey] = useState(0);
 
   // Reset to parsed tab when parseResult changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on data change
   useEffect(() => {
     setActiveTab('parsed');
     setResetKey((k) => k + 1);

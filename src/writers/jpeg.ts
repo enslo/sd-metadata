@@ -1,8 +1,7 @@
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
-import { buildExifTiffData } from './exif';
-
 import { isJpeg } from '../utils/binary';
+import { buildExifTiffData } from './exif';
 
 // Internal types (co-located with writer)
 type JpegWriteError =

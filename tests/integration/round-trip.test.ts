@@ -7,11 +7,11 @@ import {
 } from '../helpers/minimal-images';
 import { expectNovelAIRawEqual, expectRawEqual } from '../helpers/raw-equal';
 import {
+  isRawMismatchExpected,
   JPEG_SAMPLES,
+  loadSample,
   PNG_SAMPLES,
   WEBP_SAMPLES,
-  isRawMismatchExpected,
-  loadSample,
 } from '../helpers/samples';
 
 describe('Round-trip preservation', () => {
