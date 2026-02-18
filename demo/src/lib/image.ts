@@ -123,14 +123,15 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /**
- * Generate output filename
+ * Generate output filename with optional suffix
  */
 export function generateFilename(
   originalFilename: string,
   targetFormat: OutputFormat,
+  suffix = '',
 ): string {
   const baseName = originalFilename.replace(/\.[^.]+$/, '');
-  return `${baseName}${getExtension(targetFormat)}`;
+  return `${baseName}${suffix}${getExtension(targetFormat)}`;
 }
 
 /**

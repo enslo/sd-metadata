@@ -74,7 +74,11 @@ export function EmbedEditor({
       const result = embed(convertedData, { ...metadata, extras });
 
       if (result.ok) {
-        const outputFilename = generateFilename(filename, targetFormat);
+        const outputFilename = generateFilename(
+          filename,
+          targetFormat,
+          '_edited',
+        );
         const blob = new Blob([result.value.slice()], {
           type: getMimeType(targetFormat),
         });

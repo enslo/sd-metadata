@@ -47,6 +47,7 @@ export function SaveBar({ parseResult, previewUrl, filename }: SaveBarProps) {
       );
 
       let resultData: Uint8Array;
+      let suffix = '';
 
       if (!keepMetadata || !hasMetadata) {
         // Strip metadata
@@ -55,6 +56,7 @@ export function SaveBar({ parseResult, previewUrl, filename }: SaveBarProps) {
           throw new Error(writeResult.error.type);
         }
         resultData = writeResult.value;
+        suffix = '_noinfo';
       } else if (
         metadataFormat === 'a1111' &&
         parseResult.status === 'success'
@@ -65,6 +67,7 @@ export function SaveBar({ parseResult, previewUrl, filename }: SaveBarProps) {
           throw new Error(embedResult.error.type);
         }
         resultData = embedResult.value;
+        suffix = '_a1111';
       } else {
         // Keep original metadata
         const writeResult = write(convertedData, parseResult);
@@ -74,7 +77,7 @@ export function SaveBar({ parseResult, previewUrl, filename }: SaveBarProps) {
         resultData = writeResult.value;
       }
 
-      const outputFilename = generateFilename(filename, targetFormat);
+      const outputFilename = generateFilename(filename, targetFormat, suffix);
       const blob = new Blob([resultData.slice()], {
         type: getMimeType(targetFormat),
       });
