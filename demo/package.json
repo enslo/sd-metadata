@@ -9,18 +9,18 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@preact/preset-vite": "2.10.2",
-    "typescript": "5.9.3",
-    "vite": "7.3.1"
+    "@preact/preset-vite": "^2.10.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   },
   "dependencies": {
     "@enslo/sd-metadata": "workspace:*",
     "@mantine/core": "^8.3.14",
     "@mantine/dropzone": "^8.3.14",
     "@mantine/hooks": "^8.3.14",
-    "@nanostores/preact": "1.0.0",
-    "lucide-preact": "0.562.0",
-    "nanostores": "1.1.0",
-    "preact": "10.28.2"
+    "@nanostores/preact": "^1.0.0",
+    "lucide-preact": "^0.562.0",
+    "nanostores": "^1.1.0",
+    "preact": "^10.28.3"
   }
 }

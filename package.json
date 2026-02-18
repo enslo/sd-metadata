@@ -13,7 +13,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
@@ -50,13 +52,13 @@
   },
   "homepage": "https://sd-metadata.pages.dev",
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.4.2",
     "@types/node": "^25.0.3",
-    "@vitest/coverage-v8": "^4.0.17",
-    "lefthook": "^1.10.10",
+    "@vitest/coverage-v8": "^4.0.18",
+    "lefthook": "^2.1.0",
     "markdownlint-cli": "^0.47.0",
-    "tsup": "^8.3.6",
-    "typescript": "^5.7.3",
-    "vitest": "^4.0.17"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
