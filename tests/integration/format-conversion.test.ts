@@ -9,9 +9,9 @@ import { expectRawEqual } from '../helpers/raw-equal';
 import { expectRawStructure } from '../helpers/raw-structure';
 import {
   JPEG_SAMPLES,
+  loadSample,
   PNG_SAMPLES,
   WEBP_SAMPLES,
-  loadSample,
 } from '../helpers/samples';
 
 /**

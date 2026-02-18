@@ -1,15 +1,15 @@
-import { embed, stringify } from '@enslo/sd-metadata';
 import type { EmbedMetadata, ParseResult } from '@enslo/sd-metadata';
+import { embed, stringify } from '@enslo/sd-metadata';
 import { Button, Code, Group, NativeSelect, Stack, Text } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { $t } from '../../i18n';
 import {
-  type OutputFormat,
   convertImageFormat,
   downloadBlob,
   generateFilename,
   getMimeType,
+  type OutputFormat,
 } from '../../lib/image';
 import { ContentPanel } from '../Results/ContentPanel';
 import { ExtrasEditor } from './ExtrasEditor';

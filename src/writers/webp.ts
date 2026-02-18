@@ -1,9 +1,7 @@
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
-import { arraysEqual, writeUint32LE } from '../utils/binary';
+import { arraysEqual, isWebp, writeUint32LE } from '../utils/binary';
 import { buildExifTiffData } from './exif';
-
-import { isWebp } from '../utils/binary';
 
 // Internal types (co-located with writer)
 type WebpWriteError =

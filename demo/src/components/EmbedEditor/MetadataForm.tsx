@@ -4,8 +4,8 @@ import {
   Group,
   NumberInput,
   Stack,
-  TextInput,
   Textarea,
+  TextInput,
 } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useRef } from 'preact/hooks';

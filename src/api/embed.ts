@@ -7,9 +7,8 @@
  */
 
 import { createEncodedChunk } from '../converters/chunk-encoding';
-import type { EmbedMetadata, GenerationMetadata } from '../types';
+import type { EmbedMetadata, GenerationMetadata, WriteResult } from '../types';
 import { Result } from '../types';
-import type { WriteResult } from '../types';
 import type { ImageFormat } from '../utils/binary';
 import { detectFormat, toUint8Array } from '../utils/binary';
 import { writeJpegMetadata } from '../writers/jpeg';

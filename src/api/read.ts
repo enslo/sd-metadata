@@ -17,7 +17,7 @@ import type {
   RawMetadata,
   ReadOptions,
 } from '../types';
-import { type ImageFormat, detectFormat, toUint8Array } from '../utils/binary';
+import { detectFormat, type ImageFormat, toUint8Array } from '../utils/binary';
 import { pngChunksToRecord, segmentsToRecord } from '../utils/convert';
 
 /**

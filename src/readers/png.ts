@@ -1,8 +1,6 @@
 import type { ITXtChunk, PngTextChunk, TExtChunk } from '../types';
 import { Result } from '../types';
-import { readChunkType, readUint32BE } from '../utils/binary';
-
-import { isPng } from '../utils/binary';
+import { isPng, readChunkType, readUint32BE } from '../utils/binary';
 
 // Internal types (co-located with reader)
 type PngReadError =

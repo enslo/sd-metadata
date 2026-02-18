@@ -1,9 +1,7 @@
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
-import { arraysEqual } from '../utils/binary';
+import { arraysEqual, isJpeg } from '../utils/binary';
 import { parseExifMetadataSegments } from './exif';
-
-import { isJpeg } from '../utils/binary';
 
 // Internal types (co-located with reader)
 type JpegReadError = { type: 'invalidSignature' };

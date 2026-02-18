@@ -1,5 +1,4 @@
-import { Button, Tooltip } from '@mantine/core';
-import { useMantineColorScheme } from '@mantine/core';
+import { Button, Tooltip, useMantineColorScheme } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { Moon, Sun } from 'lucide-preact';
 import { $t } from '../../i18n';

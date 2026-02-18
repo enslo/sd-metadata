@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { read, write, writeAsWebUI } from '../../../src';
 import type { GenerationMetadata, ParseResult } from '../../../src';
+import { read, write, writeAsWebUI } from '../../../src';
 
 /**
  * Create a minimal valid PNG image for testing
