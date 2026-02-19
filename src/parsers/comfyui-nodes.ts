@@ -17,7 +17,13 @@ import type {
 // Node Class Type Constants
 // =============================================================================
 
-const SAMPLER_TYPES = ['KSampler', 'KSamplerAdvanced', 'SamplerCustomAdvanced'];
+const SAMPLER_TYPES = [
+  'KSampler',
+  'KSamplerAdvanced',
+  'SamplerCustomAdvanced',
+  'DetailerForEach',
+];
+
 const LATENT_IMAGE_TYPES = ['EmptyLatentImage'];
 const LATENT_IMAGE_RGTHREE_TYPES = ['SDXL Empty Latent Image (rgthree)'];
 const CHECKPOINT_TYPES = ['CheckpointLoaderSimple', 'CheckpointLoader'];
