@@ -49,20 +49,20 @@ importers:
         version: 8.3.14(react@19.2.4)
       '@nanostores/preact':
         specifier: ^1.0.0
-        version: 1.0.0(nanostores@1.1.0)(preact@10.28.3)
+        version: 1.0.0(nanostores@1.1.0)(preact@10.28.4)
       lucide-preact:
-        specifier: ^0.562.0
-        version: 0.562.0(preact@10.28.3)
+        specifier: ^0.574.0
+        version: 0.574.0(preact@10.28.4)
       nanostores:
         specifier: ^1.1.0
         version: 1.1.0
       preact:
         specifier: ^10.28.3
-        version: 10.28.3
+        version: 10.28.4
     devDependencies:
       '@preact/preset-vite':
         specifier: ^2.10.3
-        version: 2.10.3(@babel/core@7.28.6)(preact@10.28.3)(rollup@4.56.0)(vite@7.3.1(@types/node@25.3.0))
+        version: 2.10.3(@babel/core@7.28.6)(preact@10.28.4)(rollup@4.56.0)(vite@7.3.1(@types/node@25.3.0))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -1043,8 +1043,8 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-preact@0.562.0:
-    resolution: {integrity: sha512-1LOH/QVkxZ0zMspMPcVAbEfmwKHM3llG8ikA8j2M7GaMKRHZLn32PohXnvmsqDMhrCBsBc9pt1ybPCUYteywtQ==}
+  lucide-preact@0.574.0:
+    resolution: {integrity: sha512-WiTHsv7OI85J0kSyyco9qg+xFLNItrsJEETgHnrJZ+0A8S3Dc4E0qYjMy3dMbtTSJ1JBJa8K0kp1J6X2fp6ZWA==}
     peerDependencies:
       preact: ^10.27.2
 
@@ -1236,8 +1236,8 @@ packages:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  preact@10.28.3:
-    resolution: {integrity: sha512-tCmoRkPQLpBeWzpmbhryairGnhW9tKV6c6gr/w+RhoRoKEJwsjzipwp//1oCpGPOchvSLaAPlpcJi9MwMmoPyA==}
+  preact@10.28.4:
+    resolution: {integrity: sha512-uKFfOHWuSNpRFVTnljsCluEFq57OKT+0QdOiQo8XWnQ/pSvg7OpX5eNOejELXJMWy+BwM2nobz0FkvzmnpCNsQ==}
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -1923,17 +1923,17 @@ snapshots:
     dependencies:
       react: 19.2.4
 
-  '@nanostores/preact@1.0.0(nanostores@1.1.0)(preact@10.28.3)':
+  '@nanostores/preact@1.0.0(nanostores@1.1.0)(preact@10.28.4)':
     dependencies:
       nanostores: 1.1.0
-      preact: 10.28.3
+      preact: 10.28.4
 
-  '@preact/preset-vite@2.10.3(@babel/core@7.28.6)(preact@10.28.3)(rollup@4.56.0)(vite@7.3.1(@types/node@25.3.0))':
+  '@preact/preset-vite@2.10.3(@babel/core@7.28.6)(preact@10.28.4)(rollup@4.56.0)(vite@7.3.1(@types/node@25.3.0))':
     dependencies:
       '@babel/core': 7.28.6
       '@babel/plugin-transform-react-jsx': 7.28.6(@babel/core@7.28.6)
       '@babel/plugin-transform-react-jsx-development': 7.27.1(@babel/core@7.28.6)
-      '@prefresh/vite': 2.4.11(preact@10.28.3)(vite@7.3.1(@types/node@25.3.0))
+      '@prefresh/vite': 2.4.11(preact@10.28.4)(vite@7.3.1(@types/node@25.3.0))
       '@rollup/pluginutils': 5.3.0(rollup@4.56.0)
       babel-plugin-transform-hook-names: 1.0.2(@babel/core@7.28.6)
       debug: 4.4.3
@@ -1947,20 +1947,20 @@ snapshots:
 
   '@prefresh/babel-plugin@0.5.2': {}
 
-  '@prefresh/core@1.5.9(preact@10.28.3)':
+  '@prefresh/core@1.5.9(preact@10.28.4)':
     dependencies:
-      preact: 10.28.3
+      preact: 10.28.4
 
   '@prefresh/utils@1.2.1': {}
 
-  '@prefresh/vite@2.4.11(preact@10.28.3)(vite@7.3.1(@types/node@25.3.0))':
+  '@prefresh/vite@2.4.11(preact@10.28.4)(vite@7.3.1(@types/node@25.3.0))':
     dependencies:
       '@babel/core': 7.28.6
       '@prefresh/babel-plugin': 0.5.2
-      '@prefresh/core': 1.5.9(preact@10.28.3)
+      '@prefresh/core': 1.5.9(preact@10.28.4)
       '@prefresh/utils': 1.2.1
       '@rollup/pluginutils': 4.2.1
-      preact: 10.28.3
+      preact: 10.28.4
       vite: 7.3.1(@types/node@25.3.0)
     transitivePeerDependencies:
       - supports-color
@@ -2433,9 +2433,9 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-preact@0.562.0(preact@10.28.3):
+  lucide-preact@0.574.0(preact@10.28.4):
     dependencies:
-      preact: 10.28.3
+      preact: 10.28.4
 
   magic-string@0.30.21:
     dependencies:
@@ -2743,7 +2743,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  preact@10.28.3: {}
+  preact@10.28.4: {}
 
   prop-types@15.8.1:
     dependencies:
