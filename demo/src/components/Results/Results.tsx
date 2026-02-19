@@ -1,14 +1,13 @@
 import type { ParseResult } from '@enslo/sd-metadata';
-import { stringify } from '@enslo/sd-metadata';
-import { Alert, Paper, Stack, Tabs, Text } from '@mantine/core';
+import { Alert, Paper, Stack, Tabs } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
-import { $t } from '../../i18n';
+import { $t, type I18nMessages } from '../../i18n';
 import { EmbedEditor } from '../EmbedEditor';
 import { SaveBar } from '../SaveBar';
-import { ContentPanel } from './ContentPanel';
-import { ParsedMetadata } from './ParsedMetadata';
-import { ExifSegments, RawChunks } from './RawData';
+import { ParsedTabContent } from './ParsedTabContent';
+import { PlainTextTabContent } from './PlainTextTabContent';
+import { RawTabContent } from './RawTabContent';
 
 interface ResultsProps {
   parseResult: ParseResult;
@@ -26,15 +25,11 @@ export function Results({
   filename,
   previewUrl,
 }: ResultsProps) {
-  const t = useStore($t);
+  const t: I18nMessages = useStore($t);
   const [activeTab, setActiveTab] = useState<string | null>('parsed');
-  const [resetKey, setResetKey] = useState(0);
 
   // Reset to parsed tab when parseResult changes
-  useEffect(() => {
-    setActiveTab('parsed');
-    setResetKey((k) => k + 1);
-  }, [parseResult]);
+  useEffect(() => setActiveTab('parsed'), [parseResult]);
 
   // Handle invalid status
   if (parseResult.status === 'invalid') {
@@ -65,7 +60,7 @@ export function Results({
           </Tabs.Panel>
 
           <Tabs.Panel value="raw">
-            <RawTabContent parseResult={parseResult} t={t} key={resetKey} />
+            <RawTabContent parseResult={parseResult} t={t} key={previewUrl} />
           </Tabs.Panel>
 
           <Tabs.Panel value="embed">
@@ -86,80 +81,5 @@ export function Results({
         )}
       </Stack>
     </Paper>
-  );
-}
-
-function ParsedTabContent({
-  parseResult,
-  t,
-}: {
-  parseResult: Exclude<ParseResult, { status: 'invalid' }>;
-  t: ReturnType<typeof useStore<typeof $t>>;
-}) {
-  if (parseResult.status === 'empty') {
-    return <ErrorMessage message={t.results.errors.noMetadata} />;
-  }
-
-  if (parseResult.status === 'unrecognized') {
-    return <ErrorMessage message={t.results.errors.unrecognized} />;
-  }
-
-  return <ParsedMetadata metadata={parseResult.metadata} />;
-}
-
-function RawTabContent({
-  parseResult,
-  t,
-}: {
-  parseResult: Exclude<ParseResult, { status: 'invalid' }>;
-  t: ReturnType<typeof useStore<typeof $t>>;
-}) {
-  if (parseResult.status === 'empty') {
-    return <ErrorMessage message={t.results.errors.noRawData} />;
-  }
-
-  if (parseResult.raw.format === 'png') {
-    return <RawChunks chunks={parseResult.raw.chunks} />;
-  }
-
-  return <ExifSegments segments={parseResult.raw.segments} />;
-}
-
-function PlainTextTabContent({
-  parseResult,
-  t,
-}: {
-  parseResult: Exclude<ParseResult, { status: 'invalid' }>;
-  t: ReturnType<typeof useStore<typeof $t>>;
-}) {
-  const text = stringify(parseResult);
-
-  if (!text) {
-    return <ErrorMessage message={t.results.errors.noPlainText} />;
-  }
-
-  return (
-    <ContentPanel>
-      <pre
-        style={{
-          fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: '0.85rem',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          lineHeight: 1.6,
-          margin: 0,
-        }}
-      >
-        {text}
-      </pre>
-    </ContentPanel>
-  );
-}
-
-function ErrorMessage({ message }: { message: string }) {
-  return (
-    <Text c="dimmed" ta="center" py="xl">
-      {message}
-    </Text>
   );
 }

@@ -11,9 +11,11 @@ import {
   getMimeType,
   type OutputFormat,
 } from '../../lib/image';
-import { ContentPanel } from '../Results/ContentPanel';
+import { ContentPanel } from '../ContentPanel';
 import { ExtrasEditor } from './ExtrasEditor';
 import { MetadataForm } from './MetadataForm';
+
+type TextChangeEvent = { currentTarget: { value: string } };
 
 interface EmbedEditorProps {
   parseResult: ParseResult;
@@ -33,6 +35,10 @@ const EMPTY_METADATA: EmbedMetadata = {
 function toEmbedMetadata(parseResult: ParseResult): EmbedMetadata {
   if (parseResult.status !== 'success') return EMPTY_METADATA;
   return parseResult.metadata;
+}
+
+function isOutputFormat(v: string): v is OutputFormat {
+  return (OUTPUT_FORMATS as string[]).includes(v);
 }
 
 /**
@@ -141,9 +147,10 @@ export function EmbedEditor({
         <NativeSelect
           data={formatData}
           value={targetFormat}
-          onChange={(e: { currentTarget: { value: string } }) =>
-            setTargetFormat(e.currentTarget.value as OutputFormat)
-          }
+          onChange={(e: TextChangeEvent) => {
+            const value = e.currentTarget.value;
+            if (isOutputFormat(value)) setTargetFormat(value);
+          }}
           aria-label={t.embedEditor.format}
         />
         <Button

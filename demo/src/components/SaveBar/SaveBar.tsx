@@ -12,6 +12,9 @@ import {
   type OutputFormat,
 } from '../../lib/image';
 
+type TextChangeEvent = { currentTarget: { value: string } };
+type CheckboxChangeEvent = { currentTarget: { checked: boolean } };
+
 interface SaveBarProps {
   parseResult: ParseResult;
   previewUrl: string;
@@ -21,6 +24,15 @@ interface SaveBarProps {
 type MetadataFormat = 'original' | 'a1111';
 
 const OUTPUT_FORMATS: OutputFormat[] = ['png', 'jpeg', 'webp'];
+const METADATA_FORMATS: MetadataFormat[] = ['original', 'a1111'];
+
+function isOutputFormat(v: string): v is OutputFormat {
+  return (OUTPUT_FORMATS as string[]).includes(v);
+}
+
+function isMetadataFormat(v: string): v is MetadataFormat {
+  return (METADATA_FORMATS as string[]).includes(v);
+}
 
 /**
  * Inline save bar with metadata and format options
@@ -111,7 +123,7 @@ export function SaveBar({ parseResult, previewUrl, filename }: SaveBarProps) {
     <Group gap="md" align="center">
       <Switch
         checked={keepMetadata}
-        onChange={(e: { currentTarget: { checked: boolean } }) =>
+        onChange={(e: CheckboxChangeEvent) =>
           setKeepMetadata(e.currentTarget.checked)
         }
         label={t.saveBar.keepMetadata}
@@ -121,18 +133,20 @@ export function SaveBar({ parseResult, previewUrl, filename }: SaveBarProps) {
       <NativeSelect
         data={metadataFormatData}
         value={metadataFormat}
-        onChange={(e: { currentTarget: { value: string } }) =>
-          setMetadataFormat(e.currentTarget.value as MetadataFormat)
-        }
+        onChange={(e: TextChangeEvent) => {
+          const value = e.currentTarget.value;
+          if (isMetadataFormat(value)) setMetadataFormat(value);
+        }}
         disabled={!keepMetadata || !hasMetadata}
         aria-label={t.saveBar.metadataFormat}
       />
       <NativeSelect
         data={formatData}
         value={targetFormat}
-        onChange={(e: { currentTarget: { value: string } }) =>
-          setTargetFormat(e.currentTarget.value as OutputFormat)
-        }
+        onChange={(e: TextChangeEvent) => {
+          const value = e.currentTarget.value;
+          if (isOutputFormat(value)) setTargetFormat(value);
+        }}
         aria-label={t.saveBar.outputFormat}
       />
       <Button

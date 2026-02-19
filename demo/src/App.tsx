@@ -1,5 +1,5 @@
 import type { ParseResult } from '@enslo/sd-metadata';
-import { read } from '@enslo/sd-metadata';
+import { read, softwareLabels } from '@enslo/sd-metadata';
 import {
   Anchor,
   Container,
@@ -11,14 +11,13 @@ import {
 } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
-import { DropZone } from './components/DropZone/DropZone';
-import { GitHubCorner } from './components/GitHubCorner/GitHubCorner';
-import { LanguageSwitcher } from './components/LanguageSwitcher/LanguageSwitcher';
-import { Results } from './components/Results/Results';
-import { ScrollToTop } from './components/ScrollToTop/ScrollToTop';
-import { ThemeToggle } from './components/ThemeToggle/ThemeToggle';
+import { DropZone } from './components/DropZone';
+import { GitHubCorner } from './components/GitHubCorner';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { Results } from './components/Results';
+import { ScrollToTop } from './components/ScrollToTop';
+import { ThemeToggle } from './components/ThemeToggle';
 import { $t } from './i18n';
-import { getSoftwareLabel } from './utils';
 
 const GITHUB_URL = 'https://github.com/enslo/sd-metadata';
 
@@ -43,20 +42,21 @@ export function App() {
   const [globalDragOver, setGlobalDragOver] = useState(false);
 
   const handleFileSelect = async (file: File) => {
-    // Create preview URL
-    const previewUrl = URL.createObjectURL(file);
+    try {
+      const previewUrl = URL.createObjectURL(file);
+      const buffer = await file.arrayBuffer();
+      const data = new Uint8Array(buffer);
+      const parseResult = read(data);
 
-    // Read and parse metadata
-    const buffer = await file.arrayBuffer();
-    const data = new Uint8Array(buffer);
-    const parseResult = read(data);
-
-    setState({
-      parseResult,
-      filename: file.name,
-      previewUrl,
-      fileData: data,
-    });
+      setState({
+        parseResult,
+        filename: file.name,
+        previewUrl,
+        fileData: data,
+      });
+    } catch (e) {
+      console.error('Failed to load file:', e);
+    }
   };
 
   // Enable drop anywhere on the page
@@ -77,17 +77,7 @@ export function App() {
       setGlobalDragOver(false);
       const file = e.dataTransfer?.files[0];
       if (file) {
-        const url = URL.createObjectURL(file);
-        file.arrayBuffer().then((buffer) => {
-          const data = new Uint8Array(buffer);
-          const result = read(data);
-          setState({
-            parseResult: result,
-            filename: file.name,
-            previewUrl: url,
-            fileData: data,
-          });
-        });
+        void handleFileSelect(file);
       }
     };
 
@@ -106,23 +96,22 @@ export function App() {
     label: string;
     status: 'success' | 'empty' | 'unrecognized' | 'invalid';
   } | null => {
-    if (!state.parseResult) return null;
-    if (state.parseResult.status === 'success') {
-      return {
-        label: getSoftwareLabel(
-          state.parseResult.metadata.software || 'Unknown',
-        ),
-        status: 'success',
-      };
+    switch (state.parseResult?.status) {
+      case 'success':
+        return {
+          label:
+            softwareLabels[state.parseResult.metadata.software] ?? 'Unknown',
+          status: 'success',
+        };
+      case 'empty':
+        return { label: 'Empty', status: 'empty' };
+      case 'unrecognized':
+        return { label: 'Unrecognized', status: 'unrecognized' };
+      case 'invalid':
+        return { label: 'Invalid', status: 'invalid' };
+      default:
+        return null;
     }
-    if (state.parseResult.status === 'empty') {
-      return { label: 'Empty', status: 'empty' };
-    }
-    if (state.parseResult.status === 'unrecognized') {
-      return { label: 'Unrecognized', status: 'unrecognized' };
-    }
-    // invalid or unsupportedFormat
-    return { label: 'Invalid', status: 'invalid' };
   };
 
   return (
