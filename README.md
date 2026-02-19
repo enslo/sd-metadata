@@ -11,7 +11,7 @@ A TypeScript library to read and write metadata embedded in AI-generated images.
 ## Features
 
 - **Multi-format Support**: PNG (tEXt / iTXt), JPEG (COM / Exif), WebP (Exif)
-- **Unified API**: Simple `read()` and `write()` functions work across all formats
+- **Simple API**: `read()`, `write()`, `embed()`, `stringify()` — four functions cover all use cases
 - **TypeScript Native**: Written in TypeScript with full type definitions included
 - **Zero Dependencies**: Works in Node.js and browsers without any external dependencies
 - **Format Conversion**: Seamlessly convert metadata between PNG, JPEG, and WebP
@@ -95,8 +95,8 @@ const { read } = require('@enslo/sd-metadata');
 ### Node.js Usage
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
-import { readFileSync, writeFileSync } from 'fs';
+import { read, stringify } from '@enslo/sd-metadata';
+import { readFileSync } from 'fs';
 
 const imageData = readFileSync('image.png');
 const result = read(imageData);
@@ -107,24 +107,30 @@ if (result.status === 'success') {
   console.log('Model:', result.metadata.model?.name);
   console.log('Size:', result.metadata.width, 'x', result.metadata.height);
 }
+
+// Format as human-readable text (works with any status)
+const text = stringify(result);
+if (text) {
+  console.log(text);
+}
 ```
 
 ### Browser Usage
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { read, softwareLabels } from '@enslo/sd-metadata';
 
 // Handle file input
 const fileInput = document.querySelector('input[type="file"]');
 fileInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  
+
   const arrayBuffer = await file.arrayBuffer();
   const result = read(arrayBuffer);
-  
+
   if (result.status === 'success') {
-    document.getElementById('tool').textContent = result.metadata.software;
+    document.getElementById('tool').textContent = softwareLabels[result.metadata.software];
     document.getElementById('prompt').textContent = result.metadata.prompt;
     document.getElementById('model').textContent = result.metadata.model?.name || 'N/A';
   }
@@ -349,9 +355,14 @@ if (text) {
 
 ## API Reference
 
-### `read(input: Uint8Array | ArrayBuffer): ParseResult`
+### `read(input: Uint8Array | ArrayBuffer, options?: ReadOptions): ParseResult`
 
 Reads and parses metadata from an image file.
+
+**Parameters:**
+
+- `input` - Image file data (PNG, JPEG, or WebP)
+- `options` - Optional read options (see [Type Documentation](./docs/types.md) for details)
 
 **Returns:**
 
@@ -574,45 +585,28 @@ type RawMetadata =
   | { format: 'webp'; segments: MetadataSegment[] };
 ```
 
-> [!TIP]
-> For TypeScript users: All types are exported and available for import.
->
-> ```typescript
-> import type {
->   BaseMetadata,
->   EmbedMetadata,
->   ParseResult,
->   GenerationMetadata,
->   GenerationSoftware,
->   ModelSettings,
->   SamplingSettings
-> } from '@enslo/sd-metadata';
-> ```
->
-> Use your IDE's IntelliSense for auto-completion and inline documentation.
-
 For detailed documentation of all exported types including `ModelSettings`, `SamplingSettings`, and format-specific types, see the [Type Documentation](./docs/types.md).
 
 ## Development
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Run tests
-npm test
-
-# Watch mode
-npm run test:watch
-
-# Test coverage
-npm run test:coverage
+pnpm test
 
 # Build
-npm run build
+pnpm build
 
 # Lint
-npm run lint
+pnpm lint
+
+# Type check
+pnpm typecheck
+
+# Start demo site
+pnpm demo
 ```
 
 ## License

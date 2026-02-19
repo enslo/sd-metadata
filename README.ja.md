@@ -11,7 +11,7 @@ AI生成画像に埋め込まれたメタデータを読み書きするための
 ## 特徴
 
 - **マルチフォーマット対応**: PNG (tEXt / iTXt)、JPEG (COM / Exif)、WebP (Exif)
-- **統一API**: シンプルな `read()` と `write()` 関数で全フォーマットに対応
+- **シンプルAPI**: `read()`、`write()`、`embed()`、`stringify()` — 4つの関数で全ユースケースをカバー
 - **TypeScriptネイティブ**: TypeScriptで書かれており、型定義を完全同梱
 - **ゼロ依存**: Node.jsとブラウザで外部依存なしで動作
 - **フォーマット変換**: PNG、JPEG、WebP間でメタデータをシームレスに変換
@@ -95,10 +95,9 @@ const { read } = require('@enslo/sd-metadata');
 ### Node.jsでの使用
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
-import { readFileSync, writeFileSync } from 'fs';
+import { read, stringify } from '@enslo/sd-metadata';
+import { readFileSync } from 'fs';
 
-// サポートされている任意のフォーマットからメタデータを読み込み
 const imageData = readFileSync('image.png');
 const result = read(imageData);
 
@@ -108,24 +107,30 @@ if (result.status === 'success') {
   console.log('Model:', result.metadata.model?.name);
   console.log('Size:', result.metadata.width, 'x', result.metadata.height);
 }
+
+// 読みやすいテキストにフォーマット（任意のstatusで動作）
+const text = stringify(result);
+if (text) {
+  console.log(text);
+}
 ```
 
 ### ブラウザでの使用
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { read, softwareLabels } from '@enslo/sd-metadata';
 
 // ファイル入力を処理
 const fileInput = document.querySelector('input[type="file"]');
 fileInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  
+
   const arrayBuffer = await file.arrayBuffer();
   const result = read(arrayBuffer);
-  
+
   if (result.status === 'success') {
-    document.getElementById('tool').textContent = result.metadata.software;
+    document.getElementById('tool').textContent = softwareLabels[result.metadata.software];
     document.getElementById('prompt').textContent = result.metadata.prompt;
     document.getElementById('model').textContent = result.metadata.model?.name || 'N/A';
   }
@@ -353,9 +358,14 @@ if (text) {
 
 ## APIリファレンス
 
-### `read(input: Uint8Array | ArrayBuffer): ParseResult`
+### `read(input: Uint8Array | ArrayBuffer, options?: ReadOptions): ParseResult`
 
 画像ファイルからメタデータを読み込み、パースします。
+
+**パラメータ:**
+
+- `input` - 画像ファイルデータ（PNG、JPEG、またはWebP）
+- `options` - オプションの読み込み設定（詳細は[型ドキュメント](./docs/types.ja.md)を参照）
 
 **戻り値:**
 
@@ -575,45 +585,28 @@ type RawMetadata =
   | { format: 'webp'; segments: MetadataSegment[] };
 ```
 
-> [!TIP]
-> TypeScriptユーザー向け：全ての型はエクスポートされており、インポートして使用できます。
->
-> ```typescript
-> import type {
->   BaseMetadata,
->   EmbedMetadata,
->   ParseResult,
->   GenerationMetadata,
->   GenerationSoftware,
->   ModelSettings,
->   SamplingSettings
-> } from '@enslo/sd-metadata';
-> ```
->
-> IDEのIntelliSenseを使用して自動補完とインラインドキュメントを活用してください。
-
 `ModelSettings`、`SamplingSettings`、フォーマット固有の型を含む全てのエクスポート型の詳細なドキュメントについては、[型ドキュメント](./docs/types.ja.md)を参照してください。
 
 ## 開発
 
 ```bash
 # 依存関係をインストール
-npm install
+pnpm install
 
 # テストを実行
-npm test
-
-# ウォッチモード
-npm run test:watch
-
-# テストカバレッジ
-npm run test:coverage
+pnpm test
 
 # ビルド
-npm run build
+pnpm build
 
 # リント
-npm run lint
+pnpm lint
+
+# 型チェック
+pnpm typecheck
+
+# デモサイト起動
+pnpm demo
 ```
 
 ## ライセンス
