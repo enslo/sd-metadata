@@ -5,7 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2026-02-15
+## [2.0.0] - 2026-02-19
+
+### ⚠️ Breaking Changes
+
+- **Forge family software identifiers** (#129): The `'forge'` identifier now refers specifically to the current [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) main line. Images previously detected as `'forge'` (which was a catch-all for all `f`-prefixed versions) are now split into distinct identifiers:
+
+  | v1.x `software` | v2.0.0 `software` | Tool |
+  | --- | --- | --- |
+  | `'forge'` | `'forge'` | [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) (current main line) |
+  | `'forge'` | `'forge-classic'` | [Forge Classic](https://github.com/Haoming02/sd-webui-forge-classic/tree/classic) |
+  | `'forge'` | `'reforge'` | [reForge](https://github.com/Panchovix/stable-diffusion-webui-reForge) |
+  | `'forge'` | `'easy-reforge'` | [EasyReforge](https://github.com/Zuntan03/EasyReforge) |
+
+  If your code checks `metadata.software === 'forge'`, update it to handle the new identifiers. TypeScript users with exhaustive `switch` statements on `GenerationSoftware` will see compile errors for the new values.
 
 ### Added
 
@@ -26,12 +39,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **TensorArt parser** (#138): Extract sampler and scheduler from the ComfyUI node graph. Previously these fields were missing because `generation_data` does not contain them.
+- **ComfyUI CLIP skip** (#137): Extract `clipSkip` from the `CLIPSetLastLayer` node. Previously, CLIP skip was silently dropped from all ComfyUI-based tool output (ComfyUI, TensorArt, Stability Matrix).
 - **Fooocus parser** (#130): Rewrite based on actual Fooocus source code analysis. The previous implementation was non-functional due to reading from the wrong metadata location. Now supports both JSON and A1111 text metadata schemes.
-- **Easy Diffusion parser**: Improved based on source code analysis. Removed phantom key format that never appeared in actual images, improved detection reliability, and added upscale/denoise field extraction.
+- **Easy Diffusion parser** (#131): Improved based on source code analysis. Removed phantom key format that never appeared in actual images, improved detection reliability, and added upscale/denoise field extraction.
 
 ### Changed
 
-- **Forge family detection** (#129): Distinguish between Forge Classic, Forge Neo, reForge, and EasyReforge from their Version field patterns
+- **SD WebUI family detection** (#129): Explicit Version-field pattern matching for SD WebUI (`v` + digit) and all Forge variants. Added real SD WebUI sample files, promoting Stable Diffusion WebUI from experimental to fully supported.
 
 ### Deprecated
 
@@ -46,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | `writeAsWebUI(image, metadata)` | `embed(image, metadata)` | Also accepts user-created `EmbedMetadata` |
 | `formatAsWebUI(metadata)`       | `stringify(metadata)`    | Also accepts `ParseResult` directly       |
 | `formatRaw(raw)`                | `stringify(readResult)`  | Handles all statuses automatically        |
+| `software === 'forge'`          | Check all Forge variants | See Breaking Changes above                |
 
 ## [1.8.1] - 2026-02-15
 
