@@ -190,8 +190,7 @@ if (parseResult.status === 'success') {
 }
 ```
 
-> [!TIP]
-> This library handles metadata read/write only. For actual image format conversion (decoding/encoding pixels), use image processing libraries like [sharp](https://www.npmjs.com/package/sharp), [jimp](https://www.npmjs.com/package/jimp), or browser Canvas API.
+> **Tip:** This library handles metadata read/write only. For actual image format conversion (decoding/encoding pixels), use image processing libraries like [sharp](https://www.npmjs.com/package/sharp), [jimp](https://www.npmjs.com/package/jimp), or browser Canvas API.
 
 </details>
 
@@ -311,8 +310,7 @@ const result = embed(imageData, {
 });
 ```
 
-> [!TIP]
-> If an extras key matches a structured field (e.g., `Steps`), the extras value overrides the structured value at its original position. New keys are appended at the end.
+> **Tip:** If an extras key matches a structured field (e.g., `Steps`), the extras value overrides the structured value at its original position. New keys are appended at the end.
 
 Since `EmbedMetadata` is a subset of all `GenerationMetadata` variants, you can pass parsed metadata directly — including NovelAI with its `characterPrompts`:
 

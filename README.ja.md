@@ -190,8 +190,7 @@ if (parseResult.status === 'success') {
 }
 ```
 
-> [!TIP]
-> このライブラリはメタデータの読み書きのみを扱います。実際の画像フォーマット変換（ピクセルのデコード/エンコード）には、[sharp](https://www.npmjs.com/package/sharp)、[jimp](https://www.npmjs.com/package/jimp)、ブラウザCanvas APIなどの画像処理ライブラリを使用してください。
+> **Tip:** このライブラリはメタデータの読み書きのみを扱います。実際の画像フォーマット変換（ピクセルのデコード/エンコード）には、[sharp](https://www.npmjs.com/package/sharp)、[jimp](https://www.npmjs.com/package/jimp)、ブラウザCanvas APIなどの画像処理ライブラリを使用してください。
 
 </details>
 
@@ -314,8 +313,7 @@ const result = embed(imageData, {
 });
 ```
 
-> [!TIP]
-> extras のキーが構造化フィールド（例：`Steps`）と一致する場合、extras の値が元の位置で構造化フィールドを上書きします。新しいキーは末尾に追加されます。
+> **Tip:** extras のキーが構造化フィールド（例：`Steps`）と一致する場合、extras の値が元の位置で構造化フィールドを上書きします。新しいキーは末尾に追加されます。
 
 `EmbedMetadata` はすべての `GenerationMetadata` バリアントのサブセットなので、パース結果のメタデータをそのまま渡せます — `characterPrompts` を持つ NovelAI も含めて：
 
