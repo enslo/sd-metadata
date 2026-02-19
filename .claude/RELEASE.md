@@ -6,137 +6,115 @@ For daily development workflow, see [WORKFLOW.md](./WORKFLOW.md).
 
 ## Prerequisites
 
-- All features for this release are merged to `release/vX.Y.Z`
-- All tests passing
+- All features and fixes for this release are merged to `main`
+- All tests passing on `main`
 - Git working directory is clean
 
 ## Steps
 
-### 1. Finalize Version
+### 1. Review Changes Since Last Release
 
-Review the changes and determine the appropriate version:
+```bash
+git log --oneline vX.Y.Z..HEAD
+```
+
+Determine the version bump:
 
 - **Patch** (x.x.N): Bug fixes only
 - **Minor** (x.N.0): New features, backward compatible
 - **Major** (N.0.0): Breaking changes
 
-If the release branch name needs to change (e.g., `release/v1.6.0` → `release/v2.0.0`):
+### 2. Create Release Preparation Branch
 
 ```bash
-git checkout release/vOLD
-git branch -m release/vNEW
-git push origin -u release/vNEW
-git push origin --delete release/vOLD
-```
-
-### 2. Create Release Work Branch
-
-```bash
-git checkout release/vX.Y.Z
-git pull
+git checkout main && git pull
 git checkout -b chore/release-vX.Y.Z
 ```
 
-### 3. Update CHANGELOG.md
+### 3. Update Release Files
 
-Add new version entry at the top:
+#### Version bump
+
+- **package.json**: Update `"version"` to `X.Y.Z`
+
+#### CHANGELOG
+
+- **CHANGELOG.md**: Add new version entry (see [guidelines](#changelog-guidelines) below)
+
+#### Documentation review
+
+Review all user-facing documentation against the upcoming release and
+update as needed. These files are frozen between releases, so this is
+the time to bring them up to date:
+
+- **README.md** / **README.ja.md**: Update CDN version URL, and ensure
+  API descriptions, usage examples, and feature lists reflect the
+  current state of the code
+- **docs/types.md** / **docs/types.ja.md**: Ensure type definitions and
+  explanations match any added, changed, or removed types
+
+### 4. Commit and Create PR
+
+```bash
+git add CHANGELOG.md package.json README.md README.ja.md docs/
+git commit -m "chore: release vX.Y.Z"
+git push -u origin chore/release-vX.Y.Z
+gh pr create --base main --title "chore: release vX.Y.Z" \
+  --body "Release preparation for vX.Y.Z. See CHANGELOG.md."
+```
+
+After CI passes, squash merge the PR.
+
+### 5. Create GitHub Release
+
+```bash
+git checkout main && git pull
+gh release create vX.Y.Z --title "vX.Y.Z" \
+  --notes-file <(sed -n '/## \[X.Y.Z\]/,/## \[/p' CHANGELOG.md | head -n -1)
+```
+
+This creates both the Git tag and GitHub Release.
+The publish workflow triggers automatically.
+
+### 6. Verify
+
+- npm: <https://www.npmjs.com/package/@enslo/sd-metadata>
+- Demo: <https://sd-metadata.pages.dev/>
+- GitHub Actions: check workflow runs
+
+### 7. Clean Up
+
+```bash
+git branch -d chore/release-vX.Y.Z
+```
+
+## CHANGELOG Guidelines
+
+Format: [Keep a Changelog](https://keepachangelog.com/)
+
+Write for **library users**, not contributors:
+
+- **Include**: features, bug fixes, breaking changes, deprecations
+- **Include**: security-relevant dependency updates (with advisory ID)
+- **Summarize**: routine dependency updates in a single line under
+  Maintenance (e.g., "Update development dependencies")
+- **Omit**: internal refactoring, CI changes, developer tooling updates
+  that do not affect the published package
+
+Example:
 
 ```markdown
 ## [X.Y.Z] - YYYY-MM-DD
 
-### Fixed
-- Description of bug fixes (#PR)
-
 ### Added
-- Description of new features (#PR)
+- **Feature name** (#PR): User-facing description
 
-### Changed
-- Description of changes (#PR)
-```
+### Fixed
+- **Bug description** (#PR): What was wrong and how it is fixed
 
-Add version link at the bottom:
-
-```markdown
-[X.Y.Z]: https://github.com/enslo/sd-metadata/releases/tag/vX.Y.Z
-```
-
-### 4. Update package.json
-
-```json
-{
-  "version": "X.Y.Z"
-}
-```
-
-### 5. Update README CDN Version
-
-Update the pinned version example in both README files:
-
-- `README.md`
-- `README.ja.md`
-
-```markdown
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@X.Y.Z/dist/index.js
-```
-
-### 6. Commit and Push
-
-```bash
-git add CHANGELOG.md package.json README.md README.ja.md
-git commit -m "chore: release vX.Y.Z"
-git push -u origin chore/release-vX.Y.Z
-```
-
-### 7. Create PR to Release Branch
-
-```bash
-gh pr create --base release/vX.Y.Z --title "chore: release vX.Y.Z" --body "Release preparation for vX.Y.Z
-
-See CHANGELOG.md for details."
-```
-
-After review, merge the PR.
-
-### 8. Create PR to Main
-
-```bash
-git checkout release/vX.Y.Z
-git pull
-gh pr create --base main --title "release vX.Y.Z" --body "Release vX.Y.Z
-
-See CHANGELOG.md for details."
-```
-
-After review, merge the PR.
-
-### 9. Create GitHub Release
-
-```bash
-git checkout main
-git pull
-gh release create vX.Y.Z --title "vX.Y.Z" --notes-file <(sed -n '/## \[X.Y.Z\]/,/## \[/p' CHANGELOG.md | head -n -1)
-```
-
-`gh release create` automatically creates both the Git tag and the GitHub release.
-
-### 10. Verify Publish & Deploy
-
-**Automated** (triggered by release):
-
-- GitHub Actions publishes to npm
-- Cloudflare Pages deploys demo site
-
-**Manual verification**:
-
-- Check npm: <https://www.npmjs.com/package/@enslo/sd-metadata>
-- Check demo site: <https://sd-metadata.pages.dev/>
-- Verify GitHub Actions succeeded
-
-### 11. Cleanup
-
-```bash
-git branch -d release/vX.Y.Z
-git branch -d chore/release-vX.Y.Z
+### Maintenance
+- Update development dependencies
+- **vitest**: v4.0 -> v5.0 (security fix: GHSA-xxxx)
 ```
 
 ## Troubleshooting
@@ -147,11 +125,13 @@ Check GitHub Actions logs. Common issues:
 
 - Node.js version too old (need v24+)
 - npm Trusted Publisher not configured
-- Package version already exists
+- Package version already exists on npm
 
 ## Notes
 
-- **Never commit directly to `main` or `release/vX.Y.Z`** - always use PRs
+- **Never commit directly to `main`** — always use PRs
 - **Test locally** before creating release
 - **Version numbers** follow semantic versioning strictly
-- **CHANGELOG** should be user-facing (no internal refactorings unless significant)
+- **Release preparation PRs** contain only version-related file updates
+  and documentation updates; code changes must be merged in separate PRs
+  beforehand
