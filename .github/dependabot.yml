@@ -1,31 +1,18 @@
 version: 2
 updates:
-  # Root package dependencies
+  # All npm dependencies (pnpm workspace: root + demo)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
     groups:
-      dev-dependencies:
-        dependency-type: "development"
-        update-types: ["minor", "patch"]
-      production-dependencies:
-        dependency-type: "production"
-        update-types: ["minor", "patch"]
-
-  # Demo app dependencies
-  - package-ecosystem: "npm"
-    directory: "/demo"
-    schedule:
-      interval: "weekly"
-    groups:
-      mantine:
+      demo-mantine:
         patterns: ["@mantine/*"]
       demo-dependencies:
         dependency-type: "production"
         update-types: ["minor", "patch"]
         exclude-patterns: ["@mantine/*"]
-      demo-dev-dependencies:
+      dev-dependencies:
         dependency-type: "development"
         update-types: ["minor", "patch"]
 
