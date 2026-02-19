@@ -1,14 +1,13 @@
-import type {
-  ITXtChunk,
-  PngMetadataResult,
-  PngReadError,
-  PngTextChunk,
-  TExtChunk,
-} from '../types';
+import type { ITXtChunk, PngTextChunk, TExtChunk } from '../types';
 import { Result } from '../types';
-import { readChunkType, readUint32BE } from '../utils/binary';
+import { isPng, readChunkType, readUint32BE } from '../utils/binary';
 
-import { isPng } from '../utils/binary';
+// Internal types (co-located with reader)
+type PngReadError =
+  | { type: 'invalidSignature' }
+  | { type: 'corruptedChunk'; message: string };
+
+type PngMetadataResult = Result<PngTextChunk[], PngReadError>;
 
 /**
  * Read PNG metadata from binary data

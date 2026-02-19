@@ -8,7 +8,10 @@ Complete type reference for `@enslo/sd-metadata`.
 
 - [Core Types](#core-types)
   - [`ParseResult`](#parseresult)
+  - [`BaseMetadata`](#basemetadata)
   - [`GenerationMetadata`](#generationmetadata)
+  - [`GenerationSoftware`](#generationsoftware)
+  - [`EmbedMetadata`](#embedmetadata)
   - [`RawMetadata`](#rawmetadata)
   - [`WriteResult`](#writeresult)
 - [Metadata Types](#metadata-types)
@@ -89,9 +92,49 @@ switch (result.status) {
 
 ---
 
+### `BaseMetadata`
+
+Common fields shared by all metadata types. This is the foundation for both `GenerationMetadata` variants and `EmbedMetadata`.
+
+```typescript
+export interface BaseMetadata {
+  /** Positive prompt */
+  prompt: string;
+  /** Negative prompt */
+  negativePrompt: string;
+  /** Image width in pixels */
+  width: number;
+  /** Image height in pixels */
+  height: number;
+  /** Model settings */
+  model?: ModelSettings;
+  /** Sampling settings */
+  sampling?: SamplingSettings;
+  /** Hires.fix settings (if applied) */
+  hires?: HiresSettings;
+  /** Upscale settings (if applied) */
+  upscale?: UpscaleSettings;
+}
+```
+
+**Example:**
+
+```typescript
+import type { BaseMetadata } from '@enslo/sd-metadata';
+
+// Use BaseMetadata when you only need common generation fields
+function displayMetadata(meta: BaseMetadata) {
+  console.log('Prompt:', meta.prompt);
+  console.log('Size:', meta.width, 'x', meta.height);
+  console.log('Model:', meta.model?.name);
+}
+```
+
+---
+
 ### `GenerationMetadata`
 
-Unified metadata structure. Discriminated union of all supported metadata types.
+Unified metadata structure. Discriminated union of all supported metadata types. All variants extend `BaseMetadata`.
 
 ```typescript
 type GenerationMetadata =
@@ -104,7 +147,7 @@ type GenerationMetadata =
 
 | Metadata Type | `software` values |
 | ------------- | ----------------- |
-| `StandardMetadata` | `'sd-webui'` \| `'forge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'sd-next'` \| `'forge-neo'` |
+| `StandardMetadata` | `'sd-webui'` \| `'sd-next'` \| `'forge'` \| `'forge-classic'` \| `'forge-neo'` \| `'reforge'` \| `'easy-reforge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` |
 | `NovelAIMetadata` | `'novelai'` |
 | `ComfyUIMetadata` | `'comfyui'` \| `'tensorart'` \| `'stability-matrix'` \| `'swarmui'` |
 
@@ -125,6 +168,77 @@ if (metadata.software === 'comfyui' ||
     console.log('Has workflow:', Object.keys(metadata.nodes).length);
   }
 }
+```
+
+---
+
+### `GenerationSoftware`
+
+String literal union of all supported software identifiers. Used as the discriminator for `GenerationMetadata` and as the key type for `softwareLabels`.
+
+```typescript
+type GenerationSoftware =
+  | 'novelai'
+  | 'comfyui'
+  | 'swarmui'
+  | 'tensorart'
+  | 'stability-matrix'
+  | 'invokeai'
+  | 'sd-webui'
+  | 'forge'
+  | 'forge-classic'
+  | 'forge-neo'
+  | 'reforge'
+  | 'easy-reforge'
+  | 'sd-next'
+  | 'civitai'
+  | 'hf-space'
+  | 'easydiffusion'
+  | 'fooocus'
+  | 'ruined-fooocus';
+```
+
+**Example:**
+
+```typescript
+import { softwareLabels } from '@enslo/sd-metadata';
+import type { GenerationSoftware } from '@enslo/sd-metadata';
+
+function displaySoftware(software: GenerationSoftware): string {
+  return softwareLabels[software];
+}
+```
+
+---
+
+### `EmbedMetadata`
+
+User-created custom metadata for the `embed()` and `stringify()` functions. While `GenerationMetadata` represents parsed output from a known AI tool, `EmbedMetadata` is designed for composing metadata from scratch. Extends `BaseMetadata` with optional NovelAI character prompts and arbitrary key-value extras for the settings line.
+
+```typescript
+export type EmbedMetadata = BaseMetadata &
+  Pick<NovelAIMetadata, 'characterPrompts'> & {
+    extras?: Record<string, string | number>;
+  };
+```
+
+**Example:**
+
+```typescript
+import { embed } from '@enslo/sd-metadata';
+import type { EmbedMetadata } from '@enslo/sd-metadata';
+
+const metadata: EmbedMetadata = {
+  prompt: 'masterpiece, 1girl',
+  negativePrompt: 'lowres',
+  width: 512,
+  height: 768,
+  sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
+  model: { name: 'model.safetensors' },
+  extras: { Version: 'v1.0' },
+};
+
+const result = embed(imageData, metadata);
 ```
 
 ---
@@ -236,39 +350,22 @@ Standard parameters format used by most SD tools.
 export interface StandardMetadata extends BaseMetadata {
   software:
     | 'sd-webui'
-    | 'sd-next'
     | 'forge'
+    | 'forge-classic'
     | 'forge-neo'
+    | 'reforge'
+    | 'easy-reforge'
+    | 'sd-next'
     | 'invokeai'
     | 'civitai'
     | 'hf-space'
     | 'easydiffusion'
     | 'fooocus'
     | 'ruined-fooocus';
-
-  // Common fields (inherited from internal BaseMetadata)
-  /** Positive prompt */
-  prompt: string;
-  /** Negative prompt */
-  negativePrompt: string;
-  /** Image width in pixels */
-  width: number;
-  /** Image height in pixels */
-  height: number;
-  /** Model settings */
-  model?: ModelSettings;
-  /** Sampling settings */
-  sampling?: SamplingSettings;
-  /** Hires.fix settings (if applied) */
-  hires?: HiresSettings;
-  /** Upscale settings (if applied) */
-  upscale?: UpscaleSettings;
 }
 ```
 
-This is the most common metadata type. It represents the baseline generation metadata
-without any tool-specific extensions (unlike NovelAI's character prompts or ComfyUI's node graphs).
-Many tools use this minimal structure, including SD WebUI, Forge, InvokeAI, and others.
+Inherits all fields from `BaseMetadata`. This is the most common metadata type, representing baseline generation metadata without tool-specific extensions. Many tools use this structure, including SD WebUI, Forge family (Forge, Forge Classic, Forge Neo, reForge, EasyReforge), SD.Next, InvokeAI, and others.
 
 **Example:**
 

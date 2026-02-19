@@ -29,17 +29,22 @@ npm install @enslo/sd-metadata
 | ------ | :---: | :----: | :----: |
 | [NovelAI](https://novelai.net/) * | ✅ | 🔄️ | ✅ |
 | [ComfyUI](https://github.com/comfyanonymous/ComfyUI) * | ✅ | 🔄️ | 🔄️ |
-| [AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui) | ⚠️ | ⚠️ | ⚠️ |
-| [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) / [Forge Neo](https://github.com/neggles/sd-webui-forge-neoforge) | ✅ | ✅ | ✅ |
+| [Stable Diffusion WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) | ✅ | ✅ | ✅ |
+| [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) | ✅ | ✅ | ✅ |
+| [Forge Classic](https://github.com/Haoming02/sd-webui-forge-classic/tree/classic) | ✅ | ✅ | ✅ |
+| [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) | ✅ | ✅ | ✅ |
+| [reForge](https://github.com/Panchovix/stable-diffusion-webui-reForge) | ✅ | ✅ | ✅ |
+| [EasyReforge](https://github.com/Zuntan03/EasyReforge) | ✅ | ✅ | ✅ |
+| [SD.Next](https://github.com/vladmandic/automatic) | ✅ | ✅ | ✅ |
 | [InvokeAI](https://github.com/invoke-ai/InvokeAI) | ✅ | 🔄️ | 🔄️ |
-| [SwarmUI](https://github.com/Stability-AI/StableSwarmUI) * | ✅ | ✅ | ✅ |
+| [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI) * | ✅ | ✅ | ✅ |
 | [Civitai](https://civitai.com/) | ⚠️ | ✅ | ⚠️ |
 | [TensorArt](https://tensor.art/) | ✅ | 🔄️ | 🔄️ |
 | [Stability Matrix](https://github.com/LykosAI/StabilityMatrix) | ✅ | 🔄️ | 🔄️ |
 | [HuggingFace Space](https://huggingface.co/spaces) | ✅ | 🔄️ | 🔄️ |
+| [Fooocus](https://github.com/lllyasviel/Fooocus) | ⚠️ | ⚠️ | ⚠️ |
 | [Ruined Fooocus](https://github.com/runew0lf/RuinedFooocus) | ✅ | 🔄️ | 🔄️ |
 | [Easy Diffusion](https://github.com/easydiffusion/easydiffusion) | ⚠️ | ⚠️ | ⚠️ |
-| [Fooocus](https://github.com/lllyasviel/Fooocus) | ⚠️ | ⚠️ | ⚠️ |
 
 **Legend:**
 
@@ -148,7 +153,7 @@ if (result.status === 'success') {
 > For production use, pin to a specific version instead of `@latest`:
 >
 > ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@1.8.1/dist/index.js
+> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.0.0/dist/index.js
 > ```
 
 ### Advanced Examples
@@ -263,16 +268,14 @@ if (result.ok) {
 </details>
 
 <details>
-<summary>Writing Metadata in WebUI Format</summary>
+<summary>Embedding Custom Metadata</summary>
 
-Create and embed custom metadata in SD WebUI (A1111) format:
+Create and embed custom metadata in A1111 format:
 
 ```typescript
-import { writeAsWebUI } from '@enslo/sd-metadata';
+import { embed } from '@enslo/sd-metadata';
 
-// Create custom metadata from scratch
 const metadata = {
-  software: 'sd-webui',
   prompt: 'masterpiece, best quality, 1girl',
   negativePrompt: 'lowres, bad quality',
   width: 512,
@@ -287,44 +290,60 @@ const metadata = {
 };
 
 // Write to any image format (PNG, JPEG, WebP)
-const result = writeAsWebUI(imageData, metadata);
+const result = embed(imageData, metadata);
 if (result.ok) {
   writeFileSync('output.png', result.value);
 }
 ```
 
+You can also add arbitrary key-value pairs to the settings line with `extras`:
+
+```typescript
+const result = embed(imageData, {
+  ...metadata,
+  extras: { Version: 'v1.10.0', 'Lora hashes': 'abc123' },
+});
+```
+
 > [!TIP]
-> `writeAsWebUI` is particularly useful when:
->
-> - Creating images programmatically and want to embed generation parameters
-> - Converting metadata from proprietary formats to WebUI-compatible format
-> - Building tools that need to output WebUI-readable metadata
+> If an extras key matches a structured field (e.g., `Steps`), the extras value overrides the structured value at its original position. New keys are appended at the end.
+
+Since `EmbedMetadata` is a subset of all `GenerationMetadata` variants, you can pass parsed metadata directly — including NovelAI with its `characterPrompts`:
+
+```typescript
+import { read, embed } from '@enslo/sd-metadata';
+
+const result = read(novelaiPng);
+if (result.status === 'success') {
+  // NovelAI metadata (or any other tool) works as-is
+  const output = embed(blankJpeg, result.metadata);
+}
+```
 
 </details>
 
 <details>
 <summary>Formatting Metadata for Display</summary>
 
-Convert metadata from **any supported tool** to a unified, human-readable WebUI format. This normalizes the differences between tools (NovelAI, ComfyUI, Forge, etc.) into a consistent text format:
+Convert a `ParseResult` to a human-readable string. Automatically selects the best representation based on status:
 
 ```typescript
-import { read, formatAsWebUI } from '@enslo/sd-metadata';
+import { read, stringify } from '@enslo/sd-metadata';
 
 const result = read(imageData);
-if (result.status === 'success') {
-  // Works with any tool: NovelAI, ComfyUI, Forge, InvokeAI, etc.
-  const text = formatAsWebUI(result.metadata);
+const text = stringify(result);
+if (text) {
   console.log(text);
-  
-  // Always outputs in consistent WebUI format:
+
+  // For 'success': outputs in WebUI format:
   // masterpiece, best quality, 1girl
   // Negative prompt: lowres, bad quality
   // Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: model.safetensors
+  //
+  // For 'unrecognized': outputs raw metadata text
+  // For 'empty' / 'invalid': returns empty string
 }
 ```
-
-> [!NOTE]
-> Regardless of which tool generated the image, `formatAsWebUI` extracts the common generation parameters and formats them in a standardized way. This is ideal for displaying metadata to users without worrying about tool-specific formats.
 
 </details>
 
@@ -365,16 +384,14 @@ Writes metadata to an image file.
   - `'conversionFailed'`: Metadata conversion failed (e.g., incompatible format)
   - `'writeFailed'`: Failed to embed metadata into the image
 
-### `writeAsWebUI(input: Uint8Array | ArrayBuffer, metadata: GenerationMetadata): WriteResult`
+### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata | GenerationMetadata): WriteResult`
 
-Writes metadata to an image in SD WebUI (A1111) format.
+Embeds custom metadata into an image in SD WebUI (A1111) format.
 
 **Parameters:**
 
 - `input` - Target image file data (PNG, JPEG, or WebP)
-- `metadata` - Generation metadata to embed
-  - Can be from any tool or custom-created
-  - Automatically converted to WebUI format
+- `metadata` - `EmbedMetadata` or `GenerationMetadata` to embed (use `extras` field for custom settings)
 
 **Returns:**
 
@@ -389,65 +406,40 @@ Writes metadata to an image in SD WebUI (A1111) format.
 - Converting metadata from other tools to WebUI-compatible format
 - Building applications that output WebUI-readable metadata
 
-### `formatAsWebUI(metadata: GenerationMetadata): string`
+### `stringify(input: ParseResult | EmbedMetadata | GenerationMetadata): string`
 
-Formats metadata as human-readable text in SD WebUI (A1111) format.
-
-**Parameters:**
-
-- `metadata` - Generation metadata from any tool
-
-**Returns:**
-
-- Human-readable string in WebUI format (plain text)
-
-**Output format:**
-
-```text
-positive prompt
-[character prompts for NovelAI]
-Negative prompt: negative prompt
-Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, ...
-```
-
-**Use cases:**
-
-- Displaying metadata to users in a consistent format
-- Copying generation parameters as text
-- Logging or debugging generation settings
-
-### `formatRaw(raw: RawMetadata): string`
-
-Formats raw metadata as plain text.
+Converts metadata to a human-readable string.
 
 **Parameters:**
 
-- `raw` - Raw metadata from `ParseResult` (`result.raw`)
+- `input` - One of:
+  - `ParseResult` from `read()` — selects best representation based on status
+  - `EmbedMetadata` or `GenerationMetadata` — formats as A1111 text directly
 
 **Returns:**
 
-- Plain text content from the metadata (multiple entries separated by blank lines)
+- `ParseResult` with `success` → Human-readable text in WebUI format
+- `ParseResult` with `unrecognized` → Raw metadata as plain text
+- `ParseResult` with `empty` / `invalid` → Empty string
+- `EmbedMetadata` / `GenerationMetadata` → Human-readable text in WebUI format
 
 **Use cases:**
 
-- Displaying unrecognized metadata to users
-- Quick inspection of raw metadata content
-- Fallback display when parsing fails
+- Displaying generation parameters in image viewers or galleries
+- Copying metadata to clipboard as readable text
+- Logging or debugging parsed metadata
 
-**Example:**
+### `softwareLabels: Record<GenerationSoftware, string>`
+
+A read-only mapping from `GenerationSoftware` identifiers to their human-readable display names.
 
 ```typescript
-import { read, formatAsWebUI, formatRaw } from '@enslo/sd-metadata';
+import { softwareLabels } from '@enslo/sd-metadata';
 
 const result = read(imageData);
-
-switch (result.status) {
-  case 'success':
-    console.log(formatAsWebUI(result.metadata));
-    break;
-  case 'unrecognized':
-    console.log(formatRaw(result.raw));
-    break;
+if (result.status === 'success') {
+  console.log(softwareLabels[result.metadata.software]);
+  // => "NovelAI", "ComfyUI", "Stable Diffusion WebUI", etc.
 }
 ```
 
@@ -467,22 +459,26 @@ type ParseResult =
   | { status: 'invalid'; message?: string };
 ```
 
+### `BaseMetadata`
+
+Common fields shared by all metadata types. This interface is also the foundation of `EmbedMetadata`.
+
+```typescript
+interface BaseMetadata {
+  prompt: string;
+  negativePrompt: string;
+  width: number;
+  height: number;
+  model?: ModelSettings;
+  sampling?: SamplingSettings;
+  hires?: HiresSettings;
+  upscale?: UpscaleSettings;
+}
+```
+
 ### `GenerationMetadata`
 
-Unified metadata structure returned by the `read()` function. This is a discriminated union of 3 specific metadata types, distinguished by the `software` field.
-
-**Common Fields (Available in All Types):**
-
-All metadata types include these base fields:
-
-- `prompt: string` - Positive prompt text
-- `negativePrompt: string` - Negative prompt text
-- `width: number` - Image width in pixels
-- `height: number` - Image height in pixels
-- `model?: ModelSettings` - Model information (name, hash, VAE)
-- `sampling?: SamplingSettings` - Sampling parameters (seed, steps, CFG, sampler, scheduler, clipSkip)
-- `hires?: HiresSettings` - Hires.fix settings (if applied)
-- `upscale?: UpscaleSettings` - Upscale settings (if applied)
+Unified metadata structure returned by the `read()` function. This is a discriminated union of 3 specific metadata types, distinguished by the `software` field. All types extend `BaseMetadata`.
 
 **Metadata Type Variants:**
 
@@ -497,7 +493,7 @@ All metadata types include these base fields:
   - `nodes: ComfyNodeGraph` (required for comfyui/tensorart/stability-matrix)
   - `nodes?: ComfyNodeGraph` (optional for swarmui - only in PNG format)
 
-- **`StandardMetadata`** (`software: 'sd-webui' | 'forge' | 'invokeai' | 'civitai' | ...`)  
+- **`StandardMetadata`** (`software: 'sd-webui' | 'forge' | 'forge-classic' | 'reforge' | 'invokeai' | ...`)
   Baseline metadata without tool-specific extensions. Used by most SD WebUI-based tools.
 
 **Type Definition:**
@@ -544,6 +540,29 @@ if (result.status === 'success') {
 
 See [Type Documentation](./docs/types.md) for detailed interface definitions of each metadata type.
 
+### `GenerationSoftware`
+
+String literal union of all supported software identifiers. Used as the key type for `softwareLabels`.
+
+```typescript
+type GenerationSoftware =
+  | 'novelai' | 'comfyui' | 'swarmui' | 'tensorart' | 'stability-matrix'
+  | 'sd-webui' | 'forge' | 'forge-classic' | 'forge-neo' 
+  | 'reforge'| 'easy-reforge' | 'sd-next' | 'civitai' | 'hf-space'
+  | 'invokeai' | 'easydiffusion' | 'fooocus' | 'ruined-fooocus';
+```
+
+### `EmbedMetadata`
+
+User-created custom metadata for the `embed()` and `stringify()` functions. While `GenerationMetadata` represents parsed output from a known AI tool, `EmbedMetadata` is designed for composing metadata from scratch. Extends `BaseMetadata` with optional character prompts and extras.
+
+```typescript
+type EmbedMetadata = BaseMetadata &
+  Pick<NovelAIMetadata, 'characterPrompts'> & {
+    extras?: Record<string, string | number>;
+  };
+```
+
 ### `RawMetadata`
 
 Preserves the original metadata structure for round-trip conversions.
@@ -559,11 +578,14 @@ type RawMetadata =
 > For TypeScript users: All types are exported and available for import.
 >
 > ```typescript
-> import type { 
->   ParseResult, 
->   GenerationMetadata, 
->   ModelSettings, 
->   SamplingSettings 
+> import type {
+>   BaseMetadata,
+>   EmbedMetadata,
+>   ParseResult,
+>   GenerationMetadata,
+>   GenerationSoftware,
+>   ModelSettings,
+>   SamplingSettings
 > } from '@enslo/sd-metadata';
 > ```
 >

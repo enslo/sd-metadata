@@ -23,6 +23,18 @@ This is a globally released npm package. All content committed to the repository
 - `samples/` - Known/classified samples (Git-managed, source of truth)
 - `local_samples/` - Unknown/unclassified samples (.gitignore, for research)
 
+## Running Commands
+
+Always prefer scripts defined in `package.json` over invoking tools directly.
+Do not use `npx` or `pnpm exec` when an equivalent npm script exists:
+
+- `pnpm lint` / `pnpm lint:fix` — not `npx biome check`
+- `pnpm test` — not `npx vitest run`
+- `pnpm typecheck` — not `npx tsc --noEmit`
+- `pnpm build` — not `npx tsup`
+
+This ensures the correct locally-installed version is used and avoids version mismatches.
+
 ## Result Type Pattern
 
 This project uses Result types for explicit error handling:

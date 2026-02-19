@@ -1,115 +1,85 @@
 import type { ParseResult } from '@enslo/sd-metadata';
+import { Alert, Paper, Stack, Tabs } from '@mantine/core';
 import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
-import { $t } from '../../i18n';
-import { ParsedMetadata } from './ParsedMetadata';
-import { ExifSegments, RawChunks } from './RawData';
-import styles from './Results.module.css';
+import { $t, type I18nMessages } from '../../i18n';
+import { EmbedEditor } from '../EmbedEditor';
+import { SaveBar } from '../SaveBar';
+import { ParsedTabContent } from './ParsedTabContent';
+import { PlainTextTabContent } from './PlainTextTabContent';
+import { RawTabContent } from './RawTabContent';
 
 interface ResultsProps {
   parseResult: ParseResult;
+  fileData: Uint8Array;
+  filename: string;
+  previewUrl: string;
 }
 
-type TabName = 'parsed' | 'raw';
-
 /**
- * Results section with parsed and raw tabs
+ * Results section with parsed, plaintext, raw, and embed tabs
  */
-export function Results({ parseResult }: ResultsProps) {
-  const t = useStore($t);
-  const [activeTab, setActiveTab] = useState<TabName>('parsed');
-  const [resetKey, setResetKey] = useState(0);
+export function Results({
+  parseResult,
+  fileData,
+  filename,
+  previewUrl,
+}: ResultsProps) {
+  const t: I18nMessages = useStore($t);
+  const [activeTab, setActiveTab] = useState<string | null>('parsed');
 
   // Reset to parsed tab when parseResult changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on data change
-  useEffect(() => {
-    setActiveTab('parsed');
-    setResetKey((k) => k + 1);
-  }, [parseResult]);
+  useEffect(() => setActiveTab('parsed'), [parseResult]);
 
   // Handle invalid status
   if (parseResult.status === 'invalid') {
     return (
-      <div class={`${styles.error} fade-in`}>
-        <p class={styles.errorMessage}>
-          {parseResult.message ?? t.results.errors.invalid}
-        </p>
-      </div>
+      <Alert color="red" variant="light" className="fade-in">
+        {parseResult.message ?? t.results.errors.invalid}
+      </Alert>
     );
   }
 
   return (
-    <div class={`${styles.results} fade-in`}>
-      <div class={styles.tabs}>
-        <button
-          type="button"
-          class={`${styles.tab} ${activeTab === 'parsed' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('parsed')}
-        >
-          {t.results.tabs.parsed}
-        </button>
-        <button
-          type="button"
-          class={`${styles.tab} ${activeTab === 'raw' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('raw')}
-        >
-          {t.results.tabs.raw}
-        </button>
-      </div>
+    <Paper className="fade-in">
+      <Stack gap="md">
+        <Tabs value={activeTab} onChange={setActiveTab}>
+          <Tabs.List mb="md">
+            <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>
+            <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
+            <Tabs.Tab value="raw">{t.results.tabs.raw}</Tabs.Tab>
+            <Tabs.Tab value="embed">{t.results.tabs.embed}</Tabs.Tab>
+          </Tabs.List>
 
-      <div class={styles.tabContent}>
-        {activeTab === 'parsed' ? (
-          <ParsedTabContent parseResult={parseResult} t={t} />
-        ) : (
-          <RawTabContent parseResult={parseResult} t={t} key={resetKey} />
+          <Tabs.Panel value="parsed">
+            <ParsedTabContent parseResult={parseResult} t={t} />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="plaintext">
+            <PlainTextTabContent parseResult={parseResult} t={t} />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="raw">
+            <RawTabContent parseResult={parseResult} t={t} key={previewUrl} />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="embed">
+            <EmbedEditor
+              parseResult={parseResult}
+              fileData={fileData}
+              filename={filename}
+            />
+          </Tabs.Panel>
+        </Tabs>
+
+        {activeTab !== 'embed' && (
+          <SaveBar
+            parseResult={parseResult}
+            previewUrl={previewUrl}
+            filename={filename}
+          />
         )}
-      </div>
-    </div>
-  );
-}
-
-function ParsedTabContent({
-  parseResult,
-  t,
-}: {
-  parseResult: Exclude<ParseResult, { status: 'invalid' }>;
-  t: ReturnType<typeof useStore<typeof $t>>;
-}) {
-  if (parseResult.status === 'empty') {
-    return <ErrorMessage message={t.results.errors.noMetadata} />;
-  }
-
-  if (parseResult.status === 'unrecognized') {
-    return <ErrorMessage message={t.results.errors.unrecognized} />;
-  }
-
-  return <ParsedMetadata metadata={parseResult.metadata} />;
-}
-
-function RawTabContent({
-  parseResult,
-  t,
-}: {
-  parseResult: Exclude<ParseResult, { status: 'invalid' }>;
-  t: ReturnType<typeof useStore<typeof $t>>;
-}) {
-  if (parseResult.status === 'empty') {
-    return <ErrorMessage message={t.results.errors.noRawData} />;
-  }
-
-  if (parseResult.raw.format === 'png') {
-    return <RawChunks chunks={parseResult.raw.chunks} />;
-  }
-
-  return <ExifSegments segments={parseResult.raw.segments} />;
-}
-
-function ErrorMessage({ message }: { message: string }) {
-  return (
-    <div class={styles.metadataSection}>
-      <p style={{ color: 'var(--color-text-muted)', textAlign: 'center' }}>
-        {message}
-      </p>
-    </div>
+      </Stack>
+    </Paper>
   );
 }

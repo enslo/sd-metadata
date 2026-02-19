@@ -1,13 +1,16 @@
-import type {
-  ITXtChunk,
-  PngTextChunk,
-  PngWriteResult,
-  TExtChunk,
-} from '../types';
+import type { ITXtChunk, PngTextChunk, TExtChunk } from '../types';
 import { Result } from '../types';
-import { readChunkType, readUint32BE, writeUint32BE } from '../utils/binary';
+import {
+  isPng,
+  readChunkType,
+  readUint32BE,
+  writeUint32BE,
+} from '../utils/binary';
 
-import { isPng } from '../utils/binary';
+// Internal types (co-located with writer)
+type PngWriteError = { type: 'invalidSignature' } | { type: 'noIhdrChunk' };
+
+type PngWriteResult = Result<Uint8Array, PngWriteError>;
 
 /** PNG file signature (magic bytes) */
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);

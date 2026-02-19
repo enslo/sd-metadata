@@ -14,7 +14,7 @@ describe('parseA1111 - Unit Tests', () => {
     it('should return error for missing parameters', () => {
       const entries: EntryRecord = {};
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
@@ -28,7 +28,7 @@ describe('parseA1111 - Unit Tests', () => {
 Steps: 20`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -45,7 +45,7 @@ Steps: 20`;
 Steps: 20, Size: 512x768`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -63,7 +63,7 @@ Negative prompt: lowres, bad quality
 Steps: 20, Size: 512x512`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -77,7 +77,7 @@ Steps: 20, Size: 512x512`;
 Steps: 28, Sampler: Euler a, Schedule type: Automatic, CFG scale: 7.5, Seed: 123456, Size: 512x512, Clip skip: 2`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -97,7 +97,7 @@ Steps: 28, Sampler: Euler a, Schedule type: Automatic, CFG scale: 7.5, Seed: 123
 Steps: 20, Size: 512x512, Model: test-model-v1, Model hash: abc123def`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -113,7 +113,7 @@ Steps: 20, Size: 512x512, Model: test-model-v1, Model hash: abc123def`;
 Steps: 20, Size: 512x512, Hires upscale: 2, Hires upscaler: Latent, Hires steps: 10, Denoising strength: 0.5`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -127,56 +127,29 @@ Steps: 20, Size: 512x512, Hires upscale: 2, Hires upscaler: Latent, Hires steps:
     });
   });
 
-  describe('software variant detection', () => {
-    it('should detect sd-webui (default)', () => {
+  describe('software pass-through', () => {
+    it('should use the provided software value', () => {
       const parameters = `test
 Steps: 20, Size: 512x512`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const variants = [
+        'sd-webui',
+        'sd-next',
+        'forge',
+        'forge-classic',
+        'forge-neo',
+        'reforge',
+        'easy-reforge',
+        'civitai',
+      ] as const;
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('sd-webui');
-      }
-    });
-
-    it('should detect forge from Version', () => {
-      const parameters = `test
-Steps: 20, Size: 512x512, Version: f1.0.0`;
-      const entries = createA1111Entry(parameters);
-
-      const result = parseA1111(entries);
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('forge');
-      }
-    });
-
-    it('should detect forge-neo from Version', () => {
-      const parameters = `test
-Steps: 20, Size: 512x512, Version: neo`;
-      const entries = createA1111Entry(parameters);
-
-      const result = parseA1111(entries);
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('forge-neo');
-      }
-    });
-
-    it('should detect sd-next from App', () => {
-      const parameters = `test
-Steps: 20, Size: 512x512, App: SD.Next`;
-      const entries = createA1111Entry(parameters);
-
-      const result = parseA1111(entries);
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.software).toBe('sd-next');
+      for (const software of variants) {
+        const result = parseA1111(entries, software);
+        expect(result.ok).toBe(true);
+        if (result.ok) {
+          expect(result.value.software).toBe(software);
+        }
       }
     });
   });
@@ -187,7 +160,7 @@ Steps: 20, Size: 512x512, App: SD.Next`;
 Steps: 20, Size: 512x512`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -201,7 +174,7 @@ Steps: 20, Size: 512x512`;
 Steps: 20, Size: 512x512, Model: model-v1, Sampler: Euler a`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -215,7 +188,7 @@ Steps: 20, Size: 512x512, Model: model-v1, Sampler: Euler a`;
 Steps: 20, Size: 512x512`;
       const entries: EntryRecord = { UserComment: parameters };
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -229,7 +202,7 @@ Steps: 20, Size: 512x512`;
 Negative prompt: negative`;
       const entries = createA1111Entry(parameters);
 
-      const result = parseA1111(entries);
+      const result = parseA1111(entries, 'sd-webui');
 
       expect(result.ok).toBe(true);
       if (result.ok) {

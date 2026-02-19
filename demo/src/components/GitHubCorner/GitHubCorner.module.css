@@ -11,15 +11,15 @@
 }
 
 .corner svg {
-  fill: var(--color-primary);
-  color: var(--color-bg);
+  fill: var(--mantine-color-indigo-filled);
+  color: var(--mantine-color-body);
   width: 80px;
   height: 80px;
   transition: fill 0.2s ease;
 }
 
 .corner a:hover svg {
-  fill: var(--color-primary-hover);
+  fill: var(--mantine-color-indigo-4);
 }
 
 /* Animate the octocat arm */

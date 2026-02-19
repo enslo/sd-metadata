@@ -4,11 +4,17 @@ import type { EntryRecord } from '../../../src/utils/entries';
 
 /**
  * Helper to create TensorArt metadata entries
+ *
+ * Builds a minimal but realistic ComfyUI node graph alongside generation_data.
  */
-function createTensorArtEntries(generationData: unknown): EntryRecord {
+function createTensorArtEntries(
+  generationData: unknown,
+  nodeOverrides?: Record<string, unknown>,
+): EntryRecord {
+  const defaultNodes = { '1': { class_type: 'KSampler', inputs: {} } };
   return {
     generation_data: JSON.stringify(generationData),
-    prompt: JSON.stringify({ '1': { class_type: 'KSampler', inputs: {} } }),
+    prompt: JSON.stringify({ ...defaultNodes, ...nodeOverrides }),
   };
 }
 
@@ -55,13 +61,14 @@ describe('parseTensorArt - Unit Tests', () => {
       }
     });
 
-    it('should extract dimensions', () => {
-      const data = {
-        prompt: 'test',
-        width: 512,
-        height: 768,
-      };
-      const entries = createTensorArtEntries(data);
+    it('should extract dimensions from nodes', () => {
+      const data = { prompt: 'test' };
+      const entries = createTensorArtEntries(data, {
+        '10': {
+          class_type: 'EmptyLatentImage',
+          inputs: { width: 512, height: 768, batch_size: 1 },
+        },
+      });
 
       const result = parseTensorArt(entries);
 
@@ -72,15 +79,24 @@ describe('parseTensorArt - Unit Tests', () => {
       }
     });
 
-    it('should extract sampling settings', () => {
-      const data = {
-        prompt: 'test',
-        seed: '123456',
-        steps: 30,
-        cfgScale: 7.5,
-        clipSkip: 2,
-      };
-      const entries = createTensorArtEntries(data);
+    it('should extract sampling from nodes', () => {
+      const data = { prompt: 'test' };
+      const entries = createTensorArtEntries(data, {
+        '1': {
+          class_type: 'KSampler',
+          inputs: {
+            seed: 123456,
+            steps: 30,
+            cfg: 7.5,
+            sampler_name: 'euler',
+            scheduler: 'normal',
+          },
+        },
+        '2': {
+          class_type: 'CLIPSetLastLayer',
+          inputs: { stop_at_clip_layer: -2 },
+        },
+      });
 
       const result = parseTensorArt(entries);
 
@@ -90,12 +106,14 @@ describe('parseTensorArt - Unit Tests', () => {
           seed: 123456,
           steps: 30,
           cfg: 7.5,
+          sampler: 'euler',
+          scheduler: 'normal',
           clipSkip: 2,
         });
       }
     });
 
-    it('should extract model settings', () => {
+    it('should extract model from generation_data', () => {
       const data = {
         prompt: 'test',
         baseModel: {
@@ -112,6 +130,46 @@ describe('parseTensorArt - Unit Tests', () => {
         expect(result.value.model).toMatchObject({
           name: 'test-model.safetensors',
           hash: 'abc123',
+        });
+      }
+    });
+  });
+
+  describe('delegation to ComfyUI parser', () => {
+    it('should prefer prompt from generation_data over nodes', () => {
+      const data = { prompt: 'from generation_data' };
+      const entries = createTensorArtEntries(data);
+
+      const result = parseTensorArt(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.prompt).toBe('from generation_data');
+      }
+    });
+
+    it('should prefer model from generation_data over nodes', () => {
+      const data = {
+        prompt: 'test',
+        baseModel: {
+          modelFileName: 'tensorart-model.safetensors',
+          hash: 'TA_HASH',
+        },
+      };
+      const entries = createTensorArtEntries(data, {
+        '5': {
+          class_type: 'CheckpointLoaderSimple',
+          inputs: { ckpt_name: 'comfyui-model.safetensors' },
+        },
+      });
+
+      const result = parseTensorArt(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.model).toMatchObject({
+          name: 'tensorart-model.safetensors',
+          hash: 'TA_HASH',
         });
       }
     });

@@ -4,13 +4,9 @@
  * Provides functions to convert metadata between different image formats.
  */
 
-import type {
-  ConversionResult,
-  ConversionTargetFormat,
-  ParseResult,
-  RawMetadata,
-} from '../types';
+import type { ParseResult, RawMetadata } from '../types';
 import { Result } from '../types';
+
 import { convertA1111PngToSegments, convertA1111SegmentsToPng } from './a1111';
 import {
   convertCivitaiPngToSegments,
@@ -45,6 +41,16 @@ import {
   convertTensorArtPngToSegments,
   convertTensorArtSegmentsToPng,
 } from './tensorart';
+
+// Internal types
+type ConversionTargetFormat = 'png' | 'jpeg' | 'webp';
+
+type ConversionError =
+  | { type: 'missingRawData' }
+  | { type: 'invalidParseResult'; status: string }
+  | { type: 'unsupportedSoftware'; software: string };
+
+type ConversionResult = Result<RawMetadata, ConversionError>;
 
 /**
  * Convert metadata from one format to another
@@ -182,8 +188,8 @@ const convertEasyDiffusion = createFormatConverter(
 );
 
 const convertFooocus = createFormatConverter(
-  createPngToSegments('Comment'),
-  createSegmentsToPng('Comment', 'text-unicode-escape'),
+  createPngToSegments('parameters'),
+  createSegmentsToPng('parameters', 'text-unicode-escape'),
 );
 
 const convertRuinedFooocus = createFormatConverter(
@@ -227,11 +233,14 @@ const convertTensorArt = createFormatConverter(
 const softwareConverters = {
   // NovelAI
   novelai: convertNovelai,
-  // A1111-format (sd-webui, forge, forge-neo, sd-next)
+  // A1111-format (sd-webui, forge family, sd-next)
   'sd-webui': convertA1111,
   'sd-next': convertA1111,
   forge: convertA1111,
+  'forge-classic': convertA1111,
   'forge-neo': convertA1111,
+  reforge: convertA1111,
+  'easy-reforge': convertA1111,
   // CivitAI Orchestration format
   civitai: convertCivitai,
   // ComfyUI-format

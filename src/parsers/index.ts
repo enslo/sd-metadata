@@ -1,4 +1,3 @@
-import type { InternalParseResult } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseA1111 } from './a1111';
@@ -13,6 +12,7 @@ import { parseRuinedFooocus } from './ruined-fooocus';
 import { parseStabilityMatrix } from './stability-matrix';
 import { parseSwarmUI } from './swarmui';
 import { parseTensorArt } from './tensorart';
+import type { InternalParseResult } from './types';
 
 /**
  * Parse metadata entries to unified format
@@ -33,10 +33,13 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
       return parseNovelAI(entries);
 
     case 'sd-webui':
-    case 'sd-next':
     case 'forge':
+    case 'forge-classic':
     case 'forge-neo':
-      return parseA1111(entries);
+    case 'reforge':
+    case 'easy-reforge':
+    case 'sd-next':
+      return parseA1111(entries, software);
 
     case 'hf-space':
       return parseHfSpace(entries);
@@ -50,19 +53,15 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
         return comfyResult;
       }
       // Fallback to A1111 format
-      const a1111Result = parseA1111(entries);
-      if (a1111Result.ok) {
-        a1111Result.value.software = 'civitai';
-        return a1111Result;
-      }
-      return a1111Result;
+      return parseA1111(entries, 'civitai');
     }
 
     case 'comfyui': {
       // ComfyUI can use either JSON or A1111 text format (e.g., comfy-image-saver)
       const comfyResult = parseComfyUI(entries);
       if (comfyResult.ok) return comfyResult;
-      return parseA1111(entries);
+      // Fallback to A1111 text format (treat as sd-webui since Version is absent)
+      return parseA1111(entries, 'sd-webui');
     }
 
     case 'invokeai':
@@ -80,8 +79,17 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
     case 'easydiffusion':
       return parseEasyDiffusion(entries);
 
-    case 'fooocus':
+    case 'fooocus': {
+      // Fooocus supports two user-selectable metadata schemes:
+      // - 'fooocus': JSON format (default)
+      // - 'a1111': A1111-compatible text format
+      const scheme = entries.fooocus_scheme;
+      const content = entries.parameters ?? entries.UserComment;
+      if (scheme === 'a1111' || (content && !content.startsWith('{'))) {
+        return parseA1111(entries, 'fooocus');
+      }
       return parseFooocus(entries);
+    }
 
     case 'ruined-fooocus':
       return parseRuinedFooocus(entries);

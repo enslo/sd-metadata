@@ -1,9 +1,12 @@
-import type { WebpMetadataResult } from '../types';
+import type { MetadataSegment } from '../types';
 import { Result } from '../types';
-import { arraysEqual, readUint32LE } from '../utils/binary';
+import { arraysEqual, isWebp, readUint32LE } from '../utils/binary';
 import { parseExifMetadataSegments } from './exif';
 
-import { isWebp } from '../utils/binary';
+// Internal types (co-located with reader)
+type WebpReadError = { type: 'invalidSignature' };
+
+type WebpMetadataResult = Result<MetadataSegment[], WebpReadError>;
 
 /** EXIF chunk type */
 const EXIF_CHUNK_TYPE = new Uint8Array([0x45, 0x58, 0x49, 0x46]);

@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-02-19
+
+### ⚠️ Breaking Changes
+
+- **Forge family software identifiers** (#129): The `'forge'` identifier now refers specifically to the current [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) main line. Images previously detected as `'forge'` (which was a catch-all for all `f`-prefixed versions) are now split into distinct identifiers:
+
+  | v1.x `software` | v2.0.0 `software` | Tool |
+  | --- | --- | --- |
+  | `'forge'` | `'forge'` | [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) (current main line) |
+  | `'forge'` | `'forge-classic'` | [Forge Classic](https://github.com/Haoming02/sd-webui-forge-classic/tree/classic) |
+  | `'forge'` | `'reforge'` | [reForge](https://github.com/Panchovix/stable-diffusion-webui-reForge) |
+  | `'forge'` | `'easy-reforge'` | [EasyReforge](https://github.com/Zuntan03/EasyReforge) |
+
+  If your code checks `metadata.software === 'forge'`, update it to handle the new identifiers. TypeScript users with exhaustive `switch` statements on `GenerationSoftware` will see compile errors for the new values.
+
+### Added
+
+- **`embed()` function** (#126): Write metadata in SD WebUI (A1111) format to any supported image
+  - Unlike `write()` (which preserves the original format), `embed()` always writes in A1111 plain-text format
+  - Accepts user-created `EmbedMetadata` or parsed `GenerationMetadata` directly
+  - Optional `extras` field on `EmbedMetadata` for arbitrary key-value pairs in the settings line (e.g., `Version`, `Lora hashes`)
+  - Extras override structured fields at their original position; new keys append at the end
+  - Supports PNG (tEXt/iTXt), JPEG (Exif), and WebP (Exif)
+- **`stringify()` function** (#125): Unified metadata formatting for display
+  - Accepts `ParseResult`, `GenerationMetadata`, or `EmbedMetadata` directly
+  - `ParseResult`: `success` → SD WebUI format, `unrecognized` → raw text, `empty`/`invalid` → empty string
+  - `GenerationMetadata` / `EmbedMetadata`: directly formats as SD WebUI text
+- **`softwareLabels` constant**: Read-only mapping from `GenerationSoftware` identifiers to human-readable display names
+- **`EmbedMetadata` type**: User-created custom metadata — `BaseMetadata & Pick<NovelAIMetadata, 'characterPrompts'> & { extras? }`
+- **`BaseMetadata` type export**: Previously internal, now available for direct use
+- **`GenerationSoftware` type export**: String literal union of all supported software identifiers
+
+### Fixed
+
+- **TensorArt parser** (#138): Extract sampler and scheduler from the ComfyUI node graph. Previously these fields were missing because `generation_data` does not contain them.
+- **ComfyUI CLIP skip** (#137): Extract `clipSkip` from the `CLIPSetLastLayer` node. Previously, CLIP skip was silently dropped from all ComfyUI-based tool output (ComfyUI, TensorArt, Stability Matrix).
+- **Fooocus parser** (#130): Rewrite based on actual Fooocus source code analysis. The previous implementation was non-functional due to reading from the wrong metadata location. Now supports both JSON and A1111 text metadata schemes.
+- **Easy Diffusion parser** (#131): Improved based on source code analysis. Removed phantom key format that never appeared in actual images, improved detection reliability, and added upscale/denoise field extraction.
+
+### Changed
+
+- **SD WebUI family detection** (#129): Explicit Version-field pattern matching for SD WebUI (`v` + digit) and all Forge variants. Added real SD WebUI sample files, promoting Stable Diffusion WebUI from experimental to fully supported.
+
+### Deprecated
+
+- **`writeAsWebUI()`**: Use `embed()` instead (now a thin wrapper around `embed()`)
+- **`formatAsWebUI()`**: Use `stringify()` instead (now a thin wrapper around internal `buildEmbedText()`)
+- **`formatRaw()`**: Use `stringify()` instead
+
+### Migration Guide
+
+| v1.x                            | v2.0.0                   | Notes                                     |
+| ------------------------------- | ------------------------ | ----------------------------------------- |
+| `writeAsWebUI(image, metadata)` | `embed(image, metadata)` | Also accepts user-created `EmbedMetadata` |
+| `formatAsWebUI(metadata)`       | `stringify(metadata)`    | Also accepts `ParseResult` directly       |
+| `formatRaw(raw)`                | `stringify(readResult)`  | Handles all statuses automatically        |
+| `software === 'forge'`          | Check all Forge variants | See Breaking Changes above                |
+
 ## [1.8.1] - 2026-02-15
 
 ### Fixed
@@ -292,6 +350,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[2.0.0]: https://github.com/enslo/sd-metadata/releases/tag/v2.0.0
 [1.8.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.8.1
 [1.8.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.8.0
 [1.7.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.7.1

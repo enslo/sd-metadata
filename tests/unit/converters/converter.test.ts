@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { convertMetadata } from '../../../src/converters';
 import type {
-  ConversionTargetFormat,
   GenerationMetadata,
   MetadataSegment,
   ParseResult,
@@ -255,7 +254,10 @@ describe('convertMetadata - Unit Tests', () => {
       { software: 'novelai', keyword: 'Comment' },
       { software: 'sd-webui', keyword: 'parameters' },
       { software: 'forge', keyword: 'parameters' },
+      { software: 'forge-classic', keyword: 'parameters' },
       { software: 'forge-neo', keyword: 'parameters' },
+      { software: 'reforge', keyword: 'parameters' },
+      { software: 'easy-reforge', keyword: 'parameters' },
       { software: 'civitai', keyword: 'parameters' },
       { software: 'sd-next', keyword: 'parameters' },
       { software: 'ruined-fooocus', keyword: 'parameters' },
@@ -321,7 +323,7 @@ describe('convertMetadata - Unit Tests', () => {
         chunks,
       });
 
-      const formats: ConversionTargetFormat[] = ['png', 'jpeg', 'webp'];
+      const formats: Array<'png' | 'jpeg' | 'webp'> = ['png', 'jpeg', 'webp'];
       for (const format of formats) {
         const result = convertMetadata(parseResult, format);
         expect(result.ok).toBe(true);

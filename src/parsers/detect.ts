@@ -99,8 +99,13 @@ function detectUniqueKeywords(
   const keyResult = detectByUniqueKey(entryRecord);
   if (keyResult) return keyResult;
 
-  // Easy Diffusion: Has "negative_prompt" or "Negative Prompt" keyword
-  if ('negative_prompt' in entryRecord || 'Negative Prompt' in entryRecord) {
+  // Fooocus: Has "fooocus_scheme" chunk (PNG only)
+  if ('fooocus_scheme' in entryRecord) {
+    return 'fooocus';
+  }
+
+  // Easy Diffusion: Has "use_stable_diffusion_model" keyword (unique to Easy Diffusion)
+  if ('use_stable_diffusion_model' in entryRecord) {
     return 'easydiffusion';
   }
 
@@ -318,10 +323,10 @@ function detectFromJsonFormat(json: string): GenerationSoftware | null {
  *
  * Priority order:
  * 1. SwarmUI indicators (check first as it has unique markers)
- * 2. Version field analysis (forge, forge-neo, comfyui variants)
+ * 2. Version field analysis (sd-webui, forge family, comfyui)
  * 3. App field (SD.Next)
  * 4. Resource markers (Civitai)
- * 5. Default A1111 format (steps + sampler)
+ * 5. Default A1111 format (steps + sampler, fallback for embed-created data)
  */
 function detectFromA1111Format(text: string): GenerationSoftware | null {
   // ========================================
@@ -341,14 +346,34 @@ function detectFromA1111Format(text: string): GenerationSoftware | null {
   if (versionMatch) {
     const version = versionMatch[1];
 
+    // SD WebUI: Version starts with "v" + digit (e.g., "v1.10.1")
+    if (version && /^v\d/.test(version)) {
+      return 'sd-webui';
+    }
+
+    // Forge Classic: Version is literal "classic"
+    if (version === 'classic') {
+      return 'forge-classic';
+    }
+
     // Forge Neo: Version starts with "neo"
     if (version === 'neo' || version?.startsWith('neo')) {
       return 'forge-neo';
     }
 
-    // Forge: Version starts with "f" followed by a digit
+    // Forge family: Version starts with "f" followed by a digit
     if (version?.startsWith('f') && /^f\d/.test(version)) {
+      // EasyReforge: f{semver}-v pattern (dash directly after forge semver)
+      if (/^f\d+\.\d+(\.\d+)?-v/.test(version)) return 'easy-reforge';
+      // reForge: f{semver}v{N}-v pattern (version number then dash-v)
+      if (/^f\d+\.\d+(\.\d+)?v\d+-v/.test(version)) return 'reforge';
+      // Forge: remaining f{digit} prefix (default for current Forge)
       return 'forge';
+    }
+
+    // Fooocus: Version starts with "Fooocus"
+    if (version?.startsWith('Fooocus')) {
+      return 'fooocus';
     }
 
     // ComfyUI: Version explicitly says "ComfyUI"
@@ -372,10 +397,11 @@ function detectFromA1111Format(text: string): GenerationSoftware | null {
   }
 
   // ========================================
-  // Tier 4: Default A1111 Format
+  // Tier 4: Default A1111 Format (fallback)
   // ========================================
 
-  // SD-WebUI (default): Has typical A1111 parameters
+  // SD-WebUI (fallback): Has typical A1111 parameters but no Version field.
+  // Catches embed()-created data and legacy images without version info.
   if (
     text.includes('Steps:') ||
     text.includes('Sampler:') ||

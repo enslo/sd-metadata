@@ -1,55 +1,75 @@
-import type { InternalParseResult, StandardMetadata } from '../types';
+import type { StandardMetadata } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { trimObject } from '../utils/object';
+import type { InternalParseResult } from './types';
 
 /**
  * Fooocus JSON metadata structure
  *
  * ⚠️ UNVERIFIED: This parser has not been verified with actual Fooocus samples.
- * The implementation is based on reference code from other libraries but may not be
- * fully accurate. Please report any issues if you encounter problems with Fooocus
- * metadata parsing.
+ * The implementation is based on source code analysis of Fooocus
+ * (github.com/lllyasviel/Fooocus). Please report any issues if you encounter
+ * problems with Fooocus metadata parsing.
  *
- * Fooocus stores metadata as JSON in:
- * - PNG: Comment chunk
- * - JPEG: comment field
+ * Fooocus uses the "fooocus" metadata scheme which embeds JSON in:
+ * - PNG: `parameters` tEXt chunk
+ * - JPEG/WebP: EXIF UserComment (0x9286)
  */
 interface FooocusJsonMetadata {
   prompt?: string;
   negative_prompt?: string;
+  resolution?: string;
   base_model?: string;
-  refiner_model?: string;
+  base_model_hash?: string;
+  vae?: string;
   sampler?: string;
   scheduler?: string;
   seed?: number;
-  cfg?: number;
+  guidance_scale?: number;
   steps?: number;
-  width?: number;
-  height?: number;
-  loras?: Array<{ name: string; weight: number }>;
-  style_selection?: string[];
-  performance?: string;
+  clip_skip?: number;
 }
 
 /**
- * Parse Fooocus metadata from entries
+ * Parse resolution string "(W, H)" into width and height
  *
- * Fooocus stores metadata as JSON in the Comment chunk (PNG) or
- * comment field (JPEG).
+ * Fooocus stores resolution as a Python tuple string, e.g., "(1024, 1024)".
+ *
+ * @param resolution - Resolution string in format "(width, height)"
+ * @returns Parsed dimensions or { width: 0, height: 0 } on failure
+ */
+function parseResolution(resolution: string | undefined): {
+  width: number;
+  height: number;
+} {
+  if (!resolution) return { width: 0, height: 0 };
+
+  const match = resolution.match(/\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
+  if (!match?.[1] || !match[2]) return { width: 0, height: 0 };
+
+  return {
+    width: Number(match[1]),
+    height: Number(match[2]),
+  };
+}
+
+/**
+ * Parse Fooocus JSON metadata from entries
+ *
+ * Reads from `parameters` (PNG) or `UserComment` (JPEG/WebP).
  *
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
  */
 export function parseFooocus(entries: EntryRecord): InternalParseResult {
-  // Find JSON in Comment entry (PNG uses Comment, JPEG uses comment)
-  const jsonText = entries.Comment ?? entries.comment;
+  const jsonText = entries.parameters ?? entries.UserComment;
 
   if (!jsonText || !jsonText.startsWith('{')) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  // Parse JSON
   const parsed = parseJson<FooocusJsonMetadata>(jsonText);
   if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
@@ -59,22 +79,27 @@ export function parseFooocus(entries: EntryRecord): InternalParseResult {
   }
   const json = parsed.value;
 
-  const metadata: Omit<StandardMetadata, 'raw'> = {
+  const { width, height } = parseResolution(json.resolution);
+
+  const metadata: StandardMetadata = {
     software: 'fooocus',
     prompt: json.prompt?.trim() ?? '',
     negativePrompt: json.negative_prompt?.trim() ?? '',
-    width: json.width ?? 0,
-    height: json.height ?? 0,
-    model: {
+    width,
+    height,
+    model: trimObject({
       name: json.base_model,
-    },
-    sampling: {
+      hash: json.base_model_hash,
+      vae: json.vae,
+    }),
+    sampling: trimObject({
       sampler: json.sampler,
       scheduler: json.scheduler,
       steps: json.steps,
-      cfg: json.cfg,
+      cfg: json.guidance_scale,
       seed: json.seed,
-    },
+      clipSkip: json.clip_skip,
+    }),
   };
 
   return Result.ok(metadata);

@@ -31,7 +31,10 @@ const EXPECTED_TO_JPEG_WEBP: Record<GenerationSoftware, SegmentPattern[]> = {
   'sd-webui': [['exifUserComment']],
   'sd-next': [['exifUserComment']],
   forge: [['exifUserComment']],
+  'forge-classic': [['exifUserComment']],
   'forge-neo': [['exifUserComment']],
+  reforge: [['exifUserComment']],
+  'easy-reforge': [['exifUserComment']],
 
   // ComfyUI-family: Either saveimage-plus OR save-image-extended format
   // saveimage-plus: exifUserComment
@@ -86,7 +89,10 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
   'sd-webui': [['parameters']],
   'sd-next': [['parameters']],
   forge: [['parameters']],
+  'forge-classic': [['parameters']],
   'forge-neo': [['parameters']],
+  reforge: [['parameters']],
+  'easy-reforge': [['parameters']],
 
   // ComfyUI-family: prompt + workflow chunks (or variant with extra chunks)
   comfyui: [
@@ -114,8 +120,8 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
   // HF-Space: parameters
   'hf-space': [['parameters']],
 
-  // Fooocus: Comment chunk
-  fooocus: [['Comment']],
+  // Fooocus: parameters chunk
+  fooocus: [['parameters']],
 
   // Ruined Fooocus: parameters chunk
   'ruined-fooocus': [['parameters']],

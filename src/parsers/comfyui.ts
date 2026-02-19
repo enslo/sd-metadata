@@ -8,7 +8,6 @@
 import type {
   ComfyNodeGraph,
   HiresSettings,
-  InternalParseResult,
   ModelSettings,
   SamplingSettings,
   UpscaleSettings,
@@ -25,6 +24,7 @@ import {
   type ClassifiedNodes,
   calculateScale,
   classifyNodes,
+  extractClipSkip,
   extractDimensions,
   extractModel,
   extractPromptTexts,
@@ -32,6 +32,7 @@ import {
   findHiresSampler,
   isNodeReference,
 } from './comfyui-nodes';
+import type { InternalParseResult } from './types';
 
 // =============================================================================
 // Constants
@@ -211,7 +212,7 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
  * @param nodes - Parsed ComfyUI prompt (node graph)
  * @returns Partial metadata from ComfyUI nodes
  */
-function extractComfyUIMetadata(
+export function extractComfyUIMetadata(
   nodes: ComfyNodeGraph,
 ): PartialMetadata | undefined {
   // Classify all nodes in a single pass
@@ -237,13 +238,16 @@ function extractComfyUIMetadata(
     | string
     | undefined;
 
+  const rawSampling = extractSampling(nodes, c.sampler);
+  const clipSkip = extractClipSkip(c.clipSetLastLayer);
+
   return trimObject({
     prompt: promptText || undefined,
     negativePrompt: negativeText || undefined,
     width: width > 0 ? width : undefined,
     height: height > 0 ? height : undefined,
     model: extractModel(c.checkpoint, c.unetLoader),
-    sampling: extractSampling(nodes, c.sampler),
+    sampling: trimObject({ ...rawSampling, clipSkip }),
     ...buildHiresOrUpscale(upscalerName, hiresScale, hiresSampling),
   });
 }

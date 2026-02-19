@@ -22,6 +22,7 @@ const LATENT_IMAGE_TYPES = ['EmptyLatentImage'];
 const LATENT_IMAGE_RGTHREE_TYPES = ['SDXL Empty Latent Image (rgthree)'];
 const CHECKPOINT_TYPES = ['CheckpointLoaderSimple', 'CheckpointLoader'];
 const UNET_LOADER_TYPES = ['UNETLoader'];
+const CLIP_SET_LAST_LAYER_TYPES = ['CLIPSetLastLayer'];
 const HIRES_MODEL_UPSCALE_TYPES = ['UpscaleModelLoader'];
 const HIRES_IMAGE_SCALE_TYPES = ['ImageScale', 'ImageScaleBy'];
 const LATENT_UPSCALE_TYPES = ['LatentUpscale', 'LatentUpscaleBy'];
@@ -42,6 +43,7 @@ export interface ClassifiedNodes {
   latentImageRgthree?: ComfyNode;
   checkpoint?: ComfyNode;
   unetLoader?: ComfyNode;
+  clipSetLastLayer?: ComfyNode;
   hiresModelUpscale?: ComfyNode;
   hiresImageScale?: ComfyNode;
   latentUpscale?: ComfyNode;
@@ -73,6 +75,11 @@ export function classifyNodes(nodes: ComfyNodeGraph): ClassifiedNodes {
       result.checkpoint = node;
     } else if (!result.unetLoader && UNET_LOADER_TYPES.includes(ct)) {
       result.unetLoader = node;
+    } else if (
+      !result.clipSetLastLayer &&
+      CLIP_SET_LAST_LAYER_TYPES.includes(ct)
+    ) {
+      result.clipSetLastLayer = node;
     } else if (
       !result.hiresModelUpscale &&
       HIRES_MODEL_UPSCALE_TYPES.includes(ct)
@@ -349,6 +356,23 @@ export function extractModel(
     return { name: String(unetLoader.inputs.unet_name) };
   }
   return undefined;
+}
+
+/**
+ * Extract CLIP skip value from CLIPSetLastLayer node
+ *
+ * stop_at_clip_layer is negative (-2 = clip skip 2).
+ * Returns undefined if no node is present.
+ *
+ * @param clipSetLastLayer - Pre-classified CLIPSetLastLayer node
+ */
+export function extractClipSkip(
+  clipSetLastLayer: ComfyNode | undefined,
+): number | undefined {
+  if (!clipSetLastLayer) return undefined;
+  const stopAt = clipSetLastLayer.inputs.stop_at_clip_layer;
+  if (typeof stopAt !== 'number') return undefined;
+  return -stopAt;
 }
 
 // =============================================================================
