@@ -329,19 +329,13 @@ export function extractSampling(
     seed = seedNode?.inputs.seed;
   }
 
-  // Extract denoise only if explicitly set and less than 1.0
-  // (denoise = 1.0 is the txt2img default, not meaningful to store)
-  const rawDenoise = sampler.inputs.denoise;
-  const denoise =
-    typeof rawDenoise === 'number' && rawDenoise < 1 ? rawDenoise : undefined;
-
   return {
     seed: seed as number,
     steps: sampler.inputs.steps as number,
     cfg: sampler.inputs.cfg as number,
     sampler: sampler.inputs.sampler_name as string,
     scheduler: sampler.inputs.scheduler as string,
-    denoise,
+    denoise: sampler.inputs.denoise as number | undefined,
   };
 }
 
@@ -363,17 +357,13 @@ function extractAdvancedSampling(
   const samplerSelectNode = resolveNode(nodes, sampler.inputs.sampler);
   const schedulerNode = resolveNode(nodes, sampler.inputs.sigmas);
 
-  const rawDenoise = schedulerNode?.inputs.denoise;
-  const denoise =
-    typeof rawDenoise === 'number' && rawDenoise < 1 ? rawDenoise : undefined;
-
   return {
     seed: noiseNode?.inputs.noise_seed as number,
     steps: schedulerNode?.inputs.steps as number,
     cfg: guiderNode?.inputs.cfg as number,
     sampler: samplerSelectNode?.inputs.sampler_name as string,
     scheduler: schedulerNode?.inputs.scheduler as string,
-    denoise,
+    denoise: schedulerNode?.inputs.denoise as number | undefined,
   };
 }
 
@@ -401,17 +391,13 @@ function extractCustomSampling(
     seed = seedNode?.inputs.seed;
   }
 
-  const rawDenoise = schedulerNode?.inputs.denoise;
-  const denoise =
-    typeof rawDenoise === 'number' && rawDenoise < 1 ? rawDenoise : undefined;
-
   return {
     seed: seed as number,
     steps: schedulerNode?.inputs.steps as number,
     cfg: sampler.inputs.cfg as number,
     sampler: samplerSelectNode?.inputs.sampler_name as string,
     scheduler: schedulerNode?.inputs.scheduler as string,
-    denoise,
+    denoise: schedulerNode?.inputs.denoise as number | undefined,
   };
 }
 

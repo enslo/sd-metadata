@@ -137,6 +137,28 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
 }
 
 // =============================================================================
+// Denoise Normalization
+// =============================================================================
+
+/**
+ * Strip denoise from sampling when it equals the default (1.0)
+ *
+ * denoise = 1.0 means full denoising (txt2img default) and is not meaningful
+ * to store. Only non-default values (< 1.0, e.g. img2img / hires fix) are
+ * kept in the output.
+ */
+function normalizeDenoise(
+  sampling: SamplingSettings | undefined,
+): SamplingSettings | undefined {
+  if (!sampling || typeof sampling.denoise !== 'number') return sampling;
+  if (sampling.denoise >= 1) {
+    const { denoise: _, ...rest } = sampling;
+    return rest;
+  }
+  return sampling;
+}
+
+// =============================================================================
 // JSON Utilities
 // =============================================================================
 
@@ -227,9 +249,9 @@ export function extractComfyUIMetadata(
 
   // Find hires sampler and resolve its sampling parameters
   const hiresSamplerNode = findHiresSampler(nodes);
-  const hiresSampling = hiresSamplerNode
-    ? extractSampling(nodes, hiresSamplerNode)
-    : undefined;
+  const hiresSampling = normalizeDenoise(
+    hiresSamplerNode ? extractSampling(nodes, hiresSamplerNode) : undefined,
+  );
 
   // Resolve hires scale from available sources
   const hiresScale = resolveHiresScale(nodes, c, width);
@@ -238,7 +260,7 @@ export function extractComfyUIMetadata(
     | string
     | undefined;
 
-  const rawSampling = extractSampling(nodes, c.sampler);
+  const rawSampling = normalizeDenoise(extractSampling(nodes, c.sampler));
   const clipSkip = extractClipSkip(c.clipSetLastLayer);
 
   return trimObject({
