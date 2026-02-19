@@ -96,6 +96,20 @@ in regular work PRs.
        git branch -d feat/my-feature
 ```
 
+## Post-Merge Cleanup
+
+When a PR is merged, clean up immediately without waiting for
+instructions:
+
+```bash
+git checkout main && git pull --prune
+git branch -d <merged-branch>
+```
+
+Remote branches are deleted automatically by GitHub ("Automatically
+delete head branches" is enabled). The `--prune` flag removes stale
+remote-tracking references from the local repository.
+
 ## Important Notes
 
 - **Never commit directly to `main`** — always use PRs
