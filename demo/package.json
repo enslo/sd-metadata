@@ -19,7 +19,7 @@
     "@mantine/dropzone": "^8.3.14",
     "@mantine/hooks": "^8.3.14",
     "@nanostores/preact": "^1.0.0",
-    "lucide-preact": "^0.574.0",
+    "lucide-preact": "^0.575.0",
     "nanostores": "^1.1.0",
     "preact": "^10.28.3"
   }
