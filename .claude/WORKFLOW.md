@@ -4,45 +4,104 @@ Daily development workflow for this project.
 
 ## Branch Strategy
 
-| Branch                                     | Purpose                           |
-|--------------------------------------------|-----------------------------------|
-| `main`                                     | Production-ready code             |
-| `release/vX.Y.Z`                           | Development base for next release |
-| `feat/*`, `fix/*`, `refactor/*`, `chore/*` | Work branches                     |
+| Branch                                     | Purpose           |
+|--------------------------------------------|-------------------|
+| `main`                                     | Production-ready  |
+| `feat/*`, `fix/*`, `refactor/*`, `chore/*` | Work branches     |
+
+All work branches branch from and merge back to `main`.
+There are no long-lived development or release branches.
+
+## PR Rules
+
+### Merge Method
+
+All PRs are **squash merged**. Merge commits and rebase merges are
+disabled at the repository level.
+
+This means:
+
+- Each PR becomes exactly one commit on `main`.
+- Commits inside a work branch are free-form (wip, fixup, etc.) —
+  they disappear on merge.
+- The **PR title** becomes the commit message on `main`.
+
+### PR Title Convention
+
+PR titles MUST follow Conventional Commits:
+
+```text
+<type>: <description>
+```
+
+| Type       | When to use                            |
+|------------|----------------------------------------|
+| `feat`     | New feature or capability              |
+| `fix`      | Bug fix                                |
+| `refactor` | Code change that is not feat nor fix   |
+| `docs`     | Documentation only                     |
+| `test`     | Adding or updating tests               |
+| `chore`    | Maintenance (deps, CI, config, release)|
+| `perf`     | Performance improvement                |
+
+Scope is optional: `feat(comfyui): support ControlNet` is fine.
+
+### File Change Constraints
+
+Certain files are only modified in specific PR types.
+
+**Release-only files** — touched exclusively in release preparation PRs:
+
+- `package.json` `"version"` field
+- `CHANGELOG.md`
+- `README.md` / `README.ja.md` (all changes, including CDN version)
+- `docs/**`
+
+Rationale: these files are visible to users on GitHub and npmjs.com.
+Changes must correspond to a published version on npm; updating them
+between releases would describe code that users cannot install yet.
+
+**Development infrastructure** — may be changed in any PR:
+
+- `.claude/**` (developer workflow docs)
+- `.github/**` (CI, dependabot config)
+- `CONTRIBUTING.md`
+
+**Everything else** (source, tests, samples, config, deps) is modified
+in regular work PRs.
 
 ## Development Cycle
 
 ```text
-┌─────────────────────────────────────────────────────┐
-│  1. Create work branch from release branch          │
-│     git checkout release/vX.Y.Z                     │
-│     git checkout -b feat/my-feature                 │
-├─────────────────────────────────────────────────────┤
-│  2. Make changes                                    │
-│     - Write code                                    │
-│     - Run tests: pnpm test                          │
-│     - Commit changes                                │
-├─────────────────────────────────────────────────────┤
-│  3. Push and create PR                              │
-│     git push -u origin feat/my-feature              │
-│     gh pr create --base release/vX.Y.Z              │
-├─────────────────────────────────────────────────────┤
-│  4. After PR is merged: cleanup                     │
-│     git checkout release/vX.Y.Z                     │
-│     git pull                                        │
-│     git branch -d feat/my-feature                   │
-├─────────────────────────────────────────────────────┤
-│  5. Next task? Go back to step 1                    │
-└─────────────────────────────────────────────────────┘
+1. Start from main:
+
+       git checkout main && git pull
+       git checkout -b feat/my-feature
+
+2. Work, commit freely, push:
+
+       git push -u origin feat/my-feature
+
+3. Open a PR targeting main:
+
+       gh pr create --base main
+
+   Set the PR title to Conventional Commits format.
+
+4. After CI passes, squash merge the PR.
+
+5. Clean up locally:
+
+       git checkout main && git pull
+       git branch -d feat/my-feature
 ```
 
 ## Important Notes
 
-- **Never commit directly to `main`** - always use PRs
-- **Never commit directly to `release/vX.Y.Z`** - use work branches
-- **Always return to release branch** after PR merge
-- **Delete local branches** after they're merged (cleanup)
-- Work branch names should follow conventional prefixes: `feat/`, `fix/`, `refactor/`, `chore/`, `docs/`, `test/`
+- **Never commit directly to `main`** — always use PRs
+- **Delete local branches** after they are merged
+- Work branch names should follow conventional prefixes:
+  `feat/`, `fix/`, `refactor/`, `chore/`, `docs/`, `test/`
 
 ## When Ready to Release
 
