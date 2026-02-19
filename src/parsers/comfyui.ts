@@ -24,6 +24,7 @@ import {
   type ClassifiedNodes,
   calculateScale,
   classifyNodes,
+  extractClipSkip,
   extractDimensions,
   extractModel,
   extractPromptTexts,
@@ -237,13 +238,16 @@ function extractComfyUIMetadata(
     | string
     | undefined;
 
+  const rawSampling = extractSampling(nodes, c.sampler);
+  const clipSkip = extractClipSkip(c.clipSetLastLayer);
+
   return trimObject({
     prompt: promptText || undefined,
     negativePrompt: negativeText || undefined,
     width: width > 0 ? width : undefined,
     height: height > 0 ? height : undefined,
     model: extractModel(c.checkpoint, c.unetLoader),
-    sampling: extractSampling(nodes, c.sampler),
+    sampling: trimObject({ ...rawSampling, clipSkip }),
     ...buildHiresOrUpscale(upscalerName, hiresScale, hiresSampling),
   });
 }

@@ -30,6 +30,7 @@ describe('Stability Matrix Parsers - Samples', () => {
           seed: 395309383,
           cfg: 5,
           steps: 20,
+          clipSkip: 2,
         },
         hires: undefined,
         upscale: undefined,
@@ -62,6 +63,7 @@ describe('Stability Matrix Parsers - Samples', () => {
           seed: 2073041550,
           steps: 20,
           cfg: 5,
+          clipSkip: 2,
         },
         hires: {
           scale: 1.5,
@@ -99,6 +101,7 @@ describe('Stability Matrix Parsers - Samples', () => {
           seed: 963022979,
           steps: 20,
           cfg: 5,
+          clipSkip: 2,
         },
         hires: undefined,
         upscale: {
