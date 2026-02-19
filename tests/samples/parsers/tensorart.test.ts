@@ -29,6 +29,8 @@ describe('TensorArt Parsers - Samples', () => {
           steps: 25,
           cfg: 7,
           clipSkip: 2,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
         },
         hires: undefined,
         upscale: undefined,

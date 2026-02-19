@@ -212,7 +212,7 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
  * @param nodes - Parsed ComfyUI prompt (node graph)
  * @returns Partial metadata from ComfyUI nodes
  */
-function extractComfyUIMetadata(
+export function extractComfyUIMetadata(
   nodes: ComfyNodeGraph,
 ): PartialMetadata | undefined {
   // Classify all nodes in a single pass
