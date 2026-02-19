@@ -11,6 +11,8 @@ import { useStore } from '@nanostores/preact';
 import { useRef } from 'preact/hooks';
 import { $t } from '../../i18n';
 
+type TextChangeEvent = { currentTarget: { value: string } };
+
 interface MetadataFormProps {
   metadata: EmbedMetadata;
   onChange: (metadata: EmbedMetadata) => void;
@@ -22,7 +24,7 @@ function toNum(val: string | number): number | undefined {
 }
 
 /** Get input value from a change event */
-function val(e: { currentTarget: { value: string } }): string {
+function val(e: TextChangeEvent): string {
   return e.currentTarget.value;
 }
 
@@ -49,6 +51,7 @@ function computeDefaultSections(metadata: EmbedMetadata): string[] {
 }
 
 /**
+ * @package
  * Form fields for editing BaseMetadata + characterPrompts
  */
 export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
@@ -63,7 +66,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
       <Textarea
         label={t.fields.prompt}
         value={metadata.prompt}
-        onChange={(e: { currentTarget: { value: string } }) =>
+        onChange={(e: TextChangeEvent) =>
           onChange({ ...metadata, prompt: val(e) })
         }
         rows={3}
@@ -77,7 +80,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
       <Textarea
         label={t.fields.negativePrompt}
         value={metadata.negativePrompt}
-        onChange={(e: { currentTarget: { value: string } }) =>
+        onChange={(e: TextChangeEvent) =>
           onChange({ ...metadata, negativePrompt: val(e) })
         }
         rows={2}
@@ -123,7 +126,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               <TextInput
                 label={t.fields.modelName}
                 value={metadata.model?.name ?? ''}
-                onChange={(e: { currentTarget: { value: string } }) =>
+                onChange={(e: TextChangeEvent) =>
                   onChange({
                     ...metadata,
                     model: {
@@ -136,7 +139,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               <TextInput
                 label={t.fields.modelHash}
                 value={metadata.model?.hash ?? ''}
-                onChange={(e: { currentTarget: { value: string } }) =>
+                onChange={(e: TextChangeEvent) =>
                   onChange({
                     ...metadata,
                     model: {
@@ -159,7 +162,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                 <TextInput
                   label={t.fields.sampler}
                   value={metadata.sampling?.sampler ?? ''}
-                  onChange={(e: { currentTarget: { value: string } }) =>
+                  onChange={(e: TextChangeEvent) =>
                     onChange({
                       ...metadata,
                       sampling: {
@@ -172,7 +175,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                 <TextInput
                   label={t.fields.scheduler}
                   value={metadata.sampling?.scheduler ?? ''}
-                  onChange={(e: { currentTarget: { value: string } }) =>
+                  onChange={(e: TextChangeEvent) =>
                     onChange({
                       ...metadata,
                       sampling: {
@@ -245,7 +248,7 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
               <TextInput
                 label={t.fields.upscaler}
                 value={metadata.hires?.upscaler ?? ''}
-                onChange={(e: { currentTarget: { value: string } }) =>
+                onChange={(e: TextChangeEvent) =>
                   onChange({
                     ...metadata,
                     hires: {

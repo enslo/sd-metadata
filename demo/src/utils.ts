@@ -31,33 +31,6 @@ export function isJson(text: string): boolean {
 }
 
 /**
- * Get display label for generation software
- *
- * @param software - Software identifier
- * @returns Human-readable label
- */
-export function getSoftwareLabel(software: string): string {
-  const labels: Record<string, string> = {
-    novelai: 'NovelAI',
-    comfyui: 'ComfyUI',
-    tensorart: 'TensorArt',
-    'stability-matrix': 'Stability Matrix',
-    invokeai: 'InvokeAI',
-    swarmui: 'SwarmUI',
-    'sd-webui': 'SD WebUI',
-    'sd-next': 'SD.Next',
-    forge: 'Forge',
-    'forge-neo': 'Forge Neo',
-    'hf-space': 'HuggingFace Space',
-    civitai: 'Civitai',
-    easydiffusion: 'Easy Diffusion',
-    fooocus: 'Fooocus',
-    'ruined-fooocus': 'Ruined Fooocus',
-  };
-  return labels[software] || software;
-}
-
-/**
  * Format text as JSON if valid, otherwise return as-is
  *
  * @param text - Text to format

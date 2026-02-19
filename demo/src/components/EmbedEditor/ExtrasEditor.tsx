@@ -11,20 +11,21 @@ import { Plus, Trash2 } from 'lucide-preact';
 import { useState } from 'preact/hooks';
 import { $t } from '../../i18n';
 
+type TextChangeEvent = { currentTarget: { value: string } };
+
 interface ExtrasEditorProps {
   extras: Record<string, string | number>;
   onChange: (extras: Record<string, string | number>) => void;
 }
 
 interface ExtraEntry {
-  id: number;
+  id: string;
   key: string;
   value: string;
 }
 
-let nextId = 0;
-
 /**
+ * @package
  * Dynamic key-value pair editor for embed() extras parameter
  */
 export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
@@ -33,7 +34,7 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
   // Internal entries for rendering (preserves order and empty rows)
   const [entries, setEntries] = useState<ExtraEntry[]>(() =>
     Object.entries(extras).map(([key, value]) => ({
-      id: nextId++,
+      id: crypto.randomUUID(),
       key,
       value: String(value),
     })),
@@ -52,23 +53,26 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
   };
 
   const handleAdd = () => {
-    const updated = [...entries, { id: nextId++, key: '', value: '' }];
+    const updated = [
+      ...entries,
+      { id: crypto.randomUUID(), key: '', value: '' },
+    ];
     setEntries(updated);
   };
 
-  const handleRemove = (id: number) => {
+  const handleRemove = (id: string) => {
     const updated = entries.filter((e) => e.id !== id);
     setEntries(updated);
     syncExtras(updated);
   };
 
-  const handleKeyChange = (id: number, key: string) => {
+  const handleKeyChange = (id: string, key: string) => {
     const updated = entries.map((e) => (e.id === id ? { ...e, key } : e));
     setEntries(updated);
     syncExtras(updated);
   };
 
-  const handleValueChange = (id: number, value: string) => {
+  const handleValueChange = (id: string, value: string) => {
     const updated = entries.map((e) => (e.id === id ? { ...e, value } : e));
     setEntries(updated);
     syncExtras(updated);
@@ -91,7 +95,7 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
             placeholder={t.embedEditor.key}
             value={entry.key}
             aria-label={t.embedEditor.key}
-            onChange={(e: { currentTarget: { value: string } }) =>
+            onChange={(e: TextChangeEvent) =>
               handleKeyChange(entry.id, e.currentTarget.value)
             }
             style={{ flex: 2 }}
@@ -100,7 +104,7 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
             placeholder={t.embedEditor.value}
             value={entry.value}
             aria-label={t.embedEditor.value}
-            onChange={(e: { currentTarget: { value: string } }) =>
+            onChange={(e: TextChangeEvent) =>
               handleValueChange(entry.id, e.currentTarget.value)
             }
             style={{ flex: 3 }}

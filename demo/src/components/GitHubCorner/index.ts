@@ -1,0 +1,1 @@
+export { GitHubCorner } from './GitHubCorner';
