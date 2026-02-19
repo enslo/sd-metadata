@@ -17,7 +17,14 @@ import type {
 // Node Class Type Constants
 // =============================================================================
 
-const SAMPLER_TYPES = ['KSampler', 'KSamplerAdvanced', 'SamplerCustomAdvanced'];
+const SAMPLER_TYPES = [
+  'KSampler',
+  'KSamplerAdvanced',
+  'SamplerCustomAdvanced',
+  'SamplerCustom',
+  'DetailerForEach',
+];
+
 const LATENT_IMAGE_TYPES = ['EmptyLatentImage'];
 const LATENT_IMAGE_RGTHREE_TYPES = ['SDXL Empty Latent Image (rgthree)'];
 const CHECKPOINT_TYPES = ['CheckpointLoaderSimple', 'CheckpointLoader'];
@@ -202,17 +209,46 @@ export function extractPromptTexts(
   // SamplerCustomAdvanced: on the CFGGuider node via guider input
   const conditioningSource = resolveConditioningSource(nodes, sampler);
 
-  const positiveRef = conditioningSource.inputs.positive;
-  const negativeRef = conditioningSource.inputs.negative;
-
   return {
-    promptText: isNodeReference(positiveRef)
-      ? extractText(nodes, String(positiveRef[0]))
-      : '',
-    negativeText: isNodeReference(negativeRef)
-      ? extractText(nodes, String(negativeRef[0]))
-      : '',
+    promptText: extractTextFromConditioning(
+      nodes,
+      conditioningSource.inputs.positive,
+      'positive',
+    ),
+    negativeText: extractTextFromConditioning(
+      nodes,
+      conditioningSource.inputs.negative,
+      'negative',
+    ),
   };
+}
+
+/**
+ * Extract text by following a conditioning chain
+ *
+ * Conditioning may pass through intermediate nodes (e.g. ControlNet apply)
+ * before reaching the CLIPTextEncode that holds the actual text.
+ * This function first tries extractText on the target node; if no text is
+ * found, it follows the same conditioning key (positive/negative) deeper.
+ */
+function extractTextFromConditioning(
+  nodes: ComfyNodeGraph,
+  ref: unknown,
+  condKey: 'positive' | 'negative',
+  maxDepth = 10,
+): string {
+  if (maxDepth <= 0 || !isNodeReference(ref)) return '';
+
+  const nodeId = String(ref[0]);
+  const text = extractText(nodes, nodeId);
+  if (text) return text;
+
+  // No text found — follow the conditioning chain
+  const node = nodes[nodeId];
+  if (!node) return '';
+
+  const next = node.inputs[condKey];
+  return extractTextFromConditioning(nodes, next, condKey, maxDepth - 1);
 }
 
 // =============================================================================
@@ -281,6 +317,10 @@ export function extractSampling(
     return extractAdvancedSampling(nodes, sampler);
   }
 
+  if (sampler.class_type === 'SamplerCustom') {
+    return extractCustomSampling(nodes, sampler);
+  }
+
   // Handle seed which may be a reference or direct value
   let seed = sampler.inputs.seed;
   if (isNodeReference(seed)) {
@@ -289,19 +329,13 @@ export function extractSampling(
     seed = seedNode?.inputs.seed;
   }
 
-  // Extract denoise only if explicitly set and less than 1.0
-  // (denoise = 1.0 is the txt2img default, not meaningful to store)
-  const rawDenoise = sampler.inputs.denoise;
-  const denoise =
-    typeof rawDenoise === 'number' && rawDenoise < 1 ? rawDenoise : undefined;
-
   return {
     seed: seed as number,
     steps: sampler.inputs.steps as number,
     cfg: sampler.inputs.cfg as number,
     sampler: sampler.inputs.sampler_name as string,
     scheduler: sampler.inputs.scheduler as string,
-    denoise,
+    denoise: sampler.inputs.denoise as number | undefined,
   };
 }
 
@@ -323,17 +357,47 @@ function extractAdvancedSampling(
   const samplerSelectNode = resolveNode(nodes, sampler.inputs.sampler);
   const schedulerNode = resolveNode(nodes, sampler.inputs.sigmas);
 
-  const rawDenoise = schedulerNode?.inputs.denoise;
-  const denoise =
-    typeof rawDenoise === 'number' && rawDenoise < 1 ? rawDenoise : undefined;
-
   return {
     seed: noiseNode?.inputs.noise_seed as number,
     steps: schedulerNode?.inputs.steps as number,
     cfg: guiderNode?.inputs.cfg as number,
     sampler: samplerSelectNode?.inputs.sampler_name as string,
     scheduler: schedulerNode?.inputs.scheduler as string,
-    denoise,
+    denoise: schedulerNode?.inputs.denoise as number | undefined,
+  };
+}
+
+/**
+ * Extract sampling settings from SamplerCustom
+ *
+ * Similar to SamplerCustomAdvanced but cfg and noise_seed are located
+ * differently:
+ * - cfg: directly on the sampler node (not via guider)
+ * - noise_seed: reference to a seed node (not via noise node)
+ * - sampler → KSamplerSelect → sampler_name
+ * - sigmas → BasicScheduler → scheduler, steps, denoise
+ */
+function extractCustomSampling(
+  nodes: ComfyNodeGraph,
+  sampler: ComfyNode,
+): SamplingSettings {
+  const samplerSelectNode = resolveNode(nodes, sampler.inputs.sampler);
+  const schedulerNode = resolveNode(nodes, sampler.inputs.sigmas);
+
+  // noise_seed may be a direct value or a reference to a seed node
+  let seed = sampler.inputs.noise_seed;
+  if (isNodeReference(seed)) {
+    const seedNode = nodes[String(seed[0])];
+    seed = seedNode?.inputs.seed;
+  }
+
+  return {
+    seed: seed as number,
+    steps: schedulerNode?.inputs.steps as number,
+    cfg: sampler.inputs.cfg as number,
+    sampler: samplerSelectNode?.inputs.sampler_name as string,
+    scheduler: schedulerNode?.inputs.scheduler as string,
+    denoise: schedulerNode?.inputs.denoise as number | undefined,
   };
 }
 
