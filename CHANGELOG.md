@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-02-19
+
+### Fixed
+
+- **ComfyUI DetailerForEach support** (#150): Extract prompt, negative prompt, and sampling settings from workflows using `DetailerForEach` (ComfyUI Impact Pack inpainting/detailer nodes)
+- **ComfyUI SamplerCustom support** (#150): Extract metadata from `SamplerCustom` nodes with dedicated handling for its input layout (cfg on node, noise_seed via reference, steps/scheduler from BasicScheduler)
+- **ComfyUI conditioning chain traversal** (#150): Follow conditioning through intermediate nodes (e.g. ControlNet apply) to reach CLIPTextEncode for prompt text extraction
+
 ## [2.0.0] - 2026-02-19
 
 ### ⚠️ Breaking Changes
@@ -350,6 +358,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[2.0.1]: https://github.com/enslo/sd-metadata/releases/tag/v2.0.1
 [2.0.0]: https://github.com/enslo/sd-metadata/releases/tag/v2.0.0
 [1.8.1]: https://github.com/enslo/sd-metadata/releases/tag/v1.8.1
 [1.8.0]: https://github.com/enslo/sd-metadata/releases/tag/v1.8.0
