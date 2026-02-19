@@ -3,20 +3,19 @@ import { Result } from '../types';
 import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import { extractComfyUIMetadata } from './comfyui';
 import type { InternalParseResult } from './types';
 
 /**
  * TensorArt generation_data JSON structure
+ *
+ * Only prompt, negativePrompt, and baseModel are used from generation_data.
+ * All other parameters (sampling, dimensions, etc.) are extracted from the
+ * ComfyUI node graph, which provides more complete information.
  */
 interface TensorArtGenerationData {
   prompt?: string;
   negativePrompt?: string;
-  width?: number;
-  height?: number;
-  seed?: string;
-  steps?: number;
-  cfgScale?: number;
-  clipSkip?: number;
   baseModel?: {
     modelFileName?: string;
     hash?: string;
@@ -29,6 +28,11 @@ interface TensorArtGenerationData {
  * TensorArt stores metadata with:
  * - generation_data: JSON containing generation parameters
  * - prompt: ComfyUI-style node graph (workflow)
+ *
+ * Strategy: Delegate node graph parsing to the ComfyUI parser for sampling,
+ * dimensions, hires, and upscale. Only prompt text and model info are taken
+ * from generation_data, since TensorArt uses a custom checkpoint loader
+ * (ECHOCheckpointLoaderSimple) that the standard ComfyUI parser cannot detect.
  *
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
@@ -58,10 +62,6 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
   }
   const data = parsed.value;
 
-  // Extract dimensions (fallback to 0 for IHDR extraction)
-  const width = data.width ?? 0;
-  const height = data.height ?? 0;
-
   // Parse nodes from prompt chunk (required for TensorArt)
   if (!promptChunk) {
     return Result.error({ type: 'unsupportedFormat' });
@@ -75,55 +75,29 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
   }
   const nodes = promptParsed.value;
 
-  // Compute seed (resolve -1 from KSampler node)
-  const baseSeed = data.seed ? Number(data.seed) : undefined;
-  const seed = baseSeed === -1 ? findActualSeed(nodes) : baseSeed;
+  // Delegate node parsing to ComfyUI parser
+  const comfy = extractComfyUIMetadata(nodes);
+
+  // Model from generation_data (ECHOCheckpointLoaderSimple is not detected by ComfyUI parser)
+  const model = trimObject({
+    name: data.baseModel?.modelFileName,
+    hash: data.baseModel?.hash,
+  });
 
   return Result.ok({
     software: 'tensorart',
-    prompt: data.prompt ?? '',
-    negativePrompt: data.negativePrompt ?? '',
-    width,
-    height,
     nodes,
-    model: trimObject({
-      name: data.baseModel?.modelFileName,
-      hash: data.baseModel?.hash,
-    }),
-    sampling: trimObject({
-      seed,
-      steps: data.steps,
-      cfg: data.cfgScale,
-      clipSkip: data.clipSkip,
-    }),
+    // Prompt from generation_data, fallback to nodes
+    prompt: data.prompt ?? comfy?.prompt ?? '',
+    negativePrompt: data.negativePrompt ?? comfy?.negativePrompt ?? '',
+    // Dimensions from nodes, fallback to generation_data
+    width: comfy?.width ?? 0,
+    height: comfy?.height ?? 0,
+    // Model from generation_data, fallback to nodes
+    model: model ?? comfy?.model,
+    // Sampling, hires, upscale entirely from nodes
+    sampling: comfy?.sampling,
+    hires: comfy?.hires,
+    upscale: comfy?.upscale,
   });
-}
-
-/**
- * Find actual seed value from KSampler node in ComfyUI node graph
- *
- * @param nodes - ComfyUI node graph
- * @returns Actual seed value, or -1 if not found
- */
-function findActualSeed(nodes: ComfyNodeGraph): number {
-  const samplerNode = findSamplerNode(nodes);
-  return samplerNode && typeof samplerNode.inputs.seed === 'number'
-    ? samplerNode.inputs.seed
-    : -1;
-}
-
-/**
- * Find KSampler node in ComfyUI node graph
- *
- * @param nodes - ComfyUI node graph
- * @returns KSampler node or undefined
- */
-function findSamplerNode(
-  nodes: ComfyNodeGraph,
-): { inputs: Record<string, unknown>; class_type: string } | undefined {
-  return Object.values(nodes).find(
-    (node) =>
-      node.class_type === 'KSampler' ||
-      node.class_type.toLowerCase().includes('sampler'),
-  );
 }
