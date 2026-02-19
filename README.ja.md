@@ -159,7 +159,7 @@ if (result.status === 'success') {
 > 本番環境では `@latest` の代わりに特定のバージョンを指定してください：
 >
 > ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.0.0/dist/index.js
+> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.0.1/dist/index.js
 > ```
 
 ### 応用例
