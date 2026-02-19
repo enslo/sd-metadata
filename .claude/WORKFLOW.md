@@ -92,8 +92,8 @@ in regular work PRs.
 
 5. Clean up locally:
 
-       git checkout main && git pull
-       git branch -d feat/my-feature
+       git checkout main && git pull --prune
+       git branch -D feat/my-feature
 ```
 
 ## Post-Merge Cleanup
@@ -103,7 +103,7 @@ instructions:
 
 ```bash
 git checkout main && git pull --prune
-git branch -d <merged-branch>
+git branch -D <merged-branch>
 ```
 
 Remote branches are deleted automatically by GitHub ("Automatically
