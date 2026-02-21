@@ -137,17 +137,20 @@ fileInput.addEventListener('change', async (e) => {
 });
 ```
 
-### CDN使用（ユーザースクリプト）
+### ユーザースクリプトでの使用
 
-ユーザースクリプト（Tampermonkey、Violentmonkeyなど）では、jsDelivr CDNから読み込みます：
+ユーザースクリプト（Tampermonkey、Violentmonkeyなど）では、IIFEビルドを `@require` で読み込みます：
 
 ```javascript
-// CDNからインポート
-import { read } from 'https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@latest/dist/index.js';
+// ==UserScript==
+// @name        My Script
+// @namespace   https://example.com
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.0.1/dist/index.global.js
+// ==/UserScript==
 
 const response = await fetch(imageUrl);
 const arrayBuffer = await response.arrayBuffer();
-const result = read(arrayBuffer);
+const result = sdMetadata.read(arrayBuffer);
 
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software);
@@ -156,11 +159,7 @@ if (result.status === 'success') {
 ```
 
 > [!TIP]
-> 本番環境では `@latest` の代わりに特定のバージョンを指定してください：
->
-> ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.0.1/dist/index.js
-> ```
+> 安定性のため、`@require` では常に特定のバージョンを指定してください。
 
 ### 応用例
 

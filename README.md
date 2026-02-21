@@ -137,17 +137,20 @@ fileInput.addEventListener('change', async (e) => {
 });
 ```
 
-### CDN Usage (Userscript)
+### Userscript Usage
 
-For userscripts (Tampermonkey, Violentmonkey, etc.), load from jsDelivr CDN:
+For userscripts (Tampermonkey, Violentmonkey, etc.), load the IIFE build via `@require`:
 
 ```javascript
-// Import from CDN
-import { read } from 'https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@latest/dist/index.js';
+// ==UserScript==
+// @name        My Script
+// @namespace   https://example.com
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.0.1/dist/index.global.js
+// ==/UserScript==
 
 const response = await fetch(imageUrl);
 const arrayBuffer = await response.arrayBuffer();
-const result = read(arrayBuffer);
+const result = sdMetadata.read(arrayBuffer);
 
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software);
@@ -156,11 +159,7 @@ if (result.status === 'success') {
 ```
 
 > [!TIP]
-> For production use, pin to a specific version instead of `@latest`:
->
-> ```text
-> https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.0.1/dist/index.js
-> ```
+> Always pin to a specific version in `@require` for stability.
 
 ### Advanced Examples
 
