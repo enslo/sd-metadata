@@ -48,11 +48,11 @@ jobs:
       - name: Type check (lite)
         run: pnpm --filter @enslo/sd-metadata-lite typecheck
 
-      - name: Test (lite)
-        run: pnpm --filter @enslo/sd-metadata-lite test
-
       - name: Build (lite)
         run: pnpm --filter @enslo/sd-metadata-lite build
+
+      - name: Test (lite)
+        run: pnpm --filter @enslo/sd-metadata-lite test
 
       - name: Build (demo)
         run: pnpm --filter demo build
