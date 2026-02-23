@@ -1,0 +1,60 @@
+{
+  "name": "@enslo/sd-metadata",
+  "version": "2.1.0",
+  "description": "Read and write AI-generated image metadata",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enslo/sd-metadata.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "stable-diffusion",
+    "ai-image",
+    "image-metadata",
+    "metadata-parser",
+    "prompt",
+    "novelai",
+    "comfyui",
+    "forge",
+    "png",
+    "jpeg",
+    "webp",
+    "exif"
+  ],
+  "author": "Ernest Croft",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/enslo/sd-metadata/issues"
+  },
+  "homepage": "https://sd-metadata.pages.dev",
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.2",
+    "@types/node": "^25.0.3",
+    "@vitest/coverage-v8": "^4.0.18",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

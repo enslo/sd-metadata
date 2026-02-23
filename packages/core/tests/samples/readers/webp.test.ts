@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readJpegMetadata } from '../../../src/readers/jpeg';
+import { readWebpMetadata } from '../../../src/readers/webp';
 
-describe('JPEG Readers - Samples', () => {
-  const samplesDir = path.join(__dirname, '../../../samples/jpg');
+describe('WebP Readers - Samples', () => {
+  const samplesDir = path.join(__dirname, '../../../../../samples/webp');
   const samples = fs.readdirSync(samplesDir).sort();
 
-  it('should have JPEG samples', () => {
+  it('should have WebP samples', () => {
     expect(samples.length).toBeGreaterThan(0);
   });
 
@@ -16,12 +16,12 @@ describe('JPEG Readers - Samples', () => {
       const filePath = path.join(samplesDir, sample);
       const data = fs.readFileSync(filePath);
 
-      const result = readJpegMetadata(data);
+      const result = readWebpMetadata(data);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
         // Empty file has no segments, others should have at least some
-        if (sample === 'empty.jpg') {
+        if (sample === 'empty.webp') {
           expect(result.value.length).toBe(0);
         } else {
           expect(result.value.length).toBeGreaterThan(0);

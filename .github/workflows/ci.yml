@@ -43,5 +43,11 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      - name: Build lite
+        run: pnpm --filter @enslo/sd-metadata-lite build
+
+      - name: Test lite
+        run: pnpm --filter @enslo/sd-metadata-lite test
+
       - name: Build demo
         run: pnpm --filter demo build

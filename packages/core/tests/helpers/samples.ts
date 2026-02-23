@@ -23,7 +23,7 @@ const RAW_MISMATCH_EXPECTED = ['comfyui-save-image-extended'];
  * Get the samples directory path for a given format
  */
 function getSamplesDir(format: 'png' | 'jpg' | 'webp'): string {
-  return path.join(__dirname, '../../samples', format);
+  return path.join(__dirname, '../../../../samples', format);
 }
 
 /**
