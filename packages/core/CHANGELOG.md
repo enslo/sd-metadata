@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-02-24
+
+### Fixed
+
+- **Malformed input hardening** (#163): Add defensive checks for corrupted or malicious binary data across all format readers and writers
+  - PNG writer: validate chunk boundaries before slicing
+  - EXIF reader: early bailout for implausibly large tag data sizes
+  - JPEG reader: minimum segment length validation for APP1 and COM markers
+  - WebP reader: fix off-by-one in chunk iteration boundary check
+  - A1111 parser: input length guard for settings regex
+
+### Maintenance
+
+- Migrate to standard monorepo structure (#160)
+- Use standard APIs for binary operations (#162)
+
 ## [2.1.0] - 2026-02-22
 
 ### Added
@@ -364,6 +380,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[2.1.1]: https://github.com/enslo/sd-metadata/releases/tag/core@2.1.1
 [2.1.0]: https://github.com/enslo/sd-metadata/releases/tag/v2.1.0
 [2.0.1]: https://github.com/enslo/sd-metadata/releases/tag/v2.0.1
 [2.0.0]: https://github.com/enslo/sd-metadata/releases/tag/v2.0.0
