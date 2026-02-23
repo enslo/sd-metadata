@@ -1,6 +1,11 @@
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
-import { arraysEqual, isWebp, writeUint32LE } from '../utils/binary';
+import {
+  isWebp,
+  readChunkType,
+  readUint32LE,
+  writeUint32LE,
+} from '../utils/binary';
 import { buildExifTiffData } from './exif';
 
 // Internal types (co-located with writer)
@@ -15,9 +20,6 @@ const RIFF_SIGNATURE = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
 
 /** WebP format marker: "WEBP" */
 const WEBP_MARKER = new Uint8Array([0x57, 0x45, 0x42, 0x50]);
-
-/** EXIF chunk type */
-const EXIF_CHUNK_TYPE = new Uint8Array([0x45, 0x58, 0x49, 0x46]);
 
 /**
  * Write WebP metadata to binary data
@@ -102,12 +104,7 @@ export function writeWebpMetadata(
  */
 function isImageChunk(chunk: Uint8Array): boolean {
   if (chunk.length < 4) return false;
-  const type = String.fromCharCode(
-    chunk[0] ?? 0,
-    chunk[1] ?? 0,
-    chunk[2] ?? 0,
-    chunk[3] ?? 0,
-  );
+  const type = readChunkType(chunk, 0);
   return type === 'VP8 ' || type === 'VP8L' || type === 'VP8X';
 }
 
@@ -127,25 +124,13 @@ function collectNonExifChunks(
   let offset = 12;
 
   while (offset < data.length - 8) {
-    // Read chunk type (4 bytes)
-    const chunkType = data.slice(offset, offset + 4);
-    const typeStr = String.fromCharCode(
-      chunkType[0] ?? 0,
-      chunkType[1] ?? 0,
-      chunkType[2] ?? 0,
-      chunkType[3] ?? 0,
-    );
+    // Read chunk type and size
+    const typeStr = readChunkType(data, offset);
+    const chunkSize = readUint32LE(data, offset + 4);
 
     if (!firstChunkType) {
       firstChunkType = typeStr;
     }
-
-    // Read chunk size (4 bytes, little-endian)
-    const chunkSize =
-      (data[offset + 4] ?? 0) |
-      ((data[offset + 5] ?? 0) << 8) |
-      ((data[offset + 6] ?? 0) << 16) |
-      ((data[offset + 7] ?? 0) << 24);
 
     // Validate chunk
     if (offset + 8 + chunkSize > data.length) {
@@ -156,7 +141,7 @@ function collectNonExifChunks(
     }
 
     // Keep all chunks except EXIF
-    if (!arraysEqual(chunkType, EXIF_CHUNK_TYPE)) {
+    if (typeStr !== 'EXIF') {
       // Include type + size + data (+ padding if odd)
       const paddedSize = chunkSize + (chunkSize % 2);
       const chunkData = data.slice(offset, offset + 8 + paddedSize);
@@ -199,7 +184,8 @@ function buildExifChunk(segments: MetadataSegment[]): Uint8Array | null {
   const paddedSize = chunkSize + (chunkSize % 2);
   const chunk = new Uint8Array(8 + paddedSize);
 
-  chunk.set(EXIF_CHUNK_TYPE, 0);
+  // Write "EXIF" chunk type
+  chunk.set(new TextEncoder().encode('EXIF'));
   writeUint32LE(chunk, 4, chunkSize);
   chunk.set(tiffData, 8);
 

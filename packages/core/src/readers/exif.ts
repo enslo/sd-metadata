@@ -265,45 +265,28 @@ export function decodeUserComment(data: Uint8Array): string | null {
 }
 
 /**
- * Decode UTF-16BE string
+ * Decode UTF-16BE string, stopping at first null character
  */
 function decodeUtf16BE(data: Uint8Array): string {
-  const chars: string[] = [];
-
-  for (let i = 0; i < data.length - 1; i += 2) {
-    const code = ((data[i] ?? 0) << 8) | (data[i + 1] ?? 0);
-    if (code === 0) break;
-    chars.push(String.fromCharCode(code));
-  }
-
-  return chars.join('');
+  const decoded = new TextDecoder('utf-16be').decode(data);
+  const nullIndex = decoded.indexOf('\0');
+  return nullIndex >= 0 ? decoded.slice(0, nullIndex) : decoded;
 }
 
 /**
- * Decode UTF-16LE string
+ * Decode UTF-16LE string, stopping at first null character
  */
 function decodeUtf16LE(data: Uint8Array): string {
-  const chars: string[] = [];
-
-  for (let i = 0; i < data.length - 1; i += 2) {
-    const code = (data[i] ?? 0) | ((data[i + 1] ?? 0) << 8);
-    if (code === 0) break;
-    chars.push(String.fromCharCode(code));
-  }
-
-  return chars.join('');
+  const decoded = new TextDecoder('utf-16le').decode(data);
+  const nullIndex = decoded.indexOf('\0');
+  return nullIndex >= 0 ? decoded.slice(0, nullIndex) : decoded;
 }
 
 /**
- * Decode ASCII string
+ * Decode ASCII string, stopping at first null byte
  */
 function decodeAscii(data: Uint8Array): string {
-  const chars: string[] = [];
-
-  for (let i = 0; i < data.length; i++) {
-    if (data[i] === 0) break;
-    chars.push(String.fromCharCode(data[i] ?? 0));
-  }
-
-  return chars.join('');
+  const nullIndex = data.indexOf(0);
+  const sliced = nullIndex >= 0 ? data.subarray(0, nullIndex) : data;
+  return new TextDecoder('ascii').decode(sliced);
 }

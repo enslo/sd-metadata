@@ -1,6 +1,6 @@
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
-import { isJpeg } from '../utils/binary';
+import { isJpeg, readUint16BE, writeUint16BE } from '../utils/binary';
 import { buildExifTiffData } from './exif';
 
 // Internal types (co-located with writer)
@@ -166,7 +166,7 @@ function collectNonMetadataSegments(
       });
     }
 
-    const length = ((data[offset] ?? 0) << 8) | (data[offset + 1] ?? 0);
+    const length = readUint16BE(data, offset);
     const segmentStart = offset - 2; // Include marker
     const segmentEnd = offset + length;
 
@@ -221,8 +221,7 @@ function buildApp1Segment(segments: MetadataSegment[]): Uint8Array {
 
   segment[0] = 0xff;
   segment[1] = APP1_MARKER;
-  segment[2] = (segmentLength >> 8) & 0xff;
-  segment[3] = segmentLength & 0xff;
+  writeUint16BE(segment, 2, segmentLength);
   segment.set(EXIF_HEADER, 4);
   segment.set(tiffData, 4 + EXIF_HEADER.length);
 
@@ -239,8 +238,7 @@ function buildComSegment(text: string): Uint8Array {
   const segment = new Uint8Array(2 + segmentLength);
   segment[0] = 0xff;
   segment[1] = COM_MARKER;
-  segment[2] = (segmentLength >> 8) & 0xff;
-  segment[3] = segmentLength & 0xff;
+  writeUint16BE(segment, 2, segmentLength);
   segment.set(textBytes, 4);
 
   return segment;
