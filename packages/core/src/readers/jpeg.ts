@@ -1,6 +1,6 @@
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
-import { arraysEqual, isJpeg } from '../utils/binary';
+import { isJpeg, readUint16BE } from '../utils/binary';
 import { parseExifMetadataSegments } from './exif';
 
 // Internal types (co-located with reader)
@@ -14,8 +14,19 @@ const APP1_MARKER = 0xe1;
 /** COM (Comment) marker */
 const COM_MARKER = 0xfe;
 
-/** Exif header: "Exif\0\0" */
-const EXIF_HEADER = new Uint8Array([0x45, 0x78, 0x69, 0x66, 0x00, 0x00]);
+/**
+ * Check if data at offset matches the Exif header "Exif\0\0"
+ */
+function matchesExifHeader(data: Uint8Array, offset: number): boolean {
+  return (
+    data[offset] === 0x45 && // E
+    data[offset + 1] === 0x78 && // x
+    data[offset + 2] === 0x69 && // i
+    data[offset + 3] === 0x66 && // f
+    data[offset + 4] === 0x00 &&
+    data[offset + 5] === 0x00
+  );
+}
 
 /**
  * Read JPEG metadata from binary data
@@ -89,15 +100,14 @@ function findApp1Segment(
     }
 
     // Get segment length (big-endian, includes length bytes)
-    const length = ((data[offset + 2] ?? 0) << 8) | (data[offset + 3] ?? 0);
+    const length = readUint16BE(data, offset + 2);
 
     // Check for APP1 marker
     if (marker === APP1_MARKER) {
       // Verify Exif header
       const headerStart = offset + 4;
       if (headerStart + 6 <= data.length) {
-        const header = data.slice(headerStart, headerStart + 6);
-        if (arraysEqual(header, EXIF_HEADER)) {
+        if (matchesExifHeader(data, headerStart)) {
           // Return offset to TIFF data (after Exif header)
           return {
             offset: headerStart + 6,
@@ -148,7 +158,7 @@ function findComSegment(
     }
 
     // Get segment length (big-endian, includes length bytes)
-    const length = ((data[offset + 2] ?? 0) << 8) | (data[offset + 3] ?? 0);
+    const length = readUint16BE(data, offset + 2);
 
     // Check for COM marker
     if (marker === COM_MARKER) {

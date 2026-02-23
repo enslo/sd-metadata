@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  arraysEqual,
   detectFormat,
   isJpeg,
   isPng,
@@ -306,40 +305,6 @@ describe('Binary Utils - Unit Tests', () => {
         const data = new Uint8Array(4);
         writeUint32(data, 0, 0x12345678, true);
         expect(data).toEqual(new Uint8Array([0x78, 0x56, 0x34, 0x12]));
-      });
-    });
-  });
-
-  describe('Array utilities', () => {
-    describe('arraysEqual', () => {
-      it('should return true for equal arrays', () => {
-        const a = new Uint8Array([1, 2, 3, 4]);
-        const b = new Uint8Array([1, 2, 3, 4]);
-        expect(arraysEqual(a, b)).toBe(true);
-      });
-
-      it('should return false for different lengths', () => {
-        const a = new Uint8Array([1, 2, 3]);
-        const b = new Uint8Array([1, 2, 3, 4]);
-        expect(arraysEqual(a, b)).toBe(false);
-      });
-
-      it('should return false for different content', () => {
-        const a = new Uint8Array([1, 2, 3, 4]);
-        const b = new Uint8Array([1, 2, 3, 5]);
-        expect(arraysEqual(a, b)).toBe(false);
-      });
-
-      it('should return true for empty arrays', () => {
-        const a = new Uint8Array([]);
-        const b = new Uint8Array([]);
-        expect(arraysEqual(a, b)).toBe(true);
-      });
-
-      it('should handle arrays with zeros', () => {
-        const a = new Uint8Array([0, 0, 0, 0]);
-        const b = new Uint8Array([0, 0, 0, 0]);
-        expect(arraysEqual(a, b)).toBe(true);
       });
     });
   });

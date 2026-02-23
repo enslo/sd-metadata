@@ -1,15 +1,12 @@
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
-import { arraysEqual, isWebp, readUint32LE } from '../utils/binary';
+import { isWebp, readChunkType, readUint32LE } from '../utils/binary';
 import { parseExifMetadataSegments } from './exif';
 
 // Internal types (co-located with reader)
 type WebpReadError = { type: 'invalidSignature' };
 
 type WebpMetadataResult = Result<MetadataSegment[], WebpReadError>;
-
-/** EXIF chunk type */
-const EXIF_CHUNK_TYPE = new Uint8Array([0x45, 0x58, 0x49, 0x46]);
 
 /**
  * Read WebP metadata from binary data
@@ -57,14 +54,11 @@ export function findExifChunk(
   let offset = 12;
 
   while (offset < data.length - 8) {
-    // Read chunk type (4 bytes)
-    const chunkType = data.slice(offset, offset + 4);
-
     // Read chunk size (4 bytes, little-endian)
     const chunkSize = readUint32LE(data, offset + 4);
 
     // Check for EXIF chunk
-    if (arraysEqual(chunkType, EXIF_CHUNK_TYPE)) {
+    if (readChunkType(data, offset) === 'EXIF') {
       // EXIF chunk data starts after type and size
       return {
         offset: offset + 8,

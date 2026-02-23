@@ -179,6 +179,11 @@ function writeIfdEntry(
   }
 }
 
+/** UNICODE encoding prefix for UserComment: "UNICODE\0" */
+const UNICODE_PREFIX = new Uint8Array([
+  0x55, 0x4e, 0x49, 0x43, 0x4f, 0x44, 0x45, 0x00,
+]);
+
 /**
  * Encode string as UserComment with UTF-16LE encoding
  *
@@ -188,26 +193,14 @@ function writeIfdEntry(
  * @returns Encoded UserComment data (8-byte prefix + UTF-16LE text)
  */
 function encodeUserComment(text: string): Uint8Array {
-  const utf16Data: number[] = [];
+  const result = new Uint8Array(8 + text.length * 2);
+  const dataView = new DataView(result.buffer);
+
+  result.set(UNICODE_PREFIX);
   for (let i = 0; i < text.length; i++) {
-    const code = text.charCodeAt(i);
-    utf16Data.push(code & 0xff);
-    utf16Data.push((code >> 8) & 0xff);
+    dataView.setUint16(8 + i * 2, text.charCodeAt(i), true);
   }
 
-  const result = new Uint8Array(8 + utf16Data.length);
-
-  // UNICODE encoding prefix
-  result[0] = 0x55; // U
-  result[1] = 0x4e; // N
-  result[2] = 0x49; // I
-  result[3] = 0x43; // C
-  result[4] = 0x4f; // O
-  result[5] = 0x44; // D
-  result[6] = 0x45; // E
-  result[7] = 0x00; // NULL
-
-  result.set(new Uint8Array(utf16Data), 8);
   return result;
 }
 

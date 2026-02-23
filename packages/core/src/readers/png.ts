@@ -143,7 +143,7 @@ function parseITXtChunk(data: Uint8Array): ITXtChunk | null {
   let offset = 0;
 
   // Read keyword (null-terminated)
-  const keywordEnd = findNull(data, offset);
+  const keywordEnd = data.indexOf(0, offset);
   if (keywordEnd === -1) return null;
   const keyword = utf8Decode(data.slice(offset, keywordEnd));
   offset = keywordEnd + 1;
@@ -159,13 +159,13 @@ function parseITXtChunk(data: Uint8Array): ITXtChunk | null {
   offset += 1;
 
   // Read language tag (null-terminated)
-  const langEnd = findNull(data, offset);
+  const langEnd = data.indexOf(0, offset);
   if (langEnd === -1) return null;
   const languageTag = utf8Decode(data.slice(offset, langEnd));
   offset = langEnd + 1;
 
   // Read translated keyword (null-terminated)
-  const transEnd = findNull(data, offset);
+  const transEnd = data.indexOf(0, offset);
   if (transEnd === -1) return null;
   const translatedKeyword = utf8Decode(data.slice(offset, transEnd));
   offset = transEnd + 1;
@@ -193,26 +193,10 @@ function parseITXtChunk(data: Uint8Array): ITXtChunk | null {
 }
 
 /**
- * Find null byte in data starting from offset
- */
-function findNull(data: Uint8Array, offset: number): number {
-  for (let i = offset; i < data.length; i++) {
-    if (data[i] === 0) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-/**
  * Decode Latin-1 (ISO-8859-1) bytes to string
  */
 function latin1Decode(data: Uint8Array): string {
-  let result = '';
-  for (let i = 0; i < data.length; i++) {
-    result += String.fromCharCode(data[i] ?? 0);
-  }
-  return result;
+  return new TextDecoder('iso-8859-1').decode(data);
 }
 
 /**

@@ -8,6 +8,8 @@
 import type { ImageFormat } from '../utils/binary';
 import {
   readChunkType,
+  readUint16,
+  readUint16BE,
   readUint24LE,
   readUint32BE,
   readUint32LE,
@@ -62,7 +64,7 @@ function readJpegDimensions(data: Uint8Array): ImageDimensions | null {
     }
 
     // Read length (16-bit BE)
-    const length = ((data[offset + 2] ?? 0) << 8) | (data[offset + 3] ?? 0);
+    const length = readUint16BE(data, offset + 2);
 
     // SOF0 (C0) ... SOF15 (CF), except C4 (DHT), C8 (JPG), CC (DAC)
     if (
@@ -74,8 +76,8 @@ function readJpegDimensions(data: Uint8Array): ImageDimensions | null {
     ) {
       // Structure: Precision(1), Height(2), Width(2)
       // Offset: Marker(2) + Length(2) + Precision(1) = 5
-      const height = ((data[offset + 5] ?? 0) << 8) | (data[offset + 6] ?? 0);
-      const width = ((data[offset + 7] ?? 0) << 8) | (data[offset + 8] ?? 0);
+      const height = readUint16BE(data, offset + 5);
+      const width = readUint16BE(data, offset + 7);
       return { width, height };
     }
 
@@ -110,10 +112,7 @@ function readWebpDimensions(data: Uint8Array): ImageDimensions | null {
     if (chunkType === 'VP8 ') {
       // VP8 (lossy): Check keyframe
       const start = offset + 8;
-      const tag =
-        (data[start] ?? 0) |
-        ((data[start + 1] ?? 0) << 8) |
-        ((data[start + 2] ?? 0) << 16);
+      const tag = readUint24LE(data, start);
       const keyFrame = !(tag & 1);
 
       if (keyFrame) {
@@ -123,8 +122,8 @@ function readWebpDimensions(data: Uint8Array): ImageDimensions | null {
           data[start + 4] === 0x01 &&
           data[start + 5] === 0x2a
         ) {
-          const wRaw = (data[start + 6] ?? 0) | ((data[start + 7] ?? 0) << 8);
-          const hRaw = (data[start + 8] ?? 0) | ((data[start + 9] ?? 0) << 8);
+          const wRaw = readUint16(data, start + 6, true);
+          const hRaw = readUint16(data, start + 8, true);
           return { width: wRaw & 0x3fff, height: hRaw & 0x3fff };
         }
       }

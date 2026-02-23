@@ -236,9 +236,7 @@ function buildChunk(type: string, data: Uint8Array): Uint8Array {
   writeUint32BE(chunk, 0, data.length);
 
   // Write type (4 bytes)
-  for (let i = 0; i < 4; i++) {
-    chunk[4 + i] = type.charCodeAt(i);
-  }
+  chunk.set(new TextEncoder().encode(type), 4);
 
   // Write data
   chunk.set(data, 8);

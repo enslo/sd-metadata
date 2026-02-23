@@ -52,15 +52,12 @@ export function convertNovelaiPngToSegments(
  * Build UserComment JSON from PNG chunks in NovelAI's standard key order
  */
 function buildUserCommentJson(chunks: PngTextChunk[]): Record<string, string> {
-  return NOVELAI_KEY_ORDER.map((key) => {
-    const chunk = chunks.find((c) => c.keyword === key);
-    return chunk ? { [key]: chunk.text } : null;
-  })
-    .filter((entry): entry is Record<string, string> => entry !== null)
-    .reduce(
-      (acc, entry) => Object.assign(acc, entry),
-      {} as Record<string, string>,
-    );
+  return Object.fromEntries(
+    NOVELAI_KEY_ORDER.flatMap((key) => {
+      const chunk = chunks.find((c) => c.keyword === key);
+      return chunk ? [[key, chunk.text]] : [];
+    }),
+  );
 }
 
 /**
