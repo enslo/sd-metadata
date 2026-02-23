@@ -5,7 +5,11 @@ import { formatRaw, stringify } from '../../../src/api/stringify';
 import { read } from '../../../src/index';
 
 const loadSample = (format: 'png' | 'jpg' | 'webp', filename: string) => {
-  const filePath = path.join(__dirname, `../../../samples/${format}`, filename);
+  const filePath = path.join(
+    __dirname,
+    `../../../../../samples/${format}`,
+    filename,
+  );
   return fs.readFileSync(filePath);
 };
 

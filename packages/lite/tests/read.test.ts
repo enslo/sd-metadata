@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { read as fullRead, stringify } from '../../../src/index';
+import { read as fullRead, stringify } from '../../core/src/index';
 import { parse as liteRead } from '../src/index';
 
 const SAMPLES = join(__dirname, '../../../samples');

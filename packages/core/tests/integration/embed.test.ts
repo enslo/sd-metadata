@@ -18,7 +18,12 @@ function loadSample(
   filename: string,
 ): Uint8Array {
   const dirName = format === 'jpg' ? 'jpg' : format;
-  const filePath = path.join(__dirname, '../../samples', dirName, filename);
+  const filePath = path.join(
+    __dirname,
+    '../../../../samples',
+    dirName,
+    filename,
+  );
   return new Uint8Array(fs.readFileSync(filePath));
 }
 

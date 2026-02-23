@@ -4,12 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { readPngMetadata } from '../../../src/readers/png';
 
 describe('PNG Readers - Samples', () => {
-  const samplesDir = path.join(__dirname, '../../../samples/png');
+  const samplesDir = path.join(__dirname, '../../../../../samples/png');
   const samples = fs.readdirSync(samplesDir).sort();
 
   // Helper to load sample data
   const loadSample = (type: string, filename: string) => {
-    const filePath = path.join(__dirname, `../../../samples/${type}`, filename);
+    const filePath = path.join(
+      __dirname,
+      `../../../../../samples/${type}`,
+      filename,
+    );
     return fs.readFileSync(filePath);
   };
 

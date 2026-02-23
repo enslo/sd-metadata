@@ -18,7 +18,7 @@ export function parsePngSample<T>(
   filename: string,
   parser: (entries: EntryRecord) => InternalParseResult,
 ): T {
-  const filePath = path.join(__dirname, '../../samples/png', filename);
+  const filePath = path.join(__dirname, '../../../../samples/png', filename);
   const data = fs.readFileSync(filePath);
   const chunksResult = readPngMetadata(data);
 
@@ -52,7 +52,12 @@ export function parseConvertedSample<T>(
   filename: string,
 ): T {
   const dirName = format === 'webp' ? 'webp' : 'jpg';
-  const filePath = path.join(__dirname, '../../samples', dirName, filename);
+  const filePath = path.join(
+    __dirname,
+    '../../../../samples',
+    dirName,
+    filename,
+  );
   const data = fs.readFileSync(filePath);
   const result = read(data);
 
