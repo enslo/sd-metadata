@@ -53,7 +53,7 @@ export function findExifChunk(
   // Start after RIFF header (12 bytes: "RIFF" + size + "WEBP")
   let offset = 12;
 
-  while (offset < data.length - 8) {
+  while (offset + 8 <= data.length) {
     // Read chunk size (4 bytes, little-endian)
     const chunkSize = readUint32LE(data, offset + 4);
 

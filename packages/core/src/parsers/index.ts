@@ -49,8 +49,10 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
       const comfyResult = parseComfyUI(entries);
       if (comfyResult.ok) {
         // Override software to preserve CivitAI detection
-        comfyResult.value.software = 'civitai';
-        return comfyResult;
+        return Result.ok({
+          ...comfyResult.value,
+          software: 'civitai' as const,
+        });
       }
       // Fallback to A1111 format
       return parseA1111(entries, 'civitai');

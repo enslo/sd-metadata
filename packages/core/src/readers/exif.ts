@@ -81,6 +81,12 @@ function extractTagsFromIfd(
     const typeSize = getTypeSize(type);
     const dataSize = count * typeSize;
 
+    // Early bailout for implausibly large data sizes
+    if (dataSize > data.length) {
+      offset += 12;
+      continue;
+    }
+
     let valueOffset: number;
     if (dataSize <= 4) {
       valueOffset = offset + 8;

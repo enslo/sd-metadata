@@ -103,7 +103,7 @@ function findApp1Segment(
     const length = readUint16BE(data, offset + 2);
 
     // Check for APP1 marker
-    if (marker === APP1_MARKER) {
+    if (marker === APP1_MARKER && length >= 8) {
       // Verify Exif header
       const headerStart = offset + 4;
       if (headerStart + 6 <= data.length) {
@@ -161,7 +161,7 @@ function findComSegment(
     const length = readUint16BE(data, offset + 2);
 
     // Check for COM marker
-    if (marker === COM_MARKER) {
+    if (marker === COM_MARKER && length >= 2) {
       // Return offset to comment data (after marker and length)
       return {
         offset: offset + 4,
