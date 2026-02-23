@@ -145,7 +145,7 @@ For userscripts (Tampermonkey, Violentmonkey, etc.), load the IIFE build via `@r
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.1.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.1.1/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
