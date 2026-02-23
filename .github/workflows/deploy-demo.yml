@@ -1,16 +1,16 @@
 name: Deploy Demo Site
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'packages/core/src/**'
-      - 'apps/demo/**'
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
   trigger-cloudflare-deploy:
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.release.tag_name, 'core@')
     steps:
       - name: Trigger Cloudflare Pages Deploy
         run: |
@@ -19,5 +19,5 @@ jobs:
       - name: Deployment info
         run: |
           echo "✅ Cloudflare Pages deployment triggered!"
-          echo "📦 Commit: ${{ github.sha }}"
+          echo "📦 Release: ${{ github.event.release.tag_name || 'manual' }}"
           echo "Demo site will be updated shortly."
