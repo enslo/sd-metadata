@@ -1,5 +1,6 @@
 import type { GenerationSoftware } from '../types';
 import type { EntryRecord } from '../utils/entries';
+import { parseJson } from '../utils/json';
 
 // =============================================================================
 // Detection Marker Strings
@@ -139,43 +140,40 @@ function detectUniqueKeywords(
  * Handles PNG→JPEG/WebP conversions where chunks become JSON.
  */
 function detectFromCommentJson(comment: string): GenerationSoftware | null {
-  try {
-    const parsed = JSON.parse(comment) as Record<string, unknown>;
+  const result = parseJson(comment);
+  if (!result.ok || result.type !== 'object') return null;
+  const parsed = result.value;
 
-    // Unique key detection (InvokeAI, TensorArt, Stability Matrix, CivitAI)
-    const keyResult = detectByUniqueKey(parsed);
-    if (keyResult) return keyResult;
+  // Unique key detection (InvokeAI, TensorArt, Stability Matrix, CivitAI)
+  const keyResult = detectByUniqueKey(parsed);
+  if (keyResult) return keyResult;
 
-    // ComfyUI: Has both prompt and workflow in JSON
-    if ('prompt' in parsed && 'workflow' in parsed) {
-      const workflow = parsed.workflow;
-      const prompt = parsed.prompt;
+  // ComfyUI: Has both prompt and workflow in JSON
+  if ('prompt' in parsed && 'workflow' in parsed) {
+    const workflow = parsed.workflow;
+    const prompt = parsed.prompt;
 
-      const isObject =
-        typeof workflow === 'object' || typeof prompt === 'object';
-      const isJsonString =
-        (typeof workflow === 'string' && workflow.startsWith('{')) ||
-        (typeof prompt === 'string' && prompt.startsWith('{'));
+    const isObject = typeof workflow === 'object' || typeof prompt === 'object';
+    const isJsonString =
+      (typeof workflow === 'string' && workflow.startsWith('{')) ||
+      (typeof prompt === 'string' && prompt.startsWith('{'));
 
-      if (isObject || isJsonString) {
-        return 'comfyui';
-      }
+    if (isObject || isJsonString) {
+      return 'comfyui';
     }
+  }
 
-    // SwarmUI: Same as parameters check, but from Comment JSON
-    if (M_SWARMUI in parsed) {
+  // SwarmUI: Same as parameters check, but from Comment JSON
+  if (M_SWARMUI in parsed) {
+    return 'swarmui';
+  }
+
+  // SwarmUI alternative format
+  if ('prompt' in parsed && 'parameters' in parsed) {
+    const params = String(parsed.parameters || '');
+    if (params.includes(M_SWARMUI) || params.includes(M_SWARM_VERSION)) {
       return 'swarmui';
     }
-
-    // SwarmUI alternative format
-    if ('prompt' in parsed && 'parameters' in parsed) {
-      const params = String(parsed.parameters || '');
-      if (params.includes(M_SWARMUI) || params.includes(M_SWARM_VERSION)) {
-        return 'swarmui';
-      }
-    }
-  } catch {
-    // Invalid JSON
   }
 
   return null;

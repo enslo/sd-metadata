@@ -158,6 +158,9 @@ function parseSettings(settings: string): Map<string, string> {
   const result = new Map<string, string>();
   if (!settings) return result;
 
+  // Guard against ReDoS with lazy quantifiers in the regex below
+  if (settings.length > 10_000) return result;
+
   // Match "Key: value" pairs
   // Key is word characters (including spaces before colon)
   // Value continues until next "Key:" pattern or end

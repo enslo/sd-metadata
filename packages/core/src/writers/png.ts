@@ -130,6 +130,9 @@ function collectNonTextChunks(data: Uint8Array): {
     const chunkType = readChunkType(data, offset);
     offset += 4;
 
+    // Validate chunk data + CRC fits within buffer
+    if (offset + length + 4 > data.length) break;
+
     // Skip chunk data
     offset += length;
 
