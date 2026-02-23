@@ -3,15 +3,9 @@
   "private": true,
   "packageManager": "pnpm@10.5.2",
   "scripts": {
-    "build": "pnpm --filter @enslo/sd-metadata build",
-    "test": "pnpm --filter @enslo/sd-metadata test",
-    "test:watch": "pnpm --filter @enslo/sd-metadata test:watch",
-    "test:coverage": "pnpm --filter @enslo/sd-metadata test:coverage",
-    "typecheck": "pnpm --filter @enslo/sd-metadata typecheck",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "markdownlint": "markdownlint --fix",
-    "demo": "pnpm --filter demo dev",
     "prepare": "lefthook install"
   },
   "devDependencies": {

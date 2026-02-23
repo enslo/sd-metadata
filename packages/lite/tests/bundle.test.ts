@@ -3,10 +3,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse as srcParse } from '../src/index';
 
-const DIST = join(__dirname, '../dist');
+const DIST = join(import.meta.dirname, '../dist');
 const IIFE_PATH = join(DIST, 'index.global.js');
 const ESM_PATH = join(DIST, 'index.js');
-const SAMPLES = join(__dirname, '../../../samples');
+const SAMPLES = join(import.meta.dirname, '../../../samples');
 
 // Evaluate the IIFE bundle and extract the parse function.
 // The IIFE assigns `var sdml = (()=>{...})();` at the top level.
@@ -20,7 +20,7 @@ function load(format: string, file: string): Uint8Array {
 }
 
 function listSamples(format: string, ext: RegExp): string[] {
-  return readdirSync(join(SAMPLES, format)).filter((f) => ext.test(f));
+  return readdirSync(join(SAMPLES, format)).filter((f: string) => ext.test(f));
 }
 
 const pngFiles = listSamples('png', /\.png$/);

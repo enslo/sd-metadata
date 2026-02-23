@@ -20,7 +20,7 @@ Always start here. Run the library's `read()` against the unknown file:
 ```bash
 npx tsx -e "
 import { readFileSync } from 'fs';
-import { read } from './src/index.ts';
+import { read } from './packages/core/src/index.ts';
 const result = read(new Uint8Array(readFileSync('LOCAL_SAMPLE_PATH')));
 console.log(JSON.stringify(result, null, 2));
 "
@@ -97,8 +97,8 @@ When discovering a new tool or format:
 
 1. Place sample in `samples/<format>/<tool_name>.<ext>`
 2. Document the metadata structure
-3. Create failing test first
-4. Implement parser
+3. Create failing test first in `packages/core/tests/`
+4. Implement parser in `packages/core/src/parsers/`
 5. Verify test passes
 
 ## When Metadata Cannot Be Extracted

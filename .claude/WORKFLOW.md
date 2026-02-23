@@ -52,12 +52,16 @@ Certain files are only modified in specific PR types.
 
 **Release-only files** — touched exclusively in release preparation PRs:
 
-- `package.json` `"version"` field
-- `CHANGELOG.md`
-- `README.md` / `README.ja.md` (all changes, including CDN version)
-- `docs/**`
+- `packages/*/package.json` `"version"` field
+- `packages/*/CHANGELOG.md`
+- `packages/*/README.md` / `packages/*/README.ja.md` (including CDN version)
+- `packages/*/docs/**`
 
-Rationale: these files are visible to users on GitHub and npmjs.com.
+Root `README.md` / `README.ja.md` are workspace overviews and may be
+updated in release PRs when the comparison table or package descriptions
+need to reflect a new release.
+
+Rationale: package-level files are visible to users on npmjs.com.
 Changes must correspond to a published version on npm; updating them
 between releases would describe code that users cannot install yet.
 

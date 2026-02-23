@@ -30,11 +30,11 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
-      - name: Type check
-        run: pnpm run typecheck
+      - name: Type check (core)
+        run: pnpm --filter @enslo/sd-metadata typecheck
 
-      - name: Test
-        run: pnpm run test:coverage
+      - name: Test (core)
+        run: pnpm --filter @enslo/sd-metadata test:coverage
 
       - name: Report Coverage
         if: github.event_name == 'pull_request'
@@ -42,14 +42,17 @@ jobs:
         with:
           working-directory: packages/core
 
-      - name: Build
-        run: pnpm run build
+      - name: Build (core)
+        run: pnpm --filter @enslo/sd-metadata build
 
-      - name: Build lite
+      - name: Type check (lite)
+        run: pnpm --filter @enslo/sd-metadata-lite typecheck
+
+      - name: Build (lite)
         run: pnpm --filter @enslo/sd-metadata-lite build
 
-      - name: Test lite
+      - name: Test (lite)
         run: pnpm --filter @enslo/sd-metadata-lite test
 
-      - name: Build demo
+      - name: Build (demo)
         run: pnpm --filter demo build

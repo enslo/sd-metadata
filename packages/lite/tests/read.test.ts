@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { read as fullRead, stringify } from '../../core/src/index';
 import { parse as liteRead } from '../src/index';
 
-const SAMPLES = join(__dirname, '../../../samples');
+const SAMPLES = join(import.meta.dirname, '../../../samples');
 
 function load(format: string, file: string): Uint8Array {
   return new Uint8Array(readFileSync(join(SAMPLES, format, file)));
@@ -40,13 +40,13 @@ const NON_COMPATIBLE = new Set([
 ]);
 
 // All sample files per format
-const pngFiles = readdirSync(join(SAMPLES, 'png')).filter((f) =>
+const pngFiles = readdirSync(join(SAMPLES, 'png')).filter((f: string) =>
   f.endsWith('.png'),
 );
 const jpgFiles = readdirSync(join(SAMPLES, 'jpg')).filter(
-  (f) => f.endsWith('.jpg') || f.endsWith('.jpeg'),
+  (f: string) => f.endsWith('.jpg') || f.endsWith('.jpeg'),
 );
-const webpFiles = readdirSync(join(SAMPLES, 'webp')).filter((f) =>
+const webpFiles = readdirSync(join(SAMPLES, 'webp')).filter((f: string) =>
   f.endsWith('.webp'),
 );
 

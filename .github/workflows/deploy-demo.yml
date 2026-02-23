@@ -2,7 +2,7 @@ name: Deploy Demo Site
 
 on:
   workflow_run:
-    workflows: ['Publish to npm']
+    workflows: ['Publish core to npm']
     types: [completed]
 
 jobs:
@@ -16,5 +16,5 @@ jobs:
       - name: Deployment info
         run: |
           echo "✅ Cloudflare Pages deployment triggered!"
-          echo "📦 Release: ${{ github.event.release.tag_name }}"
+          echo "📦 Triggered by: ${{ github.event.workflow_run.head_branch }}"
           echo "Demo site will be updated with the latest package version shortly."
