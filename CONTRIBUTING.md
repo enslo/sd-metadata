@@ -21,7 +21,7 @@ We're particularly interested in sample images from:
   - Fooocus
   
 - **Unsupported Tools**:
-  - Any AI image generation tool not currently listed in our [Tool Support](README.md#tool-support) table
+  - Any AI image generation tool not currently listed in our [Tool Support](packages/core/README.md#tool-support) table
   - Different versions of supported tools that may use different metadata formats
 
 #### Sample Image Requirements
@@ -89,10 +89,10 @@ git clone https://github.com/enslo/sd-metadata.git
 cd sd-metadata
 
 # Install dependencies
-npm install
+pnpm install
 
-# Run tests in watch mode
-npm run test:watch
+# Run tests in watch mode (core)
+pnpm --filter @enslo/sd-metadata test:watch
 ```
 
 #### Development Workflow
@@ -106,9 +106,9 @@ npm run test:watch
 4. **Write Tests** - Add tests for new functionality
 5. **Run Tests** - Ensure all tests pass:
    ```bash
-   npm test
-   npm run lint
-   npm run typecheck
+   pnpm --filter @enslo/sd-metadata test
+   pnpm --filter @enslo/sd-metadata typecheck
+   pnpm lint
    ```
 6. **Commit** - Commit your changes with clear, descriptive messages:
    ```bash
@@ -122,7 +122,7 @@ npm run test:watch
 - **Functional Programming** - Prefer pure functions and immutable data structures
 - **Testing** - All new features must include tests
 - **Documentation** - Update README.md and JSDoc comments as needed
-- **Linting** - Code must pass Biome linting (`npm run lint`)
+- **Linting** - Code must pass Biome linting (`pnpm lint`)
 
 #### Commit Message Format
 
@@ -141,12 +141,41 @@ If you want to add support for a new AI tool:
 
 1. **Provide Sample Images** - Start with sample images from the tool
 2. **Analyze Metadata Format** - Examine how the tool stores metadata
-3. **Create Parser** - Add a parser in `src/parsers/`
-4. **Create Converter** - Add a converter in `src/converters/`
+3. **Create Parser** - Add a parser in `packages/core/src/parsers/`
+4. **Create Converter** - Add a converter in `packages/core/src/converters/`
 5. **Add Tests** - Add unit and sample tests
 6. **Update Documentation** - Update README.md tool support table
 
 See existing parsers and converters as examples.
+
+## Development Commands
+
+This is a pnpm workspace monorepo. Common commands:
+
+```bash
+# Install dependencies
+pnpm install
+
+# Build and test (core)
+pnpm --filter @enslo/sd-metadata build
+pnpm --filter @enslo/sd-metadata test
+
+# Build and test (lite)
+pnpm --filter @enslo/sd-metadata-lite build
+pnpm --filter @enslo/sd-metadata-lite test
+
+# Lint (entire workspace)
+pnpm lint
+pnpm lint:fix
+```
+
+You can also run commands directly inside a package directory:
+
+```bash
+cd packages/core
+pnpm test:watch
+pnpm test:coverage
+```
 
 ## Questions?
 

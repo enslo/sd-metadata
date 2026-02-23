@@ -10,15 +10,15 @@ This library handles metadata from third-party AI image generation tools. Key ch
 
 ## Test Architecture
 
-### Three-Layer Testing Approach
+### Core: Three-Layer Testing Approach
 
 ```text
-tests/
+packages/core/tests/
 ├── unit/                           # Logic correctness (synthetic data)
 │   ├── readers/                    # PNG/JPEG/WebP spec compliance
 │   ├── parsers/                    # Parsing logic for specific inputs
 │   ├── converters/                 # Conversion logic correctness
-│   └── writers/                    # Segment → binary conversion
+│   └── writers/                    # Segment -> binary conversion
 │
 ├── samples/                        # Real-world compatibility
 │   ├── readers/                    # Ensure all samples can be read
@@ -30,6 +30,17 @@ tests/
     ├── format-conversion.test.ts   # Cross-format conversion
     └── api.test.ts                 # Actual usage of read() / write()
 ```
+
+### Lite
+
+```text
+packages/lite/tests/
+└── Unit + sample tests for the parse() function
+```
+
+Lite tests verify that `parse()` returns correct A1111-format text for
+all supported image formats and generation tools. Sample files are
+shared from the root `samples/` directory.
 
 ## Layer Responsibilities
 
@@ -62,14 +73,14 @@ tests/
 
 **Characteristics**:
 
-- Tests across multiple layers (read → parse → convert → write)
+- Tests across multiple layers (read -> parse -> convert -> write)
 - Verifies component interface compatibility
 - Ensures data integrity through round-trips
 - Tests actual API usage
 
 **Rule**: All files in `samples/` must participate in round-trip tests. Failing to preserve metadata through read/write cycles betrays end-user expectations.
 
-Round-trip tests (read → write → read) belong here, not in unit tests.
+Round-trip tests (read -> write -> read) belong here, not in unit tests.
 
 ## Sample Tests vs Integration Tests
 
@@ -92,20 +103,20 @@ Follow TDD for each component:
 ### Phase 2: Detection
 
 - Write failing detection test
-- Implement detection in `src/parsers/detect.ts`
+- Implement detection in `packages/core/src/parsers/detect.ts`
 - Verify test passes
 
 ### Phase 3: Parser
 
-- Write failing sample test in `tests/samples/parsers/`
-- Implement parser in `src/parsers/`
+- Write failing sample test in `packages/core/tests/samples/parsers/`
+- Implement parser in `packages/core/src/parsers/`
 - Verify sample test passes
 - User reviews expected results
 
 ### Phase 4: Converter
 
 - Write failing converter test
-- Implement converter in `src/converters/`
+- Implement converter in `packages/core/src/converters/`
 - Verify test passes
 
 ### Phase 5: Integration
@@ -113,13 +124,25 @@ Follow TDD for each component:
 - Ensure round-trip test covers the new sample
 - Verify no data loss through read/write cycles
 
+### Phase 6: Lite (if applicable)
+
+- Verify `packages/lite/` can also extract metadata from the new sample
+- Add lite sample test if the tool requires special handling in extract()
+
 ## Commands
 
 ```bash
-pnpm test           # Single run
-pnpm test:watch     # Watch mode
-pnpm typecheck      # Type check
-pnpm lint           # Lint check
+# Core
+pnpm --filter @enslo/sd-metadata test             # Single run
+pnpm --filter @enslo/sd-metadata test:watch       # Watch mode
+pnpm --filter @enslo/sd-metadata typecheck        # Type check
+
+# Lite
+pnpm --filter @enslo/sd-metadata-lite test        # Single run
+pnpm --filter @enslo/sd-metadata-lite test:watch  # Watch mode
+
+# Workspace-wide
+pnpm lint                                         # Lint check
 ```
 
 ## Red Flags

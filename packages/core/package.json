@@ -13,7 +13,10 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "README.ja.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsup",

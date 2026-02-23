@@ -1,4 +1,4 @@
-name: Publish core to npm
+name: Publish lite to npm
 
 on:
   release:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   publish:
-    if: startsWith(github.event.release.tag_name, 'core@')
+    if: startsWith(github.event.release.tag_name, 'lite@')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,11 +27,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: pnpm --filter @enslo/sd-metadata test
+        run: pnpm --filter @enslo/sd-metadata-lite test
 
       - name: Build
-        run: pnpm --filter @enslo/sd-metadata build
+        run: pnpm --filter @enslo/sd-metadata-lite build
 
       - name: Publish to npm
         run: npm publish --provenance --access public
-        working-directory: packages/core
+        working-directory: packages/lite
