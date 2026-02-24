@@ -7,7 +7,42 @@ on:
     branches: [main]
 
 jobs:
-  check:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      lite: ${{ steps.filter.outputs.lite }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            core:
+              - 'packages/core/**'
+              - 'apps/demo/**'
+              - 'samples/**'
+              - 'pnpm-lock.yaml'
+              - 'biome.json'
+              - 'package.json'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yml'
+            lite:
+              - 'packages/lite/**'
+              - 'apps/demo-lite/**'
+              - 'samples/**'
+              - 'pnpm-lock.yaml'
+              - 'biome.json'
+              - 'package.json'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yml'
+
+  core:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,10 +65,10 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
-      - name: Type check (core)
+      - name: Type check
         run: pnpm --filter @enslo/sd-metadata typecheck
 
-      - name: Test (core)
+      - name: Test
         run: pnpm --filter @enslo/sd-metadata test:coverage
 
       - name: Report Coverage
@@ -42,20 +77,42 @@ jobs:
         with:
           working-directory: packages/core
 
-      - name: Build (core)
+      - name: Build
         run: pnpm --filter @enslo/sd-metadata build
 
-      - name: Type check (lite)
-        run: pnpm --filter @enslo/sd-metadata-lite typecheck
-
-      - name: Build (lite)
-        run: pnpm --filter @enslo/sd-metadata-lite build
-
-      - name: Test (lite)
-        run: pnpm --filter @enslo/sd-metadata-lite test
-
-      - name: Build (demo)
+      - name: Build demo
         run: pnpm --filter demo build
 
-      - name: Build (demo-lite)
+  lite:
+    needs: changes
+    if: needs.changes.outputs.lite == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Type check
+        run: pnpm --filter @enslo/sd-metadata-lite typecheck
+
+      - name: Build
+        run: pnpm --filter @enslo/sd-metadata-lite build
+
+      - name: Test
+        run: pnpm --filter @enslo/sd-metadata-lite test
+
+      - name: Build demo
         run: pnpm --filter demo-lite build
