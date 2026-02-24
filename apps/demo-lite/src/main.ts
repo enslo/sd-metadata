@@ -3,26 +3,19 @@ import { parse } from '@enslo/sd-metadata-lite';
 declare const __LITE_VERSION__: string;
 
 // Inject version into footer
-const versionEl = document.getElementById('lib-version');
-if (versionEl) versionEl.textContent = __LITE_VERSION__;
+document.getElementById('lib-version')!.textContent = __LITE_VERSION__;
 
 // DOM elements
-const dropzone = document.getElementById('dropzone') as HTMLDivElement;
-const dropzoneInitial = document.getElementById(
-  'dropzone-initial',
-) as HTMLDivElement;
-const dropzonePreview = document.getElementById(
-  'dropzone-preview',
-) as HTMLDivElement;
+const dropzone = document.getElementById('dropzone')!;
+const dropzoneInitial = document.getElementById('dropzone-initial')!;
+const dropzonePreview = document.getElementById('dropzone-preview')!;
 const previewThumb = document.getElementById(
   'preview-thumb',
 ) as HTMLImageElement;
-const previewFilename = document.getElementById(
-  'preview-filename',
-) as HTMLSpanElement;
-const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
-const resultSection = document.getElementById('result') as HTMLDivElement;
-const resultText = document.getElementById('result-text') as HTMLPreElement;
+const previewFilename = document.getElementById('preview-filename')!;
+const clearBtn = document.getElementById('clear-btn')!;
+const resultSection = document.getElementById('result')!;
+const resultText = document.getElementById('result-text')!;
 const fileInput = document.getElementById('file-input') as HTMLInputElement;
 
 let currentObjectUrl: string | null = null;
