@@ -26,11 +26,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
-        run: pnpm --filter @enslo/sd-metadata-lite test
-
       - name: Build
         run: pnpm --filter @enslo/sd-metadata-lite build
+
+      - name: Run tests
+        run: pnpm --filter @enslo/sd-metadata-lite test
 
       - name: Publish to npm
         run: npm publish --provenance --access public
