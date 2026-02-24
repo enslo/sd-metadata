@@ -7,14 +7,14 @@
 }
 
 :root {
-  --color-bg: #1a1b1e;
-  --color-surface: #25262b;
-  --color-border: #373a40;
-  --color-text: #c1c2c5;
-  --color-text-dimmed: #909296;
-  --color-indigo: #5c7cfa;
-  --color-indigo-light: rgba(92, 124, 250, 0.12);
-  --color-indigo-border: rgba(92, 124, 250, 0.5);
+  --color-bg: #faf8f5;
+  --color-surface: #f0ede8;
+  --color-border: #ddd8cf;
+  --color-text: #3d3833;
+  --color-text-dimmed: #8a8279;
+  --color-accent: #0d9488;
+  --color-accent-light: rgba(13, 148, 136, 0.08);
+  --color-accent-border: rgba(13, 148, 136, 0.4);
   --radius: 8px;
   --transition: 200ms ease;
 }
@@ -47,7 +47,7 @@ header {
 }
 
 header h1 {
-  color: var(--color-indigo);
+  color: var(--color-accent);
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.2;
@@ -80,14 +80,14 @@ main {
 }
 
 .dropzone:hover {
-  border-color: var(--color-indigo-border);
-  background-color: var(--color-indigo-light);
+  border-color: var(--color-accent-border);
+  background-color: var(--color-accent-light);
 }
 
 .dropzone.drag-over {
   transform: scale(1.02);
-  border-color: var(--color-indigo);
-  background-color: var(--color-indigo-light);
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-light);
 }
 
 .dropzone-initial:not([hidden]) {
@@ -197,7 +197,7 @@ footer p {
 }
 
 footer a {
-  color: var(--color-indigo);
+  color: var(--color-accent);
   text-decoration: none;
 }
 
@@ -221,7 +221,7 @@ footer a:hover {
 }
 
 .github-corner svg {
-  fill: var(--color-indigo);
+  fill: var(--color-accent);
   color: var(--color-bg);
   width: 80px;
   height: 80px;
@@ -229,7 +229,7 @@ footer a:hover {
 }
 
 .github-corner:hover svg {
-  fill: #7b9cff;
+  fill: #0f766e;
 }
 
 .github-corner-arm {
