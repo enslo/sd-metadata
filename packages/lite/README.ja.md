@@ -5,6 +5,8 @@
 
 🌐 **[English version](./README.md)**
 
+🔗 **[ライブデモ](https://sd-metadata-lite.pages.dev/)**
+
 AI生成画像のメタデータを読み取る軽量パーサーです。
 バンドルサイズが重要なブックマークレットやユーザースクリプト向けに設計されています。
 

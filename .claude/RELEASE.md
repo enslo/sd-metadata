@@ -118,6 +118,7 @@ The publish workflow triggers automatically.
 - **Core**: <https://www.npmjs.com/package/@enslo/sd-metadata>
 - **Lite**: <https://www.npmjs.com/package/@enslo/sd-metadata-lite>
 - Demo: <https://sd-metadata.pages.dev/>
+- Demo (lite): <https://sd-metadata-lite.pages.dev/>
 - GitHub Actions: check workflow runs
 
 ### 7. Clean Up

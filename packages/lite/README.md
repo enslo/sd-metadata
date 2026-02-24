@@ -3,7 +3,9 @@
 [![npm version](https://img.shields.io/npm/v/@enslo/sd-metadata-lite.svg)](https://www.npmjs.com/package/@enslo/sd-metadata-lite)
 [![license](https://img.shields.io/npm/l/@enslo/sd-metadata-lite.svg)](https://github.com/enslo/sd-metadata/blob/main/LICENSE)
 
-🇯🇵 **[日本語版はこちら](./README.ja.md)**
+🌐 **[日本語版はこちら](./README.ja.md)**
+
+🔗 **[Live Demo](https://sd-metadata-lite.pages.dev/)**
 
 A lightweight, read-only metadata parser for AI-generated images.
 Designed for bookmarklets and userscripts where bundle size matters.

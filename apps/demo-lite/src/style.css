@@ -194,6 +194,11 @@ footer {
 footer p {
   font-size: 0.85rem;
   color: var(--color-text-dimmed);
+  margin: 0;
+}
+
+footer p + p {
+  margin-top: 4px;
 }
 
 footer a {

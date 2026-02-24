@@ -166,7 +166,7 @@ export function App() {
         </Stack>
 
         <Divider />
-        <footer style={{ textAlign: 'center' }}>
+        <Stack component="footer" gap="xs" align="center">
           <Text size="sm" c="dimmed">
             Powered by{' '}
             <Anchor href={GITHUB_URL} target="_blank" rel="noreferrer">
@@ -176,7 +176,12 @@ export function App() {
               {__CORE_VERSION__}
             </Text>
           </Text>
-        </footer>
+          <Text size="xs" c="dimmed">
+            <Anchor href="https://sd-metadata-lite.pages.dev/" size="xs">
+              {t.app.liteVersion}
+            </Anchor>
+          </Text>
+        </Stack>
       </Stack>
 
       <ScrollToTop />

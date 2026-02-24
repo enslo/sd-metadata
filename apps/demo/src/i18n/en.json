@@ -1,6 +1,7 @@
 {
   "app": {
-    "description": "Extract and view metadata from AI-generated images"
+    "description": "Extract and view metadata from AI-generated images",
+    "liteVersion": "Looking for a lighter version?"
   },
   "dropzone": {
     "placeholder": "Drop PNG, JPEG, or WebP image here",
