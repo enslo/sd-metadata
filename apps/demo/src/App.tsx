@@ -19,6 +19,8 @@ import { ScrollToTop } from './components/ScrollToTop';
 import { ThemeToggle } from './components/ThemeToggle';
 import { $t } from './i18n';
 
+declare const __CORE_VERSION__: string;
+
 const GITHUB_URL = 'https://github.com/enslo/sd-metadata';
 
 interface AppState {
@@ -169,7 +171,10 @@ export function App() {
             Powered by{' '}
             <Anchor href={GITHUB_URL} target="_blank" rel="noreferrer">
               @enslo/sd-metadata
-            </Anchor>
+            </Anchor>{' '}
+            <Text component="span" size="xs" c="dimmed" opacity={0.6}>
+              {__CORE_VERSION__}
+            </Text>
           </Text>
         </footer>
       </Stack>
