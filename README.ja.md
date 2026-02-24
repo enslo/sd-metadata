@@ -11,10 +11,10 @@ PNG、JPEG、WebPフォーマットに対応し、18以上の生成ツールを�
 
 ## パッケージ
 
-| パッケージ | 概要 | npm |
-| ---------- | ---- | --- |
-| [@enslo/sd-metadata](./packages/core/) | 読み取り、書き込み、埋め込み、文字列化の全APIを備えたフル機能ライブラリ | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata) |
-| [@enslo/sd-metadata-lite](./packages/lite/) | ブックマークレットやユーザースクリプト向けの軽量読み取り専用パーサー（約7 KB） | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata-lite.svg)](https://www.npmjs.com/package/@enslo/sd-metadata-lite) |
+| パッケージ | 概要 | npm | |
+| ---------- | ---- | --- | - |
+| [@enslo/sd-metadata](./packages/core/) | 読み取り、書き込み、埋め込み、文字列化の全APIを備えたフル機能ライブラリ | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata) | [![demo](https://img.shields.io/badge/demo-live-blue)](https://sd-metadata.pages.dev/) |
+| [@enslo/sd-metadata-lite](./packages/lite/) | ブックマークレットやユーザースクリプト向けの軽量読み取り専用パーサー（約7 KB） | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata-lite.svg)](https://www.npmjs.com/package/@enslo/sd-metadata-lite) | [![demo](https://img.shields.io/badge/demo-live-blue)](https://sd-metadata-lite.pages.dev/) |
 
 ### どちらのパッケージを使うべき？
 

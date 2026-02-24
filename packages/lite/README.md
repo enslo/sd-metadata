@@ -5,6 +5,8 @@
 
 🇯🇵 **[日本語版はこちら](./README.ja.md)**
 
+🔗 **[Live Demo](https://sd-metadata-lite.pages.dev/)**
+
 A lightweight, read-only metadata parser for AI-generated images.
 Designed for bookmarklets and userscripts where bundle size matters.
 

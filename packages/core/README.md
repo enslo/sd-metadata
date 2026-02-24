@@ -6,6 +6,8 @@
 
 🇯🇵 **[日本語版はこちら](./README.ja.md)**
 
+🔗 **[Live Demo](https://sd-metadata.pages.dev/)**
+
 A TypeScript library to read and write metadata embedded in AI-generated images.
 
 ## Features

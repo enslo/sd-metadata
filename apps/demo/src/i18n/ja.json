@@ -1,6 +1,7 @@
 {
   "app": {
-    "description": "AI生成画像のメタデータを抽出・表示します"
+    "description": "AI生成画像のメタデータを抽出・表示します",
+    "liteVersion": "軽量版はこちら"
   },
   "dropzone": {
     "placeholder": "PNG、JPEG、WebP画像をここにドロップ",
