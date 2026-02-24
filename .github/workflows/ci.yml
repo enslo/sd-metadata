@@ -56,3 +56,6 @@ jobs:
 
       - name: Build (demo)
         run: pnpm --filter demo build
+
+      - name: Build (demo-lite)
+        run: pnpm --filter demo-lite build
