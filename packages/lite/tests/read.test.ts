@@ -117,6 +117,14 @@ function assertKeyFieldsMatch(lite: string, full: string, file: string): void {
     expect(liteModel, `Model mismatch in ${file}`).toBe(fullModel);
   }
 
+  for (const name of ['Hires upscale', 'Hires steps', 'Hires upscaler']) {
+    const liteVal = field(lite, name);
+    const fullVal = field(full, name);
+    if (liteVal && fullVal && strict) {
+      expect(liteVal, `${name} mismatch in ${file}`).toBe(fullVal);
+    }
+  }
+
   const litePrompt = firstLine(lite);
   const fullPrompt = firstLine(full);
   if (litePrompt && fullPrompt && !litePrompt.startsWith('Negative')) {

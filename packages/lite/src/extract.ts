@@ -295,16 +295,7 @@ function tryJsonTool(obj: JsonObject, text: string): string | null {
       asString(obj.resolution),
       /(\d+)\s*x\s*(\d+)/,
     );
-    const upscaler = obj.use_upscaler as JsonObject | undefined;
-    return buildA1111({
-      ...extractCommon(obj),
-      w,
-      h,
-      hu: asString(upscaler?.upscale_method),
-      hs: asNumber(upscaler?.upscale_by),
-      hd: asNumber(upscaler?.upscaler_strength),
-      ht: asNumber(upscaler?.upscale_steps),
-    });
+    return buildA1111({ ...extractCommon(obj), w, h });
   }
 
   // HF Space / Civitai generator: identified by "base_model" key.
@@ -342,6 +333,7 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
   const sc = asString(obj.scheduler ?? obj.noise_schedule);
   const mod = obj.model as JsonObject | undefined;
   const base = obj.baseModel as JsonObject | undefined;
+  const up = obj.use_upscaler as JsonObject | undefined;
   return {
     // Prompt: "prompt" (most tools) → "Prompt" (Fooocus) → "positive_prompt" (RuinedFooocus)
     p: asString(obj.prompt ?? obj.Prompt ?? obj.positive_prompt),
@@ -401,10 +393,12 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
       asString(mod?.hash) ||
       asString(base?.hash),
     cs: asNumber(obj.clip_skip ?? obj.clipSkip),
-    // Fooocus hires/refiner fields (different naming than A1111)
-    hs: asNumber(obj.refinerupscale),
-    hu: asString(obj.refinerupscalemethod),
-    hd: asNumber(obj.refinercontrolpercentage),
+    // Hires/upscaler: use_upscaler (Fooocus, HF Space) → refiner* (SwarmUI)
+    hs: asNumber(up?.upscale_by) ?? asNumber(obj.refinerupscale),
+    hu: asString(up?.upscale_method) || asString(obj.refinerupscalemethod),
+    hd:
+      asNumber(up?.upscaler_strength) ?? asNumber(obj.refinercontrolpercentage),
+    ht: asNumber(up?.upscale_steps),
   };
 }
 
