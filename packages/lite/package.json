@@ -1,6 +1,6 @@
 {
   "name": "@enslo/sd-metadata-lite",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Lightweight AI image metadata reader for bookmarklets",
   "type": "module",
   "main": "./dist/index.js",
