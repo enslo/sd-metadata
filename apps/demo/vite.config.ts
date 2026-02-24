@@ -1,9 +1,17 @@
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import preact from '@preact/preset-vite';
 import { defineConfig } from 'vite';
 
+const corePackageJson = JSON.parse(
+  readFileSync(resolve(__dirname, '../../packages/core/package.json'), 'utf-8'),
+);
+
 export default defineConfig({
   plugins: [preact()],
+  define: {
+    __CORE_VERSION__: JSON.stringify(corePackageJson.version),
+  },
   resolve: {
     alias: {
       // In local development, use the parent directory's source code directly
