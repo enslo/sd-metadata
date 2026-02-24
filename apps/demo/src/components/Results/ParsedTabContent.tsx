@@ -3,7 +3,7 @@ import type {
   GenerationMetadata,
   ParseResult,
 } from '@enslo/sd-metadata';
-import { Divider, Group, Stack, Text } from '@mantine/core';
+import { Group, Stack, Table, Text } from '@mantine/core';
 import type { I18nMessages } from '../../i18n';
 import { CopyButton } from '../CopyButton';
 import { ErrorMessage } from './ErrorMessage';
@@ -113,26 +113,34 @@ export function ParsedTabContent({ parseResult, t }: ParsedTabContentProps) {
       {/* Generation Settings */}
       {settings.length > 0 && (
         <ParsedSection title={t.fields.generationSettings}>
-          <Stack gap={0}>
-            {settings.map(({ label, value }, i) => (
-              <div key={label}>
-                {i > 0 && <Divider />}
-                <Group justify="space-between" wrap="nowrap" py={6}>
-                  <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
-                    {label}
-                  </Text>
-                  <Group gap={4} wrap="nowrap">
-                    <Text size="sm" fw={500} truncate="end">
-                      {String(value)}
+          <Table
+            highlightOnHover
+            horizontalSpacing={0}
+            verticalSpacing="xs"
+            layout="fixed"
+          >
+            <Table.Tbody>
+              {settings.map(({ label, value }) => (
+                <Table.Tr key={label}>
+                  <Table.Td>
+                    <Text size="sm" c="dimmed">
+                      {label}
                     </Text>
-                    {copyableLabels.has(label) && (
-                      <CopyButton value={String(value)} />
-                    )}
-                  </Group>
-                </Group>
-              </div>
-            ))}
-          </Stack>
+                  </Table.Td>
+                  <Table.Td style={{ textAlign: 'right' }}>
+                    <Group gap={4} wrap="nowrap" justify="flex-end">
+                      <Text size="sm" fw={500} truncate="end">
+                        {String(value)}
+                      </Text>
+                      {copyableLabels.has(label) && (
+                        <CopyButton value={String(value)} />
+                      )}
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
         </ParsedSection>
       )}
     </Stack>

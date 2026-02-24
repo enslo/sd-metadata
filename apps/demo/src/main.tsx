@@ -9,7 +9,7 @@ import './styles/global.css';
 const theme = createTheme({
   primaryColor: 'indigo',
   fontFamily:
-    'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   fontFamilyMonospace:
     'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
 });

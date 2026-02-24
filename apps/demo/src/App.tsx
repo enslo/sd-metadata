@@ -137,7 +137,11 @@ export function App() {
 
       <Stack gap="lg">
         <Stack component="header" gap={0} align="center">
-          <Title order={1} c="indigo">
+          <Title
+            order={1}
+            c="indigo"
+            style={{ fontSize: '2rem', lineHeight: 1.2 }}
+          >
             sd-metadata
           </Title>
           <Text c="dimmed">{t.app.description}</Text>
