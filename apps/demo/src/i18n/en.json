@@ -32,6 +32,7 @@
     "generationSettings": "Generation Settings",
     "width": "Width",
     "height": "Height",
+    "basic": "Basic",
     "model": "Model",
     "modelName": "Model Name",
     "modelHash": "Model Hash",

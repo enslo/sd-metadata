@@ -125,6 +125,7 @@ export function EmbedEditor({
             block
             styles={{
               root: {
+                fontSize: '0.85rem',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 lineHeight: 1.6,

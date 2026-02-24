@@ -10,6 +10,7 @@ import {
 import { useStore } from '@nanostores/preact';
 import { useRef } from 'preact/hooks';
 import { $t } from '../../i18n';
+import { ContentPanel } from '../ContentPanel';
 
 type TextChangeEvent = { currentTarget: { value: string } };
 
@@ -32,7 +33,7 @@ function val(e: TextChangeEvent): string {
  * Compute which accordion sections should be open by default
  */
 function computeDefaultSections(metadata: EmbedMetadata): string[] {
-  const values: string[] = [];
+  const values: string[] = ['basic'];
   if (metadata.model?.name || metadata.model?.hash) values.push('model');
   if (
     metadata.sampling?.sampler ||
@@ -61,67 +62,74 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
   const defaultSections = useRef(computeDefaultSections(metadata));
 
   return (
-    <Stack gap="sm">
-      {/* Prompt */}
-      <Textarea
-        label={t.fields.prompt}
-        value={metadata.prompt}
-        onChange={(e: TextChangeEvent) =>
-          onChange({ ...metadata, prompt: val(e) })
-        }
-        rows={3}
-        autosize
-        styles={{
-          input: { fontFamily: 'var(--mantine-font-family-monospace)' },
-        }}
-      />
-
-      {/* Negative Prompt */}
-      <Textarea
-        label={t.fields.negativePrompt}
-        value={metadata.negativePrompt}
-        onChange={(e: TextChangeEvent) =>
-          onChange({ ...metadata, negativePrompt: val(e) })
-        }
-        rows={2}
-        autosize
-        styles={{
-          input: { fontFamily: 'var(--mantine-font-family-monospace)' },
-        }}
-      />
-
-      {/* Width / Height */}
-      <Group grow>
-        <NumberInput
-          label={t.fields.width}
-          min={0}
-          step={1}
-          value={metadata.width}
-          onChange={(v: string | number) =>
-            onChange({ ...metadata, width: toNum(v) ?? 0 })
-          }
-        />
-        <NumberInput
-          label={t.fields.height}
-          min={0}
-          step={1}
-          value={metadata.height}
-          onChange={(v: string | number) =>
-            onChange({ ...metadata, height: toNum(v) ?? 0 })
-          }
-        />
-      </Group>
-
-      {/* Collapsible sections */}
-      <Accordion
-        multiple
-        defaultValue={defaultSections.current}
-        variant="separated"
-      >
-        {/* Model */}
-        <Accordion.Item value="model">
-          <Accordion.Control>{t.fields.model}</Accordion.Control>
-          <Accordion.Panel>
+    <Accordion
+      multiple
+      defaultValue={defaultSections.current}
+      variant="separated"
+    >
+      {/* Basic */}
+      <Accordion.Item value="basic">
+        <Accordion.Control>{t.fields.basic}</Accordion.Control>
+        <Accordion.Panel>
+          <ContentPanel>
+            <Stack gap="sm">
+              <Textarea
+                label={t.fields.prompt}
+                value={metadata.prompt}
+                onChange={(e: TextChangeEvent) =>
+                  onChange({ ...metadata, prompt: val(e) })
+                }
+                rows={3}
+                autosize
+                styles={{
+                  input: {
+                    fontFamily: 'var(--mantine-font-family-monospace)',
+                  },
+                }}
+              />
+              <Textarea
+                label={t.fields.negativePrompt}
+                value={metadata.negativePrompt}
+                onChange={(e: TextChangeEvent) =>
+                  onChange({ ...metadata, negativePrompt: val(e) })
+                }
+                rows={2}
+                autosize
+                styles={{
+                  input: {
+                    fontFamily: 'var(--mantine-font-family-monospace)',
+                  },
+                }}
+              />
+              <Group grow>
+                <NumberInput
+                  label={t.fields.width}
+                  min={0}
+                  step={1}
+                  value={metadata.width}
+                  onChange={(v: string | number) =>
+                    onChange({ ...metadata, width: toNum(v) ?? 0 })
+                  }
+                />
+                <NumberInput
+                  label={t.fields.height}
+                  min={0}
+                  step={1}
+                  value={metadata.height}
+                  onChange={(v: string | number) =>
+                    onChange({ ...metadata, height: toNum(v) ?? 0 })
+                  }
+                />
+              </Group>
+            </Stack>
+          </ContentPanel>
+        </Accordion.Panel>
+      </Accordion.Item>
+      {/* Model */}
+      <Accordion.Item value="model">
+        <Accordion.Control>{t.fields.model}</Accordion.Control>
+        <Accordion.Panel>
+          <ContentPanel>
             <Stack gap="sm">
               <TextInput
                 label={t.fields.modelName}
@@ -150,13 +158,15 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                 }
               />
             </Stack>
-          </Accordion.Panel>
-        </Accordion.Item>
+          </ContentPanel>
+        </Accordion.Panel>
+      </Accordion.Item>
 
-        {/* Sampling */}
-        <Accordion.Item value="sampling">
-          <Accordion.Control>{t.fields.sampling}</Accordion.Control>
-          <Accordion.Panel>
+      {/* Sampling */}
+      <Accordion.Item value="sampling">
+        <Accordion.Control>{t.fields.sampling}</Accordion.Control>
+        <Accordion.Panel>
+          <ContentPanel>
             <Stack gap="sm">
               <Group grow>
                 <TextInput
@@ -231,19 +241,24 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                   onChange={(v: string | number) =>
                     onChange({
                       ...metadata,
-                      sampling: { ...metadata.sampling, clipSkip: toNum(v) },
+                      sampling: {
+                        ...metadata.sampling,
+                        clipSkip: toNum(v),
+                      },
                     })
                   }
                 />
               </Group>
             </Stack>
-          </Accordion.Panel>
-        </Accordion.Item>
+          </ContentPanel>
+        </Accordion.Panel>
+      </Accordion.Item>
 
-        {/* Hires.fix */}
-        <Accordion.Item value="hires">
-          <Accordion.Control>{t.fields.hires}</Accordion.Control>
-          <Accordion.Panel>
+      {/* Hires.fix */}
+      <Accordion.Item value="hires">
+        <Accordion.Control>{t.fields.hires}</Accordion.Control>
+        <Accordion.Panel>
+          <ContentPanel>
             <Stack gap="sm">
               <TextInput
                 label={t.fields.upscaler}
@@ -299,9 +314,9 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                 }
               />
             </Stack>
-          </Accordion.Panel>
-        </Accordion.Item>
-      </Accordion>
-    </Stack>
+          </ContentPanel>
+        </Accordion.Panel>
+      </Accordion.Item>
+    </Accordion>
   );
 }
