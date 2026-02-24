@@ -1,0 +1,277 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --color-bg: #1a1b1e;
+  --color-surface: #25262b;
+  --color-border: #373a40;
+  --color-text: #c1c2c5;
+  --color-text-dimmed: #909296;
+  --color-indigo: #5c7cfa;
+  --color-indigo-light: rgba(92, 124, 250, 0.12);
+  --color-indigo-border: rgba(92, 124, 250, 0.5);
+  --radius: 8px;
+  --transition: 200ms ease;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Container */
+
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 48px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Header */
+
+header {
+  text-align: center;
+}
+
+header h1 {
+  color: var(--color-indigo);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.caption {
+  color: var(--color-text-dimmed);
+  font-size: 0.95rem;
+}
+
+/* Main */
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Drop zone */
+
+.dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    transform var(--transition),
+    border-color var(--transition),
+    background-color var(--transition);
+  position: relative;
+}
+
+.dropzone:hover {
+  border-color: var(--color-indigo-border);
+  background-color: var(--color-indigo-light);
+}
+
+.dropzone.drag-over {
+  transform: scale(1.02);
+  border-color: var(--color-indigo);
+  background-color: var(--color-indigo-light);
+}
+
+.dropzone-initial:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 152px;
+  padding: 16px 24px;
+  pointer-events: none;
+}
+
+.dropzone-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--color-text-dimmed);
+}
+
+.dropzone-initial p {
+  color: var(--color-text-dimmed);
+}
+
+/* Drop zone preview (after file drop) */
+
+.dropzone-preview:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.preview-thumb {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+}
+
+.preview-filename {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.clear-btn {
+  pointer-events: auto;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-dimmed);
+  font-size: 1.25rem;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    color var(--transition),
+    border-color var(--transition);
+}
+
+.clear-btn:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-dimmed);
+}
+
+/* Result section */
+
+.result {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  overflow: auto;
+}
+
+.result-text {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* Footer */
+
+footer {
+  text-align: center;
+  border-top: 1px solid var(--color-border);
+  padding-top: 24px;
+}
+
+footer p {
+  font-size: 0.85rem;
+  color: var(--color-text-dimmed);
+}
+
+footer a {
+  color: var(--color-indigo);
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+.version {
+  opacity: 0.6;
+}
+
+/* GitHub corner */
+
+.github-corner {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 100;
+  display: block;
+  color: white;
+}
+
+.github-corner svg {
+  fill: var(--color-indigo);
+  color: var(--color-bg);
+  width: 80px;
+  height: 80px;
+  transition: fill var(--transition);
+}
+
+.github-corner:hover svg {
+  fill: #7b9cff;
+}
+
+.github-corner-arm {
+  transform-origin: 130px 106px;
+}
+
+.github-corner:hover .github-corner-arm {
+  animation: wave 0.56s ease-in-out;
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20%,
+  60% {
+    transform: rotate(-25deg);
+  }
+  40%,
+  80% {
+    transform: rotate(10deg);
+  }
+}
+
+/* Responsive */
+
+@media (max-width: 600px) {
+  .container {
+    padding: 32px 16px 24px;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+  }
+
+  .github-corner svg {
+    width: 60px;
+    height: 60px;
+  }
+
+  .dropzone-initial {
+    padding: 32px 16px;
+  }
+}
