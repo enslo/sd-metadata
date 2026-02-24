@@ -10,7 +10,7 @@
 AI生成画像のメタデータを読み取る軽量パーサーです。
 バンドルサイズが重要なブックマークレットやユーザースクリプト向けに設計されています。
 
-- **超軽量**: **6,525 bytes** のminified IIFEビルド
+- **超軽量**: **6,519 bytes** のminified IIFEビルド
 - **読み取り専用**: メタデータを抽出し、A1111形式のテキストで返却
 - **ゼロ依存**: Node.jsとブラウザの両方で動作
 - **18以上のツール対応**: 主要なAI画像生成ツールをサポート
@@ -51,7 +51,7 @@ if (text) {
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.0.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.1.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -70,7 +70,7 @@ if (text) {
 
 多くのサイトではCSPにより外部スクリプトの読み込みがブロックされます。代わりに、IIFEバンドルをインラインで貼り付けてください：
 
-1. `dist/index.global.js` の内容をコピー（または[npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.0.0/dist/index.global.js)からダウンロード）
+1. `dist/index.global.js` の内容をコピー（または[npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.1.0/dist/index.global.js)からダウンロード）
 2. コードをインラインでブックマークレットに組み込みます：
 
 ```javascript

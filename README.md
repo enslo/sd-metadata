@@ -14,7 +14,7 @@ Zero dependencies, works in Node.js and browsers.
 | Package | Description | npm | |
 | ------- | ----------- | --- | - |
 | [@enslo/sd-metadata](./packages/core/) | Full-featured library with read, write, embed, and stringify APIs | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata) | [![demo](https://img.shields.io/badge/demo-blueviolet?logo=cloudflare&logoColor=white)](https://sd-metadata.pages.dev/) |
-| [@enslo/sd-metadata-lite](./packages/lite/) | Lightweight read-only parser for bookmarklets and userscripts (~7 KB) | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata-lite.svg)](https://www.npmjs.com/package/@enslo/sd-metadata-lite) | [![demo](https://img.shields.io/badge/demo-blueviolet?logo=cloudflare&logoColor=white)](https://sd-metadata-lite.pages.dev/) |
+| [@enslo/sd-metadata-lite](./packages/lite/) | Lightweight read-only parser for bookmarklets and userscripts | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata-lite.svg)](https://www.npmjs.com/package/@enslo/sd-metadata-lite) | [![demo](https://img.shields.io/badge/demo-blueviolet?logo=cloudflare&logoColor=white)](https://sd-metadata-lite.pages.dev/) |
 
 ### Which package should I use?
 
