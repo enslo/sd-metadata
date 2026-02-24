@@ -104,7 +104,7 @@ Negative prompt: lowres, bad quality
 Steps: 20, Sampler: Euler a, Schedule type: Karras, CFG scale: 7, Seed: 12345, Size: 512x768, Model hash: a1b2c3d4, Model: model.safetensors
 ```
 
-フィールドはソースメタデータに存在する場合のみ出力されます。
+プロンプトや設定値の各フィールドは、画像のメタデータに含まれているものだけが出力されます。
 
 ## 対応ツール
 
