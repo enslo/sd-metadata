@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata)
 [![license](https://img.shields.io/npm/l/@enslo/sd-metadata.svg)](https://github.com/enslo/sd-metadata/blob/main/LICENSE)
 
-🇯🇵 **[日本語版はこちら](./README.ja.md)**
+🌐 **[日本語版はこちら](./README.ja.md)**
 
 🔗 **[Live Demo](https://sd-metadata.pages.dev/)**
 

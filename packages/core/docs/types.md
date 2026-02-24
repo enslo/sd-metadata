@@ -1,6 +1,6 @@
 # Type Documentation
 
-🇯🇵 **[日本語版はこちら](./types.ja.md)**
+🌐 **[日本語版はこちら](./types.ja.md)**
 
 Complete type reference for `@enslo/sd-metadata`.
 
