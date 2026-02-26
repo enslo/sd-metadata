@@ -53,7 +53,7 @@
   },
   "homepage": "https://sd-metadata.pages.dev",
   "devDependencies": {
-    "@biomejs/biome": "^2.4.2",
+    "@biomejs/biome": "^2.4.4",
     "@types/node": "^25.0.3",
     "@vitest/coverage-v8": "^4.0.18",
     "tsup": "^8.5.1",
