@@ -17,6 +17,10 @@ import {
   convertComfyUISegmentsToPng,
 } from './comfyui';
 import {
+  convertDrawThingsPngToSegments,
+  convertDrawThingsSegmentsToPng,
+} from './draw-things';
+import {
   convertEasyDiffusionPngToSegments,
   convertEasyDiffusionSegmentsToPng,
 } from './easydiffusion';
@@ -212,6 +216,11 @@ const convertHfSpace = createFormatConverter(
   createSegmentsToPng('parameters', 'text-unicode-escape'),
 );
 
+const convertDrawThings = createFormatConverter(
+  convertDrawThingsPngToSegments,
+  convertDrawThingsSegmentsToPng,
+);
+
 const convertCivitai = createFormatConverter(
   convertCivitaiPngToSegments,
   convertCivitaiSegmentsToPng,
@@ -260,4 +269,6 @@ const softwareConverters = {
   invokeai: convertInvokeAI,
   // HuggingFace Space
   'hf-space': convertHfSpace,
+  // Draw Things (XMP format)
+  'draw-things': convertDrawThings,
 } as const;

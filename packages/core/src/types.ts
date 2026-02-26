@@ -62,7 +62,8 @@ export type MetadataSegmentSource =
   | { type: 'exifUserComment' }
   | { type: 'exifImageDescription'; prefix?: string }
   | { type: 'exifMake'; prefix?: string }
-  | { type: 'jpegCom' };
+  | { type: 'jpegCom' }
+  | { type: 'xmpPacket' };
 
 /**
  * A single metadata segment with source tracking
@@ -107,7 +108,8 @@ export type GenerationSoftware =
   | 'hf-space'
   | 'easydiffusion'
   | 'fooocus'
-  | 'ruined-fooocus';
+  | 'ruined-fooocus'
+  | 'draw-things';
 
 // ============================================================================
 // Unified Metadata Types
@@ -268,7 +270,8 @@ export interface StandardMetadata extends BaseMetadata {
     | 'hf-space'
     | 'easydiffusion'
     | 'fooocus'
-    | 'ruined-fooocus';
+    | 'ruined-fooocus'
+    | 'draw-things';
 }
 
 /**

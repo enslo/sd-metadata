@@ -1,6 +1,7 @@
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
 import { isJpeg, readUint16BE } from '../utils/binary';
+import { matchesXmpPrefix, XMP_APP1_PREFIX } from '../utils/xmp';
 import { parseExifMetadataSegments } from './exif';
 
 // Internal types (co-located with reader)
@@ -51,6 +52,17 @@ export function readJpegMetadata(data: Uint8Array): JpegMetadataResult {
     const exifData = data.slice(app1.offset, app1.offset + app1.length);
     const exifSegments = parseExifMetadataSegments(exifData);
     segments.push(...exifSegments);
+  }
+
+  // Try XMP APP1 segment (Draw Things uses this)
+  const xmpApp1 = findXmpApp1Segment(data);
+  if (xmpApp1) {
+    const xmpData = data.slice(xmpApp1.offset, xmpApp1.offset + xmpApp1.length);
+    const xmpText = new TextDecoder('utf-8').decode(xmpData);
+    segments.push({
+      source: { type: 'xmpPacket' },
+      data: xmpText,
+    });
   }
 
   // Try COM segment (NovelAI uses this)
@@ -121,6 +133,55 @@ function findApp1Segment(
     offset += 2 + length;
 
     // Stop at SOS (Start of Scan) or EOI
+    if (marker === 0xda || marker === 0xd9) {
+      break;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Find APP1 segment containing XMP data
+ *
+ * XMP uses the same APP1 marker as Exif but with a different prefix:
+ * "http://ns.adobe.com/xap/1.0/\0" (29 bytes)
+ *
+ * @param data - JPEG file data
+ * @returns Offset and length of XMP payload, or null if not found
+ */
+function findXmpApp1Segment(
+  data: Uint8Array,
+): { offset: number; length: number } | null {
+  let offset = 2; // Skip SOI marker
+
+  while (offset < data.length - 4) {
+    if (data[offset] !== 0xff) {
+      offset++;
+      continue;
+    }
+
+    const marker = data[offset + 1];
+
+    if (marker === 0xff) {
+      offset++;
+      continue;
+    }
+
+    const length = readUint16BE(data, offset + 2);
+
+    if (marker === APP1_MARKER && length >= XMP_APP1_PREFIX.length + 2) {
+      const headerStart = offset + 4;
+      if (matchesXmpPrefix(data, headerStart)) {
+        return {
+          offset: headerStart + XMP_APP1_PREFIX.length,
+          length: length - 2 - XMP_APP1_PREFIX.length,
+        };
+      }
+    }
+
+    offset += 2 + length;
+
     if (marker === 0xda || marker === 0xd9) {
       break;
     }

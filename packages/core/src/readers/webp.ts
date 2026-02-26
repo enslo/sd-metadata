@@ -22,18 +22,30 @@ export function readWebpMetadata(data: Uint8Array): WebpMetadataResult {
     return Result.error({ type: 'invalidSignature' });
   }
 
+  const segments: MetadataSegment[] = [];
+
   const exifChunk = findExifChunk(data);
-  if (!exifChunk) {
-    return Result.ok([]);
+  if (exifChunk) {
+    const exifData = data.slice(
+      exifChunk.offset,
+      exifChunk.offset + exifChunk.length,
+    );
+    segments.push(...parseExifMetadataSegments(exifData));
   }
 
-  const exifData = data.slice(
-    exifChunk.offset,
-    exifChunk.offset + exifChunk.length,
-  );
-
-  // Parse all EXIF metadata segments (UserComment, ImageDescription, Make)
-  const segments = parseExifMetadataSegments(exifData);
+  // Try XMP chunk (Draw Things uses this)
+  const xmpChunk = findXmpChunk(data);
+  if (xmpChunk) {
+    const xmpData = data.slice(
+      xmpChunk.offset,
+      xmpChunk.offset + xmpChunk.length,
+    );
+    const xmpText = new TextDecoder('utf-8').decode(xmpData);
+    segments.push({
+      source: { type: 'xmpPacket' },
+      data: xmpText,
+    });
+  }
 
   return Result.ok(segments);
 }
@@ -59,7 +71,7 @@ export function findExifChunk(
 
     // Check for EXIF chunk
     if (readChunkType(data, offset) === 'EXIF') {
-      // EXIF chunk data starts after type and size
+      if (offset + 8 + chunkSize > data.length) return null;
       return {
         offset: offset + 8,
         length: chunkSize,
@@ -68,6 +80,37 @@ export function findExifChunk(
 
     // Move to next chunk (chunk size + type + size fields)
     // RIFF chunks are padded to even byte boundaries
+    const paddedSize = chunkSize + (chunkSize % 2);
+    offset += 8 + paddedSize;
+  }
+
+  return null;
+}
+
+/**
+ * Find XMP chunk in WebP file
+ *
+ * XMP data is stored in a RIFF chunk with FourCC "XMP " (trailing space).
+ *
+ * @param data - WebP file data
+ * @returns Offset and length of XMP chunk data, or null if not found
+ */
+function findXmpChunk(
+  data: Uint8Array,
+): { offset: number; length: number } | null {
+  let offset = 12; // After RIFF header
+
+  while (offset + 8 <= data.length) {
+    const chunkSize = readUint32LE(data, offset + 4);
+
+    if (readChunkType(data, offset) === 'XMP ') {
+      if (offset + 8 + chunkSize > data.length) return null;
+      return {
+        offset: offset + 8,
+        length: chunkSize,
+      };
+    }
+
     const paddedSize = chunkSize + (chunkSize % 2);
     offset += 8 + paddedSize;
   }

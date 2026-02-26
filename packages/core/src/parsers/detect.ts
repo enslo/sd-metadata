@@ -96,6 +96,11 @@ function detectUniqueKeywords(
     return 'novelai';
   }
 
+  // Draw Things: Uses "CreatorTool" entry with "Draw Things" value (from XMP)
+  if (entryRecord.CreatorTool?.startsWith('Draw Things')) {
+    return 'draw-things';
+  }
+
   // Unique key detection (InvokeAI, TensorArt, Stability Matrix, CivitAI)
   const keyResult = detectByUniqueKey(entryRecord);
   if (keyResult) return keyResult;

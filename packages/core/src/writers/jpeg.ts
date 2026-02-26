@@ -1,6 +1,7 @@
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
 import { isJpeg, readUint16BE, writeUint16BE } from '../utils/binary';
+import { matchesXmpPrefix, XMP_APP1_PREFIX } from '../utils/xmp';
 import { buildExifTiffData } from './exif';
 
 // Internal types (co-located with writer)
@@ -48,6 +49,7 @@ export function writeJpegMetadata(
 
   // Separate segments by destination
   const comSegments = segments.filter((s) => s.source.type === 'jpegCom');
+  const xmpSegments = segments.filter((s) => s.source.type === 'xmpPacket');
   const exifSegments = segments.filter(
     (s) =>
       s.source.type === 'exifUserComment' ||
@@ -67,13 +69,22 @@ export function writeJpegMetadata(
   const app1Segment =
     exifSegments.length > 0 ? buildApp1Segment(exifSegments) : null;
 
+  // Build new APP1 XMP segment (only first XMP packet)
+  const firstXmp = xmpSegments[0];
+  const xmpApp1Segment = firstXmp ? buildXmpApp1Segment(firstXmp.data) : null;
+
   // Build new COM segments
-  const comSegmentData = comSegments.map((s) => buildComSegment(s.data));
+  const comSegmentData = comSegments
+    .map((s) => buildComSegment(s.data))
+    .filter((s): s is Uint8Array => s !== null);
 
   // Calculate total size
   let totalSize = 2; // SOI
   if (app1Segment) {
     totalSize += app1Segment.length;
+  }
+  if (xmpApp1Segment) {
+    totalSize += xmpApp1Segment.length;
   }
   for (const seg of beforeSos) {
     totalSize += seg.length;
@@ -95,6 +106,12 @@ export function writeJpegMetadata(
   if (app1Segment) {
     output.set(app1Segment, offset);
     offset += app1Segment.length;
+  }
+
+  // Write APP1 XMP (after Exif)
+  if (xmpApp1Segment) {
+    output.set(xmpApp1Segment, offset);
+    offset += xmpApp1Segment.length;
   }
 
   // Write original non-metadata segments
@@ -188,10 +205,15 @@ function collectNonMetadataSegments(
       data[offset + 6] === 0x00 && // NULL
       data[offset + 7] === 0x00; // NULL
 
+    const isXmpApp1 =
+      marker === APP1_MARKER &&
+      !isExifApp1 &&
+      matchesXmpPrefix(data, offset + 2);
+
     const isCom = marker === COM_MARKER;
 
     // Keep non-metadata segments
-    if (!isExifApp1 && !isCom) {
+    if (!isExifApp1 && !isXmpApp1 && !isCom) {
       beforeSos.push(data.slice(segmentStart, segmentEnd));
     }
 
@@ -229,11 +251,40 @@ function buildApp1Segment(segments: MetadataSegment[]): Uint8Array {
 }
 
 /**
+ * Build APP1 XMP segment from XMP text
+ */
+function buildXmpApp1Segment(xmpText: string): Uint8Array | null {
+  const textBytes = new TextEncoder().encode(xmpText);
+  // APP1 segment: marker (2) + length (2) + XMP prefix + XMP data
+  const segmentLength = 2 + XMP_APP1_PREFIX.length + textBytes.length;
+
+  // JPEG segment length is uint16 (max 65535)
+  if (segmentLength > 0xffff) {
+    return null;
+  }
+
+  const segment = new Uint8Array(2 + segmentLength);
+
+  segment[0] = 0xff;
+  segment[1] = APP1_MARKER;
+  writeUint16BE(segment, 2, segmentLength);
+  segment.set(XMP_APP1_PREFIX, 4);
+  segment.set(textBytes, 4 + XMP_APP1_PREFIX.length);
+
+  return segment;
+}
+
+/**
  * Build COM segment from text
  */
-function buildComSegment(text: string): Uint8Array {
+function buildComSegment(text: string): Uint8Array | null {
   const textBytes = new TextEncoder().encode(text);
   const segmentLength = 2 + textBytes.length; // length field includes itself
+
+  // JPEG segment length is uint16 (max 65535)
+  if (segmentLength > 0xffff) {
+    return null;
+  }
 
   const segment = new Uint8Array(2 + segmentLength);
   segment[0] = 0xff;
