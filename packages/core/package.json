@@ -1,6 +1,6 @@
 {
   "name": "@enslo/sd-metadata",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Read and write AI-generated image metadata",
   "type": "module",
   "main": "./dist/index.js",

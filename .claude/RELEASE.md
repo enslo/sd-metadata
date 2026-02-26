@@ -35,7 +35,10 @@ git log --oneline <pkg>@X.Y.Z..HEAD -- packages/<pkg>/
 Determine the version bump:
 
 - **Patch** (x.x.N): Bug fixes only
-- **Minor** (x.N.0): New features, backward compatible
+- **Minor** (x.N.0): New features, backward compatible. Adding new members to
+  TypeScript union types (`GenerationSoftware`, `MetadataSegmentSource`) is a
+  minor change — these are documented as "Potentially Breaking Changes" in the
+  CHANGELOG to alert TypeScript users with exhaustive patterns.
 - **Major** (N.0.0): Breaking changes
 
 ### 2. Create Release Preparation Branch
@@ -149,6 +152,11 @@ Example:
 
 ### Added
 - **Feature name** (#PR): User-facing description
+
+### Potentially Breaking Changes
+- **New `GenerationSoftware` member** (#PR): `'new-tool'` added.
+  TypeScript users with exhaustive `switch` or `Record<GenerationSoftware, ...>`
+  will need to handle the new value.
 
 ### Fixed
 - **Bug description** (#PR): What was wrong and how it is fixed

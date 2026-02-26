@@ -6,7 +6,7 @@
 🌐 **[日本語版はこちら](./README.ja.md)**
 
 A TypeScript library to read and write metadata embedded in AI-generated images.
-Supports PNG, JPEG, and WebP formats across 18+ generation tools.
+Supports PNG, JPEG, and WebP formats across 15+ generation tools.
 Zero dependencies, works in Node.js and browsers.
 
 ## Packages
