@@ -47,6 +47,7 @@ npm install @enslo/sd-metadata
 | [Fooocus](https://github.com/lllyasviel/Fooocus) | ⚠️ | ⚠️ | ⚠️ |
 | [Ruined Fooocus](https://github.com/runew0lf/RuinedFooocus) | ✅ | 🔄️ | 🔄️ |
 | [Easy Diffusion](https://github.com/easydiffusion/easydiffusion) | ⚠️ | ⚠️ | ⚠️ |
+| [Draw Things](https://drawthings.ai/) | ⚠️ | ⚠️ | ⚠️ |
 
 **Legend:**
 

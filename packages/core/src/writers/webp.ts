@@ -40,8 +40,12 @@ export function writeWebpMetadata(
     return Result.error({ type: 'invalidSignature' });
   }
 
-  // Collect all chunks except EXIF
-  const collectResult = collectNonExifChunks(data);
+  // Separate segments by destination
+  const xmpSegments = segments.filter((s) => s.source.type === 'xmpPacket');
+  const exifSegments = segments.filter((s) => s.source.type !== 'xmpPacket');
+
+  // Collect all chunks except EXIF and XMP
+  const collectResult = collectNonMetadataChunks(data);
   if (!collectResult.ok) {
     return collectResult;
   }
@@ -49,15 +53,24 @@ export function writeWebpMetadata(
   const { chunks } = collectResult.value;
 
   // Build new EXIF chunk from segments
-  const exifChunk = buildExifChunk(segments);
+  const exifChunk = buildExifChunk(exifSegments);
+
+  // Build new XMP chunk (only first XMP packet)
+  const firstXmp = xmpSegments[0];
+  const xmpChunk = firstXmp ? buildXmpChunk(firstXmp.data) : null;
+
+  // Collect metadata chunks to write after image chunk
+  const metadataChunks: Uint8Array[] = [];
+  if (exifChunk) metadataChunks.push(exifChunk);
+  if (xmpChunk) metadataChunks.push(xmpChunk);
 
   // Calculate new file size (excluding RIFF header)
   let newFileSize = 4; // "WEBP"
   for (const chunk of chunks) {
     newFileSize += chunk.length;
   }
-  if (exifChunk) {
-    newFileSize += exifChunk.length;
+  for (const meta of metadataChunks) {
+    newFileSize += meta.length;
   }
 
   // Build output
@@ -74,26 +87,30 @@ export function writeWebpMetadata(
   output.set(WEBP_MARKER, offset);
   offset += 4;
 
-  // Write EXIF chunk first if we have one (after VP8/VP8L/VP8X)
-  // EXIF should come after the image chunk for best compatibility
-  let exifWritten = false;
+  // Write metadata chunks after first image-related chunk (VP8/VP8L/VP8X)
+  let metadataWritten = false;
 
   for (const chunk of chunks) {
     // Write chunks in original order
     output.set(chunk, offset);
     offset += chunk.length;
 
-    // Write EXIF after first image-related chunk (VP8, VP8L, VP8X)
-    if (!exifWritten && exifChunk && isImageChunk(chunk)) {
-      output.set(exifChunk, offset);
-      offset += exifChunk.length;
-      exifWritten = true;
+    // Write metadata after first image-related chunk for best compatibility
+    if (!metadataWritten && metadataChunks.length > 0 && isImageChunk(chunk)) {
+      for (const meta of metadataChunks) {
+        output.set(meta, offset);
+        offset += meta.length;
+      }
+      metadataWritten = true;
     }
   }
 
-  // If EXIF wasn't written yet (no VP8* chunk found), append it
-  if (!exifWritten && exifChunk) {
-    output.set(exifChunk, offset);
+  // If metadata wasn't written yet (no VP8* chunk found), append it
+  if (!metadataWritten) {
+    for (const meta of metadataChunks) {
+      output.set(meta, offset);
+      offset += meta.length;
+    }
   }
 
   return Result.ok(output);
@@ -109,9 +126,9 @@ function isImageChunk(chunk: Uint8Array): boolean {
 }
 
 /**
- * Collect all chunks except EXIF
+ * Collect all chunks except EXIF and XMP
  */
-function collectNonExifChunks(
+function collectNonMetadataChunks(
   data: Uint8Array,
 ): Result<
   { chunks: Uint8Array[]; firstChunkType: string },
@@ -140,8 +157,8 @@ function collectNonExifChunks(
       });
     }
 
-    // Keep all chunks except EXIF
-    if (typeStr !== 'EXIF') {
+    // Keep all chunks except EXIF and XMP
+    if (typeStr !== 'EXIF' && typeStr !== 'XMP ') {
       // Include type + size + data (+ padding if odd)
       const paddedSize = chunkSize + (chunkSize % 2);
       const chunkData = data.slice(offset, offset + 8 + paddedSize);
@@ -161,19 +178,11 @@ function collectNonExifChunks(
  * Build EXIF chunk from metadata segments
  */
 function buildExifChunk(segments: MetadataSegment[]): Uint8Array | null {
-  // Filter Exif-compatible segments
-  const exifSegments = segments.filter(
-    (s) =>
-      s.source.type === 'exifUserComment' ||
-      s.source.type === 'exifImageDescription' ||
-      s.source.type === 'exifMake',
-  );
-
-  if (exifSegments.length === 0) {
+  if (segments.length === 0) {
     return null;
   }
 
-  const tiffData = buildExifTiffData(exifSegments);
+  const tiffData = buildExifTiffData(segments);
 
   if (tiffData.length === 0) {
     return null;
@@ -188,6 +197,25 @@ function buildExifChunk(segments: MetadataSegment[]): Uint8Array | null {
   chunk.set(new TextEncoder().encode('EXIF'));
   writeUint32LE(chunk, 4, chunkSize);
   chunk.set(tiffData, 8);
+
+  return chunk;
+}
+
+/**
+ * Build XMP chunk from XMP text
+ */
+function buildXmpChunk(xmpText: string): Uint8Array {
+  const textBytes = new TextEncoder().encode(xmpText);
+
+  // Build XMP chunk: type (4) + size (4) + XMP data (+ padding if odd)
+  const chunkSize = textBytes.length;
+  const paddedSize = chunkSize + (chunkSize % 2);
+  const chunk = new Uint8Array(8 + paddedSize);
+
+  // Write "XMP " chunk type (trailing space)
+  chunk.set(new TextEncoder().encode('XMP '));
+  writeUint32LE(chunk, 4, chunkSize);
+  chunk.set(textBytes, 8);
 
   return chunk;
 }

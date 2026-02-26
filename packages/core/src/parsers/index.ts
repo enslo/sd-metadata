@@ -3,6 +3,7 @@ import type { EntryRecord } from '../utils/entries';
 import { parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
 import { detectSoftware } from './detect';
+import { parseDrawThings } from './draw-things';
 import { parseEasyDiffusion } from './easydiffusion';
 import { parseFooocus } from './fooocus';
 import { parseHfSpace } from './hf-space';
@@ -95,6 +96,9 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
 
     case 'ruined-fooocus':
       return parseRuinedFooocus(entries);
+
+    case 'draw-things':
+      return parseDrawThings(entries);
 
     default:
       return Result.error({ type: 'unsupportedFormat' });

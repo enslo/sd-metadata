@@ -59,6 +59,9 @@ const EXPECTED_TO_JPEG_WEBP: Record<GenerationSoftware, SegmentPattern[]> = {
   fooocus: [['exifUserComment']],
   'ruined-fooocus': [['exifUserComment']],
   easydiffusion: [['exifUserComment']],
+
+  // Draw Things: XMP packet (preserved as-is)
+  'draw-things': [['xmpPacket']],
 };
 
 /**
@@ -128,6 +131,9 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
 
   // EasyDiffusion: varies based on input, no fixed expectation
   // easydiffusion: undefined - skip verification
+
+  // Draw Things: XMP iTXt chunk
+  'draw-things': [['XML:com.adobe.xmp']],
 };
 
 /**

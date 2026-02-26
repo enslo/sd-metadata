@@ -5,6 +5,7 @@ import type {
 } from '../types';
 import type { EntryRecord } from './entries';
 import { parseJson } from './json';
+import { extractXmpEntries, isXmpKeyword } from './xmp';
 
 /**
  * Convert PNG text chunks to entry record
@@ -13,7 +14,16 @@ import { parseJson } from './json';
  * @returns Entry record for keyword lookup
  */
 export function pngChunksToRecord(chunks: PngTextChunk[]): EntryRecord {
-  return Object.fromEntries(chunks.map((c) => [c.keyword, c.text]));
+  return Object.fromEntries(
+    chunks.flatMap((chunk) => {
+      // Expand XMP metadata into individual entries
+      if (isXmpKeyword(chunk.keyword)) {
+        const expanded = extractXmpEntries(chunk.text);
+        if (expanded) return Object.entries(expanded);
+      }
+      return [[chunk.keyword, chunk.text]];
+    }),
+  );
 }
 
 /**
@@ -38,13 +48,24 @@ export function segmentsToRecord(segments: MetadataSegment[]): EntryRecord {
     const keyword = sourceToKeyword(segment.source);
     const text = segment.data;
 
-    // Try to detect and expand NovelAI WebP format
-    // Format: {"Comment": "{...}", "Software": "NovelAI", ...}
-    if (segment.source.type === 'exifUserComment' && text.startsWith('{')) {
-      const expanded = tryExpandNovelAIWebpFormat(text);
+    // Expand XMP packet into individual entries
+    if (segment.source.type === 'xmpPacket') {
+      const expanded = extractXmpEntries(text);
       if (expanded) {
         Object.assign(record, expanded);
         continue;
+      }
+    }
+
+    if (segment.source.type === 'exifUserComment') {
+      // Try to detect and expand NovelAI WebP format
+      // Format: {"Comment": "{...}", "Software": "NovelAI", ...}
+      if (text.startsWith('{')) {
+        const expanded = tryExpandNovelAIWebpFormat(text);
+        if (expanded) {
+          Object.assign(record, expanded);
+          continue;
+        }
       }
     }
 
@@ -103,5 +124,7 @@ function sourceToKeyword(source: MetadataSegmentSource): string {
       return source.prefix ?? 'ImageDescription';
     case 'exifMake':
       return source.prefix ?? 'Make';
+    case 'xmpPacket':
+      return 'XML:com.adobe.xmp';
   }
 }

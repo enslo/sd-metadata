@@ -14,6 +14,7 @@ const SOURCE_LABELS: Record<MetadataSegment['source']['type'], string> = {
   exifImageDescription: 'EXIF: ImageDescription',
   exifMake: 'EXIF: Make',
   jpegCom: 'JPEG COM',
+  xmpPacket: 'XMP Packet',
 };
 
 interface RawTabContentProps {

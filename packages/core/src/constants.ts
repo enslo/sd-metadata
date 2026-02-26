@@ -34,4 +34,5 @@ export const softwareLabels: Readonly<Record<GenerationSoftware, string>> =
     easydiffusion: 'Easy Diffusion',
     fooocus: 'Fooocus',
     'ruined-fooocus': 'Ruined Fooocus',
+    'draw-things': 'Draw Things',
   });
