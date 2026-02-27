@@ -147,7 +147,7 @@ type GenerationMetadata =
 
 | メタデータ型 | `software` 値 |
 | ------------- | ----------------- |
-| `StandardMetadata` | `'sd-webui'` \| `'sd-next'` \| `'forge'` \| `'forge-classic'` \| `'forge-neo'` \| `'reforge'` \| `'easy-reforge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` |
+| `StandardMetadata` | `'sd-webui'` \| `'sd-next'` \| `'forge'` \| `'forge-classic'` \| `'forge-neo'` \| `'reforge'` \| `'easy-reforge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'draw-things'` |
 | `NovelAIMetadata` | `'novelai'` |
 | `ComfyUIMetadata` | `'comfyui'` \| `'tensorart'` \| `'stability-matrix'` \| `'swarmui'` |
 
@@ -195,7 +195,8 @@ type GenerationSoftware =
   | 'hf-space'
   | 'easydiffusion'
   | 'fooocus'
-  | 'ruined-fooocus';
+  | 'ruined-fooocus'
+  | 'draw-things';
 ```
 
 **例：**
@@ -361,7 +362,8 @@ export interface StandardMetadata extends BaseMetadata {
     | 'hf-space'
     | 'easydiffusion'
     | 'fooocus'
-    | 'ruined-fooocus';
+    | 'ruined-fooocus'
+    | 'draw-things';
 }
 ```
 
@@ -788,7 +790,8 @@ export type MetadataSegmentSource =
   | { type: 'exifUserComment' }
   | { type: 'exifImageDescription'; prefix?: string }
   | { type: 'exifMake'; prefix?: string }
-  | { type: 'jpegCom' };
+  | { type: 'jpegCom' }
+  | { type: 'xmpPacket' };
 ```
 
 正確なラウンドトリップのために、JPEG/WebPファイル内のメタデータの出所を追跡します。

@@ -148,7 +148,7 @@ fileInput.addEventListener('change', async (e) => {
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.1.1/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@2.2.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -560,7 +560,8 @@ type GenerationSoftware =
   | 'novelai' | 'comfyui' | 'swarmui' | 'tensorart' | 'stability-matrix'
   | 'sd-webui' | 'forge' | 'forge-classic' | 'forge-neo' 
   | 'reforge'| 'easy-reforge' | 'sd-next' | 'civitai' | 'hf-space'
-  | 'invokeai' | 'easydiffusion' | 'fooocus' | 'ruined-fooocus';
+  | 'invokeai' | 'easydiffusion' | 'fooocus' | 'ruined-fooocus'
+  | 'draw-things';
 ```
 
 ### `EmbedMetadata`

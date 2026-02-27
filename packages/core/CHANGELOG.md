@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-02-27
+
+### Added
+
+- **Draw Things parser** (#181): Read and write metadata from [Draw Things](https://drawthings.ai/) (macOS/iOS) generated images
+  - Extract generation parameters from XMP (Adobe XML Metadata) packets
+  - Native XMP read/write for JPEG (APP1 segment) and WebP (XMP chunk)
+  - XMP reading from PNG iTXt chunks
+
+### Potentially Breaking Changes
+
+- **New `GenerationSoftware` member** (#181): `'draw-things'` added. TypeScript users with exhaustive `switch` or `Record<GenerationSoftware, ...>` will need to handle the new value.
+- **New `MetadataSegmentSource` variant** (#181): `{ type: 'xmpPacket' }` added for XMP segment tracking. Exhaustive patterns on `MetadataSegmentSource` will need updating.
+
+### Security
+
+- **XMP regex ReDoS protection** (#181): Add 64KB size limit on XMP text input to prevent exponential backtracking on malformed XML
+- **XML entity decoder hardening** (#181): Catch `RangeError` from `String.fromCodePoint` on invalid Unicode code points in XMP entities
+- **JPEG COM segment overflow guard** (#181): Add 64KB size limit check to `buildComSegment`, matching the existing guard on `buildXmpApp1Segment`
+
+### Maintenance
+
+- Update development dependencies
+
 ## [2.1.1] - 2026-02-24
 
 ### Fixed
@@ -380,6 +404,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Biome for code formatting and linting
 - CONTRIBUTING.md for community contributions
 
+[2.2.0]: https://github.com/enslo/sd-metadata/releases/tag/core@2.2.0
 [2.1.1]: https://github.com/enslo/sd-metadata/releases/tag/core@2.1.1
 [2.1.0]: https://github.com/enslo/sd-metadata/releases/tag/v2.1.0
 [2.0.1]: https://github.com/enslo/sd-metadata/releases/tag/v2.0.1
