@@ -1,7 +1,7 @@
 # sd-metadata
 
 [![CI](https://github.com/enslo/sd-metadata/actions/workflows/ci.yml/badge.svg)](https://github.com/enslo/sd-metadata/actions/workflows/ci.yml)
-[![license](https://img.shields.io/github/license/enslo/sd-metadata)](https://github.com/enslo/sd-metadata/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/@enslo/sd-metadata.svg)](https://github.com/enslo/sd-metadata/blob/main/LICENSE)
 
 🌐 **[English version](./README.md)**
 
