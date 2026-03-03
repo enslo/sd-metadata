@@ -8,13 +8,13 @@
 
 - [コア型](#コア型)
   - [`ParseResult`](#parseresult)
-  - [`BaseMetadata`](#basemetadata)
   - [`GenerationMetadata`](#generationmetadata)
   - [`GenerationSoftware`](#generationsoftware)
   - [`EmbedMetadata`](#embedmetadata)
   - [`RawMetadata`](#rawmetadata)
   - [`WriteResult`](#writeresult)
 - [メタデータ型](#メタデータ型)
+  - [`BaseMetadata`](#basemetadata)
   - [`StandardMetadata`](#standardmetadata)
   - [`NovelAIMetadata`](#novelaimetadata)
   - [`ComfyUIMetadata`](#comfyuimetadata)
@@ -87,46 +87,6 @@ switch (result.status) {
   case 'invalid':
     console.error(`無効な画像: ${result.message}`);
     break;
-}
-```
-
----
-
-### `BaseMetadata`
-
-全メタデータ型で共有される共通フィールド。`GenerationMetadata` の各バリアントと `EmbedMetadata` の基盤です。
-
-```typescript
-export interface BaseMetadata {
-  /** ポジティブプロンプト */
-  prompt: string;
-  /** ネガティブプロンプト */
-  negativePrompt: string;
-  /** 画像の幅（ピクセル） */
-  width: number;
-  /** 画像の高さ（ピクセル） */
-  height: number;
-  /** モデル設定 */
-  model?: ModelSettings;
-  /** サンプリング設定 */
-  sampling?: SamplingSettings;
-  /** Hires.fix設定（適用されている場合） */
-  hires?: HiresSettings;
-  /** アップスケール設定（適用されている場合） */
-  upscale?: UpscaleSettings;
-}
-```
-
-**例：**
-
-```typescript
-import type { BaseMetadata } from '@enslo/sd-metadata';
-
-// 共通の生成フィールドのみ必要な場合にBaseMetadataを使用
-function displayMetadata(meta: BaseMetadata) {
-  console.log('Prompt:', meta.prompt);
-  console.log('Size:', meta.width, 'x', meta.height);
-  console.log('Model:', meta.model?.name);
 }
 ```
 
@@ -342,6 +302,46 @@ export type WriteWarning = {
 ---
 
 ## メタデータ型
+
+### `BaseMetadata`
+
+全メタデータ型で共有される共通フィールド。`GenerationMetadata` の各バリアントと `EmbedMetadata` の基盤です。
+
+```typescript
+export interface BaseMetadata {
+  /** ポジティブプロンプト */
+  prompt: string;
+  /** ネガティブプロンプト */
+  negativePrompt: string;
+  /** 画像の幅（ピクセル） */
+  width: number;
+  /** 画像の高さ（ピクセル） */
+  height: number;
+  /** モデル設定 */
+  model?: ModelSettings;
+  /** サンプリング設定 */
+  sampling?: SamplingSettings;
+  /** Hires.fix設定（適用されている場合） */
+  hires?: HiresSettings;
+  /** アップスケール設定（適用されている場合） */
+  upscale?: UpscaleSettings;
+}
+```
+
+**例：**
+
+```typescript
+import type { BaseMetadata } from '@enslo/sd-metadata';
+
+// 共通の生成フィールドのみ必要な場合にBaseMetadataを使用
+function displayMetadata(meta: BaseMetadata) {
+  console.log('Prompt:', meta.prompt);
+  console.log('Size:', meta.width, 'x', meta.height);
+  console.log('Model:', meta.model?.name);
+}
+```
+
+---
 
 ### `StandardMetadata`
 

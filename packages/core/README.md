@@ -362,7 +362,8 @@ Reads and parses metadata from an image file.
 **Parameters:**
 
 - `input` - Image file data (PNG, JPEG, or WebP)
-- `options` - Optional read options (see [Type Documentation](./docs/types.md) for details)
+- `options` - Optional read options
+  - `strict?: boolean` (default: `false`) — When `true`, dimensions (`width` / `height`) are taken strictly from metadata only. When `false`, missing dimensions are extracted from image headers.
 
 **Returns:**
 

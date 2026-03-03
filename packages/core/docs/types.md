@@ -8,13 +8,13 @@ Complete type reference for `@enslo/sd-metadata`.
 
 - [Core Types](#core-types)
   - [`ParseResult`](#parseresult)
-  - [`BaseMetadata`](#basemetadata)
   - [`GenerationMetadata`](#generationmetadata)
   - [`GenerationSoftware`](#generationsoftware)
   - [`EmbedMetadata`](#embedmetadata)
   - [`RawMetadata`](#rawmetadata)
   - [`WriteResult`](#writeresult)
 - [Metadata Types](#metadata-types)
+  - [`BaseMetadata`](#basemetadata)
   - [`StandardMetadata`](#standardmetadata)
   - [`NovelAIMetadata`](#novelaimetadata)
   - [`ComfyUIMetadata`](#comfyuimetadata)
@@ -87,46 +87,6 @@ switch (result.status) {
   case 'invalid':
     console.error(`Invalid image: ${result.message}`);
     break;
-}
-```
-
----
-
-### `BaseMetadata`
-
-Common fields shared by all metadata types. This is the foundation for both `GenerationMetadata` variants and `EmbedMetadata`.
-
-```typescript
-export interface BaseMetadata {
-  /** Positive prompt */
-  prompt: string;
-  /** Negative prompt */
-  negativePrompt: string;
-  /** Image width in pixels */
-  width: number;
-  /** Image height in pixels */
-  height: number;
-  /** Model settings */
-  model?: ModelSettings;
-  /** Sampling settings */
-  sampling?: SamplingSettings;
-  /** Hires.fix settings (if applied) */
-  hires?: HiresSettings;
-  /** Upscale settings (if applied) */
-  upscale?: UpscaleSettings;
-}
-```
-
-**Example:**
-
-```typescript
-import type { BaseMetadata } from '@enslo/sd-metadata';
-
-// Use BaseMetadata when you only need common generation fields
-function displayMetadata(meta: BaseMetadata) {
-  console.log('Prompt:', meta.prompt);
-  console.log('Size:', meta.width, 'x', meta.height);
-  console.log('Model:', meta.model?.name);
 }
 ```
 
@@ -342,6 +302,46 @@ Returned when metadata was intentionally dropped during a write operation (e.g.,
 ---
 
 ## Metadata Types
+
+### `BaseMetadata`
+
+Common fields shared by all metadata types. This is the foundation for both `GenerationMetadata` variants and `EmbedMetadata`.
+
+```typescript
+export interface BaseMetadata {
+  /** Positive prompt */
+  prompt: string;
+  /** Negative prompt */
+  negativePrompt: string;
+  /** Image width in pixels */
+  width: number;
+  /** Image height in pixels */
+  height: number;
+  /** Model settings */
+  model?: ModelSettings;
+  /** Sampling settings */
+  sampling?: SamplingSettings;
+  /** Hires.fix settings (if applied) */
+  hires?: HiresSettings;
+  /** Upscale settings (if applied) */
+  upscale?: UpscaleSettings;
+}
+```
+
+**Example:**
+
+```typescript
+import type { BaseMetadata } from '@enslo/sd-metadata';
+
+// Use BaseMetadata when you only need common generation fields
+function displayMetadata(meta: BaseMetadata) {
+  console.log('Prompt:', meta.prompt);
+  console.log('Size:', meta.width, 'x', meta.height);
+  console.log('Model:', meta.model?.name);
+}
+```
+
+---
 
 ### `StandardMetadata`
 

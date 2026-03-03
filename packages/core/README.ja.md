@@ -365,7 +365,8 @@ if (text) {
 **パラメータ:**
 
 - `input` - 画像ファイルデータ（PNG、JPEG、またはWebP）
-- `options` - オプションの読み込み設定（詳細は[型ドキュメント](./docs/types.ja.md)を参照）
+- `options` - オプションの読み込み設定
+  - `strict?: boolean`（デフォルト: `false`）— `true` の場合、寸法（`width` / `height`）はメタデータからのみ取得します。`false` の場合、メタデータに寸法がなければ画像ヘッダーから取得します。
 
 **戻り値:**
 
