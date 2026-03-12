@@ -21,6 +21,6 @@
     "@nanostores/preact": "^1.0.0",
     "lucide-preact": "^0.577.0",
     "nanostores": "^1.1.1",
-    "preact": "^10.28.3"
+    "preact": "^10.29.0"
   }
 }
