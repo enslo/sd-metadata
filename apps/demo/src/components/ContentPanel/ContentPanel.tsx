@@ -1,8 +1,8 @@
 import { Paper } from '@mantine/core';
-import type { ComponentChildren } from 'preact';
+import type { ReactNode } from 'react';
 
 interface ContentPanelProps {
-  children: ComponentChildren;
+  children: ReactNode;
 }
 
 /**

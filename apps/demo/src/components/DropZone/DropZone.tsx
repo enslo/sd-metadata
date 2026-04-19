@@ -1,7 +1,7 @@
 import { Badge, Group, Image, Stack, Text } from '@mantine/core';
 import { Dropzone, IMAGE_MIME_TYPE } from '@mantine/dropzone';
-import { useStore } from '@nanostores/preact';
-import { Upload } from 'lucide-preact';
+import { useStore } from '@nanostores/react';
+import { Upload } from 'lucide-react';
 import { $t } from '../../i18n';
 
 interface DropZoneProps {

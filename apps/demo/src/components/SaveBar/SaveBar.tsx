@@ -1,8 +1,8 @@
 import type { ParseResult } from '@enslo/sd-metadata';
 import { embed, write } from '@enslo/sd-metadata';
 import { Button, Group, NativeSelect, Switch, Text } from '@mantine/core';
-import { useStore } from '@nanostores/preact';
-import { useCallback, useState } from 'preact/hooks';
+import { useStore } from '@nanostores/react';
+import { useCallback, useState } from 'react';
 import { $t } from '../../i18n';
 import {
   convertImageFormat,

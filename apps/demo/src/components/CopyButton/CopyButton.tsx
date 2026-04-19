@@ -3,7 +3,7 @@ import {
   CopyButton as MantineCopyButton,
   Tooltip,
 } from '@mantine/core';
-import { Check, Copy } from 'lucide-preact';
+import { Check, Copy } from 'lucide-react';
 
 interface CopyButtonProps {
   value: string;
@@ -20,7 +20,7 @@ export function CopyButton({ value }: CopyButtonProps) {
           <ActionIcon
             variant="subtle"
             color={copied ? 'teal' : 'gray'}
-            onClick={(e: MouseEvent) => {
+            onClick={(e) => {
               e.stopPropagation();
               copy();
             }}

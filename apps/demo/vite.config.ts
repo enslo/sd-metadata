@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import preact from '@preact/preset-vite';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 const corePackageJson = JSON.parse(
@@ -8,7 +8,7 @@ const corePackageJson = JSON.parse(
 );
 
 export default defineConfig({
-  plugins: [preact()],
+  plugins: [react()],
   define: {
     __CORE_VERSION__: JSON.stringify(corePackageJson.version),
   },

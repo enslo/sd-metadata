@@ -1,6 +1,6 @@
 import { Button, Tooltip } from '@mantine/core';
-import { useStore } from '@nanostores/preact';
-import { Languages } from 'lucide-preact';
+import { useStore } from '@nanostores/react';
+import { Languages } from 'lucide-react';
 import type { Locale } from '../../i18n';
 import { $locale, $t, setLocale } from '../../i18n';
 

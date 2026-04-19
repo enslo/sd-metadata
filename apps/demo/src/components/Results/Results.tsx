@@ -1,7 +1,7 @@
 import type { ParseResult } from '@enslo/sd-metadata';
 import { Alert, Paper, Stack, Tabs } from '@mantine/core';
-import { useStore } from '@nanostores/preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useStore } from '@nanostores/react';
+import { type RefObject, useEffect, useState } from 'react';
 import { $t, type I18nMessages } from '../../i18n';
 import { EmbedEditor } from '../EmbedEditor';
 import { SaveBar } from '../SaveBar';
@@ -11,7 +11,7 @@ import { RawTabContent } from './RawTabContent';
 
 interface ResultsProps {
   parseResult: ParseResult;
-  fileData: Uint8Array;
+  fileDataRef: RefObject<Uint8Array | null>;
   filename: string;
   previewUrl: string;
 }
@@ -21,7 +21,7 @@ interface ResultsProps {
  */
 export function Results({
   parseResult,
-  fileData,
+  fileDataRef,
   filename,
   previewUrl,
 }: ResultsProps) {
@@ -29,6 +29,7 @@ export function Results({
   const [activeTab, setActiveTab] = useState<string | null>('parsed');
 
   // Reset to parsed tab when parseResult changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on parseResult change
   useEffect(() => setActiveTab('parsed'), [parseResult]);
 
   // Handle invalid status
@@ -66,7 +67,7 @@ export function Results({
           <Tabs.Panel value="embed">
             <EmbedEditor
               parseResult={parseResult}
-              fileData={fileData}
+              fileDataRef={fileDataRef}
               filename={filename}
             />
           </Tabs.Panel>
