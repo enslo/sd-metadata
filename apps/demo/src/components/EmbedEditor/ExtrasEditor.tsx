@@ -6,9 +6,9 @@ import {
   Text,
   TextInput,
 } from '@mantine/core';
-import { useStore } from '@nanostores/preact';
-import { Plus, Trash2 } from 'lucide-preact';
-import { useState } from 'preact/hooks';
+import { useStore } from '@nanostores/react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { $t } from '../../i18n';
 
 type TextChangeEvent = { currentTarget: { value: string } };

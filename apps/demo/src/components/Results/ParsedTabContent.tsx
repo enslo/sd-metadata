@@ -76,6 +76,7 @@ export function ParsedTabContent({ parseResult, t }: ParsedTabContentProps) {
             <Stack gap="sm">
               {metadata.characterPrompts.map(
                 (char: CharacterPrompt, i: number) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: character entries have no stable id
                   <div key={`character-${i}`}>
                     <Group justify="space-between" mb={4}>
                       <Text

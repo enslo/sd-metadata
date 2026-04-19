@@ -7,8 +7,8 @@ import {
   Textarea,
   TextInput,
 } from '@mantine/core';
-import { useStore } from '@nanostores/preact';
-import { useRef } from 'preact/hooks';
+import { useStore } from '@nanostores/react';
+import { useRef } from 'react';
 import { $t } from '../../i18n';
 import { ContentPanel } from '../ContentPanel';
 

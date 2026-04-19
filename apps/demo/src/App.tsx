@@ -9,8 +9,8 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { useStore } from '@nanostores/preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useStore } from '@nanostores/react';
+import { useCallback, useEffect, useState } from 'react';
 import { DropZone } from './components/DropZone';
 import { GitHubCorner } from './components/GitHubCorner';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
@@ -43,7 +43,7 @@ export function App() {
   });
   const [globalDragOver, setGlobalDragOver] = useState(false);
 
-  const handleFileSelect = async (file: File) => {
+  const handleFileSelect = useCallback(async (file: File) => {
     try {
       const previewUrl = URL.createObjectURL(file);
       const buffer = await file.arrayBuffer();
@@ -59,7 +59,7 @@ export function App() {
     } catch (e) {
       console.error('Failed to load file:', e);
     }
-  };
+  }, []);
 
   // Enable drop anywhere on the page
   useEffect(() => {
@@ -92,7 +92,7 @@ export function App() {
       document.removeEventListener('dragleave', handleDragLeave);
       document.removeEventListener('drop', handleDrop);
     };
-  }, []);
+  }, [handleFileSelect]);
 
   const getSoftwareLabelForDisplay = (): {
     label: string;

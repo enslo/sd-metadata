@@ -1,12 +1,12 @@
 import { Group, Text } from '@mantine/core';
-import type { ComponentChildren } from 'preact';
+import type { ReactNode } from 'react';
 import { ContentPanel } from '../ContentPanel';
 import { CopyButton } from '../CopyButton';
 
 interface ParsedSectionProps {
   title: string;
   copyValue?: string;
-  children: ComponentChildren;
+  children: ReactNode;
 }
 
 /**

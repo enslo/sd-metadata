@@ -1,7 +1,8 @@
 import { createTheme, MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dropzone/styles.css';
-import { render } from 'preact';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { initLocale } from './i18n';
 import './styles/global.css';
@@ -19,10 +20,11 @@ initLocale();
 
 const root = document.getElementById('app');
 if (root) {
-  render(
-    <MantineProvider theme={theme} defaultColorScheme="dark">
-      <App />
-    </MantineProvider>,
-    root,
+  createRoot(root).render(
+    <StrictMode>
+      <MantineProvider theme={theme} defaultColorScheme="dark">
+        <App />
+      </MantineProvider>
+    </StrictMode>,
   );
 }

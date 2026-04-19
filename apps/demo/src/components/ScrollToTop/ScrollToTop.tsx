@@ -1,6 +1,6 @@
 import { ActionIcon, Affix, Transition } from '@mantine/core';
 import { useWindowScroll } from '@mantine/hooks';
-import { ArrowUp } from 'lucide-preact';
+import { ArrowUp } from 'lucide-react';
 
 /**
  * Floating action button to scroll to top of page
