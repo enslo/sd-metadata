@@ -2,7 +2,13 @@ import type { EmbedMetadata, ParseResult } from '@enslo/sd-metadata';
 import { embed, stringify } from '@enslo/sd-metadata';
 import { Button, Code, Group, NativeSelect, Stack, Text } from '@mantine/core';
 import { useStore } from '@nanostores/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { $t } from '../../i18n';
 import {
   convertImageFormat,
@@ -19,7 +25,7 @@ type TextChangeEvent = { currentTarget: { value: string } };
 
 interface EmbedEditorProps {
   parseResult: ParseResult;
-  fileData: Uint8Array;
+  fileDataRef: RefObject<Uint8Array | null>;
   filename: string;
 }
 
@@ -46,7 +52,7 @@ function isOutputFormat(v: string): v is OutputFormat {
  */
 export function EmbedEditor({
   parseResult,
-  fileData,
+  fileDataRef,
   filename,
 }: EmbedEditorProps) {
   const t = useStore($t);
@@ -75,6 +81,10 @@ export function EmbedEditor({
     setProcessing(true);
     setError(null);
     try {
+      const fileData = fileDataRef.current;
+      if (!fileData) {
+        throw new Error('File data is not available');
+      }
       // Convert image to target format via canvas
       const convertedData = await convertImageFormat(fileData, targetFormat);
       const result = embed(convertedData, { ...metadata, extras });
@@ -97,7 +107,7 @@ export function EmbedEditor({
     } finally {
       setProcessing(false);
     }
-  }, [fileData, metadata, extras, targetFormat, filename]);
+  }, [fileDataRef, metadata, extras, targetFormat, filename]);
 
   const formatData = OUTPUT_FORMATS.map((f) => ({
     value: f,

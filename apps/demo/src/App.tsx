@@ -10,7 +10,7 @@ import {
   Title,
 } from '@mantine/core';
 import { useStore } from '@nanostores/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DropZone } from './components/DropZone';
 import { GitHubCorner } from './components/GitHubCorner';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
@@ -27,7 +27,6 @@ interface AppState {
   parseResult: ParseResult | null;
   filename: string | null;
   previewUrl: string | null;
-  fileData: Uint8Array | null;
 }
 
 /**
@@ -39,8 +38,11 @@ export function App() {
     parseResult: null,
     filename: null,
     previewUrl: null,
-    fileData: null,
   });
+  // Held in a ref rather than state so large binary payloads do not flow
+  // through React's reconciliation (React 19.2 dev mode otherwise serializes
+  // them on every commit for performance timeline logging).
+  const fileDataRef = useRef<Uint8Array | null>(null);
   const [globalDragOver, setGlobalDragOver] = useState(false);
 
   const handleFileSelect = useCallback(async (file: File) => {
@@ -50,11 +52,11 @@ export function App() {
       const data = new Uint8Array(buffer);
       const parseResult = read(data);
 
+      fileDataRef.current = data;
       setState({
         parseResult,
         filename: file.name,
         previewUrl,
-        fileData: data,
       });
     } catch (e) {
       console.error('Failed to load file:', e);
@@ -156,17 +158,14 @@ export function App() {
             globalDragOver={globalDragOver}
           />
 
-          {state.parseResult &&
-            state.fileData &&
-            state.filename &&
-            state.previewUrl && (
-              <Results
-                parseResult={state.parseResult}
-                fileData={state.fileData}
-                filename={state.filename}
-                previewUrl={state.previewUrl}
-              />
-            )}
+          {state.parseResult && state.filename && state.previewUrl && (
+            <Results
+              parseResult={state.parseResult}
+              fileDataRef={fileDataRef}
+              filename={state.filename}
+              previewUrl={state.previewUrl}
+            />
+          )}
         </Stack>
 
         <Divider />
