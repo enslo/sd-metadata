@@ -24,14 +24,14 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
       '@mantine/core':
-        specifier: ^9.0.2
-        version: 9.0.2(@mantine/hooks@9.0.2(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+        specifier: ^9.1.0
+        version: 9.1.0(@mantine/hooks@9.1.0(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@mantine/dropzone':
-        specifier: ^9.0.2
-        version: 9.0.2(@mantine/core@9.0.2(@mantine/hooks@9.0.2(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@mantine/hooks@9.0.2(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+        specifier: ^9.1.0
+        version: 9.1.0(@mantine/core@9.1.0(@mantine/hooks@9.1.0(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@mantine/hooks@9.1.0(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@mantine/hooks':
-        specifier: ^9.0.2
-        version: 9.0.2(react@19.2.5)
+        specifier: ^9.1.0
+        version: 9.1.0(react@19.2.5)
       '@nanostores/react':
         specifier: ^1.1.0
         version: 1.1.0(nanostores@1.2.0)(react@19.2.5)
@@ -715,23 +715,23 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@mantine/core@9.0.2':
-    resolution: {integrity: sha512-Ot4mgqRuWc9yCTr2BhMHKrGCikDa43dVr6oHwp1cxLN8+RfeRfm8fIfz0Tn/9syEVYwn64drzUlKVipDdHBPkA==}
+  '@mantine/core@9.1.0':
+    resolution: {integrity: sha512-gT14pELclqrxhWZsFoY6MxN3dtVKxwUQFM9Y5SNzNyHgm6Mjh374pFdMg7P6FOECXYy1nlTP8y5S1vIR9CiNTA==}
     peerDependencies:
-      '@mantine/hooks': 9.0.2
+      '@mantine/hooks': 9.1.0
       react: ^19.2.0
       react-dom: ^19.2.0
 
-  '@mantine/dropzone@9.0.2':
-    resolution: {integrity: sha512-Hf7TmI/RgtnwxztiPRI4xO+rVH7cb4eV1U9nnA+9Z209pEATEhZKasutsqZzfWZxSY5m+Dv+I4VZLtmLkXIl2A==}
+  '@mantine/dropzone@9.1.0':
+    resolution: {integrity: sha512-PrypVjTZ4ewB564WqqrBHwpJAjp6sxkSaEYWtEL8G6hzXUFWSGVCcJifgIVoGb4fEJJlkgseVxB8KIPJfRy2bg==}
     peerDependencies:
-      '@mantine/core': 9.0.2
-      '@mantine/hooks': 9.0.2
+      '@mantine/core': 9.1.0
+      '@mantine/hooks': 9.1.0
       react: ^19.2.0
       react-dom: ^19.2.0
 
-  '@mantine/hooks@9.0.2':
-    resolution: {integrity: sha512-luCVX4okiAZaSxuBYPtyPJJT8RwZyM2JUkSD4KWefzzcDbkKGHT4d4pHrvViwn5QcH2dY2j/42lj7ZTGX2yncw==}
+  '@mantine/hooks@9.1.0':
+    resolution: {integrity: sha512-qWES5aD0fYfhEP1Kg82IYUZSg1fT9VTwJJF2jmn9lpIAYR2Bht9GIeWMd3WgjRNaxU+7A1I9rC2HADs0khKUpQ==}
     peerDependencies:
       react: ^19.2.0
 
@@ -2324,10 +2324,10 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@mantine/core@9.0.2(@mantine/hooks@9.0.2(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
+  '@mantine/core@9.1.0(@mantine/hooks@9.1.0(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
       '@floating-ui/react': 0.27.19(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@mantine/hooks': 9.0.2(react@19.2.5)
+      '@mantine/hooks': 9.1.0(react@19.2.5)
       clsx: 2.1.1
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
@@ -2337,15 +2337,15 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@mantine/dropzone@9.0.2(@mantine/core@9.0.2(@mantine/hooks@9.0.2(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@mantine/hooks@9.0.2(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
+  '@mantine/dropzone@9.1.0(@mantine/core@9.1.0(@mantine/hooks@9.1.0(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@mantine/hooks@9.1.0(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
-      '@mantine/core': 9.0.2(@mantine/hooks@9.0.2(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@mantine/hooks': 9.0.2(react@19.2.5)
+      '@mantine/core': 9.1.0(@mantine/hooks@9.1.0(react@19.2.5))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@mantine/hooks': 9.1.0(react@19.2.5)
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
       react-dropzone: 15.0.0(react@19.2.5)
 
-  '@mantine/hooks@9.0.2(react@19.2.5)':
+  '@mantine/hooks@9.1.0(react@19.2.5)':
     dependencies:
       react: 19.2.5
 
