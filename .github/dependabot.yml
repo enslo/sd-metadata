@@ -8,6 +8,10 @@ updates:
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
+    # Align with pnpm 11 minimumReleaseAge (1 day) and add safety margin
+    cooldown:
+      default-days: 2
+      semver-major-days: 7
     groups:
       demo-mantine:
         patterns: ["@mantine/*"]
@@ -26,6 +30,9 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "chore"
+    cooldown:
+      default-days: 2
+      semver-major-days: 7
     groups:
       actions:
         patterns: ["*"]

@@ -1,7 +1,7 @@
 {
   "name": "sd-metadata-workspace",
   "private": true,
-  "packageManager": "pnpm@10.5.2",
+  "packageManager": "pnpm@11.3.0",
   "scripts": {
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
