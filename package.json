@@ -9,7 +9,7 @@
     "prepare": "lefthook install"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.15",
+    "@biomejs/biome": "catalog:",
     "lefthook": "^2.1.8",
     "markdownlint-cli": "^0.48.0"
   }
