@@ -19,7 +19,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -56,8 +56,8 @@
     "@biomejs/biome": "^2.4.12",
     "@types/node": "^25.6.0",
     "@vitest/coverage-v8": "^4.1.4",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
+    "tsdown": "^0.22.0",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }
 }
