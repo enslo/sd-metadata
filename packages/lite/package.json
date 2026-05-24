@@ -18,7 +18,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "tsup && tsx build-iife.ts",
+    "build": "tsdown && tsx build-iife.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "biome check .",
@@ -48,7 +48,7 @@
     "@types/node": "^25.6.0",
     "esbuild": "^0.28.0",
     "terser": "^5.46.1",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.22.0",
     "tsx": "^4.19.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
