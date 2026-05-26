@@ -15,6 +15,19 @@ export function escapeHtml(text: string): string {
 }
 
 /**
+ * Sanitize text for strict JSON.parse.
+ *
+ * - Trims trailing NUL bytes that some tools append to PNG tEXt chunks.
+ * - Replaces NaN literals at JSON value positions (after ":", "," or "[")
+ *   with null. ComfyUI custom nodes such as DPRandomGenerator emit
+ *   `"is_changed": [NaN]`, which is not valid JSON and would otherwise
+ *   collapse the raw view into a single unformatted line.
+ */
+function sanitizeJsonText(text: string): string {
+  return text.replace(/\0+$/, '').replace(/([:,[])\s*NaN\b/g, '$1null');
+}
+
+/**
  * Detect if text is JSON
  *
  * @param text - Text to check
@@ -22,8 +35,7 @@ export function escapeHtml(text: string): string {
  */
 export function isJson(text: string): boolean {
   try {
-    // Trim NUL characters that some tools append
-    JSON.parse(text.replace(/\0+$/, ''));
+    JSON.parse(sanitizeJsonText(text));
     return true;
   } catch {
     return false;
@@ -41,9 +53,7 @@ export function formatJson(text: string): {
   isJson: boolean;
 } {
   try {
-    // Trim NUL characters that some tools append
-    const cleaned = text.replace(/\0+$/, '');
-    const parsed = JSON.parse(cleaned);
+    const parsed = JSON.parse(sanitizeJsonText(text));
     return {
       formatted: JSON.stringify(parsed, null, 2),
       isJson: true,
