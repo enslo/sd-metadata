@@ -243,6 +243,55 @@ describe('parseComfyUI - Unit Tests', () => {
       }
     });
 
+    it('should surface workflow-only chunks as ComfyUI with empty metadata', () => {
+      // ComfyUI saves that embed only the UI-state "workflow" JSON (no API
+      // "prompt" graph). The workflow format is structurally incompatible
+      // with the extractor, but identifying the image as ComfyUI is still
+      // useful — interpretation is intentionally given up here.
+      const workflow = {
+        id: 'test-workflow',
+        revision: 0,
+        last_node_id: 3,
+        nodes: [
+          {
+            id: 1,
+            type: 'CLIPTextEncode',
+            widgets_values: ['a prompt'],
+          },
+        ],
+        links: [],
+      };
+      const entries: EntryRecord = { workflow: JSON.stringify(workflow) };
+
+      const result = parseComfyUI(entries);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.software).toBe('comfyui');
+      expect(result.value.prompt).toBe('');
+      expect(result.value.negativePrompt).toBe('');
+      expect(result.value.width).toBe(0);
+      expect(result.value.height).toBe(0);
+      if (result.value.software === 'comfyui') {
+        expect(result.value.nodes).toEqual({});
+      }
+    });
+
+    it('should not treat non-workflow JSON as a workflow-only chunk', () => {
+      // Defensive: an unrelated JSON-shaped entry under the "workflow" key
+      // must not be misidentified. The signature requires `nodes` to be an
+      // Array (vs. the flat-object prompt format).
+      const entries: EntryRecord = {
+        workflow: JSON.stringify({ nodes: { '1': { class_type: 'X' } } }),
+      };
+
+      const result = parseComfyUI(entries);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe('unsupportedFormat');
+      }
+    });
+
     it('should resolve prompts via PromptStashSaver through a ControlNet apply chain', () => {
       // Real-world workflow pattern: sampler conditioning is routed through
       // ControlNetApplyAdvanced before reaching CLIPTextEncode, which itself

@@ -62,6 +62,22 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
   // Find and parse prompt JSON
   const promptText = findPromptJson(entries);
   if (!promptText) {
+    // ComfyUI workflow-only chunk: UI state JSON without an accompanying
+    // API "prompt" graph. The UI workflow format (nodes as an array, values
+    // packed into positional `widgets_values`) is structurally incompatible
+    // with the extractor, so we cannot recover prompts or settings. We still
+    // surface the image as ComfyUI with empty fields so software detection
+    // and the raw view work — interpretation is intentionally given up.
+    if (hasWorkflowOnlyChunk(entries)) {
+      return Result.ok({
+        software: 'comfyui',
+        nodes: {},
+        prompt: '',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+      });
+    }
     return Result.error({ type: 'unsupportedFormat' });
   }
 
@@ -183,6 +199,30 @@ function findPromptJson(entryRecord: EntryRecord): string | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * Detect a ComfyUI workflow-only chunk
+ *
+ * Some ComfyUI saves embed only the UI-state "workflow" JSON without the
+ * companion API "prompt" graph. The UI workflow JSON has a distinctive
+ * shape: a top-level `nodes` array (vs. the prompt format where each node
+ * lives under a numeric-string key in a flat object). We use this signature
+ * to identify the image as ComfyUI even though we cannot parse the workflow.
+ */
+function hasWorkflowOnlyChunk(entryRecord: EntryRecord): boolean {
+  for (const candidate of [entryRecord.workflow, entryRecord.Workflow]) {
+    if (!candidate?.startsWith('{')) continue;
+    const parsed = parseJson(cleanJsonString(candidate));
+    if (
+      parsed.ok &&
+      parsed.type === 'object' &&
+      Array.isArray(parsed.value.nodes)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // =============================================================================
