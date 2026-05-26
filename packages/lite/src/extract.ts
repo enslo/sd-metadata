@@ -458,14 +458,19 @@ function flatScan(json: string): GenerationParams {
 
     // --- Prompt text nodes -------------------------------------------
     // Matches CLIPTextEncode (and variants like SDXL, Flux) via "TextEncode",
-    // and text box nodes (DF_Text_Box, TextBox) via ".?Box".
+    // text box nodes (DF_Text_Box, TextBox) via ".?Box", ShowText|pysssss
+    // (pythongosssss/ComfyUI-Custom-Scripts) which caches composed prompts in
+    // inputs.text_0, and PromptStashSaver which holds user-authored prompts in
+    // inputs.prompt_text.
     // Unified classification: if class name contains "neg" → negative prompt,
     // otherwise first-come-first-served (1st → positive, 2nd → negative).
-    if (/Text(Encode|.?Box)/.test(classType)) {
+    if (/Text(Encode|.?Box)|ShowText|PromptStash/.test(classType)) {
       const txt =
         asString(inputs.text) ||
         asString(inputs.prompt) ||
-        asString(inputs.Text);
+        asString(inputs.Text) ||
+        asString(inputs.prompt_text) ||
+        asString(inputs.text_0);
       if (txt) {
         if (/neg/i.test(classType)) {
           result.n ??= txt;
