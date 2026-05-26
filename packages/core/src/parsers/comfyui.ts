@@ -5,13 +5,7 @@
  * Also handles Civitai extraMetadata fallbacks for upscale workflows.
  */
 
-import type {
-  ComfyNodeGraph,
-  HiresSettings,
-  ModelSettings,
-  SamplingSettings,
-  UpscaleSettings,
-} from '../types';
+import type { BaseMetadata, ComfyNodeGraph, SamplingSettings } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
@@ -20,6 +14,7 @@ import {
   extractCivitaiMetadata,
   extractExtraMetadata,
 } from './comfyui-civitai';
+import { flatScanComfyMetadata } from './comfyui-flat-scan';
 import {
   type ClassifiedNodes,
   calculateScale,
@@ -32,7 +27,7 @@ import {
   findHiresSampler,
   isNodeReference,
 } from './comfyui-nodes';
-import type { InternalParseResult } from './types';
+import type { InternalParseResult, PartialMetadata } from './types';
 
 // =============================================================================
 // Constants
@@ -45,42 +40,6 @@ import type { InternalParseResult } from './types';
  * excluded from the nodes object to maintain type safety.
  */
 const CIVITAI_EXTENSION_KEYS = ['extra', 'extraMetadata', 'resource-stack'];
-
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Partial metadata extracted from a single source
- *
- * All fields optional - will be merged later with other sources.
- */
-interface PartialMetadata {
-  prompt?: string;
-  negativePrompt?: string;
-  width?: number;
-  height?: number;
-  model?: ModelSettings;
-  sampling?: SamplingSettings;
-  hires?: HiresSettings;
-  upscale?: UpscaleSettings;
-}
-
-/**
- * Merged metadata with required base fields
- *
- * Result of merging ComfyUI and CivitAI metadata sources.
- */
-interface MergedMetadata {
-  prompt: string;
-  negativePrompt: string;
-  width: number;
-  height: number;
-  model?: ModelSettings;
-  sampling?: SamplingSettings;
-  hires?: HiresSettings;
-  upscale?: UpscaleSettings;
-}
 
 // =============================================================================
 // Main Parser
@@ -115,14 +74,16 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
   }
   const prompt = parsed.value;
 
-  // Extract metadata from both sources
-  const comfyMetadata = extractComfyUIMetadata(prompt);
-  const civitaiMetadata = extractCivitaiMetadata(
-    extractExtraMetadata(prompt, entries),
+  // Extract metadata from all sources and merge in priority order.
+  // Higher index = higher priority. Flat scan is the brute-force fallback
+  // that catches custom-node and non-standard topology cases the structured
+  // parser cannot resolve; CivitAI extraMetadata fills any remaining gaps;
+  // the structured ComfyUI walk is most trustworthy when it succeeds.
+  const final = mergeMetadata(
+    flatScanComfyMetadata(prompt),
+    extractCivitaiMetadata(extractExtraMetadata(prompt, entries)),
+    extractComfyUIMetadata(prompt),
   );
-
-  // Merge with ComfyUI taking priority
-  const merged = mergeMetadata(civitaiMetadata, comfyMetadata);
 
   return Result.ok({
     software: 'comfyui',
@@ -132,7 +93,7 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
         ([key]) => !CIVITAI_EXTENSION_KEYS.includes(key),
       ),
     ),
-    ...merged,
+    ...final,
   });
 }
 
@@ -167,10 +128,13 @@ function normalizeDenoise(
  *
  * Handles common issues in ComfyUI JSON:
  * - Remove null terminators that some tools append
- * - Replace NaN with null (NaN is not valid in JSON spec)
+ * - Replace NaN with null at any JSON value position (NaN is not valid in
+ *   JSON spec). Matches NaN preceded by ":", "," or "[" so it covers both
+ *   object values ({"k": NaN}) and array elements ([NaN], [1, NaN]),
+ *   without touching the literal substring "NaN" inside quoted strings.
  */
 function cleanJsonString(json: string): string {
-  return json.replace(/\0+$/, '').replace(/:\s*NaN\b/g, ': null');
+  return json.replace(/\0+$/, '').replace(/([:,[])\s*NaN\b/g, '$1null');
 }
 
 // =============================================================================
@@ -354,18 +318,17 @@ function buildHiresOrUpscale(
 // =============================================================================
 
 /**
- * Shallow merge two objects, skipping undefined values
+ * Shallow merge any number of objects, skipping undefined values.
  *
- * Unlike spread, undefined in override does NOT overwrite defined base values.
- * Returns undefined if result is empty.
+ * Later sources take priority over earlier ones (undefined in a later source
+ * does NOT overwrite a defined value from an earlier one). Returns undefined
+ * if the result would be empty.
  */
 function mergeObjects<T extends object>(
-  base: T | undefined,
-  override: T | undefined,
+  ...sources: (T | undefined)[]
 ): T | undefined {
-  if (!base && !override) return undefined;
   const merged: Record<string, unknown> = {};
-  for (const obj of [base, override]) {
+  for (const obj of sources) {
     if (!obj) continue;
     for (const [k, v] of Object.entries(obj)) {
       if (v !== undefined) merged[k] = v;
@@ -375,39 +338,37 @@ function mergeObjects<T extends object>(
 }
 
 /**
- * Merge two partial metadata objects
+ * Merge any number of partial metadata sources by priority.
  *
- * ComfyUI metadata takes priority over CivitAI fallback.
- * Handles:
- * - Required fields: defaults to empty/zero if both undefined
- * - Optional fields: omitted if undefined (not set to undefined)
- * - Nested objects (upscale, hires): deep merge preserving defined values from both
+ * Later arguments win over earlier ones. For scalar fields (prompt,
+ * negativePrompt, width, height), the highest-priority *truthy* value is
+ * picked — so an empty string or zero from a higher-priority source does
+ * not mask a usable value from a lower one. Nested objects (model,
+ * sampling, hires, upscale) are merged field-by-field via {@link mergeObjects}
+ * so partial coverage from each source is preserved.
  *
- * @param base - Base metadata (lower priority, e.g., CivitAI fallback)
- * @param override - Override metadata (higher priority, e.g., ComfyUI nodes)
- * @returns Merged metadata with required fields and optional fields
+ * @param sources - Partial metadata in increasing priority order
+ * @returns Merged base metadata with required fields defaulted
  */
 function mergeMetadata(
-  base: PartialMetadata | undefined,
-  override: PartialMetadata | undefined,
-): MergedMetadata {
-  // Deep merge for nested objects (upscale, hires)
-  // mergeObjects excludes undefined values, preserving defined values from both sources
-  const upscale = mergeObjects(base?.upscale, override?.upscale);
-  const hires = mergeObjects(base?.hires, override?.hires);
+  ...sources: (PartialMetadata | undefined)[]
+): BaseMetadata {
+  // Highest-priority first iteration: pick the first truthy value found.
+  const reversed = [...sources].reverse();
+  const pick = <K extends keyof PartialMetadata>(
+    key: K,
+  ): PartialMetadata[K] | undefined => reversed.find((s) => s?.[key])?.[key];
 
   return {
-    // Required fields with defaults (override takes priority)
-    prompt: override?.prompt ?? base?.prompt ?? '',
-    negativePrompt: override?.negativePrompt ?? base?.negativePrompt ?? '',
-    width: override?.width ?? base?.width ?? 0,
-    height: override?.height ?? base?.height ?? 0,
-    // Optional fields - only include if defined
+    prompt: pick('prompt') ?? '',
+    negativePrompt: pick('negativePrompt') ?? '',
+    width: pick('width') ?? 0,
+    height: pick('height') ?? 0,
     ...trimObject({
-      model: override?.model ?? base?.model,
-      sampling: override?.sampling ?? base?.sampling,
-      hires,
-      upscale,
+      model: mergeObjects(...sources.map((s) => s?.model)),
+      sampling: mergeObjects(...sources.map((s) => s?.sampling)),
+      hires: mergeObjects(...sources.map((s) => s?.hires)),
+      upscale: mergeObjects(...sources.map((s) => s?.upscale)),
     }),
   };
 }

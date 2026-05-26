@@ -153,16 +153,33 @@ export function extractText(
   const node = nodes[nodeId];
   if (!node) return '';
 
-  // Try common text input names
-  const textValue = node.inputs.text ?? node.inputs.prompt ?? node.inputs.Text;
+  // Common text input names across CLIPTextEncode variants, Power Prompt
+  // (rgthree, inputs.prompt), ComfyRoll text boxes (inputs.Text) and
+  // PromptStashSaver (inputs.prompt_text — a user-provided string stored on
+  // the node itself, treated the same as a direct text input).
+  const textValue =
+    node.inputs.text ??
+    node.inputs.prompt ??
+    node.inputs.Text ??
+    node.inputs.prompt_text;
 
   if (typeof textValue === 'string') {
     return textValue;
   }
 
-  // If text is a reference, follow it
+  // Reference: try to follow the chain.
   if (isNodeReference(textValue)) {
-    return extractText(nodes, String(textValue[0]), maxDepth - 1);
+    const upstream = extractText(nodes, String(textValue[0]), maxDepth - 1);
+    if (upstream) return upstream;
+    // Fall through to the text_0 cache below — happens when the reference
+    // chain ends at a node we cannot introspect (e.g. CR Combine Prompt).
+  }
+
+  // ShowText|pysssss (pythongosssss/ComfyUI-Custom-Scripts) caches the
+  // composed final text in text_0. Used as a last resort so a regular
+  // CLIPTextEncode with a literal text input still wins above.
+  if (typeof node.inputs.text_0 === 'string') {
+    return node.inputs.text_0;
   }
 
   return '';
@@ -405,6 +422,9 @@ function extractCustomSampling(
  * Extract model name from pre-classified model loader node
  *
  * Checks CheckpointLoader first, then falls back to UNETLoader.
+ * Only string literal values are accepted — node references like
+ * ["928", 0] (forwarded checkpoint connections) are ignored so the
+ * caller's flat-scan fallback can locate the real model name elsewhere.
  *
  * @param checkpoint - Pre-classified checkpoint loader node
  * @param unetLoader - Pre-classified UNET loader node (fallback)
@@ -413,11 +433,13 @@ export function extractModel(
   checkpoint: ComfyNode | undefined,
   unetLoader?: ComfyNode | undefined,
 ): ModelSettings | undefined {
-  if (checkpoint?.inputs?.ckpt_name) {
-    return { name: String(checkpoint.inputs.ckpt_name) };
+  const ckptName = checkpoint?.inputs?.ckpt_name;
+  if (typeof ckptName === 'string' && ckptName) {
+    return { name: ckptName };
   }
-  if (unetLoader?.inputs?.unet_name) {
-    return { name: String(unetLoader.inputs.unet_name) };
+  const unetName = unetLoader?.inputs?.unet_name;
+  if (typeof unetName === 'string' && unetName) {
+    return { name: unetName };
   }
   return undefined;
 }
