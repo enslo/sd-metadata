@@ -30,7 +30,7 @@ importers:
   .:
     devDependencies:
       '@biomejs/biome':
-        specifier: 2.4.16
+        specifier: 'catalog:'
         version: 2.4.16
       lefthook:
         specifier: ^2.1.8
