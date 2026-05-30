@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-05-30
+
+### Improved
+
+- **ComfyUI metadata parsing** (#219): Improved accuracy and coverage for
+  non-standard workflow topologies and custom nodes (`ShowText|pysssss`,
+  `PromptStashSaver`). Several edge cases that previously caused parse failures
+  or incorrect results — including workflows with `NaN`-containing JSON, node
+  references in model fields, and workflow-only PNG files — are now handled
+  correctly.
+
+### Maintenance
+
+- Add `index.d.ts.map` (declaration sourcemaps) to the published output (#216)
+- Update development dependencies
+
 ## [2.2.0] - 2026-02-27
 
 ### Added
