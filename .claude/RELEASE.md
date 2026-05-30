@@ -76,7 +76,8 @@ to bring them up to date:
 **Lite:**
 
 - `packages/lite/README.md` / `README.ja.md`: Update CDN version URL
-  and bundle size if changed
+  and IIFE bundle size if changed (the exact byte count is in the CHANGELOG
+  entry under Maintenance)
 
 **Root (if needed):**
 

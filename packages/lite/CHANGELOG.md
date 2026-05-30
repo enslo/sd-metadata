@@ -5,6 +5,21 @@ All notable changes to `@enslo/sd-metadata-lite` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-05-30
+
+### Improved
+
+- **ComfyUI metadata parsing** (#219): Recognise `ShowText|pysssss` and
+  `PromptStashSaver` nodes in the flat scanner.
+
+### Maintenance
+
+- IIFE bundle size: 6,519 → 6,571 bytes (+52 bytes uncompressed; #219)
+- ESM bundle size: ~15.7 KB → ~17.7 KB (+13%); tsdown now preserves JSDoc
+  comments by default — does not affect minified CDN or bookmarklet usage (#216)
+- Add `index.d.ts.map` (declaration sourcemaps) to the published output (#216)
+- Update development dependencies
+
 ## [1.1.0] - 2026-02-25
 
 ### Improved
