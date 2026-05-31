@@ -15,10 +15,13 @@ updates:
     groups:
       demo-mantine:
         patterns: ["@mantine/*"]
+      # pnpm catalog entries (shared dev tools across all packages)
+      catalog:
+        patterns: ["@biomejs/biome", "@types/node", "tsdown", "typescript", "vite", "vitest"]
       demo-dependencies:
         dependency-type: "production"
         update-types: ["minor", "patch"]
-        exclude-patterns: ["@mantine/*"]
+        exclude-patterns: ["@mantine/*", "@biomejs/biome", "@types/node", "tsdown", "typescript", "vite", "vitest"]
       dev-dependencies:
         dependency-type: "development"
         update-types: ["minor", "patch"]
