@@ -32,7 +32,6 @@ updates:
       prefix: "chore"
     cooldown:
       default-days: 2
-      semver-major-days: 7
     groups:
       actions:
         patterns: ["*"]
