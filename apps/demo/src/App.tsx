@@ -1,5 +1,5 @@
 import type { ParseResult } from '@enslo/sd-metadata';
-import { read, softwareLabels } from '@enslo/sd-metadata';
+import { c2paVendorLabels, read, softwareLabels } from '@enslo/sd-metadata';
 import {
   Anchor,
   Container,
@@ -98,7 +98,7 @@ export function App() {
 
   const getSoftwareLabelForDisplay = (): {
     label: string;
-    status: 'success' | 'empty' | 'unrecognized' | 'invalid';
+    status: 'success' | 'c2pa' | 'empty' | 'unrecognized' | 'invalid';
   } | null => {
     switch (state.parseResult?.status) {
       case 'success':
@@ -106,6 +106,11 @@ export function App() {
           label:
             softwareLabels[state.parseResult.metadata.software] ?? 'Unknown',
           status: 'success',
+        };
+      case 'c2pa':
+        return {
+          label: c2paVendorLabels[state.parseResult.c2pa.vendor],
+          status: 'c2pa',
         };
       case 'empty':
         return { label: 'Empty', status: 'empty' };

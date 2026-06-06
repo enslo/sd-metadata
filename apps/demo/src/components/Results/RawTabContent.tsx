@@ -27,7 +27,8 @@ interface RawTabContentProps {
  * Tab content for the raw PNG chunks / EXIF segments view
  */
 export function RawTabContent({ parseResult, t }: RawTabContentProps) {
-  if (parseResult.status === 'empty') {
+  if (parseResult.status === 'empty' || parseResult.status === 'c2pa') {
+    // C2PA results carry no raw text chunks/segments to display.
     return <ErrorMessage message={t.results.errors.noRawData} />;
   }
 

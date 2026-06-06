@@ -10,13 +10,14 @@ interface DropZoneProps {
   filename: string | null;
   softwareInfo: {
     label: string;
-    status: 'success' | 'empty' | 'unrecognized' | 'invalid';
+    status: 'success' | 'c2pa' | 'empty' | 'unrecognized' | 'invalid';
   } | null;
   globalDragOver?: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
   success: 'indigo',
+  c2pa: 'grape',
   empty: 'gray',
   unrecognized: 'yellow',
   invalid: 'red',
