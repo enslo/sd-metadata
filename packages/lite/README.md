@@ -10,7 +10,7 @@
 A lightweight, read-only metadata parser for AI-generated images.
 Designed for bookmarklets and userscripts where bundle size matters.
 
-- **Tiny**: **6,571 bytes** minified IIFE build
+- **Tiny**: **6,911 bytes** minified IIFE build
 - **Read-only**: Extracts metadata and returns A1111-format text
 - **Zero dependencies**: Works in Node.js and browsers
 - **18+ tools**: Supports all major AI image generation tools
@@ -92,6 +92,7 @@ Parses metadata from an image and returns A1111-format text.
 **Returns:**
 
 - A1111-format metadata string if metadata is found
+- For PNGs with no generation parameters, the C2PA Content Credentials generator name (e.g. `OpenAI Media Service API`, `Google C2PA Core Generator Library`) when present
 - Empty string (`""`) if no metadata is found or the format is unrecognized
 
 ### Output Format
@@ -128,6 +129,15 @@ Reads PNG, JPEG, and WebP metadata from:
 
 > [!NOTE]
 > \* Implemented based on reference code analysis, not verified with actual sample files.
+
+### Content Credentials (C2PA)
+
+PNGs from commercial tools that sign their output with [C2PA](https://c2pa.org/) Content Credentials are detected by their generator name instead of generation parameters:
+
+- OpenAI ChatGPT
+- Google Gemini
+
+For these images `parse()` returns the generator name (e.g. `OpenAI Media Service API`). Detection is best-effort: the credentials are easily stripped by re-saving or re-uploading, and a present manifest is not cryptographically verified.
 
 ## Globals
 

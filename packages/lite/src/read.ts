@@ -6,6 +6,10 @@
 // Entry record: keyword → text value
 export type Entries = Record<string, string>;
 
+// Maximum caBX (C2PA) bytes captured. The generator marker sits near the start
+// of the box, so clamping bounds memory against a maliciously oversized chunk.
+const MAX_CABX = 8 * 1024 * 1024;
+
 // ============================================================================
 // PNG Reader
 // ============================================================================
@@ -24,6 +28,12 @@ export function readPng(data: Uint8Array): Entries {
     offset += 8;
 
     if (offset + length > data.length) break;
+
+    // caBX: C2PA Content Credentials. Capture the manifest as a Latin-1 string
+    // (1:1 byte view) so extract() can recover the generator name from it.
+    if (type === 'caBX') {
+      entries.cabx = str(data, offset, Math.min(length, MAX_CABX));
+    }
 
     if (type === 'tEXt' || type === 'iTXt') {
       const nullIdx = data.indexOf(0, offset);

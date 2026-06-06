@@ -26,6 +26,7 @@ function listSamples(format: string, ext: RegExp): string[] {
 const pngFiles = listSamples('png', /\.png$/);
 const jpgFiles = listSamples('jpg', /\.jpe?g$/);
 const webpFiles = listSamples('webp', /\.webp$/);
+const c2paPngFiles = listSamples('c2pa/png', /\.png$/);
 
 describe('IIFE bundle', () => {
   it('should export a parse function', () => {
@@ -58,6 +59,15 @@ describe('IIFE bundle', () => {
     for (const file of webpFiles) {
       it(`should match source output for ${file}`, () => {
         const data = load('webp', file);
+        expect(iifeParse(data)).toBe(srcParse(data));
+      });
+    }
+  });
+
+  describe('C2PA PNG samples', () => {
+    for (const file of c2paPngFiles) {
+      it(`should match source output for ${file}`, () => {
+        const data = load('c2pa/png', file);
         expect(iifeParse(data)).toBe(srcParse(data));
       });
     }

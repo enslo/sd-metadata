@@ -261,13 +261,53 @@ export function extract(rawEntries: Entries): string {
 
   // --- Final fallback --------------------------------------------------
   // Return whatever text is available, trying the most likely fields first.
+  // C2PA Content Credentials (ChatGPT / Gemini) carry no generation params, so
+  // their generator name is the last resort.
   return (
     params ??
     entries.UserComment ??
     entries.Comment ??
     entries.ImageDescription ??
-    ''
+    readC2paName(entries.cabx)
   );
+}
+
+// ============================================================================
+// C2PA (Content Credentials)
+// ============================================================================
+
+/**
+ * Recover `claim_generator_info.name` from a caBX manifest captured as a Latin-1
+ * string (1:1 byte view, see readPng). Detection only — no JUMBF/CBOR decoder
+ * and no signature verification.
+ *
+ * The `name` key is encoded as 0x64 ('d') + "name", i.e. the run "dname", so the
+ * value's CBOR text-string header sits 5 bytes later. Generator names are short
+ * ASCII, so only inline (0x60-0x77) and 1-byte (0x78) length headers are read.
+ * charCodeAt yields NaN past the string end, which fails every comparison below,
+ * so out-of-range offsets fall through to "".
+ */
+function readC2paName(manifest: string | undefined): string {
+  if (!manifest) return '';
+
+  const cgi = manifest.indexOf('claim_generator_info');
+  if (cgi < 0) return '';
+
+  // Require the key within a short window of the marker so a stray "...name"
+  // elsewhere cannot be misread as the generator name.
+  const p = manifest.indexOf('dname', cgi);
+  if (p < 0 || p > cgi + 256) return '';
+
+  const pos = p + 5;
+  const head = manifest.charCodeAt(pos);
+  if (!(head >= 0x60 && head <= 0x78)) return '';
+
+  const oneByte = head === 0x78;
+  const length = oneByte ? manifest.charCodeAt(pos + 1) || 0 : head - 0x60;
+  const dataPos = pos + (oneByte ? 2 : 1);
+  if (dataPos + length > manifest.length) return '';
+
+  return manifest.slice(dataPos, dataPos + length);
 }
 
 // ============================================================================
