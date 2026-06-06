@@ -6,6 +6,7 @@
  */
 
 import { parseMetadata } from '../parsers';
+import { detectC2pa } from '../parsers/c2pa';
 import { readImageDimensions } from '../readers/dimensions';
 import { readJpegMetadata } from '../readers/jpeg';
 import { readPngMetadata } from '../readers/png';
@@ -41,38 +42,47 @@ export function read(
     return { status: 'invalid', message: 'Unknown image format' };
   }
 
-  // 1. Read raw metadata based on format
   const rawResult = readRawMetadata(data, format);
-  if (rawResult.status !== 'success') {
+  if (rawResult.status === 'invalid') {
     return rawResult;
   }
-  const raw = rawResult.raw;
 
-  // 2. Convert to entry record
-  const entries =
-    raw.format === 'png'
-      ? pngChunksToRecord(raw.chunks)
-      : segmentsToRecord(raw.segments);
+  // 1. Generation metadata (the library's primary path) takes precedence.
+  if (rawResult.status === 'success') {
+    const { raw } = rawResult;
+    const entries =
+      raw.format === 'png'
+        ? pngChunksToRecord(raw.chunks)
+        : segmentsToRecord(raw.segments);
 
-  // 3. Parse metadata
-  const parseResult = parseMetadata(entries);
-  if (!parseResult.ok) {
-    return { status: 'unrecognized', raw };
-  }
+    const parseResult = parseMetadata(entries);
+    if (parseResult.ok) {
+      const metadata = parseResult.value;
 
-  const metadata = parseResult.value;
+      // Fallback for dimensions if missing (unless strict mode).
+      if (!options?.strict && (metadata.width === 0 || metadata.height === 0)) {
+        const dims = readImageDimensions(data, format);
+        if (dims) {
+          metadata.width = metadata.width || dims.width;
+          metadata.height = metadata.height || dims.height;
+        }
+      }
 
-  // 4. Fallback for dimensions if missing (unless strict mode)
-  if (!options?.strict && (metadata.width === 0 || metadata.height === 0)) {
-    const dims = readImageDimensions(data, format);
-
-    if (dims) {
-      metadata.width = metadata.width || dims.width;
-      metadata.height = metadata.height || dims.height;
+      return { status: 'success', metadata, raw };
     }
   }
 
-  return { status: 'success', metadata, raw };
+  // 2. No generation metadata: surface Content Credentials (C2PA) if present.
+  //    Commercial AI tools (ChatGPT/Gemini) carry only a signed manifest.
+  const c2pa = detectC2pa(data, format);
+  if (c2pa) {
+    return { status: 'c2pa', c2pa };
+  }
+
+  // 3. Otherwise distinguish "no metadata" from "metadata in an unknown format".
+  return rawResult.status === 'empty'
+    ? { status: 'empty' }
+    : { status: 'unrecognized', raw: rawResult.raw };
 }
 
 // ============================================================================

@@ -14,6 +14,7 @@ AI生成画像に埋め込まれたメタデータを読み書きするための
 
 - **マルチフォーマット対応**: PNG (tEXt / iTXt)、JPEG (COM / Exif)、WebP (Exif)
 - **シンプルAPI**: `read()`、`write()`、`embed()`、`stringify()` — 4つの関数で全ユースケースをカバー
+- **AI生成元の検出**: C2PA Content Credentials を持つ画像（OpenAI ChatGPT、Google Gemini）を識別 — 検出のみ、署名検証なし
 - **TypeScriptネイティブ**: TypeScriptで書かれており、型定義を完全同梱
 - **ゼロ依存**: Node.jsとブラウザで外部依存なしで動作
 - **フォーマット変換**: PNG、JPEG、WebP間でメタデータをシームレスに変換
@@ -211,6 +212,13 @@ switch (result.status) {
     console.log(`Prompt: ${result.metadata.prompt}`);
     break;
 
+  case 'c2pa':
+    // C2PA Content Credentials を検出（例：OpenAI ChatGPT、Google Gemini）。
+    // 検出のみ — 署名は検証されず、読み取れる生成パラメータ（プロンプト／シード／モデル）もありません。
+    console.log(`AI生成元（未検証）: ${result.c2pa.vendor}`);
+    console.log(`Claim generator: ${result.c2pa.claimGenerator ?? 'unknown'}`);
+    break;
+
   case 'unrecognized':
     // メタデータは存在するがフォーマットが認識できない
     console.log('不明なメタデータフォーマット');
@@ -255,6 +263,27 @@ if (result.ok) {
   }
 }
 ```
+
+</details>
+
+<details>
+<summary>AI生成元の検出（C2PA Content Credentials）</summary>
+
+一部の商用ツール（OpenAI ChatGPT、Google Gemini）は、生成パラメータの代わりに C2PA Content Credentials を埋め込みます。これらの画像に対して `read()` は `{ status: 'c2pa', c2pa }` を返します：
+
+```typescript
+import { read, c2paVendorLabels } from '@enslo/sd-metadata';
+
+const result = read(imageData);
+
+if (result.status === 'c2pa') {
+  console.log('Vendor:', c2paVendorLabels[result.c2pa.vendor]);
+  console.log('Declared AI-generated:', result.c2pa.aiGenerated);
+  console.log('Claim generator:', result.c2pa.claimGenerator ?? 'unknown');
+}
+```
+
+> **検出のみ — 証明にはなりません。** C2PA署名を検証しないため、`c2pa` の結果は偽造可能で、真正性の証明にはなりません。また Content Credentials は再アップロードや再エンコードで失われやすいため、`c2pa` にならないことも「AI生成ではない」ことの証明にはなりません。
 
 </details>
 
@@ -373,6 +402,8 @@ if (text) {
 - `{ status: 'success', metadata, raw }` - パース成功
   - `metadata`: 統一されたメタデータオブジェクト（`GenerationMetadata`を参照）
   - `raw`: 元のフォーマット固有のデータ（chunks/segments）
+- `{ status: 'c2pa', c2pa }` - 画像がC2PA Content Credentials（例：OpenAI ChatGPT、Google Gemini）を持つが、パース可能な生成メタデータがない
+  - `c2pa`: 未検証の Content Credentials（`C2paMetadata`を参照）。検出のみ — 署名は検証されません。
 - `{ status: 'unrecognized', raw }` - 画像にメタデータがあるが既知のAIツールからではない
   - `raw`: 変換用に保持された元のメタデータ
 - `{ status: 'empty' }` - 画像にメタデータが見つからない
@@ -397,7 +428,7 @@ if (text) {
 - `{ ok: false, error: { type, message? } }` - 失敗。`type` は以下のいずれか：
   - `'unsupportedFormat'`: 対象画像がPNG、JPEG、WebP以外の場合
   - `'conversionFailed'`: メタデータ変換に失敗（例：互換性のないフォーマット）
-  - `'writeFailed'`: 画像へのメタデータ埋め込みに失敗
+  - `'writeFailed'`: 画像へのメタデータ埋め込みに失敗、または再書き込みが不可能な場合
 
 ### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata | GenerationMetadata): WriteResult`
 
@@ -431,7 +462,11 @@ SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋
 
 **戻り値:**
 
-- `ParseResult` の場合: `success` → WebUIフォーマット、`unrecognized` → 生テキスト、`empty`/`invalid` → 空文字列
+- `ParseResult` の場合:
+  - `success` → WebUIフォーマット
+  - `c2pa` → claim generator 名（`claimGenerator ?? ''`）
+  - `unrecognized` → 生テキスト
+  - `empty` / `invalid` → 空文字列
 - `EmbedMetadata` / `GenerationMetadata` の場合: WebUIフォーマットのテキスト
 
 **ユースケース:**
@@ -455,6 +490,20 @@ if (result.status === 'success') {
 }
 ```
 
+### `c2paVendorLabels: Record<C2paVendor, string>`
+
+`C2paVendor` の識別子から表示用の名前への読み取り専用マッピング。
+
+```typescript
+import { c2paVendorLabels } from '@enslo/sd-metadata';
+
+const result = read(imageData);
+if (result.status === 'c2pa') {
+  console.log(c2paVendorLabels[result.c2pa.vendor]);
+  // => "OpenAI (ChatGPT)", "Google (Gemini)", "AI-generated (Content Credentials)"
+}
+```
+
 ## 型リファレンス
 
 このセクションでは主要な型の概要を説明します。完全な型定義については[型ドキュメント](./docs/types.ja.md)を参照してください。
@@ -466,6 +515,7 @@ if (result.status === 'success') {
 ```typescript
 type ParseResult =
   | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
+  | { status: 'c2pa'; c2pa: C2paMetadata }
   | { status: 'unrecognized'; raw: RawMetadata }
   | { status: 'empty' }
   | { status: 'invalid'; message?: string };

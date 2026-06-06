@@ -55,6 +55,18 @@ export function write(
     };
   }
 
+  // Content Credentials are read-only: the signed C2PA manifest is hash-bound,
+  // so re-serializing it is out of scope. Refuse rather than silently strip it.
+  if (metadata.status === 'c2pa') {
+    return {
+      ok: false,
+      error: {
+        type: 'writeFailed',
+        message: 'Cannot write Content Credentials (C2PA) metadata',
+      },
+    };
+  }
+
   // Handle unrecognized metadata
   if (metadata.status === 'unrecognized') {
     const sourceFormat = metadata.raw.format;

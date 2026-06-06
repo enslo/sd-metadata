@@ -23,6 +23,15 @@
       "unrecognized": "メタデータが見つかりましたが、解析できません。生データタブを確認してください。",
       "noRawData": "データがありません",
       "noPlainText": "テキスト表現がありません"
+    },
+    "c2pa": {
+      "title": "Content Credentials",
+      "vendor": "生成元",
+      "aiGenerated": "AI生成",
+      "claimGenerator": "Claim generator",
+      "digitalSourceType": "Digital source type",
+      "yes": "はい",
+      "no": "いいえ"
     }
   },
   "fields": {
