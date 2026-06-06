@@ -173,6 +173,8 @@ export function stringify(
     switch (input.status) {
       case 'success':
         return buildEmbedText(input.metadata);
+      case 'c2pa':
+        return input.c2pa.claimGenerator ?? '';
       case 'unrecognized':
         return formatRaw(input.raw);
       case 'empty':

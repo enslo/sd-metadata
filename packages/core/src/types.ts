@@ -370,19 +370,63 @@ export interface UpscaleSettings {
 }
 
 // ============================================================================
+// Content Credentials (C2PA)
+// ============================================================================
+
+/**
+ * Vendor that signed an image's C2PA Content Credentials.
+ *
+ * Coarse by design: a C2PA manifest identifies the producing vendor but not the
+ * specific model (e.g. Imagen and Gemini "Nano Banana" both map to `google`).
+ */
+export type C2paVendor = 'openai' | 'google' | 'unknown';
+
+/**
+ * Content Credentials (C2PA) read from an image's signed manifest.
+ *
+ * Unlike {@link GenerationMetadata}, this carries no prompt/sampling/size data:
+ * commercial AI tools (ChatGPT, Gemini, ...) embed provenance, not generation
+ * parameters. The manifest is read as declared — the cryptographic signature is
+ * NOT verified, so presence is not proof of authenticity (the strings are
+ * forgeable). Likewise,
+ * absence is not proof of human origin: Content Credentials are routinely
+ * stripped by screenshots, re-encoding, and social-media re-uploads.
+ */
+export interface C2paMetadata {
+  /**
+   * Coarse vendor attribution from the manifest's claim generator / signer.
+   * Declared, not cryptographically verified — never treat as proof of origin.
+   */
+  vendor: C2paVendor;
+  /**
+   * `true` when the manifest declares a trained-algorithmic (AI-generated) IPTC
+   * DigitalSourceType. Camera/scan source types are not flagged. This is the
+   * image's *declared*, unverified status: a `false`/absent result is not proof
+   * of human origin, and a `true` result is forgeable.
+   */
+  aiGenerated: boolean;
+  /** Raw IPTC DigitalSourceType URI, surfaced verbatim when present. */
+  digitalSourceType?: string;
+  /** C2PA `claim_generator_info.name`, when present. */
+  claimGenerator?: string;
+}
+
+// ============================================================================
 // Parse Result
 // ============================================================================
 
 /**
- * Parse result with 4-status design
+ * Parse result with 5-status design
  *
- * - `success`: Parsing succeeded, metadata and raw data available
+ * - `success`: Generation metadata parsed; metadata and raw data available
+ * - `c2pa`: C2PA Content Credentials found (AI provenance, no generation params)
  * - `empty`: No metadata found in the file
  * - `unrecognized`: Metadata exists but format is not recognized
  * - `invalid`: File is corrupted or not a valid image
  */
 export type ParseResult =
   | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
+  | { status: 'c2pa'; c2pa: C2paMetadata }
   | { status: 'empty' }
   | { status: 'unrecognized'; raw: RawMetadata }
   | { status: 'invalid'; message?: string };

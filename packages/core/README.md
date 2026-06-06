@@ -14,6 +14,7 @@ A TypeScript library to read and write metadata embedded in AI-generated images.
 
 - **Multi-format Support**: PNG (tEXt / iTXt), JPEG (COM / Exif), WebP (Exif)
 - **Simple API**: `read()`, `write()`, `embed()`, `stringify()` — four functions cover all use cases
+- **AI Provenance Detection**: identifies images carrying C2PA Content Credentials (OpenAI ChatGPT, Google Gemini) — detection only, no signature verification
 - **TypeScript Native**: Written in TypeScript with full type definitions included
 - **Zero Dependencies**: Works in Node.js and browsers without any external dependencies
 - **Format Conversion**: Seamlessly convert metadata between PNG, JPEG, and WebP
@@ -211,6 +212,14 @@ switch (result.status) {
     console.log(`Prompt: ${result.metadata.prompt}`);
     break;
 
+  case 'c2pa':
+    // C2PA Content Credentials detected (e.g. OpenAI ChatGPT, Google Gemini).
+    // Detection only — the signature is NOT verified, and there are no
+    // generation parameters (prompt/seed/model) to read.
+    console.log(`AI provenance: ${result.c2pa.vendor} (unverified)`);
+    console.log(`Claim generator: ${result.c2pa.claimGenerator ?? 'unknown'}`);
+    break;
+
   case 'unrecognized':
     // Metadata exists but format is not recognized
     console.log('Unknown metadata format');
@@ -255,6 +264,27 @@ if (result.ok) {
   }
 }
 ```
+
+</details>
+
+<details>
+<summary>AI Provenance Detection (C2PA Content Credentials)</summary>
+
+Some commercial tools (OpenAI ChatGPT, Google Gemini) embed a signed C2PA "Content Credentials" provenance manifest instead of generation parameters. `read()` returns `{ status: 'c2pa', c2pa }` for these images:
+
+```typescript
+import { read, c2paVendorLabels } from '@enslo/sd-metadata';
+
+const result = read(imageData);
+
+if (result.status === 'c2pa') {
+  console.log('Vendor:', c2paVendorLabels[result.c2pa.vendor]);
+  console.log('Declared AI-generated:', result.c2pa.aiGenerated);
+  console.log('Claim generator:', result.c2pa.claimGenerator ?? 'unknown');
+}
+```
+
+> **Detection only — not proof.** The C2PA signature is not verified, so a `c2pa` result is forgeable and cannot prove authenticity. Content Credentials are also easily stripped (screenshots, re-uploads, re-encoding), so the absence of a `c2pa` result does not prove an image is *not* AI-generated.
 
 </details>
 
@@ -370,6 +400,8 @@ Reads and parses metadata from an image file.
 - `{ status: 'success', metadata, raw }` - Successfully parsed
   - `metadata`: Unified metadata object (see `GenerationMetadata`)
   - `raw`: Original format-specific data (chunks/segments)
+- `{ status: 'c2pa', c2pa }` - Image carries C2PA Content Credentials (e.g. OpenAI ChatGPT, Google Gemini) but no parseable generation metadata
+  - `c2pa`: Declared (unverified) AI provenance (see `C2paMetadata`). Detection only — the signature is not verified.
 - `{ status: 'unrecognized', raw }` - Image has metadata but not from a known AI tool
   - `raw`: Original metadata preserved for conversion
 - `{ status: 'empty' }` - No metadata found in the image
@@ -394,7 +426,7 @@ Writes metadata to an image file.
 - `{ ok: false, error: { type, message? } }` - Failed. `type` is one of:
   - `'unsupportedFormat'`: Target image is not PNG, JPEG, or WebP
   - `'conversionFailed'`: Metadata conversion failed (e.g., incompatible format)
-  - `'writeFailed'`: Failed to embed metadata into the image
+  - `'writeFailed'`: Failed to embed metadata into the image, or the input cannot be written back
 
 ### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata | GenerationMetadata): WriteResult`
 
@@ -430,9 +462,11 @@ Converts metadata to a human-readable string.
 
 **Returns:**
 
-- `ParseResult` with `success` → Human-readable text in WebUI format
-- `ParseResult` with `unrecognized` → Raw metadata as plain text
-- `ParseResult` with `empty` / `invalid` → Empty string
+- `ParseResult`:
+  - `success` → Human-readable text in WebUI format
+  - `c2pa` → The claim generator name (`claimGenerator ?? ''`)
+  - `unrecognized` → Raw metadata as plain text
+  - `empty` / `invalid` → Empty string
 - `EmbedMetadata` / `GenerationMetadata` → Human-readable text in WebUI format
 
 **Use cases:**
@@ -440,6 +474,7 @@ Converts metadata to a human-readable string.
 - Displaying generation parameters in image viewers or galleries
 - Copying metadata to clipboard as readable text
 - Logging or debugging parsed metadata
+- Previewing `EmbedMetadata` before embedding
 
 ### `softwareLabels: Record<GenerationSoftware, string>`
 
@@ -455,6 +490,20 @@ if (result.status === 'success') {
 }
 ```
 
+### `c2paVendorLabels: Record<C2paVendor, string>`
+
+A read-only mapping from `C2paVendor` identifiers to their human-readable display names.
+
+```typescript
+import { c2paVendorLabels } from '@enslo/sd-metadata';
+
+const result = read(imageData);
+if (result.status === 'c2pa') {
+  console.log(c2paVendorLabels[result.c2pa.vendor]);
+  // => "OpenAI (ChatGPT)", "Google (Gemini)", "AI-generated (Content Credentials)"
+}
+```
+
 ## Type Reference
 
 This section provides an overview of the main types. For complete type definitions, see [Type Documentation](./docs/types.md).
@@ -466,6 +515,7 @@ The result of the `read()` function. It uses a discriminated union with a `statu
 ```typescript
 type ParseResult =
   | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
+  | { status: 'c2pa'; c2pa: C2paMetadata }
   | { status: 'unrecognized'; raw: RawMetadata }
   | { status: 'empty' }
   | { status: 'invalid'; message?: string };

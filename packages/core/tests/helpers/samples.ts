@@ -10,6 +10,21 @@ import path from 'node:path';
 const EXCLUDED_PATTERNS = ['empty', 'gimp'];
 
 /**
+ * C2PA (Content Credentials) samples.
+ *
+ * These images carry only a signed C2PA manifest (in a PNG `caBX` chunk) and
+ * NO generation parameters, so they are not handled by the SD-tool parsers.
+ * They live in their own directory tree (samples/c2pa/<format>/), so the
+ * generation-metadata sweeps never see them; they are exercised separately by
+ * tests/samples/c2pa.test.ts.
+ */
+export const C2PA_PNG_SAMPLES = [
+  { filename: 'chatgpt-image2.png', vendor: 'openai' },
+  { filename: 'gemini_3.1pro.png', vendor: 'google' },
+  { filename: 'gemini_unknown.png', vendor: 'google' },
+] as const;
+
+/**
  * Files with expected raw metadata mismatch in cross-format round-trips
  *
  * These files have intentional raw differences due to format normalization:
@@ -85,6 +100,30 @@ export function loadSample(
   filename: string,
 ): Uint8Array {
   const filePath = path.join(getSamplesDir(format), filename);
+  return new Uint8Array(fs.readFileSync(filePath));
+}
+
+/**
+ * Load a C2PA (Content Credentials) sample file as Uint8Array
+ *
+ * C2PA fixtures live under samples/c2pa/<format>/, separate from the
+ * generation-metadata samples in samples/<format>/, so they are never picked
+ * up by the generation sample sweeps.
+ *
+ * @param format - The image format
+ * @param filename - The filename within samples/c2pa/<format>/
+ * @returns The file contents as Uint8Array
+ */
+export function loadC2paSample(
+  format: 'png' | 'jpg' | 'webp',
+  filename: string,
+): Uint8Array {
+  const filePath = path.join(
+    __dirname,
+    '../../../../samples/c2pa',
+    format,
+    filename,
+  );
   return new Uint8Array(fs.readFileSync(filePath));
 }
 

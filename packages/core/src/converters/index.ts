@@ -100,6 +100,15 @@ export function convertMetadata(
     });
   }
 
+  // Content Credentials carry no generation metadata to convert; write() also
+  // guards this, so reaching here is a defensive backstop.
+  if (parseResult.status === 'c2pa') {
+    return Result.error({
+      type: 'invalidParseResult',
+      status: 'c2pa',
+    });
+  }
+
   const raw = parseResult.raw;
 
   // If source and target are the same format, return as-is
