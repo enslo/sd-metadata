@@ -61,10 +61,14 @@ export function read(
 
       // Fallback for dimensions if missing (unless strict mode).
       if (!options?.strict && (metadata.width === 0 || metadata.height === 0)) {
-        const dims = readImageDimensions(data, format);
-        if (dims) {
-          metadata.width = metadata.width || dims.width;
-          metadata.height = metadata.height || dims.height;
+        try {
+          const dims = readImageDimensions(data, format);
+          if (dims) {
+            metadata.width = metadata.width || dims.width;
+            metadata.height = metadata.height || dims.height;
+          }
+        } catch {
+          // Malformed image header — leave dimensions as 0.
         }
       }
 

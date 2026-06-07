@@ -87,11 +87,39 @@ function extractAltElement(
   ns: string,
   field: string,
 ): string | undefined {
-  const pattern = new RegExp(
-    `<${ns}:${field}>[\\s\\S]*?<rdf:li[^>]*(?<!/)>([\\s\\S]*?)</rdf:li>[\\s\\S]*?</${ns}:${field}>`,
-  );
-  const match = xmp.match(pattern);
-  return match?.[1] ? decodeXmlEntities(match[1]) : undefined;
+  const openTag = `<${ns}:${field}>`;
+  const closeTag = `</${ns}:${field}>`;
+
+  const start = xmp.indexOf(openTag);
+  if (start === -1) return undefined;
+
+  const end = xmp.indexOf(closeTag, start);
+  if (end === -1) return undefined;
+
+  const inner = xmp.slice(start + openTag.length, end);
+
+  let pos = 0;
+  while (pos < inner.length) {
+    const liStart = inner.indexOf('<rdf:li', pos);
+    if (liStart === -1) return undefined;
+
+    const tagEnd = inner.indexOf('>', liStart);
+    if (tagEnd === -1) return undefined;
+
+    if (inner[tagEnd - 1] === '/') {
+      pos = tagEnd + 1;
+      continue;
+    }
+
+    const contentStart = tagEnd + 1;
+    const liClose = inner.indexOf('</rdf:li>', contentStart);
+    if (liClose === -1) return undefined;
+
+    const content = inner.slice(contentStart, liClose);
+    return content ? decodeXmlEntities(content) : undefined;
+  }
+
+  return undefined;
 }
 
 /**
