@@ -91,5 +91,27 @@ describe('XMP utilities', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should complete quickly on malformed XMP missing closing tag (ReDoS guard)', () => {
+      // Attacker-controlled input: opening tag + many <rdf:li> items but no closing tag.
+      // With catastrophic backtracking this would hang for tens of seconds at 65 KB.
+      const payload = `<dc:description>${'<rdf:li>a</rdf:li>'.repeat(3000)}`;
+      const xmp = payload.padEnd(60_000, 'x');
+
+      const start = performance.now();
+      extractXmpEntries(xmp);
+      const elapsed = performance.now() - start;
+
+      expect(elapsed).toBeLessThan(500);
+    });
+
+    it('should extract dc:description when closing tag is present after many items', () => {
+      const items = '<rdf:li xml:lang="x-default">hello</rdf:li>';
+      const xmp = `<dc:description><rdf:Alt>${items}</rdf:Alt></dc:description>`;
+
+      const result = extractXmpEntries(xmp);
+
+      expect(result?.parameters).toBe('hello');
+    });
   });
 });

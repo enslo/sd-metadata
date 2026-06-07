@@ -75,7 +75,8 @@ function readJpegDimensions(data: Uint8Array): ImageDimensions | null {
       marker !== 0xcc
     ) {
       // Structure: Precision(1), Height(2), Width(2)
-      // Offset: Marker(2) + Length(2) + Precision(1) = 5
+      // Offset: Marker(2) + Length(2) + Precision(1) = 5, Width ends at offset+9
+      if (offset + 9 > data.length) return null;
       const height = readUint16BE(data, offset + 5);
       const width = readUint16BE(data, offset + 7);
       return { width, height };
@@ -112,6 +113,8 @@ function readWebpDimensions(data: Uint8Array): ImageDimensions | null {
     if (chunkType === 'VP8 ') {
       // VP8 (lossy): Check keyframe
       const start = offset + 8;
+      // Need tag(3) + validation(3) + width(2) + height(2) = 10 bytes from start
+      if (start + 10 > data.length) return null;
       const tag = readUint24LE(data, start);
       const keyFrame = !(tag & 1);
 
@@ -130,7 +133,8 @@ function readWebpDimensions(data: Uint8Array): ImageDimensions | null {
     }
 
     if (chunkType === 'VP8L') {
-      // VP8L (lossless)
+      // VP8L (lossless): signature(1) + bitstream uint32(4) = 5 bytes from offset+8
+      if (offset + 13 > data.length) return null;
       if (data[offset + 8] === 0x2f) {
         const bits = readUint32LE(data, offset + 9);
         const width = (bits & 0x3fff) + 1;
