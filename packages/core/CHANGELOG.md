@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-06-07
+
+### Added
+
+- **C2PA Content Credentials detection** (#234): Detect AI provenance metadata
+  embedded by commercial tools (ChatGPT / OpenAI, Gemini / Google). When an
+  image carries no recognized generation parameters but has a signed C2PA
+  manifest, `read()` now returns a `c2pa` status with coarse vendor attribution
+  and the declared AI-generated flag.
+  - New `C2paMetadata` and `C2paVendor` types
+  - The manifest is read as declared; its cryptographic signature is **not**
+    verified, so presence is not proof of authenticity and absence is not proof
+    of human origin
+
+### Potentially Breaking Changes
+
+- **New `ParseResult` variant** (#234): `{ status: 'c2pa'; c2pa: C2paMetadata }`
+  added. TypeScript users with an exhaustive `switch` on `result.status` (or a
+  `Record<...>` keyed by the status union) will need to handle the new `'c2pa'`
+  case.
+- **`read()` behavior change** (#234): images that carry a C2PA manifest but no
+  recognized generation metadata now return `{ status: 'c2pa' }` instead of
+  `{ status: 'unrecognized' }` or `{ status: 'empty' }`.
+
+### Security
+
+- **`read()` hardening** (#236): Fix two HIGH-severity issues when reading
+  malformed input — a ReDoS via unbounded regex backtracking in XMP parsing,
+  and an out-of-bounds `RangeError` while reading image dimensions.
+
+### Maintenance
+
+- Update development dependencies
+
 ## [2.3.0] - 2026-05-30
 
 ### Improved
