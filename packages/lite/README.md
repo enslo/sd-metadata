@@ -51,7 +51,7 @@ Load the IIFE build via `@require`:
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.2.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.3.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -70,7 +70,7 @@ if (text) {
 
 Most sites block external script loading via CSP. Instead, paste the IIFE bundle inline:
 
-1. Copy the contents of `dist/index.global.js` (or download from [npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.2.0/dist/index.global.js))
+1. Copy the contents of `dist/index.global.js` (or download from [npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.3.0/dist/index.global.js))
 2. Build your bookmarklet with the code inlined:
 
 ```javascript

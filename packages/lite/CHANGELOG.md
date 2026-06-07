@@ -5,6 +5,20 @@ All notable changes to `@enslo/sd-metadata-lite` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-06-07
+
+### Added
+
+- **C2PA Content Credentials detection** (#235): For PNG images with no
+  recognized generation parameters, `parse()` now falls back to C2PA Content
+  Credentials and returns the generator name (e.g. ChatGPT / Gemini exports)
+  instead of an empty string. Detection only — the signature is not verified.
+
+### Maintenance
+
+- IIFE bundle size: 6,571 → 6,911 bytes (+340 bytes uncompressed; #235)
+- Update development dependencies
+
 ## [1.2.0] - 2026-05-30
 
 ### Improved
