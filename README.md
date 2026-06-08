@@ -6,7 +6,7 @@
 🌐 **[日本語版はこちら](./README.ja.md)**
 
 A TypeScript library to read and write metadata embedded in AI-generated images.
-Supports PNG, JPEG, and WebP formats across 15+ generation tools.
+Supports PNG, JPEG, and WebP formats across 18+ generation tools.
 Zero dependencies, works in Node.js and browsers.
 
 ## Packages
@@ -20,14 +20,14 @@ Zero dependencies, works in Node.js and browsers.
 
 | Feature | `sd-metadata` | `sd-metadata-lite` |
 | ------- | :-----------: | :----------------: |
-| Read metadata | ✅ | ✅ |
-| Write metadata | ✅ | - |
-| Embed custom metadata | ✅ | - |
+| Read metadata | ✅ | ✅ (A1111-format text only) |
+| Write metadata back to an image | ✅ | - |
+| Embed custom (user-authored) metadata | ✅ | - |
 | Format conversion (PNG/JPEG/WebP) | ✅ | - |
 | Tool detection | ✅ | - |
 | Structured metadata object | ✅ | - |
 | IIFE build (userscript `@require`) | ✅ | ✅ |
-| Bundle size (IIFE, minified) | ~45 KB | ~6.5 KB |
+| Bundle size (IIFE, minified) | ~51 KB | ~7 KB |
 | Node.js + Browser | ✅ | ✅ |
 
 - **Full library** (`@enslo/sd-metadata`)
@@ -36,6 +36,24 @@ Zero dependencies, works in Node.js and browsers.
 - **Lite** (`@enslo/sd-metadata-lite`)
   - Read-only parser for bookmarklets and userscripts where bundle size matters
   - [Documentation](./packages/lite/README.md)
+
+## Quick start
+
+```bash
+npm install @enslo/sd-metadata
+```
+
+```typescript
+import { read } from '@enslo/sd-metadata';
+
+const result = read(imageBytes); // Uint8Array | ArrayBuffer
+if (result.status === 'success') {
+  console.log(result.metadata.software); // 'novelai', 'comfyui', ...
+  console.log(result.metadata.prompt);
+}
+```
+
+That's it for reading. See the [full library docs](./packages/core/README.md) for write / embed / format conversion, or the [lite docs](./packages/lite/README.md) for the ~7 KB read-only build.
 
 ## Development
 

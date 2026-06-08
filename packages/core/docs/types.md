@@ -334,7 +334,12 @@ Result type returned by the `write()` function.
 ```typescript
 export type WriteResult =
   | { ok: true; value: Uint8Array; warning?: WriteWarning }
-  | { ok: false; error: { type: string; message?: string } };
+  | { ok: false; error: WriteError };
+
+type WriteError =
+  | { type: 'unsupportedFormat' }
+  | { type: 'conversionFailed'; message: string }
+  | { type: 'writeFailed'; message: string };
 ```
 
 **Success:**
@@ -353,7 +358,8 @@ if (result.ok) {
 ```typescript
 if (!result.ok) {
   console.error(`Write failed: ${result.error.type}`);
-  if (result.error.message) {
+  // `message` is only present on `conversionFailed` / `writeFailed`
+  if ('message' in result.error) {
     console.error(result.error.message);
   }
 }
@@ -361,9 +367,9 @@ if (!result.ok) {
 
 **Error Types:**
 
-- `unsupportedFormat`: Image format not supported
-- `conversionFailed`: Metadata conversion failed
-- `writeFailed`: Failed to write metadata to image
+- `unsupportedFormat`: target image is not PNG, JPEG, or WebP
+- `conversionFailed`: metadata conversion failed
+- `writeFailed`: failed to embed metadata into the image
 
 ### `WriteWarning`
 

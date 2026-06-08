@@ -14,17 +14,33 @@ AI生成画像に埋め込まれたメタデータを読み書きするための
 
 - **マルチフォーマット対応**: PNG (tEXt / iTXt)、JPEG (COM / Exif)、WebP (Exif)
 - **シンプルAPI**: `read()`、`write()`、`embed()`、`stringify()` — 4つの関数で全ユースケースをカバー
-- **AI生成元の検出**: C2PA Content Credentials を持つ画像（OpenAI ChatGPT、Google Gemini）を識別 — 検出のみ、署名検証なし
 - **TypeScriptネイティブ**: TypeScriptで書かれており、型定義を完全同梱
 - **ゼロ依存**: Node.jsとブラウザで外部依存なしで動作
 - **フォーマット変換**: PNG、JPEG、WebP間でメタデータをシームレスに変換
 - **メタデータ保持**: フォーマット変換時に元のメタデータ構造を保持（例：PNG → JPEG → PNG で全データを維持）
+- **AI生成元の検出**: C2PA Content Credentials を持つ画像（OpenAI ChatGPT、Google Gemini）を識別 — 検出のみ、署名検証なし
 
 ## インストール
 
 ```bash
 npm install @enslo/sd-metadata
 ```
+
+## クイックスタート
+
+```typescript
+import { read } from '@enslo/sd-metadata';
+
+// `imageBytes` は Uint8Array または ArrayBuffer（fs、fetch、ファイル入力などから取得）
+const result = read(imageBytes);
+if (result.status === 'success') {
+  console.log('Tool:', result.metadata.software); // 'novelai', 'comfyui', ...
+  console.log('Prompt:', result.metadata.prompt);
+  console.log('Size:', result.metadata.width, 'x', result.metadata.height);
+}
+```
+
+Node.js、ブラウザ、ユーザースクリプトでの利用方法は[使い方](#使い方)を、その他の結果ステータス（`c2pa`、`unrecognized`、`empty`、`invalid`）の扱いは[応用例](#応用例)を参照してください。
 
 ## ツールサポート
 
@@ -56,15 +72,18 @@ npm install @enslo/sd-metadata
 - 🔄️ **拡張対応** - ツールがネイティブでサポートしないフォーマット。sd-metadataがカスタムフォーマット変換により読み書きを可能に。ネイティブフォーマットへのラウンドトリップ変換に対応
 - ⚠️ **実験的** - リファレンスコードやドキュメントの分析により実装。サンプルファイルでの検証は未実施。全てのメタデータフィールドを正しく抽出できない可能性あり
 
-**拡張対応の例:**
+<details>
+<summary>拡張対応の例</summary>
 
 - **Stability Matrix**（ネイティブ: PNGのみ）→ sd-metadataがJPEG/WebPをサポート
 - **NovelAI**（ネイティブ: PNG、WebP）→ sd-metadataがJPEGをサポート
 
 ネイティブフォーマットから拡張フォーマットに変換し、再度戻す場合（例：PNG → JPEG → PNG）、全てのメタデータが保持されます。
 
+</details>
+
 > [!NOTE]
-> \* フォーマット固有の動作があるツール。詳細は[フォーマット固有の動作](#フォーマット固有の動作)を参照してください。
+> \* フォーマット固有の動作があるツール — 下記を参照。
 
 > [!TIP]
 > **ツールサポートの拡大にご協力ください！** 実験的なツール（Easy Diffusion、Fooocus）やサポートされていないツールのサンプル画像を募集しています。これらのAIツールで生成したサンプル画像をお持ちの方は、ぜひご提供ください！詳細は[CONTRIBUTING.md](https://github.com/enslo/sd-metadata/blob/main/CONTRIBUTING.md)を参照してください。
@@ -580,21 +599,20 @@ if (result.status === 'success') {
   console.log('Model:', metadata.model?.name);
   console.log('Seed:', metadata.sampling?.seed);
   
-  // ユニオン型を使用したタイプ固有の処理
+  // `software` ディスクリミネータで絞り込んでツール固有のフィールドにアクセス
   if (metadata.software === 'novelai') {
     // TypeScriptはこれがNovelAIMetadataであることを認識
     console.log('Character prompts:', metadata.characterPrompts);
   } else if (
     metadata.software === 'comfyui' ||
     metadata.software === 'tensorart' ||
-    metadata.software === 'stability-matrix'
+    metadata.software === 'stability-matrix' ||
+    metadata.software === 'swarmui'
   ) {
-    // TypeScriptはこれがBasicComfyUIMetadata（nodesは常に存在）であることを認識
-    console.log('Node count:', Object.keys(metadata.nodes).length);
-  } else if (metadata.software === 'swarmui') {
-    // TypeScriptはこれがSwarmUIMetadata（nodesはオプション）であることを認識
+    // TypeScriptはこれがComfyUIMetadataであることを認識。
+    // `nodes` はネイティブのSwarmUI JPEG/WebP を除いて常に存在するためガードする。
     if (metadata.nodes) {
-      console.log('Workflow included');
+      console.log('Node count:', Object.keys(metadata.nodes).length);
     }
   }
 }

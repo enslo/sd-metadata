@@ -31,6 +31,7 @@ Interpret the result:
 | `status`       | Meaning                                   | Next step              |
 |----------------|-------------------------------------------|------------------------|
 | `success`      | Known tool, fully parsed                  | Review parsed metadata |
+| `c2pa`         | C2PA Credentials (ChatGPT/Gemini)         | Record as C2PA         |
 | `unrecognized` | Metadata found but format unknown         | Go to step 3           |
 | `empty`        | No metadata extracted                     | Go to step 2           |
 | `invalid`      | Image format error                        | Go to step 2           |
@@ -96,6 +97,7 @@ Common detection patterns:
 When discovering a new tool or format:
 
 1. Place sample in `samples/<format>/<tool_name>.<ext>`
+   (C2PA Content Credentials samples go under `samples/c2pa/<format>/`)
 2. Document the metadata structure
 3. Create failing test first in `packages/core/tests/`
 4. Implement parser in `packages/core/src/parsers/`

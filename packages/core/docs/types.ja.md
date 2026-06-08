@@ -1,8 +1,8 @@
 # 型ドキュメント
 
-`@enslo/sd-metadata` の完全な型リファレンスです。
-
 🌐 **[English version](./types.md)**
+
+`@enslo/sd-metadata` の完全な型リファレンスです。
 
 ## 目次
 
@@ -334,7 +334,12 @@ if (parseResult.status === 'success') {
 ```typescript
 export type WriteResult =
   | { ok: true; value: Uint8Array; warning?: WriteWarning }
-  | { ok: false; error: { type: string; message?: string } };
+  | { ok: false; error: WriteError };
+
+type WriteError =
+  | { type: 'unsupportedFormat' }
+  | { type: 'conversionFailed'; message: string }
+  | { type: 'writeFailed'; message: string };
 ```
 
 **成功：**
@@ -353,7 +358,8 @@ if (result.ok) {
 ```typescript
 if (!result.ok) {
   console.error(`書き込み失敗: ${result.error.type}`);
-  if (result.error.message) {
+  // `message` は `conversionFailed` / `writeFailed` のみが持つ
+  if ('message' in result.error) {
     console.error(result.error.message);
   }
 }
@@ -361,9 +367,9 @@ if (!result.ok) {
 
 **エラータイプ：**
 
-- `unsupportedFormat`: 画像フォーマットが非対応
+- `unsupportedFormat`: 対象画像が PNG / JPEG / WebP のいずれでもない
 - `conversionFailed`: メタデータ変換に失敗
-- `writeFailed`: 画像へのメタデータ書き込みに失敗
+- `writeFailed`: 画像へのメタデータ埋め込みに失敗
 
 ### `WriteWarning`
 
