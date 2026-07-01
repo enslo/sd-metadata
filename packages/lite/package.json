@@ -46,7 +46,7 @@
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "terser": "^5.48.0",
     "tsdown": "catalog:",
     "tsx": "^4.22.4",
