@@ -15,9 +15,12 @@ updates:
     groups:
       demo-mantine:
         patterns: ["@mantine/*"]
-      # pnpm catalog entries (shared dev tools across all packages)
+      # pnpm catalog entries (shared dev tools across all packages).
+      # Minor/patch only: a major of any of these must not ride in the routine
+      # catalog PR. Majors get an individual PR (and TS majors are ignored below).
       catalog:
         patterns: ["@biomejs/biome", "@types/node", "tsdown", "typescript", "vite", "vitest"]
+        update-types: ["minor", "patch"]
       demo-dependencies:
         dependency-type: "production"
         update-types: ["minor", "patch"]
@@ -25,6 +28,12 @@ updates:
       dev-dependencies:
         dependency-type: "development"
         update-types: ["minor", "patch"]
+    # A TypeScript major is a compiler change, not a routine bump. Don't let
+    # Dependabot propose it at all: bump TS majors manually in a dedicated PR
+    # so the change gets real review instead of a rubber stamp.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
