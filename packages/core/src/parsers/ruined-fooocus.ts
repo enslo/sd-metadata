@@ -42,7 +42,7 @@ export function parseRuinedFooocus(entries: EntryRecord): InternalParseResult {
   // JPEG/WebP (after conversion): stored in 'UserComment' (from exifUserComment)
   const jsonText = entries.parameters ?? entries.UserComment;
 
-  if (!jsonText || !jsonText.startsWith('{')) {
+  if (!jsonText?.startsWith('{')) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
