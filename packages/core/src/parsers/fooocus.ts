@@ -66,7 +66,7 @@ function parseResolution(resolution: string | undefined): {
 export function parseFooocus(entries: EntryRecord): InternalParseResult {
   const jsonText = entries.parameters ?? entries.UserComment;
 
-  if (!jsonText || !jsonText.startsWith('{')) {
+  if (!jsonText?.startsWith('{')) {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
