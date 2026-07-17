@@ -139,6 +139,12 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 local_samples/
 .claude/research/
+.claude/settings.local.json
 
 # Demo site lockfile (exact versions used, no lockfile needed)
 demo/package-lock.json
+
+# pnpm store created inside the workspace by dev container installs
+# (bind-mounted workspace is a different device than the container home,
+# so pnpm falls back to a workspace-local store)
+.pnpm-store/

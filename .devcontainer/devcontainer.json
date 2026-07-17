@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "sd-metadata",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "features": {
+    // pnpmVersion is pinned to match "packageManager" in package.json.
+    // When bumping pnpm, update both this file and package.json.
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24",
+      "pnpmVersion": "11.3.0"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["biomejs.biome", "EditorConfig.EditorConfig"]
+    }
+  },
+  "forwardPorts": [5173, 5174],
+  "portsAttributes": {
+    "5173": { "label": "demo" },
+    "5174": { "label": "demo-lite" }
+  },
+  "remoteUser": "vscode",
+  // Shares the host's Claude Code state (auth token, settings, session history all live
+  // under ~/.claude) so `claude` works inside the container without re-authenticating.
+  // Requires ~/.claude to exist on the host, i.e. Claude Code installed.
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind"
+  ],
+  // confirmModulesPurge=false: when node_modules installed on the host is visible through
+  // the workspace bind mount, pnpm must recreate it for the container's store; without a
+  // TTY the confirmation prompt aborts (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY).
+  "postCreateCommand": "pnpm install --config.confirmModulesPurge=false"
+}
