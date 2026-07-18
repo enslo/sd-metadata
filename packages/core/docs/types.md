@@ -875,10 +875,15 @@ export type MetadataSegmentSource =
   | { type: 'exifUserComment' }
   | { type: 'exifImageDescription'; prefix?: string }
   | { type: 'exifMake'; prefix?: string }
+  | { type: 'exifModel'; prefix?: string }
   | { type: 'jpegCom' }
   | { type: 'xmpPacket' };
 ```
 
 Tracks where the metadata came from in JPEG/WebP files for accurate round-tripping.
+
+`prefix` holds the label a tool wrote in front of the value, such as the
+`workflow` in ComfyUI's `workflow:{...}`. Tools disagree on which tag holds
+what, so the label — not the tag — identifies the payload.
 
 ---

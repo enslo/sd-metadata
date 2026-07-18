@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-07-18
+
+### Added
+
+- **ComfyUI Save Animated WEBP support** (#250): Read metadata in the tag
+  layout ComfyUI's official `Save Animated WEBP` node uses (EXIF
+  `Make`/`Model`) — the only layout ComfyUI's own frontend reads natively
+  for WebP drag-and-drop workflow loading.
+
+### Changed
+
+- **ComfyUI JPEG/WebP write format** (#250): Writing now defaults to the
+  same `Make`/`Model` tag layout described above instead of the
+  `comfyui-saveimage-plus` UserComment envelope. `read()` still parses both
+  layouts, so round-tripping through this library is unaffected — but code
+  that inspects the raw JPEG/WebP bytes for ComfyUI images (e.g. snapshot
+  tests, or another tool expecting the old envelope) will see different
+  output.
+
+### Potentially Breaking Changes
+
+- **New `MetadataSegmentSource` member** (#250): `{ type: 'exifModel';
+  prefix?: string }` added. TypeScript users with an exhaustive `switch` on
+  `segment.source.type` (or a `Record<MetadataSegmentSource['type'], ...>`)
+  will need to handle the new `'exifModel'` case.
+
+### Maintenance
+
+- Update development dependencies (#245, #246)
+
 ## [3.0.0] - 2026-06-07
 
 ### Added

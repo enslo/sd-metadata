@@ -47,7 +47,7 @@ Node.js、ブラウザ、ユーザースクリプトでの利用方法は[使い
 | ツール | PNG | JPEG | WebP |
 | ------ | :---: | :----: | :----: |
 | [NovelAI](https://novelai.net/) * | ✅ | 🔄️ | ✅ |
-| [ComfyUI](https://github.com/comfyanonymous/ComfyUI) * | ✅ | 🔄️ | 🔄️ |
+| [ComfyUI](https://github.com/comfyanonymous/ComfyUI) * | ✅ | 🔄️ | ✅ |
 | [Stable Diffusion WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) | ✅ | ✅ | ✅ |
 | [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) | ✅ | ✅ | ✅ |
 | [Forge Classic](https://github.com/Haoming02/sd-webui-forge-classic/tree/classic) | ✅ | ✅ | ✅ |
@@ -92,7 +92,7 @@ Node.js、ブラウザ、ユーザースクリプトでの利用方法は[使い
 
 一部のツールはフォーマット変換時に特定の動作をします：
 
-- **ComfyUI JPEG/WebP**: 読み込みは複数のカスタムノードフォーマット（例：`save-image-extended`）に対応していますが、書き込みは情報保持とComfyUIネイティブのドラッグ＆ドロップワークフロー読み込みとの互換性のため、常に `comfyui-saveimage-plus` フォーマットを使用します。
+- **ComfyUI JPEG/WebP**: 読み込みは複数のノードフォーマット（例：ビルトインの `Save Animated WEBP`、`save-image-extended`）に対応しています。書き込みは常にビルトインの `Save Animated WEBP` ノードの `Make`/`Model` EXIFタグをバイト単位で再現します — ComfyUI自身がWebPのドラッグ＆ドロップで読み取るレイアウトです。`prompt`/`workflow` 以外のPNGチャンク（サードパーティ製保存ノードによる `parameters` など）は破棄します。
 - **NovelAI WebP**: Descriptionフィールドの破損したUTF-8を自動修正します。WebP → PNG → WebP のラウンドトリップは有効で読み取り可能なメタデータを生成しますが、軽微なテキスト修正が含まれます。
 - **SwarmUI PNG→JPEG/WebP**: ネイティブのSwarmUI JPEG/WebPファイルにはノード情報が含まれません。PNGから変換する際、このライブラリは完全なメタデータ保持のためにComfyUIワークフローを `Make` フィールドに保存します（拡張対応）。
 
@@ -168,7 +168,7 @@ fileInput.addEventListener('change', async (e) => {
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@3.0.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@3.1.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
