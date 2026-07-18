@@ -875,10 +875,15 @@ export type MetadataSegmentSource =
   | { type: 'exifUserComment' }
   | { type: 'exifImageDescription'; prefix?: string }
   | { type: 'exifMake'; prefix?: string }
+  | { type: 'exifModel'; prefix?: string }
   | { type: 'jpegCom' }
   | { type: 'xmpPacket' };
 ```
 
 正確なラウンドトリップのために、JPEG/WebPファイル内のメタデータの出所を追跡します。
+
+`prefix` は、ツールが値の前に書き込んだラベルを保持します（ComfyUIの
+`workflow:{...}` における `workflow` など）。どのタグに何を格納するかは
+ツールによって異なるため、タグではなくラベルが内容を識別します。
 
 ---

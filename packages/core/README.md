@@ -47,7 +47,7 @@ See [Usage](#usage) for Node.js, browser, and userscript entry points, and [Adva
 | Tool | PNG | JPEG | WebP |
 | ------ | :---: | :----: | :----: |
 | [NovelAI](https://novelai.net/) * | ✅ | 🔄️ | ✅ |
-| [ComfyUI](https://github.com/comfyanonymous/ComfyUI) * | ✅ | 🔄️ | 🔄️ |
+| [ComfyUI](https://github.com/comfyanonymous/ComfyUI) * | ✅ | 🔄️ | ✅ |
 | [Stable Diffusion WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) | ✅ | ✅ | ✅ |
 | [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) | ✅ | ✅ | ✅ |
 | [Forge Classic](https://github.com/Haoming02/sd-webui-forge-classic/tree/classic) | ✅ | ✅ | ✅ |
@@ -92,7 +92,7 @@ When you convert from a native format to an extended format and back (e.g., PNG 
 
 Some tools have specific behaviors when converting between formats:
 
-- **ComfyUI JPEG/WebP**: Reading supports multiple custom node formats (e.g., `save-image-extended`), but writing always uses the `comfyui-saveimage-plus` format for best information preservation and compatibility with ComfyUI's native drag-and-drop workflow loading.
+- **ComfyUI JPEG/WebP**: Reading supports multiple node formats (e.g., the built-in `Save Animated WEBP` and `save-image-extended`). Writing always matches the built-in `Save Animated WEBP` node's `Make`/`Model` EXIF tags byte-for-byte — the layout ComfyUI itself reads natively for WebP drag-and-drop — dropping any PNG chunk other than `prompt`/`workflow` (e.g. `parameters` from third-party save nodes).
 - **NovelAI WebP**: Automatically corrects corrupted UTF-8 in the Description field. WebP → PNG → WebP round-trip produces valid, readable metadata but with minor text corrections.
 - **SwarmUI PNG→JPEG/WebP**: Native SwarmUI JPEG/WebP files do not include node information. When converting from PNG, this library preserves the ComfyUI workflow in the `Make` field for complete metadata retention (extended support).
 
@@ -168,7 +168,7 @@ For userscripts (Tampermonkey, Violentmonkey, etc.), load the IIFE build via `@r
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@3.0.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@3.1.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
