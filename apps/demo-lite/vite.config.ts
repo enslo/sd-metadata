@@ -10,6 +10,7 @@ export default defineConfig({
   define: {
     __LITE_VERSION__: JSON.stringify(litePackageJson.version),
   },
+  server: { host: true },
   resolve: {
     alias: {
       // In local development, use the parent directory's source code directly

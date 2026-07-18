@@ -12,6 +12,7 @@ export default defineConfig({
   define: {
     __CORE_VERSION__: JSON.stringify(corePackageJson.version),
   },
+  server: { host: true },
   resolve: {
     alias: {
       // In local development, use the parent directory's source code directly
