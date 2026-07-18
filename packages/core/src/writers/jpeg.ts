@@ -32,7 +32,7 @@ const EXIF_HEADER = new Uint8Array([0x45, 0x78, 0x69, 0x66, 0x00, 0x00]);
  * Replaces existing metadata segments with the provided segments.
  * Each segment is written to its original location based on source type:
  * - jpegCom -> COM segment (before SOS)
- * - exifUserComment/exifImageDescription/exifMake -> APP1 Exif segment (after SOI)
+ * - exifUserComment/exifImageDescription/exifMake/exifModel -> APP1 Exif segment (after SOI)
  *
  * @param data - Original JPEG file data as Uint8Array
  * @param segments - Metadata segments to embed
@@ -54,7 +54,8 @@ export function writeJpegMetadata(
     (s) =>
       s.source.type === 'exifUserComment' ||
       s.source.type === 'exifImageDescription' ||
-      s.source.type === 'exifMake',
+      s.source.type === 'exifMake' ||
+      s.source.type === 'exifModel',
   );
 
   // Collect non-metadata segments from original JPEG

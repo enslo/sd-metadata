@@ -4,14 +4,28 @@
  * Functions for building Exif/TIFF structures from metadata segments.
  */
 
-import type { MetadataSegment } from '../types';
+import type { MetadataSegment, MetadataSegmentSource } from '../types';
 import { writeUint16, writeUint32 } from '../utils/binary';
 import {
   EXIF_IFD_POINTER_TAG,
   IMAGE_DESCRIPTION_TAG,
   MAKE_TAG,
+  MODEL_TAG,
   USER_COMMENT_TAG,
 } from '../utils/exif-constants';
+
+/**
+ * IFD0 ASCII tag each segment source is written back to
+ *
+ * Mirrors the reader's tag table so a segment returns to the tag it came from.
+ */
+const IFD0_TAG_BY_SOURCE: Partial<
+  Record<MetadataSegmentSource['type'], number>
+> = {
+  exifImageDescription: IMAGE_DESCRIPTION_TAG,
+  exifMake: MAKE_TAG,
+  exifModel: MODEL_TAG,
+};
 
 /**
  * Build Exif TIFF data from MetadataSegments
@@ -23,42 +37,28 @@ import {
  * @returns TIFF data (starts with "II" byte order marker)
  */
 export function buildExifTiffData(segments: MetadataSegment[]): Uint8Array {
-  // Separate segments by destination IFD
-  const ifd0Segments = segments.filter(
-    (s) =>
-      s.source.type === 'exifImageDescription' || s.source.type === 'exifMake',
-  );
-  const exifIfdSegments = segments.filter(
-    (s) => s.source.type === 'exifUserComment',
-  );
-
-  // No Exif-type segments
-  if (ifd0Segments.length === 0 && exifIfdSegments.length === 0) {
-    return new Uint8Array(0);
-  }
-
-  const isLittleEndian = true;
-
-  // Build tag data for each segment
+  // Build tag data for each segment, split by destination IFD
   const ifd0Tags: Array<{ tag: number; type: number; data: Uint8Array }> = [];
   const exifTags: Array<{ tag: number; type: number; data: Uint8Array }> = [];
 
-  for (const seg of ifd0Segments) {
-    if (seg.source.type === 'exifImageDescription') {
-      const data = encodeAsciiTag(seg.data, seg.source.prefix);
-      ifd0Tags.push({ tag: IMAGE_DESCRIPTION_TAG, type: 2, data });
-    } else if (seg.source.type === 'exifMake') {
-      const data = encodeAsciiTag(seg.data, seg.source.prefix);
-      ifd0Tags.push({ tag: MAKE_TAG, type: 2, data });
-    }
-  }
-
-  for (const seg of exifIfdSegments) {
-    if (seg.source.type === 'exifUserComment') {
+  for (const seg of segments) {
+    const ifd0Tag = IFD0_TAG_BY_SOURCE[seg.source.type];
+    if (ifd0Tag !== undefined) {
+      const prefix = 'prefix' in seg.source ? seg.source.prefix : undefined;
+      const data = encodeAsciiTag(seg.data, prefix);
+      ifd0Tags.push({ tag: ifd0Tag, type: 2, data });
+    } else if (seg.source.type === 'exifUserComment') {
       const data = encodeUserComment(seg.data);
       exifTags.push({ tag: USER_COMMENT_TAG, type: 7, data });
     }
   }
+
+  // No Exif-type segments
+  if (ifd0Tags.length === 0 && exifTags.length === 0) {
+    return new Uint8Array(0);
+  }
+
+  const isLittleEndian = true;
 
   const hasExifIfd = exifTags.length > 0;
   if (hasExifIfd) {
@@ -205,6 +205,15 @@ function encodeUserComment(text: string): Uint8Array {
 }
 
 /**
+ * Prefixes written without a space after the colon, matching ComfyUI's own
+ * Save Animated WEBP node byte-for-byte (Python: f"{key}:{json.dumps(value)}").
+ * Every other prefix (e.g. save-image-extended's Title Case "Workflow"/
+ * "Prompt") keeps the ": " separator, matching that tool's own real-world
+ * output — see comfyui-save-image-extended.webp in samples/.
+ */
+const NO_SPACE_PREFIXES = new Set(['workflow', 'prompt']);
+
+/**
  * Encode ASCII tag data with optional prefix
  *
  * @param text - Text content
@@ -212,7 +221,8 @@ function encodeUserComment(text: string): Uint8Array {
  * @returns Null-terminated ASCII bytes
  */
 function encodeAsciiTag(text: string, prefix?: string): Uint8Array {
-  const fullText = prefix ? `${prefix}: ${text}` : text;
+  const separator = prefix && NO_SPACE_PREFIXES.has(prefix) ? ':' : ': ';
+  const fullText = prefix ? `${prefix}${separator}${text}` : text;
   const textBytes = new TextEncoder().encode(fullText);
   const result = new Uint8Array(textBytes.length + 1);
   result.set(textBytes, 0);

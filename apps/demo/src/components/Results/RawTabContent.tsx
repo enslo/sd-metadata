@@ -13,6 +13,7 @@ const SOURCE_LABELS: Record<MetadataSegment['source']['type'], string> = {
   exifUserComment: 'EXIF: UserComment',
   exifImageDescription: 'EXIF: ImageDescription',
   exifMake: 'EXIF: Make',
+  exifModel: 'EXIF: Model',
   jpegCom: 'JPEG COM',
   xmpPacket: 'XMP Packet',
 };

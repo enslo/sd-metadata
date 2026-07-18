@@ -71,7 +71,7 @@ export function readPng(data: Uint8Array): Entries {
 // ============================================================================
 
 /**
- * Extract metadata from JPEG: EXIF UserComment/ImageDescription/Make + COM segment.
+ * Extract metadata from JPEG: EXIF UserComment/ImageDescription/Make/Model + COM segment.
  */
 export function readJpeg(data: Uint8Array): Entries {
   const entries: Entries = {};
@@ -161,7 +161,7 @@ function readExif(data: Uint8Array): Entries {
   const entries: Entries = {};
   const ifd0 = dv.getUint32(4, le);
 
-  // Scan IFD0 for ImageDescription, Make, UserComment, and Exif IFD pointer
+  // Scan IFD0 for ImageDescription, Make, Model, UserComment, and Exif IFD pointer
   let exifIfdOffset = 0;
   const handleUserComment = (tagData: Uint8Array) => {
     const text = decodeUserComment(tagData);
@@ -188,16 +188,28 @@ function readExif(data: Uint8Array): Entries {
     }
   };
   scanIfd(data, dv, ifd0, le, (tag, tagData) => {
-    if (tag === 0x010e || tag === 0x010f) {
-      // ImageDescription (0x010E) or Make (0x010F)
+    // ImageDescription (0x010E) through Model (0x0110). Tools label the value
+    // with the PNG chunk keyword it stands in for, so the label decides the
+    // entry key: save-image-extended writes ImageDescription "Workflow: {...}"
+    // and Make "Prompt: {...}", while ComfyUI's built-in Save Animated WEBP
+    // writes Make "workflow:{...}" and Model "prompt:{...}".
+    if (tag > 0x010d && tag < 0x0111) {
       const text = decodeAscii(tagData);
       if (text) {
-        const prefixMatch = text.match(/^([A-Za-z]+):\s/);
+        // The space after the colon is optional, but a bare colon only counts
+        // in front of JSON so values like "http://..." keep their text.
+        const prefixMatch = text.match(/^([A-Za-z]+):(?:\s|(?=\{))/);
         if (prefixMatch) {
           const key = prefixMatch[1];
           if (key) entries[key] = text.slice(prefixMatch[0].length);
         } else {
-          entries[tag === 0x010e ? 'ImageDescription' : 'Make'] = text;
+          entries[
+            tag === 0x010e
+              ? 'ImageDescription'
+              : tag === 0x010f
+                ? 'Make'
+                : 'Model'
+          ] = text;
         }
       }
     } else if (tag === 0x9286) {

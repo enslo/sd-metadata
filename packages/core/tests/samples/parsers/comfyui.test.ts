@@ -465,6 +465,38 @@ describe('ComfyUI Parsers - Samples', () => {
       expectComfyNodeGraph(meta.nodes);
     });
 
+    it('should parse comfyui-animated-webp.webp', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'webp',
+        'comfyui-animated-webp.webp',
+      );
+
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, テスト, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: 270932924124066,
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+          clipSkip: 2,
+        },
+        hires: undefined,
+        upscale: undefined,
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
     it('should parse comfyui-saveimagewithmetadata.webp', () => {
       const meta = parseConvertedSample<ComfyUIMetadata>(
         'webp',

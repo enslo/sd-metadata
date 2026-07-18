@@ -27,12 +27,32 @@ export const C2PA_PNG_SAMPLES = [
 /**
  * Files with expected raw metadata mismatch in cross-format round-trips
  *
- * These files have intentional raw differences due to format normalization:
- * - comfyui-save-image-extended: Converted to saveimage-plus format for ComfyUI compatibility
+ * A PNG with `prompt`/`workflow` chunks now always writes the Make(0x010F)
+ * "workflow:..." + Model(0x0110) "prompt:..." tag pair — byte-for-byte the
+ * same layout the official Save Animated WEBP node writes, and the only one
+ * ComfyUI's own frontend reads natively for WebP drag-and-drop (see
+ * convertComfyUIPngToSegments). Sources that used a different JPEG/WebP
+ * layout therefore can't stay raw-identical through a PNG round-trip:
+ * - comfyui-save-image-extended: labelled, but Title Case and the opposite
+ *   tag (ImageDescription "Workflow: " + Make "Prompt: ", with a space)
+ * - comfyui-saveimage-plus: a single exifUserComment JSON envelope, not the
+ *   labelled tag pair
+ *
+ * Any PNG chunk other than prompt/workflow (e.g. comfy-image-saver's
+ * `parameters`, an A1111-compatible text rendering third-party save nodes
+ * add) has no slot in that tag pair and is intentionally dropped, not
+ * preserved through another channel:
+ * - comfyui-comfy-image-saver
+ * - comfyui-saveimagewithmetadata
  *
  * Parsed metadata should still match - only raw comparison is skipped.
  */
-const RAW_MISMATCH_EXPECTED = ['comfyui-save-image-extended'];
+const RAW_MISMATCH_EXPECTED = [
+  'comfyui-save-image-extended',
+  'comfyui-saveimage-plus',
+  'comfyui-comfy-image-saver',
+  'comfyui-saveimagewithmetadata',
+];
 
 /**
  * Get the samples directory path for a given format

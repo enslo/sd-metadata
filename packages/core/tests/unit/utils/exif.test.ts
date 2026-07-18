@@ -4,7 +4,66 @@ import {
   parseExifMetadataSegments,
 } from '../../../src/readers/exif';
 import type { MetadataSegment } from '../../../src/types';
+import {
+  IMAGE_DESCRIPTION_TAG,
+  MAKE_TAG,
+  MODEL_TAG,
+} from '../../../src/utils/exif-constants';
 import { buildExifTiffData } from '../../../src/writers/exif';
+
+/**
+ * Decode the raw ASCII tag value (prefix + separator + payload, exactly as
+ * encoded) for the given tag out of a built TIFF. Unlike
+ * parseExifMetadataSegments, this does not strip the prefix/separator, so it
+ * can verify the literal bytes written — needed because a decode-based
+ * round-trip can't distinguish "workflow: {...}" from "workflow:{...}" (the
+ * reader's prefix regex tolerates both).
+ */
+function readAsciiTagRaw(tiff: Uint8Array, tag: number): string | undefined {
+  const view = new DataView(tiff.buffer, tiff.byteOffset, tiff.byteLength);
+  const ifd0Offset = view.getUint32(4, true);
+  const entryCount = view.getUint16(ifd0Offset, true);
+
+  for (let i = 0; i < entryCount; i++) {
+    const entryOffset = ifd0Offset + 2 + i * 12;
+    if (view.getUint16(entryOffset, true) !== tag) continue;
+
+    const byteCount = view.getUint32(entryOffset + 4, true);
+    const valueOffset =
+      byteCount <= 4 ? entryOffset + 8 : view.getUint32(entryOffset + 8, true);
+    const bytes = tiff.subarray(valueOffset, valueOffset + byteCount - 1); // drop null terminator
+    return new TextDecoder().decode(bytes);
+  }
+  return undefined;
+}
+
+/**
+ * Build a little-endian TIFF holding a single ASCII tag with the exact text
+ *
+ * buildExifTiffData writes ": " between a prefix and its payload, except for
+ * the "workflow"/"prompt" labels (Save Animated WEBP's own "key:value", no
+ * space), so this helper is needed to construct any OTHER separator by hand.
+ */
+function buildAsciiTagTiff(tag: number, text: string): Uint8Array {
+  const textBytes = new TextEncoder().encode(`${text}\0`);
+  // 8 header + 2 entry count + 12 entry + 4 next-IFD pointer
+  const valueOffset = 26;
+  const data = new Uint8Array(valueOffset + textBytes.length);
+  const view = new DataView(data.buffer);
+
+  data.set([0x49, 0x49], 0); // "II" (little-endian)
+  view.setUint16(2, 42, true); // TIFF magic
+  view.setUint32(4, 8, true); // IFD0 offset
+  view.setUint16(8, 1, true); // Entry count
+  view.setUint16(10, tag, true);
+  view.setUint16(12, 2, true); // ASCII
+  view.setUint32(14, textBytes.length, true);
+  view.setUint32(18, valueOffset, true);
+  view.setUint32(22, 0, true); // No next IFD
+  data.set(textBytes, valueOffset);
+
+  return data;
+}
 
 describe('Exif Utils - Decoding', () => {
   describe('decodeUserComment', () => {
@@ -168,6 +227,19 @@ describe('Exif Utils - Decoding', () => {
       expect(result.at(0)?.data).toBe('Test make');
     });
 
+    it('should extract Model tag', () => {
+      const segments: MetadataSegment[] = [
+        { source: { type: 'exifModel' }, data: 'Test model' },
+      ];
+      const tiffData = buildExifTiffData(segments);
+
+      const result = parseExifMetadataSegments(tiffData);
+
+      expect(result).toHaveLength(1);
+      expect(result.at(0)?.source.type).toBe('exifModel');
+      expect(result.at(0)?.data).toBe('Test model');
+    });
+
     it('should handle prefix extraction for ImageDescription', () => {
       const segments: MetadataSegment[] = [
         {
@@ -187,6 +259,32 @@ describe('Exif Utils - Decoding', () => {
         expect(segment.source.prefix).toBe('Workflow');
       }
       expect(segment?.data).toBe('{"test": true}');
+    });
+
+    it('should extract a prefix written without a space after the colon', () => {
+      // Save Animated WEBP writes Make as "workflow:{...}" (no space)
+      const tiffData = buildAsciiTagTiff(MAKE_TAG, 'workflow:{"nodes": []}');
+
+      const result = parseExifMetadataSegments(tiffData);
+
+      expect(result).toHaveLength(1);
+      expect(result.at(0)?.source).toEqual({
+        type: 'exifMake',
+        prefix: 'workflow',
+      });
+      expect(result.at(0)?.data).toBe('{"nodes": []}');
+    });
+
+    it('should keep a colon that does not separate a prefix', () => {
+      // A space-less colon only counts in front of JSON, so plain values
+      // such as a camera maker URL must survive untouched.
+      const tiffData = buildAsciiTagTiff(MAKE_TAG, 'http://example.com');
+
+      const result = parseExifMetadataSegments(tiffData);
+
+      expect(result).toHaveLength(1);
+      expect(result.at(0)?.source).toEqual({ type: 'exifMake' });
+      expect(result.at(0)?.data).toBe('http://example.com');
     });
 
     it('should return empty array for invalid TIFF (bad byte order)', () => {
@@ -276,6 +374,38 @@ describe('Exif Utils - Encoding', () => {
       expect(result.length).toBeGreaterThan(0);
     });
 
+    it('should write workflow/prompt prefixes without a space, matching Save Animated WEBP exactly', () => {
+      const segments: MetadataSegment[] = [
+        {
+          source: { type: 'exifMake', prefix: 'workflow' },
+          data: '{"nodes": []}',
+        },
+        { source: { type: 'exifModel', prefix: 'prompt' }, data: '{"1": {}}' },
+      ];
+
+      const result = buildExifTiffData(segments);
+
+      expect(readAsciiTagRaw(result, MAKE_TAG)).toBe('workflow:{"nodes": []}');
+      expect(readAsciiTagRaw(result, MODEL_TAG)).toBe('prompt:{"1": {}}');
+    });
+
+    it('should keep a space after every other prefix (e.g. save-image-extended)', () => {
+      const segments: MetadataSegment[] = [
+        {
+          source: { type: 'exifImageDescription', prefix: 'Workflow' },
+          data: '{"nodes": []}',
+        },
+        { source: { type: 'exifMake', prefix: 'Prompt' }, data: '{"1": {}}' },
+      ];
+
+      const result = buildExifTiffData(segments);
+
+      expect(readAsciiTagRaw(result, IMAGE_DESCRIPTION_TAG)).toBe(
+        'Workflow: {"nodes": []}',
+      );
+      expect(readAsciiTagRaw(result, MAKE_TAG)).toBe('Prompt: {"1": {}}');
+    });
+
     it('should build TIFF with multiple segments', () => {
       const segments: MetadataSegment[] = [
         { source: { type: 'exifImageDescription' }, data: 'Desc' },
@@ -344,6 +474,26 @@ describe('Exif Utils - Round-trip', () => {
 
     expect(decoded).toHaveLength(1);
     expect(decoded.at(0)?.data).toBe(original);
+  });
+
+  it('should preserve the Save Animated WEBP tag layout through encode-decode cycle', () => {
+    // Make carries the workflow and Model the prompt here — the reverse of
+    // save-image-extended, so the labels are what keeps the two apart.
+    const segments: MetadataSegment[] = [
+      {
+        source: { type: 'exifMake', prefix: 'workflow' },
+        data: '{"nodes": []}',
+      },
+      {
+        source: { type: 'exifModel', prefix: 'prompt' },
+        data: '{"1": {"class_type": "KSampler"}}',
+      },
+    ];
+
+    const encoded = buildExifTiffData(segments);
+    const decoded = parseExifMetadataSegments(encoded);
+
+    expect(decoded).toEqual(segments);
   });
 
   it('should preserve prefix through encode-decode cycle', () => {

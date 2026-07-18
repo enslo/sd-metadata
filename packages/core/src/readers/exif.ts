@@ -10,15 +10,36 @@ import {
   EXIF_IFD_POINTER_TAG,
   IMAGE_DESCRIPTION_TAG,
   MAKE_TAG,
+  MODEL_TAG,
   USER_COMMENT_TAG,
 } from '../utils/exif-constants';
+
+/**
+ * IFD0 ASCII tags that carry generation metadata, mapped to their segment source
+ *
+ * Tools label the value with the PNG chunk keyword it stands in for, so the
+ * prefix identifies the payload while the tag is merely where it landed:
+ * - Save Image Extended: ImageDescription "Workflow: ...", Make "Prompt: ..."
+ * - Save Animated WEBP (built-in): Model "prompt:...", Make "workflow:..."
+ *
+ * Save Animated WEBP assigns tags counting down from Make for every
+ * extra_pnginfo key, so a second key would land on ImageDescription.
+ */
+const PREFIXED_TAG_SOURCES: Record<
+  number,
+  'exifImageDescription' | 'exifMake' | 'exifModel'
+> = {
+  [IMAGE_DESCRIPTION_TAG]: 'exifImageDescription',
+  [MAKE_TAG]: 'exifMake',
+  [MODEL_TAG]: 'exifModel',
+};
 
 /**
  * Parse Exif TIFF structure and extract all metadata segments
  *
  * Extracts metadata from:
- * - ImageDescription (0x010E) - Used by ComfyUI Save Image Extended (with "Workflow:" prefix)
- * - Make (0x010F) - Used by ComfyUI Save Image Extended (with "Prompt:" prefix)
+ * - ImageDescription (0x010E), Make (0x010F), Model (0x0110) - see
+ *   {@link PREFIXED_TAG_SOURCES}
  * - UserComment (0x9286) - Used by most tools
  *
  * @param exifData - TIFF data (starting with II/MM byte order marker)
@@ -102,22 +123,14 @@ function extractTagsFromIfd(
     const tagData = data.slice(valueOffset, valueOffset + dataSize);
 
     // Process known tags
-    if (tag === IMAGE_DESCRIPTION_TAG) {
+    const prefixedSource = PREFIXED_TAG_SOURCES[tag];
+    if (prefixedSource) {
       const text = decodeAsciiString(tagData);
       if (text) {
-        const prefix = extractPrefix(text);
+        const { prefix, body } = splitPrefixedText(text);
         segments.push({
-          source: { type: 'exifImageDescription', prefix: prefix ?? undefined },
-          data: prefix ? text.slice(prefix.length + 2) : text,
-        });
-      }
-    } else if (tag === MAKE_TAG) {
-      const text = decodeAsciiString(tagData);
-      if (text) {
-        const prefix = extractPrefix(text);
-        segments.push({
-          source: { type: 'exifMake', prefix: prefix ?? undefined },
-          data: prefix ? text.slice(prefix.length + 2) : text,
+          source: { type: prefixedSource, prefix },
+          data: body,
         });
       }
     } else if (tag === USER_COMMENT_TAG) {
@@ -137,11 +150,20 @@ function extractTagsFromIfd(
 }
 
 /**
- * Extract prefix from text like "Workflow: {...}" -> "Workflow"
+ * Split a labelled tag value like "Workflow: {...}" into prefix and payload
+ *
+ * The separator varies by tool: Save Image Extended writes "Workflow: {...}"
+ * while Save Animated WEBP writes "workflow:{...}". The space is therefore
+ * optional, but omitting it only counts in front of a JSON object so that
+ * ordinary values such as "http://example.com" keep their text intact.
+ *
+ * @param text - Decoded tag value
+ * @returns Prefix (absent when the value carries no label) and the payload
  */
-function extractPrefix(text: string): string | null {
-  const match = text.match(/^([A-Za-z]+):\s/);
-  return match?.[1] ?? null;
+function splitPrefixedText(text: string): { prefix?: string; body: string } {
+  const match = text.match(/^([A-Za-z]+):(?:\s|(?=\{))/);
+  if (!match) return { body: text };
+  return { prefix: match[1], body: text.slice(match[0].length) };
 }
 
 /**
