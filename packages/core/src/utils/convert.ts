@@ -34,6 +34,7 @@ export function pngChunksToRecord(chunks: PngTextChunk[]): EntryRecord {
  * - exifUserComment → 'UserComment' (or expand if NovelAI WebP format)
  * - exifImageDescription → prefix or 'ImageDescription'
  * - exifMake → prefix or 'Make'
+ * - exifModel → prefix or 'Model'
  *
  * Special handling for NovelAI WebP format where metadata is stored as:
  * {"Comment": "{...inner JSON...}", "Software": "NovelAI", ...}
@@ -124,6 +125,8 @@ function sourceToKeyword(source: MetadataSegmentSource): string {
       return source.prefix ?? 'ImageDescription';
     case 'exifMake':
       return source.prefix ?? 'Make';
+    case 'exifModel':
+      return source.prefix ?? 'Model';
     case 'xmpPacket':
       return 'XML:com.adobe.xmp';
   }
