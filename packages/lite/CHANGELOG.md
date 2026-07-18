@@ -5,6 +5,19 @@ All notable changes to `@enslo/sd-metadata-lite` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-07-18
+
+### Added
+
+- **ComfyUI Save Animated WEBP support** (#250): `parse()` now reads the
+  workflow/prompt tag layout ComfyUI's official `Save Animated WEBP` node
+  writes (EXIF `Make`/`Model`), which previously returned no metadata.
+
+### Maintenance
+
+- IIFE bundle size: 6,911 → 6,934 bytes (+23 bytes uncompressed; #250)
+- Update development dependencies (#245, #246, #248)
+
 ## [1.3.0] - 2026-06-07
 
 ### Added
