@@ -427,6 +427,160 @@ describe('parseComfyUI - Unit Tests', () => {
       expect(result.value.model).toEqual({ name: 'real-model.safetensors' });
     });
 
+    it('should resolve prompts through ComfySwitchNode/PreviewAny chains (Krea-2 Turbo template)', () => {
+      // Mirrors ComfyUI's official Krea-2 Turbo subgraph template: the
+      // CLIPTextEncode text flows through If/Else switches and a PreviewAny
+      // display node. The enhanced prompt comes from TextGenerate (an LLM
+      // node whose output is never persisted), so extraction must fall back
+      // to the other switch branch, which carries the user's original input.
+      const prompt = {
+        '3': {
+          class_type: 'KSampler',
+          inputs: {
+            seed: 371644226245214,
+            steps: 8,
+            cfg: 1,
+            sampler_name: 'euler',
+            scheduler: 'simple',
+            denoise: 1,
+            model: ['10', 0],
+            positive: ['6', 0],
+            negative: ['13', 0],
+            latent_image: ['5', 0],
+          },
+        },
+        '5': {
+          class_type: 'EmptyLatentImage',
+          inputs: { width: ['49', 0], height: ['49', 1], batch_size: 1 },
+        },
+        '6': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: ['28', 0], clip: ['11', 0] },
+        },
+        '10': {
+          class_type: 'UNETLoader',
+          inputs: { unet_name: 'krea2_turbo.safetensors' },
+        },
+        '13': {
+          class_type: 'ConditioningZeroOut',
+          inputs: { conditioning: ['6', 0] },
+        },
+        '16': {
+          class_type: 'TextGenerate',
+          inputs: { prompt: ['17', 0], max_length: 512, clip: ['11', 0] },
+        },
+        '17': {
+          class_type: 'StringConcatenate',
+          inputs: { string_a: ['18', 0], string_b: ['19', 0], delimiter: '' },
+        },
+        '18': {
+          class_type: 'PrimitiveStringMultiline',
+          inputs: { value: 'You are an expert prompt engineer. Expand...' },
+        },
+        '19': {
+          class_type: 'PrimitiveStringMultiline',
+          inputs: { value: 'portrait of hatsune miku, white background' },
+        },
+        '20': {
+          class_type: 'PreviewAny',
+          inputs: { source: ['21', 0] },
+        },
+        '21': {
+          // Refine Prompt? = true → selects TextGenerate (runtime-only)
+          class_type: 'ComfySwitchNode',
+          inputs: {
+            switch: ['24', 0],
+            on_false: ['19', 0],
+            on_true: ['16', 0],
+          },
+        },
+        '23': {
+          class_type: 'PrimitiveBoolean',
+          inputs: { value: false },
+        },
+        '24': {
+          class_type: 'PrimitiveBoolean',
+          inputs: { value: true },
+        },
+        '27': {
+          class_type: 'StringConcatenate',
+          inputs: { string_a: ['20', 0], string_b: '', delimiter: ', ' },
+        },
+        '28': {
+          // Enable LoRA? = false → selects the PreviewAny passthrough
+          class_type: 'ComfySwitchNode',
+          inputs: {
+            switch: ['23', 0],
+            on_false: ['20', 0],
+            on_true: ['27', 0],
+          },
+        },
+      };
+      const entries: EntryRecord = { prompt: JSON.stringify(prompt) };
+
+      const result = parseComfyUI(entries);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // User input recovered; the LLM system prompt must not leak
+      expect(result.value.prompt).toBe(
+        'portrait of hatsune miku, white background',
+      );
+      // ConditioningZeroOut means empty negative conditioning
+      expect(result.value.negativePrompt).toBe('');
+      expect(result.value.model).toEqual({ name: 'krea2_turbo.safetensors' });
+    });
+
+    it('should prefer the switch-selected branch when it resolves to text', () => {
+      const prompt = {
+        '1': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: ['2', 0] },
+        },
+        '2': {
+          class_type: 'ComfySwitchNode',
+          inputs: { switch: true, on_false: ['3', 0], on_true: ['4', 0] },
+        },
+        '3': {
+          class_type: 'PrimitiveStringMultiline',
+          inputs: { value: 'unselected branch' },
+        },
+        '4': {
+          class_type: 'PrimitiveString',
+          inputs: { value: 'selected branch' },
+        },
+        '5': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: 'negative text' },
+        },
+        '9': {
+          class_type: 'KSampler',
+          inputs: {
+            seed: 1,
+            steps: 10,
+            cfg: 5,
+            sampler_name: 'euler',
+            scheduler: 'normal',
+            positive: ['1', 0],
+            negative: ['5', 0],
+            latent_image: ['8', 0],
+          },
+        },
+        '8': {
+          class_type: 'EmptyLatentImage',
+          inputs: { width: 512, height: 512 },
+        },
+      };
+      const entries: EntryRecord = { prompt: JSON.stringify(prompt) };
+
+      const result = parseComfyUI(entries);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.prompt).toBe('selected branch');
+      expect(result.value.negativePrompt).toBe('negative text');
+    });
+
     it('should clean NaN literals inside arrays (is_changed: [NaN])', () => {
       // Some ComfyUI custom nodes (DPRandomGenerator etc.) emit
       // `"is_changed": [NaN]` which breaks strict JSON.parse. cleanJsonString

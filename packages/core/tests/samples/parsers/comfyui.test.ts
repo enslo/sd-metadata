@@ -398,6 +398,38 @@ describe('ComfyUI Parsers - Samples', () => {
       });
       expectComfyNodeGraph(meta.nodes);
     });
+
+    it('should parse krea2.png (official Krea-2 Turbo subgraph template)', () => {
+      const meta = parsePngSample<ComfyUIMetadata>('krea2.png', parseComfyUI);
+
+      expect(meta).toEqual({
+        software: 'comfyui',
+        // The template routes CLIPTextEncode text through ComfySwitchNode /
+        // PreviewAny nodes. The LLM-enhanced prompt (TextGenerate output) is
+        // not persisted, so the user's original input is extracted instead.
+        prompt: '初音ミクのポートレート。美麗な2Dアニメイラスト。白背景。',
+        // ConditioningZeroOut → no negative prompt
+        negativePrompt: '',
+        // EmptyLatentImage receives width/height via ResolutionSelector node
+        // references; read() backfills real dimensions from the PNG header.
+        width: 0,
+        height: 0,
+        model: {
+          name: 'krea2_turbo_int8_convrot.safetensors',
+        },
+        sampling: {
+          seed: 371644226245214,
+          steps: 8,
+          cfg: 1,
+          sampler: 'euler',
+          scheduler: 'simple',
+        },
+        hires: undefined,
+        upscale: undefined,
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
   });
 
   describe('WebP samples', () => {

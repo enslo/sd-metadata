@@ -135,6 +135,20 @@ export function isNodeReference(value: unknown): value is [string, number] {
 }
 
 /**
+ * Resolve a boolean input that may be a literal or a reference to a
+ * primitive node (e.g. PrimitiveBoolean) holding the literal in `value`.
+ */
+function resolveBooleanInput(
+  nodes: ComfyNodeGraph,
+  value: unknown,
+): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  const node = resolveNode(nodes, value);
+  if (typeof node?.inputs.value === 'boolean') return node.inputs.value;
+  return undefined;
+}
+
+/**
  * Extract text from a node, following references if needed
  *
  * Handles various text input patterns:
@@ -153,15 +167,56 @@ export function extractText(
   const node = nodes[nodeId];
   if (!node) return '';
 
+  // TextGenerate (comfy-core LLM prompt enhancer): its output text is
+  // produced at runtime and never persisted in metadata, and its `prompt`
+  // input holds the LLM instruction (system prompt), not the generation
+  // prompt. Treated as opaque so ComfySwitchNode traversal falls back to
+  // the branch carrying the user's original input.
+  if (node.class_type === 'TextGenerate') return '';
+
+  // ComfySwitchNode (comfy-core If/Else): forwards one of two branches
+  // selected by a boolean `switch` input. Follow the selected branch first;
+  // when it yields no text (e.g. it ends at a runtime-only TextGenerate),
+  // fall back to the other branch.
+  if (node.class_type === 'ComfySwitchNode') {
+    const selected = resolveBooleanInput(nodes, node.inputs.switch) !== false;
+    const branches = selected
+      ? [node.inputs.on_true, node.inputs.on_false]
+      : [node.inputs.on_false, node.inputs.on_true];
+    for (const branch of branches) {
+      if (typeof branch === 'string' && branch) return branch;
+      if (isNodeReference(branch)) {
+        const text = extractText(nodes, String(branch[0]), maxDepth - 1);
+        if (text) return text;
+      }
+    }
+    return '';
+  }
+
+  // PreviewAny (comfy-core): display node that passes `source` through.
+  if (node.class_type === 'PreviewAny') {
+    const source = node.inputs.source;
+    if (typeof source === 'string') return source;
+    if (isNodeReference(source)) {
+      return extractText(nodes, String(source[0]), maxDepth - 1);
+    }
+    return '';
+  }
+
   // Common text input names across CLIPTextEncode variants, Power Prompt
   // (rgthree, inputs.prompt), ComfyRoll text boxes (inputs.Text) and
   // PromptStashSaver (inputs.prompt_text — a user-provided string stored on
   // the node itself, treated the same as a direct text input).
+  // PrimitiveString / PrimitiveStringMultiline (comfy-core) hold their
+  // literal in `value`.
   const textValue =
     node.inputs.text ??
     node.inputs.prompt ??
     node.inputs.Text ??
-    node.inputs.prompt_text;
+    node.inputs.prompt_text ??
+    (node.class_type.startsWith('PrimitiveString')
+      ? node.inputs.value
+      : undefined);
 
   if (typeof textValue === 'string') {
     return textValue;
