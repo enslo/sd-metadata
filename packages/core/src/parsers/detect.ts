@@ -345,7 +345,10 @@ function detectFromA1111Format(text: string): GenerationSoftware | null {
   // Tier 2: Version Field Analysis
   // ========================================
 
-  const versionMatch = text.match(/Version:\s*([^\s,]+)/);
+  // Match "Version:" only as a standalone parameter (line start or right
+  // after a comma separator) so that prefixed keys from extensions, such as
+  // "ADetailer Version:", are not mistaken for the software version.
+  const versionMatch = text.match(/(?:^|[,\n])\s*Version:\s*([^\s,]+)/);
   if (versionMatch) {
     const version = versionMatch[1];
 

@@ -102,6 +102,41 @@ describe('detectSoftware - Unit Tests', () => {
     });
   });
 
+  describe('Forge family detection', () => {
+    describe('regression: prefixed keys like "ADetailer Version:" must not shadow the Version field', () => {
+      it('should detect forge-neo when ADetailer Version precedes Version', () => {
+        const parameters =
+          'test prompt\nNegative prompt: bad\nSteps: 24, Sampler: Euler a, Seed: 12345, ADetailer model: face_yolov8n.pt, ADetailer Version: Neo, Version: neo-2.28';
+        const entries: EntryRecord = { parameters };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('forge-neo');
+      });
+
+      it('should detect forge-classic when ADetailer version precedes Version', () => {
+        const parameters =
+          'test prompt\nNegative prompt: bad\nSteps: 24, Sampler: Euler a, Seed: 12345, ADetailer model: face_yolov8n.pt, ADetailer version: 26.2.0, Version: classic';
+        const entries: EntryRecord = { parameters };
+
+        const result = detectSoftware(entries);
+
+        expect(result).toBe('forge-classic');
+      });
+
+      it('should ignore prefixed Version keys regardless of casing when no standalone Version exists', () => {
+        const parameters =
+          'test prompt\nSteps: 24, Sampler: Euler a, ADetailer Version: Neo';
+        const entries: EntryRecord = { parameters };
+
+        const result = detectSoftware(entries);
+
+        // Falls back to sd-webui (Steps/Sampler present), not forge-neo
+        expect(result).toBe('sd-webui');
+      });
+    });
+  });
+
   describe('Fooocus detection', () => {
     describe('from fooocus_scheme chunk (PNG Tier 1)', () => {
       it('should detect fooocus when fooocus_scheme chunk exists with "fooocus" value', () => {
