@@ -165,6 +165,36 @@ describe('A1111 Parsers - Samples', () => {
         upscale: undefined,
       });
     });
+
+    it('should parse forge-classic-adetailer.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'forge-classic-adetailer.png',
+        parseMetadata,
+      );
+
+      expect(meta).toEqual({
+        software: 'forge-classic',
+        prompt:
+          'general, masterpiece, best quality, amazing quality,\n1girl, solo, hatsune miku, cowboy shot, dutch angle, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiNSFWIllustrious_v140',
+          hash: 'c9b4dab236',
+        },
+        sampling: {
+          sampler: 'Euler a',
+          scheduler: 'Automatic',
+          steps: 24,
+          cfg: 4,
+          seed: 4179307297,
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
   });
 
   describe('Forge Neo samples', () => {
@@ -231,6 +261,36 @@ describe('A1111 Parsers - Samples', () => {
           steps: 10,
           denoise: 0.3,
         },
+        upscale: undefined,
+      });
+    });
+
+    it('should parse forge-neo-adetailer.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'forge-neo-adetailer.png',
+        parseMetadata,
+      );
+
+      expect(meta).toEqual({
+        software: 'forge-neo',
+        prompt:
+          'general, masterpiece, best quality, amazing quality,\n1girl, solo, hatsune miku, テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiNSFWIllustrious_v140',
+          hash: 'c9b4dab236',
+        },
+        sampling: {
+          sampler: 'Euler a',
+          scheduler: 'Automatic',
+          steps: 24,
+          cfg: 4,
+          seed: 4179307297,
+        },
+        hires: undefined,
         upscale: undefined,
       });
     });
