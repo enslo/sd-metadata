@@ -1,0 +1,82 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Bash(git branch:*)",
+      "Bash(git fetch:*)",
+      "Bash(git log:*)",
+      "Bash(git status:*)",
+      "Bash(git stash:*)",
+      "Bash(git restore:*)",
+      "Bash(git remote:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git mv:*)",
+      "Bash(git -C:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh release list:*)",
+      "Bash(gh release view:*)",
+      "Bash(gh api:*)",
+      "Bash(gh search code:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm lint:fix:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm run build:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm list:*)",
+      "Bash(pnpm lefthook:*)",
+      "Bash(pnpm markdownlint:*)",
+      "Bash(pnpm exec biome:*)",
+      "Bash(pnpm --filter demo build:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata build:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata test:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata typecheck:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata lint:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata lint:fix:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata exec tsx:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata-lite build:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata-lite test:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata-lite typecheck:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata-lite lint:*)",
+      "Bash(pnpm --filter @enslo/sd-metadata-lite lint:fix:*)",
+      "Bash(npx knip:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npx esbuild:*)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Bash(exiftool:*)",
+      "Bash(curl:*)",
+      "Bash(file:*)",
+      "Bash(ls:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(test:*)",
+      "Bash(gzip:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "WebFetch",
+      "WebSearch"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read -r f; case \"$f\" in *.js|*.jsx|*.ts|*.tsx|*.json) cd \"$CLAUDE_PROJECT_DIR\" && pnpm exec biome check --write \"$f\";; esac; } 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "Running biome on edited file"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,8 +1,18 @@
+---
+name: release
+description: Prepare and publish a release of @enslo/sd-metadata (core) or @enslo/sd-metadata-lite (lite) — version bump, CHANGELOG, docs review, release PR, and GitHub Release. Use when asked to release, publish, or cut a new version of a package.
+argument-hint: <core|lite> [X.Y.Z]
+---
+
 # Release Workflow
 
 Workflow for publishing package releases.
 
-For daily development workflow, see [WORKFLOW.md](./WORKFLOW.md).
+Arguments: `$ARGUMENTS` — the package (`core` or `lite`) and optionally
+the target version. If not provided, determine both in step 1 and
+confirm with the user before proceeding.
+
+Throughout this guide, `<pkg>` refers to either `core` or `lite`.
 
 ## Packages and Versioning
 
@@ -23,8 +33,6 @@ Each package is versioned and released independently:
 - Git working directory is clean
 
 ## Steps
-
-Throughout this guide, `<pkg>` refers to either `core` or `lite`.
 
 ### 1. Review Changes Since Last Release
 

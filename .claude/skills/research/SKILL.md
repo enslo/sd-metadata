@@ -1,6 +1,16 @@
+---
+name: research
+description: Investigate the metadata structure of an unknown AI-generated image — read it with the library API, cross-validate with exiftool, analyze raw chunks/EXIF segments, identify the generating tool, and document findings. Use when asked to research, investigate, or classify an unknown sample.
+argument-hint: [path/to/sample]
+---
+
 # Metadata Research Guide
 
 How to investigate the metadata structure of unknown AI-generated images.
+
+Arguments: `$ARGUMENTS` — optionally the path to the sample file to
+investigate. If not provided, ask the user which file to research or
+look in `local_samples/`.
 
 ## Sample File Locations
 
@@ -15,13 +25,15 @@ How to investigate the metadata structure of unknown AI-generated images.
 
 ### 1. Read with the Library API
 
-Always start here. Run the library's `read()` against the unknown file:
+Always start here. Run the library's `read()` against the unknown file.
+The command runs with `packages/core` as the working directory, so
+reference the sample relative to the repository root via `../../`:
 
 ```bash
-npx tsx -e "
+pnpm --filter @enslo/sd-metadata exec tsx -e "
 import { readFileSync } from 'fs';
-import { read } from './packages/core/src/index.ts';
-const result = read(new Uint8Array(readFileSync('LOCAL_SAMPLE_PATH')));
+import { read } from './src/index.ts';
+const result = read(new Uint8Array(readFileSync('../../local_samples/unknown.png')));
 console.log(JSON.stringify(result, null, 2));
 "
 ```
@@ -99,9 +111,8 @@ When discovering a new tool or format:
 1. Place sample in `samples/<format>/<tool_name>.<ext>`
    (C2PA Content Credentials samples go under `samples/c2pa/<format>/`)
 2. Document the metadata structure
-3. Create failing test first in `packages/core/tests/`
-4. Implement parser in `packages/core/src/parsers/`
-5. Verify test passes
+3. Continue with the `new-tool` skill to implement support
+   (failing test first, then parser)
 
 ## When Metadata Cannot Be Extracted
 
