@@ -5,6 +5,21 @@ All notable changes to `@enslo/sd-metadata-lite` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-08-17
+
+### Improved
+
+- **ComfyUI user-prompt extraction** (#261): The flat scanner now falls back
+  to `"... (User Prompt)"`-titled primitive nodes when no text node yields a
+  prompt literal, recovering the user's input from official enhancer
+  templates (e.g. Krea-2 Turbo) whose `CLIPTextEncode` nodes only carry node
+  references.
+
+### Maintenance
+
+- IIFE bundle size: 6,934 → 7,003 bytes (+69 bytes uncompressed; #261)
+- Update development dependencies (#260)
+
 ## [1.4.0] - 2026-07-18
 
 ### Added
