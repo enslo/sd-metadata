@@ -57,6 +57,7 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "^4.1.10",
     "tsdown": "catalog:",
+    "tsx": "^4.23.1",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

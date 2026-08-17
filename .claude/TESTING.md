@@ -14,28 +14,35 @@ This library handles metadata from third-party AI image generation tools. Key ch
 
 ```text
 packages/core/tests/
+├── helpers/                        # Shared test utilities
 ├── unit/                           # Logic correctness (synthetic data)
+│   ├── api/                        # embed/stringify/image input handling
 │   ├── readers/                    # PNG/JPEG/WebP spec compliance
-│   ├── parsers/                    # Parsing logic for specific inputs
+│   ├── parsers/                    # Parsing logic + software detection
 │   ├── converters/                 # Conversion logic correctness
-│   └── writers/                    # Segment -> binary conversion
+│   ├── writers/                    # Segment -> binary conversion
+│   └── utils/                      # Shared utility functions
 │
 ├── samples/                        # Real-world compatibility
+│   ├── api/                        # API behavior against real samples
 │   ├── readers/                    # Ensure all samples can be read
 │   ├── parsers/                    # Verify samples parse correctly
-│   └── detection.test.ts           # Software detection accuracy
+│   └── c2pa.test.ts                # C2PA Content Credentials samples
 │
 └── integration/                    # End-to-end guarantees
     ├── round-trip.test.ts          # Ensure no data loss
     ├── format-conversion.test.ts   # Cross-format conversion
-    └── api.test.ts                 # Actual usage of read() / write()
+    ├── api.test.ts                 # Actual usage of read() / write()
+    └── embed.test.ts               # embed() end-to-end
 ```
 
 ### Lite
 
 ```text
 packages/lite/tests/
-└── Unit + sample tests for the parse() function
+├── read.test.ts                    # parse() vs core read()+stringify() on all samples
+├── c2pa.test.ts                    # C2PA detection
+└── bundle.test.ts                  # Built IIFE/ESM bundles match source behavior
 ```
 
 Lite tests verify that `parse()` returns correct A1111-format text for
@@ -94,40 +101,8 @@ Both are equally critical:
 
 ## Supporting New Tools
 
-Follow TDD for each component:
-
-### Phase 1: Setup
-
-- Add sample files to `samples/`
-
-### Phase 2: Detection
-
-- Write failing detection test
-- Implement detection in `packages/core/src/parsers/detect.ts`
-- Verify test passes
-
-### Phase 3: Parser
-
-- Write failing sample test in `packages/core/tests/samples/parsers/`
-- Implement parser in `packages/core/src/parsers/`
-- Verify sample test passes
-- User reviews expected results
-
-### Phase 4: Converter
-
-- Write failing converter test
-- Implement converter in `packages/core/src/converters/`
-- Verify test passes
-
-### Phase 5: Integration
-
-- Ensure round-trip test covers the new sample
-- Verify no data loss through read/write cycles
-
-### Phase 6: Lite (if applicable)
-
-- Verify `packages/lite/` can also extract metadata from the new sample
-- Add lite sample test if the tool requires special handling in extract()
+Follow the `new-tool` skill (`.claude/skills/new-tool/SKILL.md`) — it
+walks through the TDD phases from sample files to lite support.
 
 ## Commands
 

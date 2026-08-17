@@ -123,4 +123,4 @@ remote-tracking references from the local repository.
 
 ## When Ready to Release
 
-See [RELEASE.md](./RELEASE.md) for the release workflow.
+Use the `/release` skill ([skills/release/SKILL.md](./skills/release/SKILL.md)).

@@ -77,9 +77,16 @@ This is a globally released npm package. All content committed to the repository
 ## Key Documents
 
 - [Development Workflow](.claude/WORKFLOW.md) - Branch strategy, PR rules, daily workflow
-- [Release Workflow](.claude/RELEASE.md) - How to create and publish releases
 - [Testing Strategy](.claude/TESTING.md) - Three-layer testing approach
-- [Metadata Research](.claude/RESEARCH.md) - How to investigate unknown metadata formats
+
+## Skills
+
+Task-specific workflows live in `.claude/skills/` and are invoked as
+slash commands:
+
+- `/release <core|lite>` - Prepare and publish a package release
+- `/research [sample]` - Investigate metadata of an unknown image
+- `/new-tool <name>` - Add support for a new generation tool (TDD phases)
 
 ## Sample Files
 
