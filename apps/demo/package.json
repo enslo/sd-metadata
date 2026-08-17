@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@enslo/sd-metadata": "workspace:*",
-    "@mantine/core": "^9.4.1",
-    "@mantine/dropzone": "^9.4.1",
-    "@mantine/hooks": "^9.4.1",
+    "@mantine/core": "^9.5.1",
+    "@mantine/dropzone": "^9.5.1",
+    "@mantine/hooks": "^9.5.1",
     "@nanostores/react": "^1.1.0",
     "lucide-react": "^1.31.0",
     "nanostores": "^1.4.2",
