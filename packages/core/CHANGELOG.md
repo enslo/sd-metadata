@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-08-17
+
+### Added
+
+- **ComfyUI prompt-enhancer workflow support** (#261): Extract the user's
+  original prompt from workflows built on comfy-core's LLM prompt-enhancer
+  template (e.g. Krea-2 Turbo). Text extraction now traverses
+  `ComfySwitchNode` (If/Else) branches and `PreviewAny` pass-through nodes,
+  and treats `TextGenerate` output as runtime-only so the branch carrying
+  the user's typed prompt is used instead of the LLM instruction.
+
+### Fixed
+
+- **ADetailer Version shadowing software detection** (#262): A1111-format
+  metadata containing `ADetailer Version:` (or any other prefixed
+  `... Version:` key) before the standalone `Version:` parameter could be
+  attributed to the wrong software. The version field is now matched only
+  as a standalone parameter, so Forge Classic/Neo images with the ADetailer
+  extension are detected correctly.
+
+### Maintenance
+
+- Update development dependencies (#259, #260)
+
 ## [3.1.0] - 2026-07-18
 
 ### Added
