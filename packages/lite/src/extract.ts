@@ -484,6 +484,12 @@ function buildNovelAI(obj: JsonObject): string {
  */
 function flatScan(json: string): GenerationParams {
   const result: GenerationParams = {};
+  // User-prompt fallback: official enhancer templates (e.g. Krea-2 Turbo)
+  // hold the user's input in a PrimitiveStringMultiline titled
+  // "... (User Prompt)" while CLIPTextEncode only carries node references.
+  // Collected during the scan, applied only when no text node yielded a
+  // prompt literal.
+  let up = '';
   // Pre-clean: strip trailing null bytes (PNG chunks) and replace NaN
   // literals that some ComfyUI versions emit (invalid JSON).
   const nodes = parseJson(json.replace(/\0+$/, '').replace(/\bNaN\b/g, 'null'));
@@ -495,6 +501,9 @@ function flatScan(json: string): GenerationParams {
     const classType = asString(node[CT]);
     const inputs = node.inputs as JsonObject | undefined;
     if (!inputs) continue;
+
+    if (/User Prompt/.test(asString((node._meta as JsonObject)?.title)))
+      up ||= asString(inputs.value);
 
     // --- Prompt text nodes -------------------------------------------
     // Matches CLIPTextEncode (and variants like SDXL, Flux) via "TextEncode",
@@ -541,6 +550,7 @@ function flatScan(json: string): GenerationParams {
     result.w ??= asNumber(inputs.width);
     result.h ??= asNumber(inputs.height);
   }
+  result.p ||= up;
   return result;
 }
 
