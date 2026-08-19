@@ -3,8 +3,7 @@ import { Alert, Paper, Stack, Tabs } from '@mantine/core';
 import { useStore } from '@nanostores/react';
 import { type RefObject, useEffect, useState } from 'react';
 import { $t, type I18nMessages } from '../../i18n';
-import { EmbedEditor } from '../EmbedEditor';
-import { SaveBar } from '../SaveBar';
+import { OutputTab } from '../OutputTab';
 import { ParsedTabContent } from './ParsedTabContent';
 import { PlainTextTabContent } from './PlainTextTabContent';
 import { RawTabContent } from './RawTabContent';
@@ -17,7 +16,7 @@ interface ResultsProps {
 }
 
 /**
- * Results section with parsed, plaintext, raw, and embed tabs
+ * Results section with parsed, plaintext, raw, and output tabs
  */
 export function Results({
   parseResult,
@@ -49,7 +48,7 @@ export function Results({
             <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>
             <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
             <Tabs.Tab value="raw">{t.results.tabs.raw}</Tabs.Tab>
-            <Tabs.Tab value="embed">{t.results.tabs.embed}</Tabs.Tab>
+            <Tabs.Tab value="output">{t.results.tabs.output}</Tabs.Tab>
           </Tabs.List>
 
           <Tabs.Panel value="parsed">
@@ -64,22 +63,14 @@ export function Results({
             <RawTabContent parseResult={parseResult} t={t} key={previewUrl} />
           </Tabs.Panel>
 
-          <Tabs.Panel value="embed">
-            <EmbedEditor
+          <Tabs.Panel value="output">
+            <OutputTab
               parseResult={parseResult}
               fileDataRef={fileDataRef}
               filename={filename}
             />
           </Tabs.Panel>
         </Tabs>
-
-        {activeTab !== 'embed' && (
-          <SaveBar
-            parseResult={parseResult}
-            previewUrl={previewUrl}
-            filename={filename}
-          />
-        )}
       </Stack>
     </Paper>
   );

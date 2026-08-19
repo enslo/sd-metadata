@@ -82,28 +82,28 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
     <Stack gap="xs">
       <div>
         <Text size="sm" fw={500}>
-          {t.embedEditor.extras}
+          {t.outputTab.extras}
         </Text>
         <Text size="xs" c="dimmed">
-          {t.embedEditor.extrasDescription}
+          {t.outputTab.extrasDescription}
         </Text>
       </div>
 
       {entries.map((entry) => (
         <Group key={entry.id} gap="xs" wrap="nowrap">
           <TextInput
-            placeholder={t.embedEditor.key}
+            placeholder={t.outputTab.key}
             value={entry.key}
-            aria-label={t.embedEditor.key}
+            aria-label={t.outputTab.key}
             onChange={(e: TextChangeEvent) =>
               handleKeyChange(entry.id, e.currentTarget.value)
             }
             style={{ flex: 2 }}
           />
           <TextInput
-            placeholder={t.embedEditor.value}
+            placeholder={t.outputTab.value}
             value={entry.value}
-            aria-label={t.embedEditor.value}
+            aria-label={t.outputTab.value}
             onChange={(e: TextChangeEvent) =>
               handleValueChange(entry.id, e.currentTarget.value)
             }
@@ -113,7 +113,7 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
             variant="subtle"
             color="red"
             onClick={() => handleRemove(entry.id)}
-            aria-label={t.embedEditor.remove}
+            aria-label={t.outputTab.remove}
           >
             <Trash2 size={14} />
           </ActionIcon>
@@ -127,7 +127,7 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
         onClick={handleAdd}
         style={{ alignSelf: 'flex-start' }}
       >
-        {t.embedEditor.addExtra}
+        {t.outputTab.addExtra}
       </Button>
     </Stack>
   );
