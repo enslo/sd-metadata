@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-08-19
+
+### Changed
+
+- **Real-world compatible Exif output** (#267): `embed()` and cross-format
+  conversion now write the Exif TIFF in the same shape as the A1111 family
+  (sd-webui/Forge/reForge/SD.Next): big-endian (MM) structure, pure-ASCII
+  UserComments with the `ASCII` prefix (no byte-order ambiguity, half the
+  size), and UTF-16BE with the `UNICODE` prefix otherwise. Previously the
+  text was always written as UTF-16LE, which piexif-based readers (e.g.
+  A1111's PNG Info tab) unconditionally decode as UTF-16BE, displaying
+  non-ASCII prompts as mojibake.
+
+### Fixed
+
+- **Mojibake when reading UTF-16 UserComments starting with non-ASCII text**
+  (#266): The UTF-16 byte order was guessed only from an ASCII-shaped first
+  character and unconditionally fell back to big-endian otherwise, so
+  comments starting with e.g. Japanese or an emoji were misread. The reader
+  now falls back to the enclosing TIFF byte order per the Exif specification.
+- **Invalid count in the Exif IFD pointer entry** (#267): The IFD count
+  field was written as a byte length instead of a value count, so strict
+  readers (including `@enslo/sd-metadata-lite`) treated the pointer as an
+  out-of-line value and lost the entire Exif IFD of `embed()` output.
+
+### Demo Site
+
+- **Unified Output tab** (#265): The save bar and Edit tab are merged into
+  a single Output tab — choose to embed as-is, remove, or edit metadata,
+  and save as PNG/JPEG/WebP or transplant the metadata into another
+  uploaded image without re-encoding.
+
 ## [3.2.0] - 2026-08-17
 
 ### Added
