@@ -31,10 +31,11 @@ const IFD0_TAG_BY_SOURCE: Partial<
  * Build Exif TIFF data from MetadataSegments
  *
  * Creates a complete TIFF structure with IFD0, Exif IFD, and all tag data.
- * Uses little-endian (Intel) byte order for maximum compatibility.
+ * Uses big-endian (Motorola) byte order, matching what the A1111 family
+ * (sd-webui/Forge/reForge/SD.Next via piexif) writes — see samples/jpg.
  *
  * @param segments - Metadata segments to encode
- * @returns TIFF data (starts with "II" byte order marker)
+ * @returns TIFF data (starts with "MM" byte order marker)
  */
 export function buildExifTiffData(segments: MetadataSegment[]): Uint8Array {
   // Build tag data for each segment, split by destination IFD
@@ -58,7 +59,7 @@ export function buildExifTiffData(segments: MetadataSegment[]): Uint8Array {
     return new Uint8Array(0);
   }
 
-  const isLittleEndian = true;
+  const isLittleEndian = false;
 
   const hasExifIfd = exifTags.length > 0;
   if (hasExifIfd) {
@@ -113,8 +114,8 @@ export function buildExifTiffData(segments: MetadataSegment[]): Uint8Array {
   const result = new Uint8Array(totalSize);
 
   // Write TIFF header
-  result[0] = 0x49; // I
-  result[1] = 0x49; // I (little-endian)
+  result[0] = 0x4d; // M
+  result[1] = 0x4d; // M (big-endian)
   writeUint16(result, 2, 42, isLittleEndian);
   writeUint32(result, 4, ifd0Offset, isLittleEndian);
 
@@ -168,9 +169,12 @@ function writeIfdEntry(
   dataOffset: number | undefined,
   isLittleEndian: boolean,
 ): void {
+  // The count field holds the number of typed values, not bytes —
+  // for LONG (type 4) that is data.length / 4
+  const typeSize = tag.type === 4 ? 4 : 1;
   writeUint16(data, offset, tag.tag, isLittleEndian);
   writeUint16(data, offset + 2, tag.type, isLittleEndian);
-  writeUint32(data, offset + 4, tag.data.length, isLittleEndian);
+  writeUint32(data, offset + 4, tag.data.length / typeSize, isLittleEndian);
 
   if (tag.data.length <= 4) {
     data.set(tag.data, offset + 8);
@@ -184,21 +188,48 @@ const UNICODE_PREFIX = new Uint8Array([
   0x55, 0x4e, 0x49, 0x43, 0x4f, 0x44, 0x45, 0x00,
 ]);
 
+/** ASCII encoding prefix for UserComment: "ASCII\0\0\0" */
+const ASCII_PREFIX = new Uint8Array([
+  0x41, 0x53, 0x43, 0x49, 0x49, 0x00, 0x00, 0x00,
+]);
+
+/** Whether every code unit fits in 7-bit ASCII */
+function isAsciiOnly(text: string): boolean {
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) > 0x7f) return false;
+  }
+  return true;
+}
+
 /**
- * Encode string as UserComment with UTF-16LE encoding
+ * Encode string as UserComment
  *
- * Uses UNICODE prefix followed by UTF-16LE encoded text.
+ * Pure-ASCII text uses the ASCII prefix: single-byte code units carry no
+ * byte-order ambiguity and take half the space (NovelAI writes this shape,
+ * without a NUL terminator). Anything else uses the UNICODE prefix with
+ * UTF-16BE, matching the A1111 ecosystem — piexif, which A1111's PNG Info
+ * uses to read JPEG metadata back, decodes UNICODE comments as UTF-16BE
+ * unconditionally.
  *
  * @param text - Text to encode
- * @returns Encoded UserComment data (8-byte prefix + UTF-16LE text)
+ * @returns Encoded UserComment data (8-byte prefix + text)
  */
 function encodeUserComment(text: string): Uint8Array {
+  if (isAsciiOnly(text)) {
+    const result = new Uint8Array(8 + text.length);
+    result.set(ASCII_PREFIX);
+    for (let i = 0; i < text.length; i++) {
+      result[8 + i] = text.charCodeAt(i);
+    }
+    return result;
+  }
+
   const result = new Uint8Array(8 + text.length * 2);
   const dataView = new DataView(result.buffer);
 
   result.set(UNICODE_PREFIX);
   for (let i = 0; i < text.length; i++) {
-    dataView.setUint16(8 + i * 2, text.charCodeAt(i), true);
+    dataView.setUint16(8 + i * 2, text.charCodeAt(i), false);
   }
 
   return result;

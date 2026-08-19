@@ -5,9 +5,11 @@ import {
 } from '../../../src/readers/exif';
 import type { MetadataSegment } from '../../../src/types';
 import {
+  EXIF_IFD_POINTER_TAG,
   IMAGE_DESCRIPTION_TAG,
   MAKE_TAG,
   MODEL_TAG,
+  USER_COMMENT_TAG,
 } from '../../../src/utils/exif-constants';
 import { buildExifTiffData } from '../../../src/writers/exif';
 
@@ -20,21 +22,53 @@ import { buildExifTiffData } from '../../../src/writers/exif';
  * reader's prefix regex tolerates both).
  */
 function readAsciiTagRaw(tiff: Uint8Array, tag: number): string | undefined {
+  const le = tiff[0] === 0x49; // "II" = little-endian, "MM" = big-endian
   const view = new DataView(tiff.buffer, tiff.byteOffset, tiff.byteLength);
-  const ifd0Offset = view.getUint32(4, true);
-  const entryCount = view.getUint16(ifd0Offset, true);
+  const ifd0Offset = view.getUint32(4, le);
+  const entryCount = view.getUint16(ifd0Offset, le);
 
   for (let i = 0; i < entryCount; i++) {
     const entryOffset = ifd0Offset + 2 + i * 12;
-    if (view.getUint16(entryOffset, true) !== tag) continue;
+    if (view.getUint16(entryOffset, le) !== tag) continue;
 
-    const byteCount = view.getUint32(entryOffset + 4, true);
+    const byteCount = view.getUint32(entryOffset + 4, le);
     const valueOffset =
-      byteCount <= 4 ? entryOffset + 8 : view.getUint32(entryOffset + 8, true);
+      byteCount <= 4 ? entryOffset + 8 : view.getUint32(entryOffset + 8, le);
     const bytes = tiff.subarray(valueOffset, valueOffset + byteCount - 1); // drop null terminator
     return new TextDecoder().decode(bytes);
   }
   return undefined;
+}
+
+/**
+ * Extract the raw UserComment value (encoding prefix included) from a built
+ * TIFF, honoring the TIFF byte order. parseExifMetadataSegments decodes the
+ * text, so this is needed to verify the literal encoding the writer chose.
+ */
+function readUserCommentRaw(tiff: Uint8Array): Uint8Array | undefined {
+  const le = tiff[0] === 0x49;
+  const view = new DataView(tiff.buffer, tiff.byteOffset, tiff.byteLength);
+
+  const scan = (ifdOffset: number): Uint8Array | undefined => {
+    const entryCount = view.getUint16(ifdOffset, le);
+    for (let i = 0; i < entryCount; i++) {
+      const entryOffset = ifdOffset + 2 + i * 12;
+      const tag = view.getUint16(entryOffset, le);
+      const byteCount = view.getUint32(entryOffset + 4, le);
+      const valueOffset =
+        byteCount <= 4 ? entryOffset + 8 : view.getUint32(entryOffset + 8, le);
+      if (tag === USER_COMMENT_TAG) {
+        return tiff.subarray(valueOffset, valueOffset + byteCount);
+      }
+      if (tag === EXIF_IFD_POINTER_TAG) {
+        const nested = scan(view.getUint32(entryOffset + 8, le));
+        if (nested) return nested;
+      }
+    }
+    return undefined;
+  };
+
+  return scan(view.getUint32(4, le));
 }
 
 /**
@@ -382,11 +416,11 @@ describe('Exif Utils - Encoding', () => {
       const result = buildExifTiffData(segments);
 
       expect(result.length).toBeGreaterThan(0);
-      // Check TIFF header
-      expect(result.at(0)).toBe(0x49); // 'I'
-      expect(result.at(1)).toBe(0x49); // 'I'
-      expect(result.at(2)).toBe(42); // Magic (LE)
-      expect(result.at(3)).toBe(0);
+      // Big-endian TIFF header, matching what the A1111 family writes
+      expect(result.at(0)).toBe(0x4d); // 'M'
+      expect(result.at(1)).toBe(0x4d); // 'M'
+      expect(result.at(2)).toBe(0);
+      expect(result.at(3)).toBe(42); // Magic (BE)
     });
 
     it('should build TIFF with ImageDescription', () => {
@@ -397,8 +431,93 @@ describe('Exif Utils - Encoding', () => {
       const result = buildExifTiffData(segments);
 
       expect(result.length).toBeGreaterThan(0);
-      expect(result.at(0)).toBe(0x49);
-      expect(result.at(1)).toBe(0x49);
+      expect(result.at(0)).toBe(0x4d);
+      expect(result.at(1)).toBe(0x4d);
+    });
+
+    it('should write the Exif IFD pointer with count 1, not byte length', () => {
+      // The TIFF count field holds the number of typed values, not bytes.
+      // A LONG (type 4) pointer is one value; writing 4 made strict
+      // readers (e.g. lite) treat the 16 "bytes" as an out-of-line value
+      // and misread the pointer.
+      const tiff = buildExifTiffData([
+        { source: { type: 'exifUserComment' }, data: 'x' },
+      ]);
+      const le = tiff[0] === 0x49;
+      const view = new DataView(tiff.buffer, tiff.byteOffset, tiff.byteLength);
+      const ifd0 = view.getUint32(4, le);
+      const entryCount = view.getUint16(ifd0, le);
+
+      let found = false;
+      for (let i = 0; i < entryCount; i++) {
+        const entry = ifd0 + 2 + i * 12;
+        if (view.getUint16(entry, le) !== EXIF_IFD_POINTER_TAG) continue;
+        found = true;
+        expect(view.getUint16(entry + 2, le)).toBe(4); // LONG
+        expect(view.getUint32(entry + 4, le)).toBe(1); // one LONG value
+      }
+      expect(found).toBe(true);
+    });
+
+    it('should write pure-ASCII UserComment with the ASCII prefix', () => {
+      // Single-byte code units have no byte-order ambiguity and take
+      // half the space of UTF-16 — the same tExt/iTXt spirit as PNG.
+      // NovelAI writes this exact shape (samples/webp/novelai-*.webp),
+      // including the absence of a NUL terminator.
+      const text = 'plain ascii prompt, masterpiece\nSteps: 20';
+      const segments: MetadataSegment[] = [
+        { source: { type: 'exifUserComment' }, data: text },
+      ];
+
+      const tiff = buildExifTiffData(segments);
+      const raw = readUserCommentRaw(tiff);
+
+      expect(raw).toBeDefined();
+      if (!raw) return;
+      expect([...raw.subarray(0, 8)]).toEqual([
+        0x41,
+        0x53,
+        0x43,
+        0x49,
+        0x49,
+        0x00,
+        0x00,
+        0x00, // "ASCII\0\0\0"
+      ]);
+      expect(new TextDecoder('ascii').decode(raw.subarray(8))).toBe(text);
+    });
+
+    it('should write non-ASCII UserComment as UTF-16BE like the A1111 ecosystem', () => {
+      // piexif (used by A1111's PNG Info to read JPEG metadata) treats
+      // UNICODE UserComments as UTF-16BE unconditionally, and every
+      // UTF-16 sample except SwarmUI's is BE — so BE is what interops
+      const segments: MetadataSegment[] = [
+        { source: { type: 'exifUserComment' }, data: '日本語' },
+      ];
+
+      const tiff = buildExifTiffData(segments);
+      const raw = readUserCommentRaw(tiff);
+
+      expect(raw).toBeDefined();
+      if (!raw) return;
+      expect([...raw.subarray(0, 8)]).toEqual([
+        0x55,
+        0x4e,
+        0x49,
+        0x43,
+        0x4f,
+        0x44,
+        0x45,
+        0x00, // "UNICODE\0"
+      ]);
+      expect([...raw.subarray(8)]).toEqual([
+        0x65,
+        0xe5, // 日 (U+65E5, BE)
+        0x67,
+        0x2c, // 本 (U+672C, BE)
+        0x8a,
+        0x9e, // 語 (U+8A9E, BE)
+      ]);
     });
 
     it('should build TIFF with Make tag', () => {
