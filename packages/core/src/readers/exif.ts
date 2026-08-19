@@ -134,7 +134,7 @@ function extractTagsFromIfd(
         });
       }
     } else if (tag === USER_COMMENT_TAG) {
-      const text = decodeUserComment(tagData);
+      const text = decodeUserComment(tagData, isLittleEndian);
       if (text) {
         segments.push({
           source: { type: 'exifUserComment' },
@@ -238,9 +238,14 @@ function findExifIfdOffset(
  * Decode UserComment based on encoding prefix
  *
  * @param data - UserComment data including encoding prefix
+ * @param isLittleEndian - Byte order of the enclosing TIFF structure,
+ *   used when the text itself does not reveal its byte order
  * @returns Decoded string
  */
-export function decodeUserComment(data: Uint8Array): string | null {
+export function decodeUserComment(
+  data: Uint8Array,
+  isLittleEndian = true,
+): string | null {
   if (data.length < 8) return null;
 
   // Check for UNICODE prefix
@@ -254,13 +259,22 @@ export function decodeUserComment(data: Uint8Array): string | null {
     data[6] === 0x45 && // E
     data[7] === 0x00 // NULL
   ) {
-    // UTF-16 encoded - detect byte order by looking at first character
+    // UTF-16 encoded. An ASCII first character reveals the byte order
+    // directly (its code unit has exactly one zero byte); some tools
+    // write the text in the opposite order from the TIFF header, so
+    // this sniffing takes precedence.
     const textData = data.slice(8);
     if (textData.length >= 2) {
-      const isLikelyLE = textData[0] !== 0x00 && textData[1] === 0x00;
-      return isLikelyLE ? decodeUtf16LE(textData) : decodeUtf16BE(textData);
+      if (textData[0] !== 0x00 && textData[1] === 0x00) {
+        return decodeUtf16LE(textData);
+      }
+      if (textData[0] === 0x00 && textData[1] !== 0x00) {
+        return decodeUtf16BE(textData);
+      }
     }
-    return decodeUtf16BE(textData);
+    // Both bytes non-zero (e.g. Japanese text or an emoji surrogate):
+    // per the Exif spec, follow the TIFF byte order
+    return isLittleEndian ? decodeUtf16LE(textData) : decodeUtf16BE(textData);
   }
 
   // Check for ASCII prefix

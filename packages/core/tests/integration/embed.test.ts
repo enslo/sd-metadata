@@ -359,6 +359,55 @@ describe('embed - Integration Tests', () => {
       expect(readResult.metadata.negativePrompt).toContain('低解像度, 悪い');
     });
 
+    it('should round-trip a prompt starting with Japanese text (JPEG)', () => {
+      // JPEG stores the text as a UTF-16 Exif UserComment; a leading
+      // non-ASCII character leaves no zero byte to sniff the byte order
+      // from, so the reader must fall back to the TIFF byte order
+      const jpeg = createMinimalJpeg();
+      const metadata: StandardMetadata = {
+        software: 'sd-webui',
+        prompt: '美しい風景, masterpiece',
+        negativePrompt: '低解像度',
+        width: 512,
+        height: 512,
+        sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 42 },
+      };
+
+      const writeResult = embed(jpeg, metadata);
+      expect(writeResult.ok).toBe(true);
+      if (!writeResult.ok) return;
+
+      const readResult = read(writeResult.value);
+      expect(readResult.status).toBe('success');
+      if (readResult.status !== 'success') return;
+
+      expect(readResult.metadata.prompt).toBe('美しい風景, masterpiece');
+      expect(readResult.metadata.negativePrompt).toBe('低解像度');
+    });
+
+    it('should round-trip a prompt starting with Japanese text (WebP)', () => {
+      const webp = createMinimalWebp();
+      const metadata: StandardMetadata = {
+        software: 'sd-webui',
+        prompt: '猫耳の少女, best quality',
+        negativePrompt: '悪い手',
+        width: 512,
+        height: 512,
+        sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 42 },
+      };
+
+      const writeResult = embed(webp, metadata);
+      expect(writeResult.ok).toBe(true);
+      if (!writeResult.ok) return;
+
+      const readResult = read(writeResult.value);
+      expect(readResult.status).toBe('success');
+      if (readResult.status !== 'success') return;
+
+      expect(readResult.metadata.prompt).toBe('猫耳の少女, best quality');
+      expect(readResult.metadata.negativePrompt).toBe('悪い手');
+    });
+
     it('should handle multiline prompts correctly', () => {
       const png = createMinimalPng();
       const metadata: StandardMetadata = {
