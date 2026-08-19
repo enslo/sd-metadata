@@ -138,6 +138,56 @@ describe('Exif Utils - Decoding', () => {
       expect(result).toBe('Test');
     });
 
+    it('should decode UTF-16LE text starting with a non-ASCII character', () => {
+      // "日本語" in UTF-16LE — both bytes of the first code unit are
+      // non-zero, so the byte order cannot be sniffed from an ASCII
+      // pattern and must fall back to the TIFF byte order
+      const data = new Uint8Array([
+        0x55,
+        0x4e,
+        0x49,
+        0x43,
+        0x4f,
+        0x44,
+        0x45,
+        0x00, // "UNICODE\0"
+        0xe5,
+        0x65, // 日 (U+65E5, LE)
+        0x2c,
+        0x67, // 本 (U+672C, LE)
+        0x9e,
+        0x8a, // 語 (U+8A9E, LE)
+      ]);
+
+      const result = decodeUserComment(data, true);
+
+      expect(result).toBe('日本語');
+    });
+
+    it('should decode UTF-16BE text starting with a non-ASCII character', () => {
+      // "日本語" in UTF-16BE inside a big-endian TIFF
+      const data = new Uint8Array([
+        0x55,
+        0x4e,
+        0x49,
+        0x43,
+        0x4f,
+        0x44,
+        0x45,
+        0x00, // "UNICODE\0"
+        0x65,
+        0xe5, // 日 (U+65E5, BE)
+        0x67,
+        0x2c, // 本 (U+672C, BE)
+        0x8a,
+        0x9e, // 語 (U+8A9E, BE)
+      ]);
+
+      const result = decodeUserComment(data, false);
+
+      expect(result).toBe('日本語');
+    });
+
     it('should decode UTF-8 without prefix (ComfyUI format)', () => {
       const jsonData = JSON.stringify({ prompt: 'test' });
       const data = new TextEncoder().encode(jsonData);
@@ -545,6 +595,36 @@ describe('Exif Utils - Round-trip', () => {
 
   it('should preserve long text through encode-decode cycle', () => {
     const original = 'A'.repeat(1000);
+    const segments: MetadataSegment[] = [
+      { source: { type: 'exifUserComment' }, data: original },
+    ];
+
+    const encoded = buildExifTiffData(segments);
+    const decoded = parseExifMetadataSegments(encoded);
+
+    expect(decoded).toHaveLength(1);
+    expect(decoded.at(0)?.data).toBe(original);
+  });
+
+  it('should preserve text starting with a non-ASCII character through encode-decode cycle', () => {
+    // The first UTF-16 code unit has no zero byte here, so decoding must
+    // rely on the TIFF byte order instead of ASCII-based sniffing
+    const original = '日本語で始まるプロンプト, masterpiece';
+    const segments: MetadataSegment[] = [
+      { source: { type: 'exifUserComment' }, data: original },
+    ];
+
+    const encoded = buildExifTiffData(segments);
+    const decoded = parseExifMetadataSegments(encoded);
+
+    expect(decoded).toHaveLength(1);
+    expect(decoded.at(0)?.data).toBe(original);
+  });
+
+  it('should preserve text starting with an emoji through encode-decode cycle', () => {
+    // A surrogate pair leads with 0xD83C — neither byte is zero in
+    // either byte order, exercising the same fallback path
+    const original = '🎨 emoji first';
     const segments: MetadataSegment[] = [
       { source: { type: 'exifUserComment' }, data: original },
     ];
