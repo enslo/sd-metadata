@@ -1,7 +1,7 @@
 /**
  * Shared image conversion utilities
  *
- * Extracted from SaveFab for reuse by EmbedEditor and other components.
+ * Used by OutputTab and other components.
  */
 
 export type OutputFormat = 'png' | 'jpeg' | 'webp';
