@@ -1,4 +1,4 @@
-import { Badge, Group, Image, Stack, Text } from '@mantine/core';
+import { Badge, Group, Image, Stack, Text, Tooltip } from '@mantine/core';
 import { Dropzone, IMAGE_MIME_TYPE } from '@mantine/dropzone';
 import { useStore } from '@nanostores/react';
 import { Upload } from 'lucide-react';
@@ -11,6 +11,8 @@ interface DropZoneProps {
   softwareInfo: {
     label: string;
     status: 'success' | 'c2pa' | 'empty' | 'unrecognized' | 'invalid';
+    /** True when the result was recovered from pixel LSBs (Stealth PNGInfo) */
+    stealth?: boolean;
   } | null;
   globalDragOver?: boolean;
 }
@@ -78,14 +80,33 @@ export function DropZone({
               {filename}
             </Text>
             <Group justify="space-between" align="center">
-              <Badge
-                color={badgeColor}
-                variant="filled"
-                size="lg"
-                style={{ textTransform: 'none' }}
-              >
-                {softwareInfo?.label || t.dropzone.unknown}
-              </Badge>
+              <Group gap="xs">
+                <Badge
+                  color={badgeColor}
+                  variant="filled"
+                  size="lg"
+                  style={{ textTransform: 'none' }}
+                >
+                  {softwareInfo?.label || t.dropzone.unknown}
+                </Badge>
+                {softwareInfo?.stealth && (
+                  <Tooltip
+                    label={t.dropzone.stealthTooltip}
+                    multiline
+                    w={300}
+                    withArrow
+                  >
+                    <Badge
+                      color="grape"
+                      variant="light"
+                      size="lg"
+                      style={{ textTransform: 'none', cursor: 'help' }}
+                    >
+                      {t.dropzone.stealthBadge}
+                    </Badge>
+                  </Tooltip>
+                )}
+              </Group>
               <Text size="xs" c="dimmed">
                 {t.dropzone.changeHint}
               </Text>

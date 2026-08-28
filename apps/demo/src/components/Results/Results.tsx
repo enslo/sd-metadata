@@ -40,19 +40,9 @@ export function Results({
     );
   }
 
-  const stealthRecovered =
-    (parseResult.status === 'success' ||
-      parseResult.status === 'unrecognized') &&
-    parseResult.stealth === true;
-
   return (
     <Paper className="fade-in">
       <Stack gap="md">
-        {stealthRecovered && (
-          <Alert color="grape" variant="light">
-            {t.results.stealthRecovered}
-          </Alert>
-        )}
         <Tabs value={activeTab} onChange={setActiveTab}>
           <Tabs.List mb="md">
             <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>

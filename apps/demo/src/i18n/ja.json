@@ -8,7 +8,9 @@
     "changeHint": "クリックまたはドロップで変更",
     "unknown": "不明",
     "uploadLabel": "画像をアップロード",
-    "preview": "プレビュー"
+    "preview": "プレビュー",
+    "stealthBadge": "Stealth PNGInfo",
+    "stealthTooltip": "このメタデータは画像ピクセルに隠されていたものです（Stealth PNGInfo）。ファイル自体に通常のメタデータはありません。"
   },
   "results": {
     "tabs": {
@@ -24,7 +26,6 @@
       "noRawData": "データがありません",
       "noPlainText": "テキスト表現がありません"
     },
-    "stealthRecovered": "Stealth PNGInfo から復元 — このメタデータは画像ピクセルに隠されていたものです。ファイル自体に通常のメタデータはありません。",
     "c2pa": {
       "title": "Content Credentials",
       "vendor": "生成元",

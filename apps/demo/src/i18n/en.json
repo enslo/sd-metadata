@@ -8,7 +8,9 @@
     "changeHint": "Click or drop to change",
     "unknown": "Unknown",
     "uploadLabel": "Upload image",
-    "preview": "Preview"
+    "preview": "Preview",
+    "stealthBadge": "Stealth PNGInfo",
+    "stealthTooltip": "This metadata was hidden in the image pixels (Stealth PNGInfo). The file itself carries no regular metadata."
   },
   "results": {
     "tabs": {
@@ -24,7 +26,6 @@
       "noRawData": "No data available",
       "noPlainText": "No text representation available"
     },
-    "stealthRecovered": "Recovered from Stealth PNGInfo — this metadata was hidden in the image pixels. The file itself carries no regular metadata.",
     "c2pa": {
       "title": "Content Credentials",
       "vendor": "Vendor",
