@@ -151,12 +151,14 @@ describe('parse - Stealth PNGInfo samples', () => {
   });
 
   it('does not recover stealth data from WebP (pixel decoding is PNG-only)', async () => {
-    // forge-stealth-*.webp are lossless (VP8L), so the stealth bits do
-    // survive in the pixel data — but reading them would require a full
-    // WebP decoder, which is out of scope for a dependency-free
-    // library. Once the EXIF metadata is stripped, nothing is
-    // recoverable.
-    const original = loadSample('webp', 'forge-stealth-alpha-comp.webp');
+    // NovelAI writes stealth_pngcomp into the alpha LSBs of its
+    // lossless (VP8L) WebP exports too, so the bits survive in this
+    // sample — but reading them would require a full VP8L decoder,
+    // which is out of scope for a dependency-free library. Once the
+    // EXIF metadata is stripped, nothing is recoverable for now.
+    // (The forge-stealth-*.webp samples carry no stealth data at all:
+    // the extension only hooks PNG saves.)
+    const original = loadSample('webp', 'novelai-curated.webp');
     expect(read(original).status).toBe('success');
 
     const strippedResult = write(original, { status: 'empty' });
