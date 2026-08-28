@@ -22,7 +22,7 @@
  * @see https://github.com/ashen-sensored/sd_webui_stealth_pnginfo
  */
 
-import type { PngTextChunk } from '../types';
+import type { PngTextChunk, RgbaPixels } from '../types';
 import { isPng, readChunkType, readUint32BE } from '../utils/binary';
 import { gunzip, inflate } from '../utils/compression';
 
@@ -35,15 +35,13 @@ const RGB_MAGICS = ['stealth_rgbinfo', 'stealth_rgbcomp'];
 /** Which pixel channels carry the hidden bitstream */
 type LsbMode = 'alpha' | 'rgb';
 
-/** Decoded (unfiltered) PNG pixel data */
-interface DecodedPng {
+/** Decoded pixel data, interleaved and row-major */
+interface PixelData {
   width: number;
   height: number;
-  /** 6 = RGBA, 2 = RGB */
-  colorType: number;
-  /** Bytes per pixel */
+  /** Bytes per pixel: 4 = RGBA, 3 = RGB */
   channels: number;
-  /** Unfiltered scanlines: height * width * channels bytes */
+  /** width * height * channels bytes */
   pixels: Uint8Array;
 }
 
@@ -65,10 +63,40 @@ export async function readStealthChunks(
   if (!image) {
     return null;
   }
+  return scanPixels(image);
+}
 
+/**
+ * Scan externally decoded RGBA pixels for Stealth PNGInfo
+ *
+ * Used for formats the built-in decoder cannot handle (currently
+ * WebP), with pixels supplied by the platform (browser image decoding)
+ * or by an injected decoder (ReadOptions.decodePixels).
+ *
+ * @param rgba - Decoded RGBA pixel data
+ * @returns Synthesized text chunks, or null when no stealth data is found
+ */
+export async function scanStealthPixels(
+  rgba: RgbaPixels,
+): Promise<PngTextChunk[] | null> {
+  const { data, width, height } = rgba;
+  if (width <= 0 || height <= 0 || data.length < width * height * 4) {
+    return null;
+  }
+  const pixels =
+    data instanceof Uint8Array
+      ? data
+      : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+  return scanPixels({ width, height, channels: 4, pixels });
+}
+
+/**
+ * Try each LSB mode the pixel layout can carry
+ */
+async function scanPixels(image: PixelData): Promise<PngTextChunk[] | null> {
   // RGBA images may carry either variant; alpha is checked first to
   // match the reference readers. RGB images can only carry rgb variants.
-  const modes: LsbMode[] = image.colorType === 6 ? ['alpha', 'rgb'] : ['rgb'];
+  const modes: LsbMode[] = image.channels === 4 ? ['alpha', 'rgb'] : ['rgb'];
   for (const mode of modes) {
     const text = await extractStealthText(image, mode);
     if (text !== null) {
@@ -85,7 +113,7 @@ export async function readStealthChunks(
 /**
  * Decode PNG pixel data (8-bit RGB/RGBA, non-interlaced only)
  */
-async function decodePixels(data: Uint8Array): Promise<DecodedPng | null> {
+async function decodePixels(data: Uint8Array): Promise<PixelData | null> {
   let width = 0;
   let height = 0;
   let bitDepth = 0;
@@ -145,7 +173,7 @@ async function decodePixels(data: Uint8Array): Promise<DecodedPng | null> {
   if (!pixels) {
     return null;
   }
-  return { width, height, colorType, channels, pixels };
+  return { width, height, channels, pixels };
 }
 
 /**
@@ -241,7 +269,7 @@ class LsbCursor {
   private readonly capacity: number;
 
   constructor(
-    private readonly image: DecodedPng,
+    private readonly image: PixelData,
     private readonly mode: LsbMode,
   ) {
     this.bitsPerPixel = mode === 'alpha' ? 1 : 3;
@@ -300,7 +328,7 @@ class LsbCursor {
  * Extract and decode the stealth payload for one LSB mode
  */
 async function extractStealthText(
-  image: DecodedPng,
+  image: PixelData,
   mode: LsbMode,
 ): Promise<string | null> {
   const cursor = new LsbCursor(image, mode);

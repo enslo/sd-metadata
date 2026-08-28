@@ -4,8 +4,12 @@ import { read } from '../../../src/api/read';
 import {
   createMinimalJpeg,
   createMinimalPng,
+  createMinimalWebp,
 } from '../../helpers/minimal-images';
-import { createStealthPng } from '../../helpers/stealth-images';
+import {
+  createStealthPng,
+  createStealthRgbaPixels,
+} from '../../helpers/stealth-images';
 
 const A1111_PAYLOAD =
   'masterpiece, 1girl\nNegative prompt: lowres\n' +
@@ -85,6 +89,72 @@ describe('parse', () => {
 
     const result = await parse(buffer as ArrayBuffer);
 
+    expect(result.status).toBe('success');
+  });
+});
+
+describe('parse - WebP stealth via decodePixels', () => {
+  const stealthPixels = createStealthRgbaPixels({ payload: A1111_PAYLOAD });
+
+  it('recovers metadata from pixels supplied by the callback', async () => {
+    const webp = createMinimalWebp();
+    const formats: string[] = [];
+
+    const result = await parse(webp, {
+      decodePixels: async (_data, format) => {
+        formats.push(format);
+        return stealthPixels;
+      },
+    });
+
+    expect(formats).toEqual(['webp']);
+    expect(result.status).toBe('success');
+    if (result.status === 'success') {
+      expect(result.metadata.software).toBe('sd-webui');
+      expect(result.metadata.prompt).toBe('masterpiece, 1girl');
+      // Stealth raw metadata is chunk-shaped regardless of container.
+      expect(result.raw).toEqual({
+        format: 'png',
+        chunks: [{ type: 'tEXt', keyword: 'parameters', text: A1111_PAYLOAD }],
+      });
+    }
+  });
+
+  it('returns the chunk-based result when the callback yields null', async () => {
+    const webp = createMinimalWebp();
+
+    const result = await parse(webp, { decodePixels: async () => null });
+
+    expect(result.status).toBe('empty');
+  });
+
+  it('returns the chunk-based result when no decoder is available', async () => {
+    // Node.js has no platform decoder and no callback is supplied.
+    expect((await parse(createMinimalWebp())).status).toBe('empty');
+  });
+
+  it('survives a throwing callback', async () => {
+    const result = await parse(createMinimalWebp(), {
+      decodePixels: async () => {
+        throw new Error('decoder exploded');
+      },
+    });
+
+    expect(result.status).toBe('empty');
+  });
+
+  it('does not invoke the callback for PNG input', async () => {
+    const png = createStealthPng({ payload: A1111_PAYLOAD });
+    let called = false;
+
+    const result = await parse(png, {
+      decodePixels: async () => {
+        called = true;
+        return null;
+      },
+    });
+
+    expect(called).toBe(false);
     expect(result.status).toBe('success');
   });
 });
