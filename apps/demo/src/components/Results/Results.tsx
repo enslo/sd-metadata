@@ -13,6 +13,8 @@ interface ResultsProps {
   fileDataRef: RefObject<Uint8Array | null>;
   filename: string;
   previewUrl: string;
+  /** True when metadata came from pixel LSBs (Stealth PNGInfo) */
+  stealthRecovered?: boolean;
 }
 
 /**
@@ -23,6 +25,7 @@ export function Results({
   fileDataRef,
   filename,
   previewUrl,
+  stealthRecovered,
 }: ResultsProps) {
   const t: I18nMessages = useStore($t);
   const [activeTab, setActiveTab] = useState<string | null>('parsed');
@@ -43,6 +46,11 @@ export function Results({
   return (
     <Paper className="fade-in">
       <Stack gap="md">
+        {stealthRecovered && (
+          <Alert color="grape" variant="light">
+            {t.results.stealthRecovered}
+          </Alert>
+        )}
         <Tabs value={activeTab} onChange={setActiveTab}>
           <Tabs.List mb="md">
             <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>
