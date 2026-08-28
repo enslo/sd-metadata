@@ -21,13 +21,14 @@ PNG、JPEG、WebPフォーマットに対応し、18以上の生成ツールを�
 | 機能 | `sd-metadata` | `sd-metadata-lite` |
 | ---- | :-----------: | :----------------: |
 | メタデータ読み取り | ✅ | ✅（A1111形式テキストのみ） |
+| Stealth PNGInfo の復元（ピクセルに隠されたメタデータ） | ✅ | - |
 | 画像へのメタデータ書き戻し | ✅ | - |
 | カスタム（ユーザー作成）メタデータの埋め込み | ✅ | - |
 | フォーマット変換（PNG/JPEG/WebP） | ✅ | - |
 | ツール検知 | ✅ | - |
 | 構造化メタデータオブジェクト | ✅ | - |
 | IIFEビルド（ユーザースクリプト `@require`） | ✅ | ✅ |
-| バンドルサイズ（IIFE、minified） | 約51 KB | 約7 KB |
+| バンドルサイズ（IIFE、minified） | 約57 KB | 約7 KB |
 | Node.js + ブラウザ | ✅ | ✅ |
 
 - **フルライブラリ**（`@enslo/sd-metadata`）
@@ -44,9 +45,9 @@ npm install @enslo/sd-metadata
 ```
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 
-const result = read(imageBytes); // Uint8Array | ArrayBuffer
+const result = await parse(imageBytes); // Uint8Array | ArrayBuffer
 if (result.status === 'success') {
   console.log(result.metadata.software); // 'novelai', 'comfyui', ...
   console.log(result.metadata.prompt);

@@ -13,7 +13,8 @@ AI生成画像に埋め込まれたメタデータを読み書きするための
 ## 特徴
 
 - **マルチフォーマット対応**: PNG (tEXt / iTXt)、JPEG (COM / Exif)、WebP (Exif)
-- **シンプルAPI**: `read()`、`write()`、`embed()`、`stringify()` — 4つの関数で全ユースケースをカバー
+- **シンプルAPI**: `parse()`、`write()`、`embed()`、`stringify()` — 4つの関数で全ユースケースをカバー
+- **Stealth PNGInfo の復元**: NovelAI や stealth-pnginfo 拡張がピクセルの最下位ビットに隠したメタデータを、画像ホストに通常のメタデータを剥がされた後でも復元
 - **TypeScriptネイティブ**: TypeScriptで書かれており、型定義を完全同梱
 - **ゼロ依存**: Node.jsとブラウザで外部依存なしで動作
 - **フォーマット変換**: PNG、JPEG、WebP間でメタデータをシームレスに変換
@@ -29,10 +30,10 @@ npm install @enslo/sd-metadata
 ## クイックスタート
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 
 // `imageBytes` は Uint8Array または ArrayBuffer（fs、fetch、ファイル入力などから取得）
-const result = read(imageBytes);
+const result = await parse(imageBytes);
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software); // 'novelai', 'comfyui', ...
   console.log('Prompt:', result.metadata.prompt);
@@ -96,18 +97,78 @@ Node.js、ブラウザ、ユーザースクリプトでの利用方法は[使い
 - **NovelAI WebP**: Descriptionフィールドの破損したUTF-8を自動修正します。WebP → PNG → WebP のラウンドトリップは有効で読み取り可能なメタデータを生成しますが、軽微なテキスト修正が含まれます。
 - **SwarmUI PNG→JPEG/WebP**: ネイティブのSwarmUI JPEG/WebPファイルにはノード情報が含まれません。PNGから変換する際、このライブラリは完全なメタデータ保持のためにComfyUIワークフローを `Make` フィールドに保存します（拡張対応）。
 
+## Stealth PNGInfo の復元
+
+NovelAI（標準機能）と [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) 系の拡張機能（A1111/Forge、[ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)）は、生成メタデータのコピーをピクセルの最下位ビットに隠しています。通常のメタデータと違い、このコピーは画像ホストにメタデータチャンクを剥がされても生き残ります。
+
+`parse()` はこれを自動で復元します。読み取り可能なメタデータがない画像に対してのみ、フォールバックとしてピクセルをスキャンします。復元された結果には `stealth: true` が付きます：
+
+```typescript
+import { parse } from '@enslo/sd-metadata';
+
+const result = await parse(strippedImage);
+if (result.status === 'success') {
+  console.log(result.stealth); // true — ピクセルから復元された
+  console.log(result.metadata.prompt);
+}
+```
+
+4つの変種すべて（`stealth_pnginfo` / `stealth_pngcomp` / `stealth_rgbinfo` / `stealth_rgbcomp`）に対応し、NovelAI の JSON ペイロードも拡張機能のプレーンテキスト（infotext）ペイロードも扱えます。
+
+### WebP 画像
+
+NovelAI はロスレス WebP 書き出しにも stealth データを埋め込みます。PNG のピクセルはライブラリ自身がデコードしますが、WebP のデコードはランタイム依存です：
+
+- **ブラウザ**: 自動 — `parse()` がプラットフォームのデコーダ（WebCodecs `ImageDecoder`、フォールバックとして `createImageBitmap` + `OffscreenCanvas`）を使います。設定不要です。
+- **Node.js / Bun / Deno**: `decodePixels` オプションでピクセルを供給してください（例：[sharp](https://www.npmjs.com/package/sharp) を利用）。指定がない場合、WebP の stealth スキャンは静かにスキップされます。
+
+```typescript
+import { parse } from '@enslo/sd-metadata';
+import sharp from 'sharp';
+
+const result = await parse(webpData, {
+  decodePixels: async (data) => {
+    const { data: pixels, info } = await sharp(data)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    return { data: new Uint8Array(pixels), width: info.width, height: info.height };
+  },
+});
+```
+
+### 剥がされたメタデータのレスキュー
+
+復元した結果はそのまま `write()` に渡せます。剥がされたファイルに元ツールのネイティブメタデータが復元されます — 専用APIは不要です：
+
+```typescript
+import { parse, write } from '@enslo/sd-metadata';
+
+const rescued = await parse(strippedImage);
+if (rescued.status === 'success') {
+  const restored = write(strippedImage, rescued);
+  if (restored.ok) {
+    // restored.value は再び通常のメタデータを持ち、
+    // どのツールからも読み取れます — ピクセル内の stealth データはそのまま残ります。
+  }
+}
+```
+
+> [!NOTE]
+> stealth スキャンには `DecompressionStream` が必要です（Node.js 18+、Bun 1.4+、Deno、全モダンブラウザ）。対応していないランタイムでは、`parse()` はチャンクベースの読み取りに静かにフォールバックします。stealth データの書き込みは意図的にスコープ外です。
+
 ## インポート
 
 **ESM (TypeScript / Modern JavaScript):**
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 ```
 
 **CommonJS (Node.js):**
 
 ```javascript
-const { read } = require('@enslo/sd-metadata');
+const { parse } = require('@enslo/sd-metadata');
 ```
 
 > [!NOTE]
@@ -118,11 +179,11 @@ const { read } = require('@enslo/sd-metadata');
 ### Node.jsでの使用
 
 ```typescript
-import { read, stringify } from '@enslo/sd-metadata';
+import { parse, stringify } from '@enslo/sd-metadata';
 import { readFileSync } from 'fs';
 
 const imageData = readFileSync('image.png');
-const result = read(imageData);
+const result = await parse(imageData);
 
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software);       // 'novelai', 'comfyui', etc.
@@ -141,7 +202,7 @@ if (text) {
 ### ブラウザでの使用
 
 ```typescript
-import { read, softwareLabels } from '@enslo/sd-metadata';
+import { parse, softwareLabels } from '@enslo/sd-metadata';
 
 // ファイル入力を処理
 const fileInput = document.querySelector('input[type="file"]');
@@ -150,7 +211,7 @@ fileInput.addEventListener('change', async (e) => {
   if (!file) return;
 
   const arrayBuffer = await file.arrayBuffer();
-  const result = read(arrayBuffer);
+  const result = await parse(arrayBuffer);
 
   if (result.status === 'success') {
     document.getElementById('tool').textContent = softwareLabels[result.metadata.software];
@@ -168,12 +229,12 @@ fileInput.addEventListener('change', async (e) => {
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@3.3.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.0.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
 const arrayBuffer = await response.arrayBuffer();
-const result = sdMetadata.read(arrayBuffer);
+const result = await sdMetadata.parse(arrayBuffer);
 
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software);
@@ -192,11 +253,11 @@ if (result.status === 'success') {
 異なる画像フォーマット間でメタデータを変換：
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
+import { parse, write } from '@enslo/sd-metadata';
 
 // PNGからメタデータを読み込み
 const pngData = readFileSync('comfyui-output.png');
-const parseResult = read(pngData);
+const parseResult = await parse(pngData);
 
 if (parseResult.status === 'success') {
   // PNGをJPEGに変換（お好みの画像処理ライブラリを使用）
@@ -220,9 +281,9 @@ if (parseResult.status === 'success') {
 <summary>読み込み結果のタイプごとの処理</summary>
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 switch (result.status) {
   case 'success':
@@ -265,9 +326,9 @@ switch (result.status) {
 未対応ツールのメタデータを含む画像を扱う場合：
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
+import { parse, write } from '@enslo/sd-metadata';
 
-const source = read(unknownImage);
+const source = await parse(unknownImage);
 // source.status === 'unrecognized'
 
 // ターゲット画像に書き込み
@@ -288,12 +349,12 @@ if (result.ok) {
 <details>
 <summary>AI生成元の検出（C2PA Content Credentials）</summary>
 
-一部の商用ツール（OpenAI ChatGPT、Google Gemini）は、生成パラメータの代わりに C2PA Content Credentials を埋め込みます。これらの画像に対して `read()` は `{ status: 'c2pa', c2pa }` を返します：
+一部の商用ツール（OpenAI ChatGPT、Google Gemini）は、生成パラメータの代わりに C2PA Content Credentials を埋め込みます。これらの画像に対して `parse()` は `{ status: 'c2pa', c2pa }` を返します：
 
 ```typescript
-import { read, c2paVendorLabels } from '@enslo/sd-metadata';
+import { parse, c2paVendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 if (result.status === 'c2pa') {
   console.log('Vendor:', c2paVendorLabels[result.c2pa.vendor]);
@@ -368,9 +429,9 @@ const result = embed(imageData, {
 `EmbedMetadata` はすべての `GenerationMetadata` バリアントのサブセットなので、パース結果のメタデータをそのまま渡せます — `characterPrompts` を持つ NovelAI も含めて：
 
 ```typescript
-import { read, embed } from '@enslo/sd-metadata';
+import { parse, embed } from '@enslo/sd-metadata';
 
-const result = read(novelaiPng);
+const result = await parse(novelaiPng);
 if (result.status === 'success') {
   // NovelAI（や他のツール）のメタデータをそのまま利用可能
   const output = embed(blankJpeg, result.metadata);
@@ -385,9 +446,9 @@ if (result.status === 'success') {
 `ParseResult` を読みやすい文字列に変換します。ステータスに応じて最適な表現を自動選択します：
 
 ```typescript
-import { read, stringify } from '@enslo/sd-metadata';
+import { parse, stringify } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 const text = stringify(result);
 if (text) {
   console.log(text);
@@ -406,28 +467,38 @@ if (text) {
 
 ## APIリファレンス
 
-### `read(input: Uint8Array | ArrayBuffer, options?: ReadOptions): ParseResult`
+### `parse(input: Uint8Array | ArrayBuffer, options?: ReadOptions): Promise<ParseResult>`
 
-画像ファイルからメタデータを読み込み、パースします。
+画像ファイルからメタデータを読み込み、パースします。読み取り可能なメタデータがない画像に対しては、追加でピクセルの Stealth PNGInfo をスキャンします（「Stealth PNGInfo の復元」セクションを参照）。スキャンはその場合にのみ実行されるため、通常のメタデータを持つ画像に追加コストはありません。
 
 **パラメータ:**
 
 - `input` - 画像ファイルデータ（PNG、JPEG、またはWebP）
 - `options` - オプションの読み込み設定
   - `strict?: boolean`（デフォルト: `false`）— `true` の場合、寸法（`width` / `height`）はメタデータからのみ取得します。`false` の場合、メタデータに寸法がなければ画像ヘッダーから取得します。
+  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — プラットフォームがデコードできない環境（サーバー）で、stealth スキャン用に WebP ピクセルをデコードします。WebP に読み取り可能なメタデータがない場合にのみ遅延呼び出しされます。「WebP 画像」セクションを参照。
 
 **戻り値:**
 
-- `{ status: 'success', metadata, raw }` - パース成功
+- `{ status: 'success', metadata, raw, stealth? }` - パース成功
   - `metadata`: 統一されたメタデータオブジェクト（`GenerationMetadata`を参照）
   - `raw`: 元のフォーマット固有のデータ（chunks/segments）
+  - `stealth`: メタデータがピクセルLSBから復元された場合に `true`
 - `{ status: 'c2pa', c2pa }` - 画像がC2PA Content Credentials（例：OpenAI ChatGPT、Google Gemini）を持つが、パース可能な生成メタデータがない
   - `c2pa`: 未検証の Content Credentials（`C2paMetadata`を参照）。検出のみ — 署名は検証されません。
-- `{ status: 'unrecognized', raw }` - 画像にメタデータがあるが既知のAIツールからではない
+- `{ status: 'unrecognized', raw, stealth? }` - 画像にメタデータがあるが既知のAIツールからではない
   - `raw`: 変換用に保持された元のメタデータ
+  - `stealth`: 生データがピクセルLSBから復元された場合に `true`
 - `{ status: 'empty' }` - 画像にメタデータが見つからない
 - `{ status: 'invalid', message? }` - 破損または非対応の画像フォーマット
   - `message`: オプションのエラー説明
+
+### `read(input: Uint8Array | ArrayBuffer, options?: ReadOptions): ParseResult`
+
+> [!WARNING]
+> **非推奨** — 代わりに `parse()` を使用してください。`read()` は同期・チャンク限定の読み取りが必要な場合のために残されていますが、Stealth PNGInfo は復元できません。
+
+`parse()` と同一の動作ですが、同期実行で、ピクセルスキャンは行いません。
 
 ### `write(input: Uint8Array | ArrayBuffer, metadata: ParseResult): WriteResult`
 
@@ -436,9 +507,10 @@ if (text) {
 **パラメータ:**
 
 - `input` - ターゲット画像ファイルデータ（PNG、JPEG、またはWebP）
-- `metadata` - `read()` から得られた `ParseResult`
+- `metadata` - `parse()` から得られた `ParseResult`
   - `status: 'success'` または `'empty'` - 直接書き込み可能
   - `status: 'unrecognized'` - 同じフォーマット：そのまま書き込み、異なるフォーマット：warning付きでメタデータ削除
+  - stealth 復元された結果もそのまま渡せます — 書き込むと元ツールのネイティブメタデータが復元されます（「剥がされたメタデータのレスキュー」セクションを参照）
 
 **戻り値:**
 
@@ -502,7 +574,7 @@ SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋
 ```typescript
 import { softwareLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 if (result.status === 'success') {
   console.log(softwareLabels[result.metadata.software]);
   // => "NovelAI", "ComfyUI", "Stable Diffusion WebUI", etc.
@@ -516,7 +588,7 @@ if (result.status === 'success') {
 ```typescript
 import { c2paVendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 if (result.status === 'c2pa') {
   console.log(c2paVendorLabels[result.c2pa.vendor]);
   // => "OpenAI (ChatGPT)", "Google (Gemini)", "AI-generated (Content Credentials)"
@@ -529,13 +601,13 @@ if (result.status === 'c2pa') {
 
 ### `ParseResult`
 
-`read()` 関数の結果。`status` フィールドで分岐するユニオン型です。
+`parse()`（および非推奨の `read()`）関数の結果。`status` フィールドで分岐するユニオン型です。`stealth` は結果がピクセルLSB（Stealth PNGInfo）から復元された場合に `parse()` が `true` を設定します。
 
 ```typescript
 type ParseResult =
-  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
+  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata; stealth?: boolean }
   | { status: 'c2pa'; c2pa: C2paMetadata }
-  | { status: 'unrecognized'; raw: RawMetadata }
+  | { status: 'unrecognized'; raw: RawMetadata; stealth?: boolean }
   | { status: 'empty' }
   | { status: 'invalid'; message?: string };
 ```
@@ -559,7 +631,7 @@ interface BaseMetadata {
 
 ### `GenerationMetadata`
 
-`read()` 関数が返す統一されたメタデータ構造。`software` フィールドで区別される3つのメタデータ型のユニオン型です。全タイプが `BaseMetadata` を拡張しています。
+`parse()` 関数が返す統一されたメタデータ構造。`software` フィールドで区別される3つのメタデータ型のユニオン型です。全タイプが `BaseMetadata` を拡張しています。
 
 **メタデータ型のバリアント:**
 
@@ -589,7 +661,7 @@ type GenerationMetadata =
 **使用例:**
 
 ```typescript
-const result = read(imageData);
+const result = await parse(imageData);
 
 if (result.status === 'success') {
   const metadata = result.metadata;

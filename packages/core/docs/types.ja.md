@@ -8,6 +8,8 @@
 
 - [コア型](#コア型)
   - [`ParseResult`](#parseresult)
+  - [`ReadOptions`](#readoptions)
+  - [`RgbaPixels`](#rgbapixels)
   - [`GenerationMetadata`](#generationmetadata)
   - [`GenerationSoftware`](#generationsoftware)
   - [`C2paMetadata`](#c2pametadata)
@@ -44,13 +46,13 @@
 
 ### `ParseResult`
 
-`read()` 関数が返す結果型。
+`parse()` 関数（および非推奨の `read()`）が返す結果型。
 
 ```typescript
 type ParseResult =
-  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
+  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata; stealth?: boolean }
   | { status: 'c2pa'; c2pa: C2paMetadata }
-  | { status: 'unrecognized'; raw: RawMetadata }
+  | { status: 'unrecognized'; raw: RawMetadata; stealth?: boolean }
   | { status: 'empty' }
   | { status: 'invalid'; message?: string };
 ```
@@ -60,10 +62,12 @@ type ParseResult =
 - **`success`**: メタデータのパースに成功
   - `metadata`: 統一されたメタデータオブジェクト
   - `raw`: ラウンドトリップ変換用の元のフォーマット固有データ
+  - `stealth`: メタデータがピクセルLSB（Stealth PNGInfo）から復元された場合に `true`。`parse()` のみが設定します。復元された `raw` はコンテナ形式によらず常にチャンク形（`format: 'png'`）です。
 - **`c2pa`**: 画像が C2PA Content Credentials を持つが、パース可能な生成メタデータがない
   - `c2pa`: 未検証の Content Credentials を表す `C2paMetadata`。`raw` フィールドは存在しません — 署名済みマニフェストはラウンドトリップ書き込み用に公開されません。
 - **`unrecognized`**: 画像にメタデータがあるがフォーマットが認識できない
   - `raw`: 元のメタデータが保持される
+  - `stealth`: 生データがピクセルLSB（Stealth PNGInfo）から復元された場合に `true`
 - **`empty`**: 画像にメタデータが見つからない
 - **`invalid`**: 破損または非対応の画像フォーマット
   - `message`: オプションのエラー説明
@@ -71,9 +75,9 @@ type ParseResult =
 **例：**
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 switch (result.status) {
   case 'success':
@@ -101,6 +105,43 @@ switch (result.status) {
     break;
 }
 ```
+
+---
+
+### `ReadOptions`
+
+`parse()` と `read()` が受け取るオプション。
+
+```typescript
+interface ReadOptions {
+  strict?: boolean;
+  decodePixels?: (data: Uint8Array, format: 'webp') => Promise<RgbaPixels | null>;
+}
+```
+
+**フィールド：**
+
+- **`strict`**（デフォルト: `false`）: `true` の場合、寸法（`width` / `height`）はメタデータからのみ取得します。`false` の場合、メタデータに寸法がなければ画像ヘッダーから取得します。
+- **`decodePixels`**: プラットフォームがデコードできない環境（現在はブラウザ以外での WebP — 例：Node.js で sharp を利用）で、Stealth PNGInfo スキャン用に圧縮画像のピクセルをデコードします。`parse()` は WebP に読み取り可能なメタデータがない場合にのみ遅延呼び出しします。デコードできない場合は `null` を返してください。その場合はプラットフォームのデコーダがフォールバックとして試されます。ピクセルスキャンを行わない `read()` では無視されます。
+
+---
+
+### `RgbaPixels`
+
+`ReadOptions.decodePixels` 経由で Stealth PNGInfo スキャンに供給される、デコード済みRGBAピクセルデータ。
+
+```typescript
+interface RgbaPixels {
+  data: Uint8Array | Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+```
+
+**フィールド：**
+
+- **`data`**: インターリーブされたRGBAバイト列（1ピクセルあたり4バイト、行優先）。canvas の `getImageData` などから得られる `Uint8ClampedArray` もそのまま渡せます。
+- **`width`** / **`height`**: 画像のピクセル寸法。
 
 ---
 
@@ -188,7 +229,7 @@ function displaySoftware(software: GenerationSoftware): string {
 
 画像に埋め込まれた C2PA Content Credentials から読み取った内容。
 
-C2PAマニフェストを持つ画像（現在は **OpenAI ChatGPT** と **Google Gemini**）で、パース可能な生成メタデータがない場合に `read()` が `{ status: 'c2pa', c2pa }` として返します。`GenerationMetadata` とは異なり、**プロンプト・シード・モデル・サイズを一切持ちません**: これらのツールは生成パラメータではなく Content Credentials を埋め込むためです。`C2paMetadata` は `BaseMetadata` を**拡張しません**。
+C2PAマニフェストを持つ画像（現在は **OpenAI ChatGPT** と **Google Gemini**）で、パース可能な生成メタデータがない場合に `parse()` が `{ status: 'c2pa', c2pa }` として返します。`GenerationMetadata` とは異なり、**プロンプト・シード・モデル・サイズを一切持ちません**: これらのツールは生成パラメータではなく Content Credentials を埋め込むためです。`C2paMetadata` は `BaseMetadata` を**拡張しません**。
 
 ```typescript
 export interface C2paMetadata {
@@ -213,9 +254,9 @@ export interface C2paMetadata {
 **例：**
 
 ```typescript
-import { read, c2paVendorLabels } from '@enslo/sd-metadata';
+import { parse, c2paVendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 if (result.status === 'c2pa') {
   const { vendor, aiGenerated, claimGenerator } = result.c2pa;
@@ -301,12 +342,12 @@ type RawMetadata =
 **ラウンドトリップ変換例：**
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
+import { parse, write } from '@enslo/sd-metadata';
 import { convertImageFormat } from 'some-image-library';
 
 // PNGからメタデータを読み込み
 const pngData = readFileSync('image.png');
-const parseResult = read(pngData);
+const parseResult = await parse(pngData);
 
 if (parseResult.status === 'success') {
   // 画像をJPEGに変換

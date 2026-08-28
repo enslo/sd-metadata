@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-08-28
+
+### Added
+
+- **Stealth PNGInfo recovery via the new `parse()` API** (#269): NovelAI and
+  the stealth-pnginfo family of extensions (A1111/Forge, ComfyUI) hide
+  generation metadata in pixel least-significant bits, where it survives
+  metadata stripping by image hosts. The new async `parse()` function behaves
+  like `read()`, plus recovers this hidden metadata from PNGs whose metadata
+  chunks were stripped. All four stealth variants are supported
+  (`stealth_pnginfo` / `stealth_pngcomp` / `stealth_rgbinfo` /
+  `stealth_rgbcomp`). Still zero dependencies: decompression uses the
+  standard `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern
+  browsers).
+- **WebP stealth recovery** (#270): NovelAI embeds stealth data in its
+  lossless WebP exports too. In browsers `parse()` decodes WebP pixels
+  automatically via the platform (WebCodecs `ImageDecoder`, falling back to
+  `createImageBitmap` + `OffscreenCanvas`); in other runtimes supply the new
+  `ReadOptions.decodePixels` callback (e.g. backed by sharp) or the WebP
+  scan is skipped gracefully.
+- **`stealth` flag on `ParseResult`** (#271): `success` and `unrecognized`
+  results carry `stealth: true` when the metadata was recovered from pixels
+  rather than regular metadata.
+- **Metadata rescue write-back**: stealth-recovered results feed the
+  existing `write()` unchanged, restoring the original tool's native
+  metadata to a stripped image — including cross-format conversion back to
+  WebP Exif. Covered by integration tests; see the README recipe.
+
+### Deprecated
+
+- **`read()`** (#269): superseded by `parse()`, which is identical apart
+  from being async and adding the stealth fallback. `read()` remains
+  available and unchanged for callers that need a synchronous, chunk-only
+  read, but new code should use `parse()`.
+
+### Notes on the major version
+
+No behavior of existing APIs changed; the major bump marks the generation
+change of the primary entry point from `read()` to `parse()`.
+
 ## [3.3.0] - 2026-08-19
 
 ### Changed

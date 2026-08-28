@@ -21,13 +21,14 @@ Zero dependencies, works in Node.js and browsers.
 | Feature | `sd-metadata` | `sd-metadata-lite` |
 | ------- | :-----------: | :----------------: |
 | Read metadata | ✅ | ✅ (A1111-format text only) |
+| Stealth PNGInfo recovery (pixel-hidden metadata) | ✅ | - |
 | Write metadata back to an image | ✅ | - |
 | Embed custom (user-authored) metadata | ✅ | - |
 | Format conversion (PNG/JPEG/WebP) | ✅ | - |
 | Tool detection | ✅ | - |
 | Structured metadata object | ✅ | - |
 | IIFE build (userscript `@require`) | ✅ | ✅ |
-| Bundle size (IIFE, minified) | ~51 KB | ~7 KB |
+| Bundle size (IIFE, minified) | ~57 KB | ~7 KB |
 | Node.js + Browser | ✅ | ✅ |
 
 - **Full library** (`@enslo/sd-metadata`)
@@ -44,9 +45,9 @@ npm install @enslo/sd-metadata
 ```
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 
-const result = read(imageBytes); // Uint8Array | ArrayBuffer
+const result = await parse(imageBytes); // Uint8Array | ArrayBuffer
 if (result.status === 'success') {
   console.log(result.metadata.software); // 'novelai', 'comfyui', ...
   console.log(result.metadata.prompt);

@@ -8,6 +8,8 @@ Complete type reference for `@enslo/sd-metadata`.
 
 - [Core Types](#core-types)
   - [`ParseResult`](#parseresult)
+  - [`ReadOptions`](#readoptions)
+  - [`RgbaPixels`](#rgbapixels)
   - [`GenerationMetadata`](#generationmetadata)
   - [`GenerationSoftware`](#generationsoftware)
   - [`C2paMetadata`](#c2pametadata)
@@ -44,13 +46,13 @@ Complete type reference for `@enslo/sd-metadata`.
 
 ### `ParseResult`
 
-The result type returned by the `read()` function.
+The result type returned by the `parse()` function (and the deprecated `read()`).
 
 ```typescript
 type ParseResult =
-  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
+  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata; stealth?: boolean }
   | { status: 'c2pa'; c2pa: C2paMetadata }
-  | { status: 'unrecognized'; raw: RawMetadata }
+  | { status: 'unrecognized'; raw: RawMetadata; stealth?: boolean }
   | { status: 'empty' }
   | { status: 'invalid'; message?: string };
 ```
@@ -60,10 +62,12 @@ type ParseResult =
 - **`success`**: Metadata was successfully parsed
   - `metadata`: Unified metadata object
   - `raw`: Original format-specific data for round-trip conversion
+  - `stealth`: `true` when the metadata was recovered from pixel LSBs (Stealth PNGInfo). Only set by `parse()`; the recovered `raw` is always chunk-shaped (`format: 'png'`) regardless of the container format.
 - **`c2pa`**: Image carries C2PA Content Credentials (AI provenance) but no parseable generation metadata
   - `c2pa`: `C2paMetadata` describing the declared (unverified) provenance. There is no `raw` field — the signed manifest is not exposed for round-trip writing.
 - **`unrecognized`**: Image has metadata but format is not recognized
   - `raw`: Original metadata is preserved
+  - `stealth`: `true` when the raw data was recovered from pixel LSBs (Stealth PNGInfo)
 - **`empty`**: No metadata found in the image
 - **`invalid`**: Corrupted or unsupported image format
   - `message`: Optional error description
@@ -71,9 +75,9 @@ type ParseResult =
 **Example:**
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 switch (result.status) {
   case 'success':
@@ -101,6 +105,43 @@ switch (result.status) {
     break;
 }
 ```
+
+---
+
+### `ReadOptions`
+
+Options accepted by `parse()` and `read()`.
+
+```typescript
+interface ReadOptions {
+  strict?: boolean;
+  decodePixels?: (data: Uint8Array, format: 'webp') => Promise<RgbaPixels | null>;
+}
+```
+
+**Fields:**
+
+- **`strict`** (default: `false`): When `true`, dimensions (`width` / `height`) are taken strictly from metadata only. When `false`, missing dimensions are extracted from image headers.
+- **`decodePixels`**: Decodes compressed image pixels for the Stealth PNGInfo scan when the platform cannot (currently WebP outside browsers — e.g. backed by sharp in Node.js). `parse()` calls it lazily, only when a WebP carries no readable metadata. Return `null` when decoding is unavailable; the platform decoder is then tried as a fallback. Ignored by `read()`, which never scans pixels.
+
+---
+
+### `RgbaPixels`
+
+Decoded RGBA pixel data supplied to the Stealth PNGInfo scan via `ReadOptions.decodePixels`.
+
+```typescript
+interface RgbaPixels {
+  data: Uint8Array | Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+```
+
+**Fields:**
+
+- **`data`**: Interleaved RGBA bytes, four per pixel, row-major. A `Uint8ClampedArray` (e.g. from canvas `getImageData`) is accepted as-is.
+- **`width`** / **`height`**: Image dimensions in pixels.
 
 ---
 
@@ -188,7 +229,7 @@ function displaySoftware(software: GenerationSoftware): string {
 
 Content Credentials (C2PA) read from an image's signed provenance manifest.
 
-This is returned by `read()` as `{ status: 'c2pa', c2pa }` for images that carry a C2PA manifest — currently **OpenAI ChatGPT** and **Google Gemini** — but no parseable generation metadata. Unlike `GenerationMetadata`, it carries **no prompt, seed, model, or size**: these tools embed provenance, not generation parameters. `C2paMetadata` does **not** extend `BaseMetadata`.
+This is returned by `parse()` as `{ status: 'c2pa', c2pa }` for images that carry a C2PA manifest — currently **OpenAI ChatGPT** and **Google Gemini** — but no parseable generation metadata. Unlike `GenerationMetadata`, it carries **no prompt, seed, model, or size**: these tools embed provenance, not generation parameters. `C2paMetadata` does **not** extend `BaseMetadata`.
 
 ```typescript
 export interface C2paMetadata {
@@ -213,9 +254,9 @@ export interface C2paMetadata {
 **Example:**
 
 ```typescript
-import { read, c2paVendorLabels } from '@enslo/sd-metadata';
+import { parse, c2paVendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 if (result.status === 'c2pa') {
   const { vendor, aiGenerated, claimGenerator } = result.c2pa;
@@ -301,12 +342,12 @@ When you read metadata from an image and convert it to a different format (e.g.,
 **Round-trip conversion example:**
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
+import { parse, write } from '@enslo/sd-metadata';
 import { convertImageFormat } from 'some-image-library';
 
 // Read metadata from PNG
 const pngData = readFileSync('image.png');
-const parseResult = read(pngData);
+const parseResult = await parse(pngData);
 
 if (parseResult.status === 'success') {
   // Convert image to JPEG

@@ -13,7 +13,8 @@ A TypeScript library to read and write metadata embedded in AI-generated images.
 ## Features
 
 - **Multi-format Support**: PNG (tEXt / iTXt), JPEG (COM / Exif), WebP (Exif)
-- **Simple API**: `read()`, `write()`, `embed()`, `stringify()` — four functions cover all use cases
+- **Simple API**: `parse()`, `write()`, `embed()`, `stringify()` — four functions cover all use cases
+- **Stealth PNGInfo Recovery**: recovers metadata hidden in pixel LSBs by NovelAI and the stealth-pnginfo extensions, even after image hosts strip the regular metadata
 - **TypeScript Native**: Written in TypeScript with full type definitions included
 - **Zero Dependencies**: Works in Node.js and browsers without any external dependencies
 - **Format Conversion**: Seamlessly convert metadata between PNG, JPEG, and WebP
@@ -29,10 +30,10 @@ npm install @enslo/sd-metadata
 ## Quick Start
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 
 // `imageBytes` is a Uint8Array or ArrayBuffer (from fs, fetch, a file input, ...)
-const result = read(imageBytes);
+const result = await parse(imageBytes);
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software); // 'novelai', 'comfyui', ...
   console.log('Prompt:', result.metadata.prompt);
@@ -96,18 +97,78 @@ Some tools have specific behaviors when converting between formats:
 - **NovelAI WebP**: Automatically corrects corrupted UTF-8 in the Description field. WebP → PNG → WebP round-trip produces valid, readable metadata but with minor text corrections.
 - **SwarmUI PNG→JPEG/WebP**: Native SwarmUI JPEG/WebP files do not include node information. When converting from PNG, this library preserves the ComfyUI workflow in the `Make` field for complete metadata retention (extended support).
 
+## Stealth PNGInfo Recovery
+
+NovelAI (by default) and the [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) family of extensions (A1111/Forge, [ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)) hide a copy of the generation metadata in the least-significant bits of the pixels themselves. Unlike regular metadata, this copy survives when image hosts strip metadata chunks.
+
+`parse()` recovers it automatically: when an image carries no readable metadata, it scans the pixels as a fallback. Recovered results carry `stealth: true`:
+
+```typescript
+import { parse } from '@enslo/sd-metadata';
+
+const result = await parse(strippedImage);
+if (result.status === 'success') {
+  console.log(result.stealth); // true — recovered from pixels
+  console.log(result.metadata.prompt);
+}
+```
+
+All four variants are supported (`stealth_pnginfo` / `stealth_pngcomp` / `stealth_rgbinfo` / `stealth_rgbcomp`), for both NovelAI's JSON payloads and the extensions' plain-infotext payloads.
+
+### WebP images
+
+NovelAI embeds stealth data in its lossless WebP exports too. PNG pixels are decoded by the library itself, but WebP decoding depends on the runtime:
+
+- **Browsers**: automatic — `parse()` uses the platform decoder (WebCodecs `ImageDecoder`, falling back to `createImageBitmap` + `OffscreenCanvas`). No configuration needed.
+- **Node.js / Bun / Deno**: supply pixels via the `decodePixels` option, e.g. backed by [sharp](https://www.npmjs.com/package/sharp). Without it the WebP stealth scan is skipped gracefully.
+
+```typescript
+import { parse } from '@enslo/sd-metadata';
+import sharp from 'sharp';
+
+const result = await parse(webpData, {
+  decodePixels: async (data) => {
+    const { data: pixels, info } = await sharp(data)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    return { data: new Uint8Array(pixels), width: info.width, height: info.height };
+  },
+});
+```
+
+### Rescuing stripped metadata
+
+A recovered result feeds `write()` directly, restoring the original tool's native metadata to the stripped file — no separate API needed:
+
+```typescript
+import { parse, write } from '@enslo/sd-metadata';
+
+const rescued = await parse(strippedImage);
+if (rescued.status === 'success') {
+  const restored = write(strippedImage, rescued);
+  if (restored.ok) {
+    // restored.value now carries regular metadata again,
+    // readable by any tool — stealth data stays untouched in the pixels.
+  }
+}
+```
+
+> [!NOTE]
+> The stealth scan needs `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern browsers). On runtimes without it, `parse()` degrades gracefully to chunk-based reading. Writing stealth data is intentionally out of scope.
+
 ## Import
 
 **ESM (TypeScript / Modern JavaScript):**
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 ```
 
 **CommonJS (Node.js):**
 
 ```javascript
-const { read } = require('@enslo/sd-metadata');
+const { parse } = require('@enslo/sd-metadata');
 ```
 
 > [!NOTE]
@@ -118,11 +179,11 @@ const { read } = require('@enslo/sd-metadata');
 ### Node.js Usage
 
 ```typescript
-import { read, stringify } from '@enslo/sd-metadata';
+import { parse, stringify } from '@enslo/sd-metadata';
 import { readFileSync } from 'fs';
 
 const imageData = readFileSync('image.png');
-const result = read(imageData);
+const result = await parse(imageData);
 
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software);       // 'novelai', 'comfyui', etc.
@@ -141,7 +202,7 @@ if (text) {
 ### Browser Usage
 
 ```typescript
-import { read, softwareLabels } from '@enslo/sd-metadata';
+import { parse, softwareLabels } from '@enslo/sd-metadata';
 
 // Handle file input
 const fileInput = document.querySelector('input[type="file"]');
@@ -150,7 +211,7 @@ fileInput.addEventListener('change', async (e) => {
   if (!file) return;
 
   const arrayBuffer = await file.arrayBuffer();
-  const result = read(arrayBuffer);
+  const result = await parse(arrayBuffer);
 
   if (result.status === 'success') {
     document.getElementById('tool').textContent = softwareLabels[result.metadata.software];
@@ -168,12 +229,12 @@ For userscripts (Tampermonkey, Violentmonkey, etc.), load the IIFE build via `@r
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@3.3.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.0.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
 const arrayBuffer = await response.arrayBuffer();
-const result = sdMetadata.read(arrayBuffer);
+const result = await sdMetadata.parse(arrayBuffer);
 
 if (result.status === 'success') {
   console.log('Tool:', result.metadata.software);
@@ -192,11 +253,11 @@ if (result.status === 'success') {
 Convert metadata between different image formats:
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
+import { parse, write } from '@enslo/sd-metadata';
 
 // Read metadata from PNG
 const pngData = readFileSync('comfyui-output.png');
-const parseResult = read(pngData);
+const parseResult = await parse(pngData);
 
 if (parseResult.status === 'success') {
   // Convert PNG to JPEG (using your preferred image processing library)
@@ -220,9 +281,9 @@ if (parseResult.status === 'success') {
 <summary>Handling Different Result Types</summary>
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 switch (result.status) {
   case 'success':
@@ -266,9 +327,9 @@ switch (result.status) {
 When working with metadata from unsupported tools:
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
+import { parse, write } from '@enslo/sd-metadata';
 
-const source = read(unknownImage);
+const source = await parse(unknownImage);
 // source.status === 'unrecognized'
 
 // Write to target image
@@ -289,12 +350,12 @@ if (result.ok) {
 <details>
 <summary>AI Provenance Detection (C2PA Content Credentials)</summary>
 
-Some commercial tools (OpenAI ChatGPT, Google Gemini) embed a signed C2PA "Content Credentials" provenance manifest instead of generation parameters. `read()` returns `{ status: 'c2pa', c2pa }` for these images:
+Some commercial tools (OpenAI ChatGPT, Google Gemini) embed a signed C2PA "Content Credentials" provenance manifest instead of generation parameters. `parse()` returns `{ status: 'c2pa', c2pa }` for these images:
 
 ```typescript
-import { read, c2paVendorLabels } from '@enslo/sd-metadata';
+import { parse, c2paVendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 if (result.status === 'c2pa') {
   console.log('Vendor:', c2paVendorLabels[result.c2pa.vendor]);
@@ -366,9 +427,9 @@ const result = embed(imageData, {
 Since `EmbedMetadata` is a subset of all `GenerationMetadata` variants, you can pass parsed metadata directly — including NovelAI with its `characterPrompts`:
 
 ```typescript
-import { read, embed } from '@enslo/sd-metadata';
+import { parse, embed } from '@enslo/sd-metadata';
 
-const result = read(novelaiPng);
+const result = await parse(novelaiPng);
 if (result.status === 'success') {
   // NovelAI metadata (or any other tool) works as-is
   const output = embed(blankJpeg, result.metadata);
@@ -383,9 +444,9 @@ if (result.status === 'success') {
 Convert a `ParseResult` to a human-readable string. Automatically selects the best representation based on status:
 
 ```typescript
-import { read, stringify } from '@enslo/sd-metadata';
+import { parse, stringify } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 const text = stringify(result);
 if (text) {
   console.log(text);
@@ -404,28 +465,38 @@ if (text) {
 
 ## API Reference
 
-### `read(input: Uint8Array | ArrayBuffer, options?: ReadOptions): ParseResult`
+### `parse(input: Uint8Array | ArrayBuffer, options?: ReadOptions): Promise<ParseResult>`
 
-Reads and parses metadata from an image file.
+Reads and parses metadata from an image file. When an image carries no readable metadata, additionally scans the pixels for Stealth PNGInfo (see [Stealth PNGInfo Recovery](#stealth-pnginfo-recovery)); the scan only runs in that case, so images with regular metadata pay no extra cost.
 
 **Parameters:**
 
 - `input` - Image file data (PNG, JPEG, or WebP)
 - `options` - Optional read options
   - `strict?: boolean` (default: `false`) — When `true`, dimensions (`width` / `height`) are taken strictly from metadata only. When `false`, missing dimensions are extracted from image headers.
+  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — Decodes WebP pixels for the stealth scan where the platform cannot (servers). Called lazily, only when a WebP carries no readable metadata. See [WebP images](#webp-images).
 
 **Returns:**
 
-- `{ status: 'success', metadata, raw }` - Successfully parsed
+- `{ status: 'success', metadata, raw, stealth? }` - Successfully parsed
   - `metadata`: Unified metadata object (see `GenerationMetadata`)
   - `raw`: Original format-specific data (chunks/segments)
+  - `stealth`: `true` when the metadata was recovered from pixel LSBs
 - `{ status: 'c2pa', c2pa }` - Image carries C2PA Content Credentials (e.g. OpenAI ChatGPT, Google Gemini) but no parseable generation metadata
   - `c2pa`: Declared (unverified) AI provenance (see `C2paMetadata`). Detection only — the signature is not verified.
-- `{ status: 'unrecognized', raw }` - Image has metadata but not from a known AI tool
+- `{ status: 'unrecognized', raw, stealth? }` - Image has metadata but not from a known AI tool
   - `raw`: Original metadata preserved for conversion
+  - `stealth`: `true` when the raw data was recovered from pixel LSBs
 - `{ status: 'empty' }` - No metadata found in the image
 - `{ status: 'invalid', message? }` - Corrupted or unsupported image format
   - `message`: Optional error description
+
+### `read(input: Uint8Array | ArrayBuffer, options?: ReadOptions): ParseResult`
+
+> [!WARNING]
+> **Deprecated** — use [`parse()`](#parseinput-uint8array--arraybuffer-options-readoptions-promiseparseresult) instead. `read()` remains available for callers that need a synchronous, chunk-only read, but it cannot recover Stealth PNGInfo.
+
+Identical to `parse()` except that it is synchronous and never scans pixels.
 
 ### `write(input: Uint8Array | ArrayBuffer, metadata: ParseResult): WriteResult`
 
@@ -434,9 +505,10 @@ Writes metadata to an image file.
 **Parameters:**
 
 - `input` - Target image file data (PNG, JPEG, or WebP)
-- `metadata` - `ParseResult` from `read()`
+- `metadata` - `ParseResult` from `parse()`
   - `status: 'success'` or `'empty'` - Can write directly
   - `status: 'unrecognized'` - Same format: writes as-is; Cross-format: drops metadata with warning
+  - Stealth-recovered results work as-is — writing restores the original tool's native metadata (see [Rescuing stripped metadata](#rescuing-stripped-metadata))
 
 **Returns:**
 
@@ -476,7 +548,7 @@ Converts metadata to a human-readable string.
 **Parameters:**
 
 - `input` - One of:
-  - `ParseResult` from `read()` — selects best representation based on status
+  - `ParseResult` from `parse()` — selects best representation based on status
   - `EmbedMetadata` or `GenerationMetadata` — formats as A1111 text directly
 
 **Returns:**
@@ -502,7 +574,7 @@ A read-only mapping from `GenerationSoftware` identifiers to their human-readabl
 ```typescript
 import { softwareLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 if (result.status === 'success') {
   console.log(softwareLabels[result.metadata.software]);
   // => "NovelAI", "ComfyUI", "Stable Diffusion WebUI", etc.
@@ -516,7 +588,7 @@ A read-only mapping from `C2paVendor` identifiers to their human-readable displa
 ```typescript
 import { c2paVendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 if (result.status === 'c2pa') {
   console.log(c2paVendorLabels[result.c2pa.vendor]);
   // => "OpenAI (ChatGPT)", "Google (Gemini)", "AI-generated (Content Credentials)"
@@ -529,13 +601,13 @@ This section provides an overview of the main types. For complete type definitio
 
 ### `ParseResult`
 
-The result of the `read()` function. It uses a discriminated union with a `status` field.
+The result of the `parse()` (and deprecated `read()`) function. It uses a discriminated union with a `status` field. `stealth` is set to `true` by `parse()` when the result was recovered from pixel LSBs (Stealth PNGInfo).
 
 ```typescript
 type ParseResult =
-  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
+  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata; stealth?: boolean }
   | { status: 'c2pa'; c2pa: C2paMetadata }
-  | { status: 'unrecognized'; raw: RawMetadata }
+  | { status: 'unrecognized'; raw: RawMetadata; stealth?: boolean }
   | { status: 'empty' }
   | { status: 'invalid'; message?: string };
 ```
@@ -559,7 +631,7 @@ interface BaseMetadata {
 
 ### `GenerationMetadata`
 
-Unified metadata structure returned by the `read()` function. This is a discriminated union of 3 specific metadata types, distinguished by the `software` field. All types extend `BaseMetadata`.
+Unified metadata structure returned by the `parse()` function. This is a discriminated union of 3 specific metadata types, distinguished by the `software` field. All types extend `BaseMetadata`.
 
 **Metadata Type Variants:**
 
@@ -589,7 +661,7 @@ type GenerationMetadata =
 **Usage Example:**
 
 ```typescript
-const result = read(imageData);
+const result = await parse(imageData);
 
 if (result.status === 'success') {
   const metadata = result.metadata;
