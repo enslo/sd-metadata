@@ -100,7 +100,13 @@ export function DropZone({
                       color="grape"
                       variant="light"
                       size="lg"
-                      style={{ textTransform: 'none', cursor: 'help' }}
+                      style={{
+                        textTransform: 'none',
+                        cursor: 'help',
+                        // Dropzone disables pointer events on its inner
+                        // content; re-enable them so the tooltip opens.
+                        pointerEvents: 'auto',
+                      }}
                     >
                       {t.dropzone.stealthBadge}
                     </Badge>
