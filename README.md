@@ -21,7 +21,7 @@ Zero dependencies, works in Node.js and browsers.
 | Feature | `sd-metadata` | `sd-metadata-lite` |
 | ------- | :-----------: | :----------------: |
 | Read metadata | ✅ | ✅ (A1111-format text only) |
-| Stealth PNGInfo recovery (pixel-hidden metadata) | ✅ | - |
+| Stealth PNGInfo recovery | ✅ | - |
 | Write metadata back to an image | ✅ | - |
 | Embed custom (user-authored) metadata | ✅ | - |
 | Format conversion (PNG/JPEG/WebP) | ✅ | - |
