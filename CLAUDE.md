@@ -38,7 +38,10 @@ sd-metadata/
 ### Core data flow
 
 ```text
-read(image)  → readers/ → parsers/detect → parsers/* → ParseResult
+parse(image) → readers/ → parsers/detect → parsers/* → ParseResult
+               └ falls back to readers/stealth (pixel LSB) for PNGs
+                 without metadata chunks
+read(image)  → same as parse, minus the stealth fallback (deprecated)
 write(image) → converters/*              → writers/  → Uint8Array
 embed(image) → (always A1111 format)     → writers/  → Uint8Array
 ```

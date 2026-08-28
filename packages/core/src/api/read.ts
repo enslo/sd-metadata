@@ -12,6 +12,7 @@ import { readJpegMetadata } from '../readers/jpeg';
 import { readPngMetadata } from '../readers/png';
 import { readWebpMetadata } from '../readers/webp';
 import type {
+  GenerationMetadata,
   MetadataSegment,
   ParseResult,
   PngTextChunk,
@@ -27,6 +28,9 @@ import { pngChunksToRecord, segmentsToRecord } from '../utils/convert';
  * Automatically detects the image format (PNG, JPEG, WebP) and parses
  * any embedded generation metadata.
  *
+ * @deprecated Use {@link parse} instead — it additionally recovers
+ *   pixel-embedded Stealth PNGInfo from PNGs whose metadata chunks were
+ *   stripped.
  * @param input - Image file data (Uint8Array or ArrayBuffer)
  * @param options - Read options
  * @returns Parse result containing metadata and raw data
@@ -58,20 +62,7 @@ export function read(
     const parseResult = parseMetadata(entries);
     if (parseResult.ok) {
       const metadata = parseResult.value;
-
-      // Fallback for dimensions if missing (unless strict mode).
-      if (!options?.strict && (metadata.width === 0 || metadata.height === 0)) {
-        try {
-          const dims = readImageDimensions(data, format);
-          if (dims) {
-            metadata.width = metadata.width || dims.width;
-            metadata.height = metadata.height || dims.height;
-          }
-        } catch {
-          // Malformed image header — leave dimensions as 0.
-        }
-      }
-
+      applyDimensionFallback(metadata, data, format, options);
       return { status: 'success', metadata, raw };
     }
   }
@@ -92,6 +83,31 @@ export function read(
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/**
+ * Fill missing dimensions from the image header (unless strict mode)
+ *
+ * Shared by read() and parse(). Mutates the metadata in place.
+ */
+export function applyDimensionFallback(
+  metadata: GenerationMetadata,
+  data: Uint8Array,
+  format: ImageFormat,
+  options?: ReadOptions,
+): void {
+  if (options?.strict || (metadata.width !== 0 && metadata.height !== 0)) {
+    return;
+  }
+  try {
+    const dims = readImageDimensions(data, format);
+    if (dims) {
+      metadata.width = metadata.width || dims.width;
+      metadata.height = metadata.height || dims.height;
+    }
+  } catch {
+    // Malformed image header — leave dimensions as 0.
+  }
+}
 
 /** Result type for readRawMetadata */
 type RawReadResult =
