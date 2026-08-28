@@ -426,10 +426,27 @@ export interface C2paMetadata {
  * - `invalid`: File is corrupted or not a valid image
  */
 export type ParseResult =
-  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
+  | {
+      status: 'success';
+      metadata: GenerationMetadata;
+      raw: RawMetadata;
+      /**
+       * True when the metadata was recovered from pixel LSBs (Stealth
+       * PNGInfo) rather than regular metadata. Only set by parse().
+       */
+      stealth?: boolean;
+    }
   | { status: 'c2pa'; c2pa: C2paMetadata }
   | { status: 'empty' }
-  | { status: 'unrecognized'; raw: RawMetadata }
+  | {
+      status: 'unrecognized';
+      raw: RawMetadata;
+      /**
+       * True when the raw data was recovered from pixel LSBs (Stealth
+       * PNGInfo) rather than regular metadata. Only set by parse().
+       */
+      stealth?: boolean;
+    }
   | { status: 'invalid'; message?: string };
 
 // ============================================================================

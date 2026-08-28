@@ -52,6 +52,7 @@ describe('parse - Stealth PNGInfo samples', () => {
         if (baseline.status !== 'success' || recovered.status !== 'success') {
           return;
         }
+        expect(recovered.stealth).toBe(true);
         expect(recovered.metadata).toEqual(baseline.metadata);
       });
     }

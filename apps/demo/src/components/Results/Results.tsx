@@ -13,8 +13,6 @@ interface ResultsProps {
   fileDataRef: RefObject<Uint8Array | null>;
   filename: string;
   previewUrl: string;
-  /** True when metadata came from pixel LSBs (Stealth PNGInfo) */
-  stealthRecovered?: boolean;
 }
 
 /**
@@ -25,7 +23,6 @@ export function Results({
   fileDataRef,
   filename,
   previewUrl,
-  stealthRecovered,
 }: ResultsProps) {
   const t: I18nMessages = useStore($t);
   const [activeTab, setActiveTab] = useState<string | null>('parsed');
@@ -42,6 +39,11 @@ export function Results({
       </Alert>
     );
   }
+
+  const stealthRecovered =
+    (parseResult.status === 'success' ||
+      parseResult.status === 'unrecognized') &&
+    parseResult.stealth === true;
 
   return (
     <Paper className="fade-in">

@@ -1,10 +1,5 @@
 import type { ParseResult } from '@enslo/sd-metadata';
-import {
-  c2paVendorLabels,
-  parse,
-  read,
-  softwareLabels,
-} from '@enslo/sd-metadata';
+import { c2paVendorLabels, parse, softwareLabels } from '@enslo/sd-metadata';
 import {
   Anchor,
   Container,
@@ -32,8 +27,6 @@ interface AppState {
   parseResult: ParseResult | null;
   filename: string | null;
   previewUrl: string | null;
-  /** True when metadata came from pixel LSBs (Stealth PNGInfo) */
-  stealthRecovered: boolean;
 }
 
 /**
@@ -45,7 +38,6 @@ export function App() {
     parseResult: null,
     filename: null,
     previewUrl: null,
-    stealthRecovered: false,
   });
   // Held in a ref rather than state so large binary payloads do not flow
   // through React's reconciliation (React 19.2 dev mode otherwise serializes
@@ -58,20 +50,13 @@ export function App() {
       const previewUrl = URL.createObjectURL(file);
       const buffer = await file.arrayBuffer();
       const data = new Uint8Array(buffer);
-      // parse() falls back to a pixel-level stealth scan; comparing with
-      // the chunk-only read() reveals when that fallback kicked in.
-      const chunkResult = read(data);
-      const parseResult =
-        chunkResult.status === 'success' ? chunkResult : await parse(data);
-      const stealthRecovered =
-        chunkResult.status !== 'success' && parseResult.status === 'success';
+      const parseResult = await parse(data);
 
       fileDataRef.current = data;
       setState({
         parseResult,
         filename: file.name,
         previewUrl,
-        stealthRecovered,
       });
     } catch (e) {
       console.error('Failed to load file:', e);
@@ -184,7 +169,6 @@ export function App() {
               fileDataRef={fileDataRef}
               filename={state.filename}
               previewUrl={state.previewUrl}
-              stealthRecovered={state.stealthRecovered}
             />
           )}
         </Stack>
