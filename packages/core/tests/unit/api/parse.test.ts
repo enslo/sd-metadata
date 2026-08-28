@@ -26,6 +26,7 @@ describe('parse', () => {
     const result = await parse(png);
     expect(result.status).toBe('success');
     if (result.status === 'success') {
+      expect(result.stealth).toBe(true);
       expect(result.metadata.software).toBe('sd-webui');
       expect(result.metadata.prompt).toBe('masterpiece, 1girl');
       expect(result.metadata.negativePrompt).toBe('lowres');
@@ -48,6 +49,7 @@ describe('parse', () => {
 
     expect(result.status).toBe('unrecognized');
     if (result.status === 'unrecognized') {
+      expect(result.stealth).toBe(true);
       expect(result.raw).toEqual({
         format: 'png',
         chunks: [
@@ -110,6 +112,7 @@ describe('parse - WebP stealth via decodePixels', () => {
     expect(formats).toEqual(['webp']);
     expect(result.status).toBe('success');
     if (result.status === 'success') {
+      expect(result.stealth).toBe(true);
       expect(result.metadata.software).toBe('sd-webui');
       expect(result.metadata.prompt).toBe('masterpiece, 1girl');
       // Stealth raw metadata is chunk-shaped regardless of container.

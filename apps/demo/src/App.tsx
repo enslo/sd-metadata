@@ -1,5 +1,5 @@
 import type { ParseResult } from '@enslo/sd-metadata';
-import { c2paVendorLabels, read, softwareLabels } from '@enslo/sd-metadata';
+import { c2paVendorLabels, parse, softwareLabels } from '@enslo/sd-metadata';
 import {
   Anchor,
   Container,
@@ -50,7 +50,7 @@ export function App() {
       const previewUrl = URL.createObjectURL(file);
       const buffer = await file.arrayBuffer();
       const data = new Uint8Array(buffer);
-      const parseResult = read(data);
+      const parseResult = await parse(data);
 
       fileDataRef.current = data;
       setState({
@@ -99,6 +99,7 @@ export function App() {
   const getSoftwareLabelForDisplay = (): {
     label: string;
     status: 'success' | 'c2pa' | 'empty' | 'unrecognized' | 'invalid';
+    stealth?: boolean;
   } | null => {
     switch (state.parseResult?.status) {
       case 'success':
@@ -106,6 +107,7 @@ export function App() {
           label:
             softwareLabels[state.parseResult.metadata.software] ?? 'Unknown',
           status: 'success',
+          stealth: state.parseResult.stealth === true,
         };
       case 'c2pa':
         return {
@@ -115,7 +117,11 @@ export function App() {
       case 'empty':
         return { label: 'Empty', status: 'empty' };
       case 'unrecognized':
-        return { label: 'Unrecognized', status: 'unrecognized' };
+        return {
+          label: 'Unrecognized',
+          status: 'unrecognized',
+          stealth: state.parseResult.stealth === true,
+        };
       case 'invalid':
         return { label: 'Invalid', status: 'invalid' };
       default:

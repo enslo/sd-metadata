@@ -83,14 +83,23 @@ export async function parse(
     // Stealth payloads are keyword/text pairs regardless of container,
     // so the recovered raw metadata is always chunk-shaped ('png').
     // write() converts it to the target container's native layout.
-    return { status: 'success', metadata, raw: { format: 'png', chunks } };
+    return {
+      status: 'success',
+      metadata,
+      raw: { format: 'png', chunks },
+      stealth: true,
+    };
   }
 
   // Stealth data exists but is in an unknown format: surface it rather
   // than reporting an empty file. Chunk-based results (unrecognized,
   // c2pa) stay as they are.
   if (chunkResult.status === 'empty') {
-    return { status: 'unrecognized', raw: { format: 'png', chunks } };
+    return {
+      status: 'unrecognized',
+      raw: { format: 'png', chunks },
+      stealth: true,
+    };
   }
   return chunkResult;
 }
