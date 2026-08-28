@@ -157,24 +157,11 @@ if (rescued.status === 'success') {
 > [!NOTE]
 > The stealth scan needs `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern browsers). On runtimes without it, `parse()` degrades gracefully to chunk-based reading. Writing stealth data is intentionally out of scope.
 
-## Import
-
-**ESM (TypeScript / Modern JavaScript):**
-
-```typescript
-import { parse } from '@enslo/sd-metadata';
-```
-
-**CommonJS (Node.js):**
-
-```javascript
-const { parse } = require('@enslo/sd-metadata');
-```
+## Usage
 
 > [!NOTE]
-> All examples below use ESM syntax. CommonJS users can replace `import` with `require`.
-
-## Usage
+> All examples use ESM syntax. CommonJS users can replace `import` with
+> `require`: `const { parse } = require('@enslo/sd-metadata');`
 
 ### Node.js Usage
 
@@ -293,9 +280,7 @@ switch (result.status) {
     break;
 
   case 'c2pa':
-    // C2PA Content Credentials detected (e.g. OpenAI ChatGPT, Google Gemini).
-    // Detection only — the signature is NOT verified, and there are no
-    // generation parameters (prompt/seed/model) to read.
+    // C2PA Content Credentials — see "AI Provenance Detection" below
     console.log(`AI provenance: ${result.c2pa.vendor} (unverified)`);
     console.log(`Claim generator: ${result.c2pa.claimGenerator ?? 'unknown'}`);
     break;
@@ -365,6 +350,8 @@ if (result.status === 'c2pa') {
 ```
 
 > **Detection only — not proof.** The C2PA signature is not verified, so a `c2pa` result is forgeable and cannot prove authenticity. Content Credentials are also easily stripped (screenshots, re-uploads, re-encoding), so the absence of a `c2pa` result does not prove an image is *not* AI-generated.
+>
+> **PNG only for now.** The manifest is read from the PNG `caBX` chunk; JPEG/WebP detection is planned.
 
 </details>
 
@@ -433,31 +420,6 @@ const result = await parse(novelaiPng);
 if (result.status === 'success') {
   // NovelAI metadata (or any other tool) works as-is
   const output = embed(blankJpeg, result.metadata);
-}
-```
-
-</details>
-
-<details>
-<summary>Formatting Metadata for Display</summary>
-
-Convert a `ParseResult` to a human-readable string. Automatically selects the best representation based on status:
-
-```typescript
-import { parse, stringify } from '@enslo/sd-metadata';
-
-const result = await parse(imageData);
-const text = stringify(result);
-if (text) {
-  console.log(text);
-
-  // For 'success': outputs in WebUI format:
-  // masterpiece, best quality, 1girl
-  // Negative prompt: lowres, bad quality
-  // Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: model.safetensors
-  //
-  // For 'unrecognized': outputs raw metadata text
-  // For 'empty' / 'invalid': returns empty string
 }
 ```
 
@@ -612,122 +574,33 @@ type ParseResult =
   | { status: 'invalid'; message?: string };
 ```
 
-### `BaseMetadata`
-
-Common fields shared by all metadata types. This interface is also the foundation of `EmbedMetadata`.
-
-```typescript
-interface BaseMetadata {
-  prompt: string;
-  negativePrompt: string;
-  width: number;
-  height: number;
-  model?: ModelSettings;
-  sampling?: SamplingSettings;
-  hires?: HiresSettings;
-  upscale?: UpscaleSettings;
-}
-```
-
 ### `GenerationMetadata`
 
-Unified metadata structure returned by the `parse()` function. This is a discriminated union of 3 specific metadata types, distinguished by the `software` field. All types extend `BaseMetadata`.
-
-**Metadata Type Variants:**
-
-- **`NovelAIMetadata`** (`software: 'novelai'`)  
-  Includes NovelAI-specific fields for V4 character placement:
-  - `characterPrompts?: CharacterPrompt[]` - Per-character prompts with positions
-  - `useCoords?: boolean` - Use character coordinates for placement
-  - `useOrder?: boolean` - Use character order
-
-- **`ComfyUIMetadata`** (`software: 'comfyui' | 'tensorart' | 'stability-matrix' | 'swarmui'`)  
-  Includes ComfyUI workflow graph:
-  - `nodes: ComfyNodeGraph` (required for comfyui/tensorart/stability-matrix)
-  - `nodes?: ComfyNodeGraph` (optional for swarmui - only in PNG format)
-
-- **`StandardMetadata`** (`software: 'sd-webui' | 'forge' | 'forge-classic' | 'reforge' | 'invokeai' | ...`)
-  Baseline metadata without tool-specific extensions. Used by most SD WebUI-based tools.
-
-**Type Definition:**
+Unified metadata structure returned by `parse()` — a discriminated union of 3 metadata types, distinguished by the `software` field:
 
 ```typescript
 type GenerationMetadata =
-  | NovelAIMetadata
-  | ComfyUIMetadata
-  | StandardMetadata;
+  | NovelAIMetadata   // 'novelai' — adds V4 character-placement fields
+  | ComfyUIMetadata   // 'comfyui' | 'tensorart' | 'stability-matrix' | 'swarmui' — adds the workflow graph (nodes)
+  | StandardMetadata; // 'sd-webui', 'forge', 'invokeai', ... — baseline fields only
 ```
 
-**Usage Example:**
+All variants share the `BaseMetadata` fields: `prompt`, `negativePrompt`, `width`, `height`, and the optional `model` / `sampling` / `hires` / `upscale` settings. Narrow on the `software` discriminator to access tool-specific fields:
 
 ```typescript
-const result = await parse(imageData);
-
 if (result.status === 'success') {
   const metadata = result.metadata;
-  
-  // Access common fields
   console.log('Prompt:', metadata.prompt);
   console.log('Model:', metadata.model?.name);
-  console.log('Seed:', metadata.sampling?.seed);
-  
-  // Narrow on the `software` discriminator for tool-specific fields
+
   if (metadata.software === 'novelai') {
     // TypeScript knows this is NovelAIMetadata
     console.log('Character prompts:', metadata.characterPrompts);
-  } else if (
-    metadata.software === 'comfyui' ||
-    metadata.software === 'tensorart' ||
-    metadata.software === 'stability-matrix' ||
-    metadata.software === 'swarmui'
-  ) {
-    // TypeScript knows this is ComfyUIMetadata.
-    // `nodes` is always present except for native SwarmUI JPEG/WebP, so guard it.
-    if (metadata.nodes) {
-      console.log('Node count:', Object.keys(metadata.nodes).length);
-    }
   }
 }
 ```
 
-See [Type Documentation](./docs/types.md) for detailed interface definitions of each metadata type.
-
-### `GenerationSoftware`
-
-String literal union of all supported software identifiers. Used as the key type for `softwareLabels`.
-
-```typescript
-type GenerationSoftware =
-  | 'novelai' | 'comfyui' | 'swarmui' | 'tensorart' | 'stability-matrix'
-  | 'sd-webui' | 'forge' | 'forge-classic' | 'forge-neo' 
-  | 'reforge'| 'easy-reforge' | 'sd-next' | 'civitai' | 'hf-space'
-  | 'invokeai' | 'easydiffusion' | 'fooocus' | 'ruined-fooocus'
-  | 'draw-things';
-```
-
-### `EmbedMetadata`
-
-User-created custom metadata for the `embed()` and `stringify()` functions. While `GenerationMetadata` represents parsed output from a known AI tool, `EmbedMetadata` is designed for composing metadata from scratch. Extends `BaseMetadata` with optional character prompts and extras.
-
-```typescript
-type EmbedMetadata = BaseMetadata &
-  Pick<NovelAIMetadata, 'characterPrompts'> & {
-    extras?: Record<string, string | number>;
-  };
-```
-
-### `RawMetadata`
-
-Preserves the original metadata structure for round-trip conversions.
-
-```typescript
-type RawMetadata =
-  | { format: 'png'; chunks: PngTextChunk[] }
-  | { format: 'jpeg'; segments: MetadataSegment[] }
-  | { format: 'webp'; segments: MetadataSegment[] };
-```
-
-For detailed documentation of all exported types including `ModelSettings`, `SamplingSettings`, and format-specific types, see the [Type Documentation](./docs/types.md).
+For the complete definitions of every exported type — including `BaseMetadata`, `EmbedMetadata`, `RawMetadata`, `GenerationSoftware`, and the settings types — see the [Type Documentation](./docs/types.md).
 
 ## Development
 

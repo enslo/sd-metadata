@@ -31,13 +31,6 @@ PNG、JPEG、WebPフォーマットに対応し、18以上の生成ツールを�
 | バンドルサイズ（IIFE、minified） | 約57 KB | 約7 KB |
 | Node.js + ブラウザ | ✅ | ✅ |
 
-- **フルライブラリ**（`@enslo/sd-metadata`）
-  - 書き込み、フォーマット変換、完全なAPIを提供
-  - [ドキュメント](./packages/core/README.ja.md)
-- **軽量版**（`@enslo/sd-metadata-lite`）
-  - バンドルサイズを重視するブックマークレット・ユーザースクリプト向けの読み取り専用パーサー
-  - [ドキュメント](./packages/lite/README.ja.md)
-
 ## クイックスタート
 
 ```bash

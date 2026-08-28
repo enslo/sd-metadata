@@ -157,24 +157,11 @@ if (rescued.status === 'success') {
 > [!NOTE]
 > stealth スキャンには `DecompressionStream` が必要です（Node.js 18+、Bun 1.4+、Deno、全モダンブラウザ）。対応していないランタイムでは、`parse()` はチャンクベースの読み取りに静かにフォールバックします。stealth データの書き込みは意図的にスコープ外です。
 
-## インポート
-
-**ESM (TypeScript / Modern JavaScript):**
-
-```typescript
-import { parse } from '@enslo/sd-metadata';
-```
-
-**CommonJS (Node.js):**
-
-```javascript
-const { parse } = require('@enslo/sd-metadata');
-```
+## 使い方
 
 > [!NOTE]
-> 以下の例は全てESM構文を使用しています。CommonJSユーザーは `import` を `require` に置き換えてください。
-
-## 使い方
+> 例は全てESM構文を使用しています。CommonJSユーザーは `import` を `require` に
+> 置き換えてください：`const { parse } = require('@enslo/sd-metadata');`
 
 ### Node.jsでの使用
 
@@ -293,8 +280,7 @@ switch (result.status) {
     break;
 
   case 'c2pa':
-    // C2PA Content Credentials を検出（例：OpenAI ChatGPT、Google Gemini）。
-    // 検出のみ — 署名は検証されず、読み取れる生成パラメータ（プロンプト／シード／モデル）もありません。
+    // C2PA Content Credentials — 下記「AI生成元の検出」を参照
     console.log(`AI生成元（未検証）: ${result.c2pa.vendor}`);
     console.log(`Claim generator: ${result.c2pa.claimGenerator ?? 'unknown'}`);
     break;
@@ -364,6 +350,8 @@ if (result.status === 'c2pa') {
 ```
 
 > **検出のみ — 証明にはなりません。** C2PA署名を検証しないため、`c2pa` の結果は偽造可能で、真正性の証明にはなりません。また Content Credentials は再アップロードや再エンコードで失われやすいため、`c2pa` にならないことも「AI生成ではない」ことの証明にはなりません。
+>
+> **現時点ではPNGのみ。** マニフェストはPNGの `caBX` チャンクから読み取ります。JPEG/WebPでの検出は対応予定です。
 
 </details>
 
@@ -435,31 +423,6 @@ const result = await parse(novelaiPng);
 if (result.status === 'success') {
   // NovelAI（や他のツール）のメタデータをそのまま利用可能
   const output = embed(blankJpeg, result.metadata);
-}
-```
-
-</details>
-
-<details>
-<summary>表示用にメタデータをフォーマット</summary>
-
-`ParseResult` を読みやすい文字列に変換します。ステータスに応じて最適な表現を自動選択します：
-
-```typescript
-import { parse, stringify } from '@enslo/sd-metadata';
-
-const result = await parse(imageData);
-const text = stringify(result);
-if (text) {
-  console.log(text);
-
-  // 'success' の場合: WebUIフォーマットで出力:
-  // masterpiece, best quality, 1girl
-  // Negative prompt: lowres, bad quality
-  // Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: model.safetensors
-  //
-  // 'unrecognized' の場合: 生のメタデータテキストを出力
-  // 'empty' / 'invalid' の場合: 空文字列を返す
 }
 ```
 
@@ -612,122 +575,33 @@ type ParseResult =
   | { status: 'invalid'; message?: string };
 ```
 
-### `BaseMetadata`
-
-全メタデータ型で共有される共通フィールド。このインターフェースは `EmbedMetadata` の基盤でもあります。
-
-```typescript
-interface BaseMetadata {
-  prompt: string;
-  negativePrompt: string;
-  width: number;
-  height: number;
-  model?: ModelSettings;
-  sampling?: SamplingSettings;
-  hires?: HiresSettings;
-  upscale?: UpscaleSettings;
-}
-```
-
 ### `GenerationMetadata`
 
-`parse()` 関数が返す統一されたメタデータ構造。`software` フィールドで区別される3つのメタデータ型のユニオン型です。全タイプが `BaseMetadata` を拡張しています。
-
-**メタデータ型のバリアント:**
-
-- **`NovelAIMetadata`** (`software: 'novelai'`)  
-  V4キャラクター配置用のNovelAI固有フィールドを含む：
-  - `characterPrompts?: CharacterPrompt[]` - キャラクターごとのプロンプトと位置
-  - `useCoords?: boolean` - 配置にキャラクター座標を使用
-  - `useOrder?: boolean` - キャラクターの順序を使用
-
-- **`ComfyUIMetadata`** (`software: 'comfyui' | 'tensorart' | 'stability-matrix' | 'swarmui'`)  
-  ComfyUIワークフローグラフを含む：
-  - `nodes: ComfyNodeGraph`（comfyui/tensorart/stability-matrixでは必須）
-  - `nodes?: ComfyNodeGraph`（swarmuiではオプション - PNGフォーマットのみ）
-
-- **`StandardMetadata`** (`software: 'sd-webui' | 'forge' | 'forge-classic' | 'reforge' | 'invokeai' | ...`)
-  ツール固有の拡張なしのベースラインメタデータ。ほとんどのSD WebUIベースのツールで使用。
-
-**型定義:**
+`parse()` が返す統一されたメタデータ構造。`software` フィールドで判別される3つのメタデータ型のユニオン型です：
 
 ```typescript
 type GenerationMetadata =
-  | NovelAIMetadata
-  | ComfyUIMetadata
-  | StandardMetadata;
+  | NovelAIMetadata   // 'novelai' — V4キャラクター配置フィールドを追加
+  | ComfyUIMetadata   // 'comfyui' | 'tensorart' | 'stability-matrix' | 'swarmui' — ワークフローグラフ（nodes）を追加
+  | StandardMetadata; // 'sd-webui', 'forge', 'invokeai', ... — 基本フィールドのみ
 ```
 
-**使用例:**
+全バリアントが `BaseMetadata` のフィールド — `prompt`、`negativePrompt`、`width`、`height`、およびオプションの `model` / `sampling` / `hires` / `upscale` 設定 — を共有します。ツール固有のフィールドには `software` ディスクリミネータで絞り込んでアクセスします：
 
 ```typescript
-const result = await parse(imageData);
-
 if (result.status === 'success') {
   const metadata = result.metadata;
-  
-  // 共通フィールドにアクセス
   console.log('Prompt:', metadata.prompt);
   console.log('Model:', metadata.model?.name);
-  console.log('Seed:', metadata.sampling?.seed);
-  
-  // `software` ディスクリミネータで絞り込んでツール固有のフィールドにアクセス
+
   if (metadata.software === 'novelai') {
     // TypeScriptはこれがNovelAIMetadataであることを認識
     console.log('Character prompts:', metadata.characterPrompts);
-  } else if (
-    metadata.software === 'comfyui' ||
-    metadata.software === 'tensorart' ||
-    metadata.software === 'stability-matrix' ||
-    metadata.software === 'swarmui'
-  ) {
-    // TypeScriptはこれがComfyUIMetadataであることを認識。
-    // `nodes` はネイティブのSwarmUI JPEG/WebP を除いて常に存在するためガードする。
-    if (metadata.nodes) {
-      console.log('Node count:', Object.keys(metadata.nodes).length);
-    }
   }
 }
 ```
 
-各メタデータ型の詳細なインターフェース定義については[型ドキュメント](./docs/types.ja.md)を参照してください。
-
-### `GenerationSoftware`
-
-サポートされている全ソフトウェア識別子の文字列リテラルユニオン型。`softwareLabels` のキー型として使用します。
-
-```typescript
-type GenerationSoftware =
-  | 'novelai' | 'comfyui' | 'swarmui' | 'tensorart' | 'stability-matrix'
-  | 'sd-webui' | 'forge' | 'forge-classic' | 'forge-neo' 
-  | 'reforge'| 'easy-reforge' | 'sd-next' | 'civitai' | 'hf-space'
-  | 'invokeai' | 'easydiffusion' | 'fooocus' | 'ruined-fooocus'
-  | 'draw-things';
-```
-
-### `EmbedMetadata`
-
-`embed()` と `stringify()` で使用するユーザー作成カスタムメタデータ型。`GenerationMetadata` が既知のAIツールからのパース結果を表すのに対し、`EmbedMetadata` はユーザーが独自にメタデータを組み立てるための型です。`BaseMetadata` にオプションのキャラクタープロンプトと設定行への任意キーバリュー（`extras`）を追加。
-
-```typescript
-type EmbedMetadata = BaseMetadata &
-  Pick<NovelAIMetadata, 'characterPrompts'> & {
-    extras?: Record<string, string | number>;
-  };
-```
-
-### `RawMetadata`
-
-ラウンドトリップ変換のために元のメタデータ構造を保持します。
-
-```typescript
-type RawMetadata =
-  | { format: 'png'; chunks: PngTextChunk[] }
-  | { format: 'jpeg'; segments: MetadataSegment[] }
-  | { format: 'webp'; segments: MetadataSegment[] };
-```
-
-`ModelSettings`、`SamplingSettings`、フォーマット固有の型を含む全てのエクスポート型の詳細なドキュメントについては、[型ドキュメント](./docs/types.ja.md)を参照してください。
+`BaseMetadata`、`EmbedMetadata`、`RawMetadata`、`GenerationSoftware`、各設定型を含む全エクスポート型の完全な定義については、[型ドキュメント](./docs/types.ja.md)を参照してください。
 
 ## 開発
 

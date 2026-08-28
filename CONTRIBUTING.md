@@ -148,35 +148,6 @@ If you want to add support for a new AI tool:
 
 See existing parsers and converters as examples.
 
-## Development Commands
-
-This is a pnpm workspace monorepo. Common commands:
-
-```bash
-# Install dependencies
-pnpm install
-
-# Build and test (core)
-pnpm --filter @enslo/sd-metadata build
-pnpm --filter @enslo/sd-metadata test
-
-# Build and test (lite)
-pnpm --filter @enslo/sd-metadata-lite build
-pnpm --filter @enslo/sd-metadata-lite test
-
-# Lint (entire workspace)
-pnpm lint
-pnpm lint:fix
-```
-
-You can also run commands directly inside a package directory:
-
-```bash
-cd packages/core
-pnpm test:watch
-pnpm test:coverage
-```
-
 ## Questions?
 
 If you have questions about contributing, feel free to:

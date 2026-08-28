@@ -31,13 +31,6 @@ Zero dependencies, works in Node.js and browsers.
 | Bundle size (IIFE, minified) | ~57 KB | ~7 KB |
 | Node.js + Browser | ✅ | ✅ |
 
-- **Full library** (`@enslo/sd-metadata`)
-  - Write support, format conversion, and the complete API
-  - [Documentation](./packages/core/README.md)
-- **Lite** (`@enslo/sd-metadata-lite`)
-  - Read-only parser for bookmarklets and userscripts where bundle size matters
-  - [Documentation](./packages/lite/README.md)
-
 ## Quick start
 
 ```bash
