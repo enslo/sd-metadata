@@ -156,8 +156,8 @@ describe('parse - Stealth PNGInfo samples', () => {
     // sample — but reading them would require a full VP8L decoder,
     // which is out of scope for a dependency-free library. Once the
     // EXIF metadata is stripped, nothing is recoverable for now.
-    // (The forge-stealth-*.webp samples carry no stealth data at all:
-    // the extension only hooks PNG saves.)
+    // (The sd-webui-stealth-pnginfo extension only hooks PNG saves,
+    // so Forge WebP output carries no stealth data at all.)
     const original = loadSample('webp', 'novelai-curated.webp');
     expect(read(original).status).toBe('success');
 
