@@ -6,6 +6,8 @@
 /** @deprecated Use {@link embed} instead */
 export { embed, embed as writeAsWebUI } from './api/embed';
 // Export core API functions
+export { parse } from './api/parse';
+/** @deprecated Use {@link parse} instead */
 export { read } from './api/read';
 // Export utility functions
 /** @deprecated Use {@link stringify} instead */
