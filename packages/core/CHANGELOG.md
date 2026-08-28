@@ -14,9 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generation metadata in pixel least-significant bits, where it survives
   metadata stripping by image hosts. The new async `parse()` function behaves
   like `read()`, plus recovers this hidden metadata from PNGs whose metadata
-  chunks were stripped. All four stealth variants are supported
-  (`stealth_pnginfo` / `stealth_pngcomp` / `stealth_rgbinfo` /
-  `stealth_rgbcomp`). Still zero dependencies: decompression uses the
+  chunks were stripped. All four stealth variants are supported (alpha- or
+  RGB-channel embedding, compressed or uncompressed). Still zero
+  dependencies: decompression uses the
   standard `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern
   browsers).
 - **WebP stealth recovery** (#270): NovelAI embeds stealth data in its

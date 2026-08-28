@@ -113,7 +113,7 @@ if (result.status === 'success') {
 }
 ```
 
-4つの変種すべて（`stealth_pnginfo` / `stealth_pngcomp` / `stealth_rgbinfo` / `stealth_rgbcomp`）に対応し、NovelAI の JSON ペイロードも拡張機能のプレーンテキスト（infotext）ペイロードも扱えます。
+4つの変種すべて — アルファ/RGBチャンネル埋め込み × 圧縮/非圧縮 — に対応し、NovelAI の JSON ペイロードも拡張機能のプレーンテキスト（infotext）ペイロードも扱えます。
 
 ### WebP 画像
 

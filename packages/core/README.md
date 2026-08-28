@@ -113,7 +113,7 @@ if (result.status === 'success') {
 }
 ```
 
-All four variants are supported (`stealth_pnginfo` / `stealth_pngcomp` / `stealth_rgbinfo` / `stealth_rgbcomp`), for both NovelAI's JSON payloads and the extensions' plain-infotext payloads.
+All four variants are supported — alpha- or RGB-channel embedding, compressed or uncompressed — for both NovelAI's JSON payloads and the extensions' plain-infotext payloads.
 
 ### WebP images
 
