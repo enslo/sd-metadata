@@ -437,6 +437,18 @@ export type ParseResult =
 // ============================================================================
 
 /**
+ * Decoded RGBA pixel data for the stealth scan
+ *
+ * Interleaved RGBA bytes, four per pixel, row-major. A
+ * Uint8ClampedArray (e.g. from canvas getImageData) is accepted as-is.
+ */
+export interface RgbaPixels {
+  data: Uint8Array | Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+
+/**
  * Options for the read function
  */
 export interface ReadOptions {
@@ -446,6 +458,18 @@ export interface ReadOptions {
    * @default false
    */
   strict?: boolean;
+
+  /**
+   * Decode compressed image pixels for the stealth scan when the
+   * platform cannot (currently WebP outside browsers — e.g. via sharp
+   * in Node.js). parse() calls it lazily, only when a WebP carries no
+   * readable metadata. Return null when decoding is unavailable for
+   * the given image; the platform decoder is then tried as a fallback.
+   */
+  decodePixels?: (
+    data: Uint8Array,
+    format: 'webp',
+  ) => Promise<RgbaPixels | null>;
 }
 
 /**

@@ -34,10 +34,37 @@ export interface StealthPngOptions {
  * Build a synthetic PNG with Stealth PNGInfo embedded in pixel LSBs
  */
 export function createStealthPng(options: StealthPngOptions): Uint8Array {
+  const colorType =
+    options.colorType ?? ((options.mode ?? 'alpha') === 'alpha' ? 6 : 2);
+  const channels = colorType === 6 ? 4 : 3;
+  const { width, height, pixels } = buildStealthPixels(options, channels);
+  return buildPng(width, height, colorType, channels, pixels);
+}
+
+/**
+ * Build raw RGBA pixels with Stealth PNGInfo embedded in the LSBs
+ *
+ * Same embedding as createStealthPng, but returned as a decoded pixel
+ * buffer — the shape an external WebP decoder would produce.
+ */
+export function createStealthRgbaPixels(options: StealthPngOptions): {
+  data: Uint8Array;
+  width: number;
+  height: number;
+} {
+  const { width, height, pixels } = buildStealthPixels(options, 4);
+  return { data: pixels, width, height };
+}
+
+/**
+ * Embed the stealth bitstream into a fresh pixel buffer
+ */
+function buildStealthPixels(
+  options: StealthPngOptions,
+  channels: number,
+): { width: number; height: number; pixels: Uint8Array } {
   const mode = options.mode ?? 'alpha';
   const compress = options.compress ?? true;
-  const colorType = options.colorType ?? (mode === 'alpha' ? 6 : 2);
-  const channels = colorType === 6 ? 4 : 3;
 
   const magic =
     options.magic ??
@@ -102,7 +129,7 @@ export function createStealthPng(options: StealthPngOptions): Uint8Array {
     pixels[offset] = ((pixels[offset] ?? 0) & 0xfe) | (bits[i] ?? 0);
   }
 
-  return buildPng(width, height, colorType, channels, pixels);
+  return { width, height, pixels };
 }
 
 /**

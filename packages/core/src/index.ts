@@ -43,6 +43,7 @@ export type {
   PngTextChunk,
   RawMetadata,
   ReadOptions,
+  RgbaPixels,
   SamplingSettings,
   TExtChunk,
   UpscaleSettings,

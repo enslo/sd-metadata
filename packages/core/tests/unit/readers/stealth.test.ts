@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { readStealthChunks } from '../../../src/readers/stealth';
+import {
+  readStealthChunks,
+  scanStealthPixels,
+} from '../../../src/readers/stealth';
 import { createMinimalPng } from '../../helpers/minimal-images';
-import { createStealthPng } from '../../helpers/stealth-images';
+import {
+  createStealthPng,
+  createStealthRgbaPixels,
+} from '../../helpers/stealth-images';
 
 /** A NovelAI-style JSON payload mirroring its tEXt chunk layout */
 const NOVELAI_PAYLOAD = JSON.stringify({
@@ -135,5 +141,70 @@ describe('readStealthChunks', () => {
     it('returns null for non-PNG data', async () => {
       expect(await readStealthChunks(new Uint8Array([1, 2, 3]))).toBeNull();
     });
+  });
+});
+
+describe('scanStealthPixels', () => {
+  it('extracts stealth data from an RGBA pixel buffer (alpha mode)', async () => {
+    const pixels = createStealthRgbaPixels({
+      payload: A1111_PAYLOAD,
+      compress: false,
+    });
+
+    const chunks = await scanStealthPixels(pixels);
+
+    expect(chunks).toEqual([
+      { type: 'tEXt', keyword: 'parameters', text: A1111_PAYLOAD },
+    ]);
+  });
+
+  it('extracts stealth data from an RGBA pixel buffer (rgb mode)', async () => {
+    const pixels = createStealthRgbaPixels({
+      payload: NOVELAI_PAYLOAD,
+      mode: 'rgb',
+    });
+
+    const chunks = await scanStealthPixels(pixels);
+
+    expect(chunks).not.toBeNull();
+    const record = Object.fromEntries(
+      (chunks ?? []).map((chunk) => [chunk.keyword, chunk.text]),
+    );
+    expect(record.Software).toBe('NovelAI');
+  });
+
+  it('accepts Uint8ClampedArray data (canvas getImageData shape)', async () => {
+    const { data, width, height } = createStealthRgbaPixels({
+      payload: A1111_PAYLOAD,
+      compress: false,
+    });
+    const clamped = new Uint8ClampedArray(
+      data.buffer,
+      data.byteOffset,
+      data.byteLength,
+    );
+
+    const chunks = await scanStealthPixels({ data: clamped, width, height });
+
+    expect(chunks).toEqual([
+      { type: 'tEXt', keyword: 'parameters', text: A1111_PAYLOAD },
+    ]);
+  });
+
+  it('returns null when the buffer is smaller than the dimensions claim', async () => {
+    const { data } = createStealthRgbaPixels({
+      payload: A1111_PAYLOAD,
+      compress: false,
+    });
+
+    expect(
+      await scanStealthPixels({ data, width: 10_000, height: 10_000 }),
+    ).toBeNull();
+  });
+
+  it('returns null for pixels without stealth data', async () => {
+    const data = new Uint8Array(64 * 64 * 4).fill(255);
+
+    expect(await scanStealthPixels({ data, width: 64, height: 64 })).toBeNull();
   });
 });
