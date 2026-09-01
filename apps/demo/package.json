@@ -21,8 +21,8 @@
     "@mantine/dropzone": "^9.5.1",
     "@mantine/hooks": "^9.5.1",
     "@nanostores/react": "^1.1.0",
-    "lucide-react": "^1.31.0",
-    "nanostores": "^1.4.2",
+    "lucide-react": "^1.37.0",
+    "nanostores": "^1.5.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   }
