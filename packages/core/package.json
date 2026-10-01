@@ -56,9 +56,9 @@
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "^4.1.10",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "tsdown": "catalog:",
-    "tsx": "^4.23.12",
+    "tsx": "^4.23.15",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
