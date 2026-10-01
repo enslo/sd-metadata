@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.0.5",
     "typescript": "catalog:",
     "vite": "catalog:"
@@ -21,9 +21,9 @@
     "@mantine/dropzone": "^9.5.1",
     "@mantine/hooks": "^9.5.1",
     "@nanostores/react": "^1.1.0",
-    "lucide-react": "^1.31.0",
-    "nanostores": "^1.4.2",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "lucide-react": "^1.48.0",
+    "nanostores": "^1.5.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }
