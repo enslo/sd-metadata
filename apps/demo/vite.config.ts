@@ -4,7 +4,10 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 const corePackageJson = JSON.parse(
-  readFileSync(resolve(__dirname, '../../packages/core/package.json'), 'utf-8'),
+  readFileSync(
+    resolve(import.meta.dirname, '../../packages/core/package.json'),
+    'utf-8',
+  ),
 );
 
 export default defineConfig({
@@ -19,7 +22,7 @@ export default defineConfig({
       // In production build (Cloudflare Pages), use the npm package
       ...(process.env.NODE_ENV !== 'production' && {
         '@enslo/sd-metadata': resolve(
-          __dirname,
+          import.meta.dirname,
           '../../packages/core/src/index.ts',
         ),
       }),
