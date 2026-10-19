@@ -3,7 +3,10 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 const litePackageJson = JSON.parse(
-  readFileSync(resolve(__dirname, '../../packages/lite/package.json'), 'utf-8'),
+  readFileSync(
+    resolve(import.meta.dirname, '../../packages/lite/package.json'),
+    'utf-8',
+  ),
 );
 
 export default defineConfig({
@@ -17,7 +20,7 @@ export default defineConfig({
       // In production build (Cloudflare Pages), use the npm package
       ...(process.env.NODE_ENV !== 'production' && {
         '@enslo/sd-metadata-lite': resolve(
-          __dirname,
+          import.meta.dirname,
           '../../packages/lite/src/index.ts',
         ),
       }),
