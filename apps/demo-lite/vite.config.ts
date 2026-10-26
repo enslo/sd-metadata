@@ -13,7 +13,10 @@ export default defineConfig({
   define: {
     __LITE_VERSION__: JSON.stringify(litePackageJson.version),
   },
-  server: { host: true },
+  // Fixed, distinct ports so demo and demo-lite can run side by side
+  // without colliding with each other or Vite's defaults used elsewhere.
+  server: { host: true, port: 5281, strictPort: true },
+  preview: { port: 4281, strictPort: true },
   resolve: {
     alias: {
       // In local development, use the parent directory's source code directly

@@ -16,10 +16,10 @@
       "extensions": ["biomejs.biome", "EditorConfig.EditorConfig"]
     }
   },
-  "forwardPorts": [5173, 5174],
+  "forwardPorts": [5280, 5281],
   "portsAttributes": {
-    "5173": { "label": "demo" },
-    "5174": { "label": "demo-lite" }
+    "5280": { "label": "demo" },
+    "5281": { "label": "demo-lite" }
   },
   "remoteUser": "vscode",
   // Shares the host's Claude Code state (auth token, settings, session history all live
