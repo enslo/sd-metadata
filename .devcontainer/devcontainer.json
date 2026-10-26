@@ -7,7 +7,7 @@
     // When bumping pnpm, update both this file and package.json.
     "ghcr.io/devcontainers/features/node:1": {
       "version": "24",
-      "pnpmVersion": "11.3.0"
+      "pnpmVersion": "12.7.0"
     },
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
