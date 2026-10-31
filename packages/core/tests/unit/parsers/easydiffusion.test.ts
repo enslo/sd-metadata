@@ -17,7 +17,7 @@ function createPngEntries(overrides: Record<string, string> = {}): EntryRecord {
     sampler_name: 'euler_a',
     num_inference_steps: '25',
     guidance_scale: '7.5',
-    clip_skip: '1',
+    clip_skip: 'False',
     width: '512',
     height: '768',
     ...overrides,
@@ -111,8 +111,8 @@ describe('parseEasyDiffusion - Unit Tests', () => {
           steps: 25,
           cfg: 7.5,
           seed: '12345',
-          clipSkip: 1,
         });
+        expect(result.value.sampling?.clipSkip).toBeUndefined();
       }
     });
 
@@ -216,7 +216,123 @@ describe('parseEasyDiffusion - Unit Tests', () => {
     });
   });
 
+  describe('unset values', () => {
+    it('should ignore PNG "None" and "" values written for unset options', () => {
+      // Real Easy Diffusion PNG output: Python str(None) and empty selections
+      const entries = createPngEntries({
+        use_upscale: 'None',
+        use_vae_model: '',
+        scheduler_name: 'None',
+      });
+
+      const result = parseEasyDiffusion(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.upscale).toBeUndefined();
+        expect(result.value.model?.vae).toBeUndefined();
+        expect(result.value.sampling?.scheduler).toBeUndefined();
+      }
+    });
+
+    it('should ignore JSON null values written for unset options', () => {
+      const entries = createJsonEntry({
+        prompt: 'test',
+        use_stable_diffusion_model: 'sd-v1-5',
+        use_upscale: null,
+        use_vae_model: '',
+        scheduler_name: null,
+      });
+
+      const result = parseEasyDiffusion(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.upscale).toBeUndefined();
+        expect(result.value.model?.vae).toBeUndefined();
+        expect(result.value.sampling?.scheduler).toBeUndefined();
+      }
+    });
+
+    it('should ignore the "null" text a converted JSON null leaves in a PNG chunk', () => {
+      const entries = createPngEntries({ use_upscale: 'null' });
+
+      const result = parseEasyDiffusion(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.upscale).toBeUndefined();
+      }
+    });
+
+    it('should extract the scheduler when set', () => {
+      const entries = createPngEntries({ scheduler_name: 'karras' });
+
+      const result = parseEasyDiffusion(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.sampling?.scheduler).toBe('karras');
+      }
+    });
+
+    it('should map the boolean clip_skip to A1111 Clip skip 2 and keep a numeric one', () => {
+      // sdkit uses CLIP's penultimate hidden states when clip_skip is set
+      const clipSkipOf = (entries: EntryRecord): number | undefined => {
+        const result = parseEasyDiffusion(entries);
+        expect(result.ok).toBe(true);
+        return result.ok ? result.value.sampling?.clipSkip : undefined;
+      };
+      const json = (clip_skip: unknown): EntryRecord =>
+        createJsonEntry({
+          prompt: 'test',
+          use_stable_diffusion_model: 'sd-v1-5',
+          clip_skip,
+        });
+
+      expect(clipSkipOf(json(true))).toBe(2);
+      expect(clipSkipOf(createPngEntries({ clip_skip: 'True' }))).toBe(2);
+      expect(clipSkipOf(json(false))).toBeUndefined();
+      expect(
+        clipSkipOf(createPngEntries({ clip_skip: 'False' })),
+      ).toBeUndefined();
+      expect(clipSkipOf(createPngEntries({ clip_skip: '2' }))).toBe(2);
+    });
+  });
+
   describe('upscale extraction', () => {
+    it('should map the latent upscaler to hires with its own step count', () => {
+      // latent_upscaler is a second diffusion pass, not image post-processing
+      const fromPng = parseEasyDiffusion(
+        createPngEntries({
+          use_upscale: 'latent_upscaler',
+          upscale_amount: '2',
+          latent_upscaler_steps: '16',
+        }),
+      );
+      const fromJson = parseEasyDiffusion(
+        createJsonEntry({
+          prompt: 'test',
+          use_stable_diffusion_model: 'sd-v1-5',
+          use_upscale: 'latent_upscaler',
+          upscale_amount: 2,
+          latent_upscaler_steps: 16,
+        }),
+      );
+
+      expect(fromPng.ok && fromJson.ok).toBe(true);
+      if (fromPng.ok && fromJson.ok) {
+        for (const result of [fromPng, fromJson]) {
+          expect(result.value.hires).toEqual({
+            scale: 2,
+            upscaler: 'latent_upscaler',
+            steps: 16,
+          });
+          expect(result.value.upscale).toBeUndefined();
+        }
+      }
+    });
+
     it('should extract upscale settings', () => {
       const entries = createPngEntries({
         use_upscale: 'RealESRGAN_x4plus',

@@ -166,3 +166,15 @@ describe('Fooocus JSON scheme resolved prompts', () => {
     }
   });
 });
+
+// Easy Diffusion PNG: `clip_skip` is the boolean "False"/"True", which core
+// ignores; lite must not print it as a Clip skip value either.
+describe('Easy Diffusion boolean clip_skip', () => {
+  it('should not emit Clip skip for the PNG samples', () => {
+    for (const file of ['easy-diffusion.png', 'easy-diffusion-lora.png']) {
+      const data = load('png', file);
+      expect(liteRead(data), file).not.toContain('Clip skip');
+      expect(stringify(fullRead(data)), file).not.toContain('Clip skip');
+    }
+  });
+});

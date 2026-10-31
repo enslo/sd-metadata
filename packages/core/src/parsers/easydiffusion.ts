@@ -9,15 +9,36 @@ import type { InternalParseResult } from './types';
 /**
  * Easy Diffusion metadata parser
  *
- * ⚠️ UNVERIFIED: This parser has not been verified with actual Easy Diffusion samples.
- * The implementation is based on source code analysis of Easy Diffusion
- * (github.com/easydiffusion/easydiffusion). Please report any issues if you encounter
- * problems with Easy Diffusion metadata parsing.
+ * Easy Diffusion (github.com/easydiffusion/easydiffusion) writes its request
+ * fields under snake_case keys:
+ * - PNG: one text chunk per field (`prompt`, `seed`, `sampler_name`, ...).
+ *   Values are Python `str()` renderings, so unset options appear as
+ *   `"None"`, empty strings stay `""`, booleans are `"False"`/`"True"`,
+ *   and lists keep their Python repr (`"['a', 'b']"`)
+ * - JPEG/WebP: all fields as one JSON object in EXIF UserComment (0x9286)
+ *   with native types (`null`, `false`, numbers, arrays)
  *
- * Easy Diffusion stores metadata using snake_case keys:
- * - PNG: Each field as a separate tEXt chunk (e.g., `prompt`, `seed`, `sampler_name`)
- * - JPEG/WebP: All fields as JSON in EXIF UserComment (0x9286)
+ * Verified against real Easy Diffusion output in `samples/`.
  */
+
+/**
+ * Values that mean "option not set"
+ *
+ * `"None"` is Python's `str(None)` as written to PNG chunks, `""` is an
+ * empty selection (e.g. no VAE), and `"null"` is how a JSON `null` ends up
+ * in a PNG chunk after our own JPEG/WebP → PNG conversion.
+ */
+const UNSET_VALUES = new Set(['', 'None', 'null']);
+
+/**
+ * Easy Diffusion's latent upscaler
+ *
+ * Unlike the other `use_upscale` choices (RealESRGAN and friends, which are
+ * image post-processing), this one is a second diffusion pass over the
+ * latents with its own step count (`latent_upscaler_steps`), i.e. a hires
+ * fix.
+ */
+const LATENT_UPSCALER = 'latent_upscaler';
 
 /**
  * Extract model name from path
@@ -38,7 +59,7 @@ function extractModelName(path: string | undefined): string | undefined {
  * @returns Parsed metadata or error
  */
 export function parseEasyDiffusion(entries: EntryRecord): InternalParseResult {
-  // PNG: each field is a separate tEXt chunk
+  // PNG: each field is a separate text chunk
   if ('use_stable_diffusion_model' in entries) {
     return buildMetadata(entries);
   }
@@ -76,6 +97,11 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
     const v = data[key];
     return typeof v === 'string' ? v : undefined;
   };
+  // Optional setting: undefined when missing, not a string, or unset
+  const opt = (key: string): string | undefined => {
+    const v = str(key);
+    return v === undefined || UNSET_VALUES.has(v) ? undefined : v;
+  };
   const num = (key: string): number | undefined => {
     const v = Number(data[key]);
     return v || undefined;
@@ -83,13 +109,33 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
 
   const prompt = (str('prompt') ?? '').trim();
   const negativePrompt = (str('negative_prompt') ?? '').trim();
-  const modelPath = str('use_stable_diffusion_model');
+  const modelPath = opt('use_stable_diffusion_model');
 
-  // Upscale settings (post-processing, only present when upscaler is used)
-  const upscale = trimObject({
-    upscaler: str('use_upscale'),
-    scale: num('upscale_amount'),
-  });
+  // Easy Diffusion's clip_skip is a boolean; when set, sdkit takes CLIP's
+  // penultimate hidden states, which is what A1111 calls "Clip skip: 2".
+  // A plain number (not something Easy Diffusion writes) is taken as-is.
+  const clipSkip =
+    data.clip_skip === true || data.clip_skip === 'True'
+      ? 2
+      : typeof data.clip_skip === 'boolean'
+        ? undefined
+        : num('clip_skip');
+
+  // Upscaling (unset unless chosen): the latent upscaler is a hires pass,
+  // everything else is post-generation image upscaling
+  const upscaler = opt('use_upscale');
+  const hires =
+    upscaler === LATENT_UPSCALER
+      ? trimObject({
+          scale: num('upscale_amount'),
+          upscaler,
+          steps: num('latent_upscaler_steps'),
+        })
+      : undefined;
+  const upscale =
+    upscaler && upscaler !== LATENT_UPSCALER
+      ? trimObject({ upscaler, scale: num('upscale_amount') })
+      : undefined;
 
   const metadata: StandardMetadata = {
     software: 'easydiffusion',
@@ -99,17 +145,19 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
     height: num('height') ?? 0,
     model: trimObject({
       name: extractModelName(modelPath),
-      vae: str('use_vae_model'),
+      vae: opt('use_vae_model'),
     }),
     sampling: trimObject({
-      sampler: str('sampler_name'),
+      sampler: opt('sampler_name'),
+      scheduler: opt('scheduler_name'),
       steps: num('num_inference_steps'),
       cfg: num('guidance_scale'),
       // Seed 0 means unset (same rule as num()); otherwise keep the exact text
       seed: num('seed') === undefined ? undefined : toSeedString(data.seed),
-      clipSkip: num('clip_skip'),
+      clipSkip,
       denoise: num('prompt_strength'),
     }),
+    ...(hires ? { hires } : {}),
     ...(upscale ? { upscale } : {}),
   };
 
