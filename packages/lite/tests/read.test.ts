@@ -144,3 +144,25 @@ function assertKeyFieldsMatch(lite: string, full: string, file: string): void {
     }
   }
 }
+
+// Fooocus JSON scheme: both lite and core join `full_prompt` /
+// `full_negative_prompt` (the style-resolved text Fooocus actually encoded)
+// with ", ", so the prompt lines must match exactly, not just overlap.
+describe('Fooocus JSON scheme resolved prompts', () => {
+  it('should produce the same prompt lines as core for every container', () => {
+    const files: Array<[string, string]> = [
+      ['png', 'fooocus.png'],
+      ['jpg', 'fooocus.jpg'],
+      ['webp', 'fooocus.webp'],
+    ];
+    for (const [format, file] of files) {
+      const data = load(format, file);
+      const lite = liteRead(data).split('\n');
+      const full = stringify(fullRead(data)).split('\n');
+      // Everything but the trailing settings line
+      expect(lite.slice(0, -1), file).toEqual(full.slice(0, -1));
+      // The style template, not the raw user prompt, must be present
+      expect(lite[0], file).toContain('watercolor painting');
+    }
+  });
+});

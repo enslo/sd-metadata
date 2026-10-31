@@ -339,7 +339,8 @@ function tryJsonTool(obj: JsonObject, text: string): string | null {
     return buildA1111({ ...extractCommon(obj), w, h });
   }
 
-  // HF Space / Civitai generator: identified by "base_model" key.
+  // HF Space / Civitai generator / Fooocus JSON scheme: identified by
+  // "base_model" key.
   // Resolution format: "(1024, 1024)" (Python tuple string).
   if ('base_model' in obj) {
     const [w, h] = parseDimensions(
@@ -376,17 +377,23 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
   const base = obj.baseModel as JsonObject | undefined;
   const up = obj.use_upscaler as JsonObject | undefined;
   return {
-    // Prompt: "prompt" (most tools) → "Prompt" (Fooocus) → "positive_prompt" (RuinedFooocus)
-    p: asText(obj.prompt ?? obj.Prompt ?? obj.positive_prompt),
+    // Prompt: Fooocus "full_prompt" (style-resolved parts, joined with ", "
+    // like its own a1111 scheme) → "prompt" (most tools) → "Prompt" (Fooocus)
+    // → "positive_prompt" (RuinedFooocus)
+    p:
+      (obj.full_prompt as string[] | undefined)?.join?.(', ') ||
+      asText(obj.prompt ?? obj.Prompt ?? obj.positive_prompt),
     // Negative: multiple naming conventions across tools
     // "uc" = NovelAI's "undesired content"
-    n: asText(
-      obj.negative_prompt ??
-        obj.Negative ??
-        obj.negativeprompt ??
-        obj.negativePrompt ??
-        obj.uc,
-    ),
+    n:
+      (obj.full_negative_prompt as string[] | undefined)?.join?.(', ') ||
+      asText(
+        obj.negative_prompt ??
+          obj.Negative ??
+          obj.negativeprompt ??
+          obj.negativePrompt ??
+          obj.uc,
+      ),
     se: asText(obj.seed),
     // "num_inference_steps" = HF Space / Civitai generator
     st: asText(obj.steps ?? obj.num_inference_steps),
