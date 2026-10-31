@@ -701,6 +701,40 @@ describe('ComfyUI Parsers - Samples', () => {
       });
     });
 
+    it('should parse comfyui-comfy-image-saver-with-workflow.jpeg', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'jpeg',
+        'comfyui-comfy-image-saver-with-workflow.jpeg',
+      );
+
+      // Image Saver with embed_workflow on writes the Make/Model tag pair next
+      // to its A1111-style UserComment; the node's text inputs were left
+      // unwired ("unknown", Seed 0), so the graph is the source of truth
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+        },
+        sampling: {
+          seed: '804396282339439',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
     it('should parse civitai-hires.jpg', () => {
       const meta = parseConvertedSample<ComfyUIMetadata>(
         'jpeg',
