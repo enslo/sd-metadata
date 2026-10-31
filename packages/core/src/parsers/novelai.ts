@@ -3,6 +3,7 @@ import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
 
 /**
@@ -15,7 +16,7 @@ interface NovelAIComment {
   height?: number;
   width?: number;
   scale?: number;
-  seed?: number;
+  seed?: number | string;
   noise_schedule?: string;
   sampler?: string;
   /** V4 prompt structure */
@@ -104,7 +105,7 @@ export function parseNovelAI(entries: EntryRecord): InternalParseResult {
     sampling: trimObject({
       steps: comment.steps,
       cfg: comment.scale,
-      seed: comment.seed,
+      seed: toSeedString(comment.seed),
       sampler: comment.sampler,
       scheduler: comment.noise_schedule,
     }),

@@ -103,7 +103,7 @@ describe('parseTensorArt - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.sampling).toMatchObject({
-          seed: 123456,
+          seed: '123456',
           steps: 30,
           cfg: 7.5,
           sampler: 'euler',

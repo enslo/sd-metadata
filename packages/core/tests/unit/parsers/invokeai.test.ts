@@ -86,7 +86,7 @@ describe('parseInvokeAI - Unit Tests', () => {
         expect(result.value.sampling).toMatchObject({
           steps: 50,
           cfg: 7.5,
-          seed: 123456,
+          seed: '123456',
           sampler: 'euler',
         });
       }

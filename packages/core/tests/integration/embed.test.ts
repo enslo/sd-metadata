@@ -45,7 +45,7 @@ describe('embed - Integration Tests', () => {
           steps: 25,
           sampler: 'Euler a',
           cfg: 7.5,
-          seed: 424242,
+          seed: '424242',
         },
       };
 
@@ -66,7 +66,7 @@ describe('embed - Integration Tests', () => {
       expect(readResult.metadata.height).toBe(768);
       expect(readResult.metadata.model?.name).toBe('test-model.safetensors');
       expect(readResult.metadata.sampling?.steps).toBe(25);
-      expect(readResult.metadata.sampling?.seed).toBe(424242);
+      expect(readResult.metadata.sampling?.seed).toBe('424242');
     });
 
     it('should allow reading back written metadata (JPEG)', () => {
@@ -79,7 +79,7 @@ describe('embed - Integration Tests', () => {
         height: 768,
         sampling: {
           steps: 30,
-          seed: 99999,
+          seed: '99999',
         },
       };
 
@@ -92,7 +92,7 @@ describe('embed - Integration Tests', () => {
       if (readResult.status !== 'success') return;
 
       expect(readResult.metadata.prompt).toBe('fantasy landscape, epic');
-      expect(readResult.metadata.sampling?.seed).toBe(99999);
+      expect(readResult.metadata.sampling?.seed).toBe('99999');
     });
 
     it('should allow reading back written metadata (WebP)', () => {
@@ -127,7 +127,7 @@ describe('embed - Integration Tests', () => {
         negativePrompt: 'bad',
         width: 512,
         height: 512,
-        sampling: { seed: 111, steps: 20 },
+        sampling: { seed: '111', steps: 20 },
       };
 
       // First write
@@ -148,7 +148,7 @@ describe('embed - Integration Tests', () => {
         negativePrompt: 'bad',
         width: 512,
         height: 512,
-        sampling: { seed: 222, steps: 20 },
+        sampling: { seed: '222', steps: 20 },
       };
 
       const write2 = embed(write1.value, metadata2);
@@ -159,7 +159,7 @@ describe('embed - Integration Tests', () => {
       expect(read2.status).toBe('success');
       if (read2.status !== 'success') return;
       expect(read2.metadata.prompt).toBe('second version');
-      expect(read2.metadata.sampling?.seed).toBe(222);
+      expect(read2.metadata.sampling?.seed).toBe('222');
     });
   });
 
@@ -269,7 +269,7 @@ describe('embed - Integration Tests', () => {
         width: readResult.metadata.width,
         height: readResult.metadata.height,
         sampling: {
-          seed: 999999,
+          seed: '999999',
           steps: 50,
         },
       };
@@ -283,7 +283,7 @@ describe('embed - Integration Tests', () => {
       if (modifiedRead.status !== 'success') return;
 
       expect(modifiedRead.metadata.prompt).toContain('MODIFIED:');
-      expect(modifiedRead.metadata.sampling?.seed).toBe(999999);
+      expect(modifiedRead.metadata.sampling?.seed).toBe('999999');
       expect(modifiedRead.metadata.sampling?.steps).toBe(50);
     });
 
@@ -312,7 +312,7 @@ describe('embed - Integration Tests', () => {
           steps: 30,
           sampler: 'DPM++ 2M Karras',
           cfg: 8.5,
-          seed: 12345,
+          seed: '12345',
         },
         hires: {
           scale: 2,
@@ -370,7 +370,7 @@ describe('embed - Integration Tests', () => {
         negativePrompt: '低解像度',
         width: 512,
         height: 512,
-        sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 42 },
+        sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: '42' },
       };
 
       const writeResult = embed(jpeg, metadata);
@@ -393,7 +393,7 @@ describe('embed - Integration Tests', () => {
         negativePrompt: '悪い手',
         width: 512,
         height: 512,
-        sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 42 },
+        sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: '42' },
       };
 
       const writeResult = embed(webp, metadata);

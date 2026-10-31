@@ -25,7 +25,7 @@ describe('HF-Space Parsers - Samples', () => {
         },
         sampling: {
           sampler: 'DPM++ 2M Karras',
-          seed: 1971450810,
+          seed: '1971450810',
           steps: 20,
           cfg: 5.5,
         },
@@ -59,7 +59,7 @@ describe('HF-Space Parsers - Samples', () => {
         },
         sampling: {
           sampler: 'DPM++ 2M Karras',
-          seed: 443800072,
+          seed: '443800072',
           steps: 24,
           cfg: 5.5,
         },

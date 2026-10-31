@@ -32,8 +32,8 @@ interface GenerationParams {
   p?: string;
   /** Negative prompt text */
   n?: string;
-  /** Random seed */
-  se?: number;
+  /** Random seed (kept as text: 64-bit seeds exceed Number precision) */
+  se?: string;
   /** Sampling steps */
   st?: number;
   /** CFG scale (classifier-free guidance) */
@@ -386,7 +386,7 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
         obj.negativePrompt ??
         obj.uc,
     ),
-    se: asNumber(obj.seed),
+    se: asSeed(obj.seed),
     // "num_inference_steps" = HF Space / Civitai generator
     st: asNumber(obj.steps ?? obj.num_inference_steps),
     // CFG: many naming variants across tools
@@ -534,7 +534,7 @@ function flatScan(json: string): GenerationParams {
     // Class-type guard is required here: "steps" and "seed" also appear
     // on non-sampler nodes (BasicScheduler, RandomNoise, etc.).
     if (classType.includes('Sampler')) {
-      result.se ??= asNumber(inputs.seed) ?? asNumber(inputs.noise_seed);
+      result.se ??= asSeed(inputs.seed) ?? asSeed(inputs.noise_seed);
       result.st ??= asNumber(inputs.steps);
       result.cf ??= asNumber(inputs.cfg);
       result.sa ||= asString(inputs.sampler_name);
@@ -635,6 +635,12 @@ function stringifyValue(v: unknown): string {
  * Accepts both number and numeric string inputs (e.g. "42" → 42).
  * NaN values are filtered out and returned as undefined.
  */
+/** Seed as text: numbers are stringified, non-empty strings pass through. */
+function asSeed(v: unknown): string | undefined {
+  if (typeof v === 'number') return String(v);
+  return typeof v === 'string' && v ? v : undefined;
+}
+
 function asNumber(v: unknown): number | undefined {
   // biome-ignore lint/suspicious/noSelfCompare: intentional NaN check (IEEE 754: NaN !== NaN)
   if (typeof v === 'number') return v === v ? v : undefined;

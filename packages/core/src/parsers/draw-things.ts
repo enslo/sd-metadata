@@ -3,6 +3,7 @@ import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
 
 /**
@@ -95,7 +96,8 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
       sampler: str('sampler'),
       steps: num('steps'),
       cfg: num('scale'),
-      seed: num('seed'),
+      // Seed 0 means unset (same rule as num()); otherwise keep the exact text
+      seed: num('seed') === undefined ? undefined : toSeedString(data.seed),
       denoise: num('strength'),
     }),
   };

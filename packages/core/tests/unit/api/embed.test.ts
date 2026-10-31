@@ -56,7 +56,7 @@ describe('embed - Unit Tests', () => {
       steps: 20,
       sampler: 'Euler a',
       cfg: 7,
-      seed: 12345,
+      seed: '12345',
     },
     model: {
       name: 'model.safetensors',
@@ -80,7 +80,7 @@ describe('embed - Unit Tests', () => {
             'lowres, bad quality',
           );
           expect(readResult.metadata.sampling?.steps).toBe(20);
-          expect(readResult.metadata.sampling?.seed).toBe(12345);
+          expect(readResult.metadata.sampling?.seed).toBe('12345');
           expect(readResult.metadata.model?.name).toBe('model.safetensors');
         }
       }
@@ -222,7 +222,7 @@ describe('embed - Unit Tests', () => {
         ],
         sampling: {
           steps: 28,
-          seed: 123456,
+          seed: '123456',
         },
       };
 
@@ -235,7 +235,7 @@ describe('embed - Unit Tests', () => {
         if (readResult.status === 'success') {
           expect(readResult.metadata.software).toBe('sd-webui');
           expect(readResult.metadata.prompt).toContain('main prompt');
-          expect(readResult.metadata.sampling?.seed).toBe(123456);
+          expect(readResult.metadata.sampling?.seed).toBe('123456');
         }
       }
     });
@@ -255,7 +255,7 @@ describe('embed - Unit Tests', () => {
           },
         },
         sampling: {
-          seed: 9999,
+          seed: '9999',
           steps: 30,
         },
       };
@@ -269,7 +269,7 @@ describe('embed - Unit Tests', () => {
         if (readResult.status === 'success') {
           expect(readResult.metadata.software).toBe('sd-webui');
           expect(readResult.metadata.prompt).toBe('comfy prompt');
-          expect(readResult.metadata.sampling?.seed).toBe(9999);
+          expect(readResult.metadata.sampling?.seed).toBe('9999');
         }
       }
     });
@@ -285,7 +285,7 @@ describe('embed - Unit Tests', () => {
         sampling: {
           steps: 25,
           sampler: 'DPM++ 2M',
-          seed: 777,
+          seed: '777',
         },
       };
 
@@ -321,7 +321,7 @@ describe('embed - Unit Tests', () => {
           sampler: 'Euler a',
           scheduler: 'Karras',
           cfg: 8.5,
-          seed: 424242,
+          seed: '424242',
           clipSkip: 2,
         },
         hires: {
@@ -346,7 +346,7 @@ describe('embed - Unit Tests', () => {
           expect(meta.model?.name).toBe('my-custom-model-v2.safetensors');
           expect(meta.sampling?.steps).toBe(35);
           expect(meta.sampling?.cfg).toBe(8.5);
-          expect(meta.sampling?.seed).toBe(424242);
+          expect(meta.sampling?.seed).toBe('424242');
           expect(meta.sampling?.clipSkip).toBe(2);
           expect(meta.hires?.scale).toBe(2);
           expect(meta.hires?.upscaler).toBe('R-ESRGAN 4x+');
@@ -404,7 +404,7 @@ describe('embed - Unit Tests', () => {
         negativePrompt: 'bad',
         width: 512,
         height: 512,
-        sampling: { seed: 0, steps: 20 },
+        sampling: { seed: '0', steps: 20 },
       };
 
       const result = embed(png, metadata);
@@ -414,7 +414,7 @@ describe('embed - Unit Tests', () => {
         const readResult = read(result.value);
         expect(readResult.status).toBe('success');
         if (readResult.status === 'success') {
-          expect(readResult.metadata.sampling?.seed).toBe(0);
+          expect(readResult.metadata.sampling?.seed).toBe('0');
         }
       }
     });

@@ -2,6 +2,7 @@ import type { StandardMetadata } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
 
 /**
@@ -17,7 +18,7 @@ interface RuinedFooocusJsonMetadata {
   cfg?: number;
   width?: number;
   height?: number;
-  seed?: number;
+  seed?: number | string;
   sampler_name?: string;
   scheduler?: string;
   base_model_name?: string;
@@ -71,7 +72,7 @@ export function parseRuinedFooocus(entries: EntryRecord): InternalParseResult {
       scheduler: json.scheduler,
       steps: json.steps,
       cfg: json.cfg,
-      seed: json.seed,
+      seed: toSeedString(json.seed),
       clipSkip: json.clip_skip,
     },
   };

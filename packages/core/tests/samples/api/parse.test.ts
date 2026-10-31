@@ -97,7 +97,7 @@ describe('parse - Stealth PNGInfo samples', () => {
     expect(result.metadata.prompt).toContain('hatsune miku');
     expect(result.metadata.width).toBe(832);
     expect(result.metadata.height).toBe(1216);
-    expect(result.metadata.sampling?.seed).toBe(2043807047);
+    expect(result.metadata.sampling?.seed).toBe('2043807047');
     expect(result.metadata.sampling?.steps).toBe(28);
   });
 
@@ -114,7 +114,7 @@ describe('parse - Stealth PNGInfo samples', () => {
     }
     expect(result.metadata.software).toBe('forge-classic');
     expect(result.metadata.prompt).toContain('masterpiece');
-    expect(result.metadata.sampling?.seed).toBe(85111043);
+    expect(result.metadata.sampling?.seed).toBe('85111043');
     expect(result.metadata.model?.name).toBe('waiNSFWIllustrious_v140');
   });
 
@@ -130,7 +130,7 @@ describe('parse - Stealth PNGInfo samples', () => {
       return;
     }
     expect(result.metadata.software).toBe('comfyui');
-    expect(result.metadata.sampling?.seed).toBe(168422942929213);
+    expect(result.metadata.sampling?.seed).toBe('168422942929213');
     expect(result.metadata.model?.name).toBe(
       'waiNSFWIllustrious_v140.safetensors',
     );

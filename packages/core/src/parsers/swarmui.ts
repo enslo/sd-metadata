@@ -3,6 +3,7 @@ import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
 
 /**
@@ -13,7 +14,7 @@ interface SwarmUIParameters {
     prompt?: string;
     negativeprompt?: string;
     model?: string;
-    seed?: number;
+    seed?: number | string;
     steps?: number;
     cfgscale?: number;
     width?: number;
@@ -117,7 +118,7 @@ export function parseSwarmUI(entries: EntryRecord): InternalParseResult {
     nodes,
     model: trimObject({ name: params.model }),
     sampling: trimObject({
-      seed: params.seed,
+      seed: toSeedString(params.seed),
       steps: params.steps,
       cfg: params.cfgscale,
       sampler: params.sampler,

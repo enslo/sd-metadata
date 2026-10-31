@@ -2,6 +2,7 @@ import { Result } from '../types';
 import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
 
 /**
@@ -12,7 +13,7 @@ interface InvokeAIMetadataJson {
   negative_prompt?: string;
   width?: number;
   height?: number;
-  seed?: number;
+  seed?: number | string;
   steps?: number;
   cfg_scale?: number;
   scheduler?: string;
@@ -86,7 +87,7 @@ export function parseInvokeAI(entries: EntryRecord): InternalParseResult {
       hash: data.model?.hash,
     }),
     sampling: trimObject({
-      seed: data.seed,
+      seed: toSeedString(data.seed),
       steps: data.steps,
       cfg: data.cfg_scale,
       sampler: data.scheduler,

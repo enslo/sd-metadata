@@ -103,7 +103,7 @@ describe('parseDrawThings - Unit Tests', () => {
           sampler: 'DPM++ 2M AYS',
           steps: 20,
           cfg: 7.5,
-          seed: 12345,
+          seed: '12345',
           denoise: 0.75,
         });
       }

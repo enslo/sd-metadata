@@ -21,7 +21,7 @@ describe('SwarmUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160',
         },
         sampling: {
-          seed: 2083100758,
+          seed: '2083100758',
           steps: 20,
           cfg: 7,
           sampler: 'euler_ancestral',
@@ -52,7 +52,7 @@ describe('SwarmUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160',
         },
         sampling: {
-          seed: 733776228,
+          seed: '733776228',
           steps: 20,
           cfg: 7,
           sampler: 'euler_ancestral',
@@ -87,7 +87,7 @@ describe('SwarmUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160',
         },
         sampling: {
-          seed: 1741309074,
+          seed: '1741309074',
           steps: 20,
           cfg: 7,
           sampler: 'euler_ancestral',
@@ -117,7 +117,7 @@ describe('SwarmUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160',
         },
         sampling: {
-          seed: 697543491,
+          seed: '697543491',
           steps: 20,
           cfg: 7,
           sampler: 'euler_ancestral',
@@ -148,7 +148,7 @@ describe('SwarmUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160',
         },
         sampling: {
-          seed: 830680752,
+          seed: '830680752',
           steps: 20,
           cfg: 7,
           sampler: 'euler_ancestral',

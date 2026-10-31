@@ -223,14 +223,16 @@ export function MetadataForm({ metadata, onChange }: MetadataFormProps) {
                 />
               </Group>
               <Group grow>
-                <NumberInput
+                <TextInput
                   label={t.fields.seed}
-                  min={0}
                   value={metadata.sampling?.seed ?? ''}
-                  onChange={(v: string | number) =>
+                  onChange={(e) =>
                     onChange({
                       ...metadata,
-                      sampling: { ...metadata.sampling, seed: toNum(v) },
+                      sampling: {
+                        ...metadata.sampling,
+                        seed: val(e).trim() || undefined,
+                      },
                     })
                   }
                 />

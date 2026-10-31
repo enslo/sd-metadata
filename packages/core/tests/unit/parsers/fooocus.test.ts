@@ -157,7 +157,7 @@ describe('parseFooocus - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.sampling).toMatchObject({
-          seed: 123456,
+          seed: '123456',
           steps: 30,
           cfg: 7.0,
           sampler: 'dpmpp_2m_sde_gpu',
@@ -244,6 +244,37 @@ describe('parseFooocus - Unit Tests', () => {
         // Model and sampling should still be defined but with undefined fields
         expect(result.value.model?.name).toBeUndefined();
         expect(result.value.sampling?.seed).toBeUndefined();
+      }
+    });
+
+    it('should keep the 64-bit seed string written by Fooocus exact', () => {
+      // Fooocus serializes the seed as a JSON string because it exceeds 2^53
+      const metadata = {
+        prompt: 'test',
+        seed: '7100816951239959675',
+      };
+      const entries = createFooocusEntry(metadata);
+
+      const result = parseFooocus(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.sampling?.seed).toBe('7100816951239959675');
+      }
+    });
+
+    it('should stringify a numeric seed from older Fooocus builds', () => {
+      const metadata = {
+        prompt: 'test',
+        seed: 123456,
+      };
+      const entries = createFooocusEntry(metadata);
+
+      const result = parseFooocus(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.sampling?.seed).toBe('123456');
       }
     });
   });
