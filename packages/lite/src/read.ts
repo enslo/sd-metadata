@@ -35,6 +35,10 @@ export function readPng(data: Uint8Array): Entries {
       entries.cabx = str(data, offset, Math.min(length, MAX_CABX));
     }
 
+    // eXIf: a TIFF structure like a JPEG APP1 payload (CivitAI PNGs)
+    if (type === 'eXIf')
+      Object.assign(entries, readExif(data.subarray(offset, offset + length)));
+
     if (type === 'tEXt' || type === 'iTXt') {
       const nullIdx = data.indexOf(0, offset);
       if (nullIdx > offset && nullIdx < offset + length) {
