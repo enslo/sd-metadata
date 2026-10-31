@@ -42,10 +42,14 @@ const EXPECTED_TO_JPEG_WEBP: Record<GenerationSoftware, SegmentPattern[]> = {
   // Save Animated WEBP (built-in, our write default): exifMake + exifModel
   // save-image-extended: exifImageDescription + exifMake
   // saveimage-plus: exifUserComment
+  // comfy-image-saver (embed_workflow on): exifMake + exifModel + exifUserComment
   comfyui: [
     ['exifMake', 'exifModel'],
     ['exifImageDescription', 'exifMake'],
     ['exifUserComment'],
+    // The tag pair next to the node's A1111-style text, kept verbatim
+    // between JPEG and WebP
+    ['exifMake', 'exifModel', 'exifUserComment'],
   ],
   // TensorArt and Stability Matrix are PNG-native formats without JPEG/WebP variants.
   // sd-metadata converts them using the saveimage-plus format (exifUserComment).

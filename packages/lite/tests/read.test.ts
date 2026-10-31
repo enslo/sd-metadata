@@ -37,6 +37,9 @@ const NON_COMPATIBLE = new Set([
   'comfyui-comfy-image-saver.png',
   // Flat scan picks a different KSampler node than recursive traversal (different Seed).
   'comfyui-comfyroll.png',
+  // Same Image Saver node with embed_workflow on: UserComment holds its unwired
+  // placeholder text (Seed 0); full reads the graph from Make/Model instead.
+  'comfyui-comfy-image-saver-with-workflow.jpeg',
 ]);
 
 // All sample files per format
