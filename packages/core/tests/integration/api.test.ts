@@ -149,6 +149,12 @@ describe('API Integration Tests', () => {
           file: 'stability-matrix.png',
           software: 'stability-matrix',
         },
+        // Easy Diffusion
+        {
+          format: 'png',
+          file: 'easy-diffusion.png',
+          software: 'easydiffusion',
+        },
         // Fooocus (both metadata schemes)
         { format: 'png', file: 'fooocus.png', software: 'fooocus' },
         {

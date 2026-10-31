@@ -45,6 +45,12 @@ export const C2PA_PNG_SAMPLES = [
  * - comfyui-comfy-image-saver
  * - comfyui-saveimagewithmetadata
  *
+ * Easy Diffusion PNGs hold one text chunk per request field, so the typed
+ * JSON values of a JPEG/WebP (`"seed": 530900047`, `"clip_skip": false`,
+ * `"use_upscale": null`, LoRA arrays) come back as strings after a PNG
+ * round-trip:
+ * - easy-diffusion
+ *
  * Parsed metadata should still match - only raw comparison is skipped.
  */
 const RAW_MISMATCH_EXPECTED = [
@@ -52,6 +58,7 @@ const RAW_MISMATCH_EXPECTED = [
   'comfyui-saveimage-plus',
   'comfyui-comfy-image-saver',
   'comfyui-saveimagewithmetadata',
+  'easy-diffusion',
 ];
 
 /**

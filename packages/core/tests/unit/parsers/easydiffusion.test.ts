@@ -17,7 +17,7 @@ function createPngEntries(overrides: Record<string, string> = {}): EntryRecord {
     sampler_name: 'euler_a',
     num_inference_steps: '25',
     guidance_scale: '7.5',
-    clip_skip: '1',
+    clip_skip: 'False',
     width: '512',
     height: '768',
     ...overrides,
@@ -111,8 +111,8 @@ describe('parseEasyDiffusion - Unit Tests', () => {
           steps: 25,
           cfg: 7.5,
           seed: '12345',
-          clipSkip: 1,
         });
+        expect(result.value.sampling?.clipSkip).toBeUndefined();
       }
     });
 
@@ -212,6 +212,88 @@ describe('parseEasyDiffusion - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.model?.name).toBe('sd-v1-5');
+      }
+    });
+  });
+
+  describe('unset values', () => {
+    it('should ignore PNG "None" and "" values written for unset options', () => {
+      // Real Easy Diffusion PNG output: Python str(None) and empty selections
+      const entries = createPngEntries({
+        use_upscale: 'None',
+        use_vae_model: '',
+        scheduler_name: 'None',
+      });
+
+      const result = parseEasyDiffusion(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.upscale).toBeUndefined();
+        expect(result.value.model?.vae).toBeUndefined();
+        expect(result.value.sampling?.scheduler).toBeUndefined();
+      }
+    });
+
+    it('should ignore JSON null values written for unset options', () => {
+      const entries = createJsonEntry({
+        prompt: 'test',
+        use_stable_diffusion_model: 'sd-v1-5',
+        use_upscale: null,
+        use_vae_model: '',
+        scheduler_name: null,
+      });
+
+      const result = parseEasyDiffusion(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.upscale).toBeUndefined();
+        expect(result.value.model?.vae).toBeUndefined();
+        expect(result.value.sampling?.scheduler).toBeUndefined();
+      }
+    });
+
+    it('should ignore the "null" text a converted JSON null leaves in a PNG chunk', () => {
+      const entries = createPngEntries({ use_upscale: 'null' });
+
+      const result = parseEasyDiffusion(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.upscale).toBeUndefined();
+      }
+    });
+
+    it('should extract the scheduler when set', () => {
+      const entries = createPngEntries({ scheduler_name: 'karras' });
+
+      const result = parseEasyDiffusion(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.sampling?.scheduler).toBe('karras');
+      }
+    });
+
+    it('should ignore the boolean clip_skip and keep a numeric one', () => {
+      const fromJson = parseEasyDiffusion(
+        createJsonEntry({
+          prompt: 'test',
+          use_stable_diffusion_model: 'sd-v1-5',
+          clip_skip: true,
+        }),
+      );
+      const fromPng = parseEasyDiffusion(
+        createPngEntries({ clip_skip: 'True' }),
+      );
+      const numeric = parseEasyDiffusion(createPngEntries({ clip_skip: '2' }));
+
+      expect(fromJson.ok && fromPng.ok && numeric.ok).toBe(true);
+      if (fromJson.ok && fromPng.ok && numeric.ok) {
+        expect(fromJson.value.sampling?.clipSkip).toBeUndefined();
+        expect(fromPng.value.sampling?.clipSkip).toBeUndefined();
+        expect(numeric.value.sampling?.clipSkip).toBe(2);
       }
     });
   });

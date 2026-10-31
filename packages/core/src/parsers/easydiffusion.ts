@@ -9,15 +9,26 @@ import type { InternalParseResult } from './types';
 /**
  * Easy Diffusion metadata parser
  *
- * ⚠️ UNVERIFIED: This parser has not been verified with actual Easy Diffusion samples.
- * The implementation is based on source code analysis of Easy Diffusion
- * (github.com/easydiffusion/easydiffusion). Please report any issues if you encounter
- * problems with Easy Diffusion metadata parsing.
+ * Easy Diffusion (github.com/easydiffusion/easydiffusion) writes its request
+ * fields under snake_case keys:
+ * - PNG: one text chunk per field (`prompt`, `seed`, `sampler_name`, ...).
+ *   Values are Python `str()` renderings, so unset options appear as
+ *   `"None"`, empty strings stay `""`, booleans are `"False"`/`"True"`,
+ *   and lists keep their Python repr (`"['a', 'b']"`)
+ * - JPEG/WebP: all fields as one JSON object in EXIF UserComment (0x9286)
+ *   with native types (`null`, `false`, numbers, arrays)
  *
- * Easy Diffusion stores metadata using snake_case keys:
- * - PNG: Each field as a separate tEXt chunk (e.g., `prompt`, `seed`, `sampler_name`)
- * - JPEG/WebP: All fields as JSON in EXIF UserComment (0x9286)
+ * Verified against real Easy Diffusion output in `samples/`.
  */
+
+/**
+ * Values that mean "option not set"
+ *
+ * `"None"` is Python's `str(None)` as written to PNG chunks, `""` is an
+ * empty selection (e.g. no VAE), and `"null"` is how a JSON `null` ends up
+ * in a PNG chunk after our own JPEG/WebP → PNG conversion.
+ */
+const UNSET_VALUES = new Set(['', 'None', 'null']);
 
 /**
  * Extract model name from path
@@ -38,7 +49,7 @@ function extractModelName(path: string | undefined): string | undefined {
  * @returns Parsed metadata or error
  */
 export function parseEasyDiffusion(entries: EntryRecord): InternalParseResult {
-  // PNG: each field is a separate tEXt chunk
+  // PNG: each field is a separate text chunk
   if ('use_stable_diffusion_model' in entries) {
     return buildMetadata(entries);
   }
@@ -76,6 +87,11 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
     const v = data[key];
     return typeof v === 'string' ? v : undefined;
   };
+  // Optional setting: undefined when missing, not a string, or unset
+  const opt = (key: string): string | undefined => {
+    const v = str(key);
+    return v === undefined || UNSET_VALUES.has(v) ? undefined : v;
+  };
   const num = (key: string): number | undefined => {
     const v = Number(data[key]);
     return v || undefined;
@@ -83,11 +99,12 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
 
   const prompt = (str('prompt') ?? '').trim();
   const negativePrompt = (str('negative_prompt') ?? '').trim();
-  const modelPath = str('use_stable_diffusion_model');
+  const modelPath = opt('use_stable_diffusion_model');
 
-  // Upscale settings (post-processing, only present when upscaler is used)
+  // Upscale settings (post-processing); `use_upscale` is unset unless an
+  // upscaler was chosen
   const upscale = trimObject({
-    upscaler: str('use_upscale'),
+    upscaler: opt('use_upscale'),
     scale: num('upscale_amount'),
   });
 
@@ -99,15 +116,21 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
     height: num('height') ?? 0,
     model: trimObject({
       name: extractModelName(modelPath),
-      vae: str('use_vae_model'),
+      vae: opt('use_vae_model'),
     }),
     sampling: trimObject({
-      sampler: str('sampler_name'),
+      sampler: opt('sampler_name'),
+      scheduler: opt('scheduler_name'),
       steps: num('num_inference_steps'),
       cfg: num('guidance_scale'),
       // Seed 0 means unset (same rule as num()); otherwise keep the exact text
       seed: num('seed') === undefined ? undefined : toSeedString(data.seed),
-      clipSkip: num('clip_skip'),
+      // Easy Diffusion's clip_skip is a boolean ("skip the last CLIP layer");
+      // no sample verifies how it maps to the A1111-style layer count, so
+      // only a numeric value is taken over (PNG "False"/"True" are NaN, a
+      // JSON `true` would otherwise read as 1)
+      clipSkip:
+        typeof data.clip_skip === 'boolean' ? undefined : num('clip_skip'),
       denoise: num('prompt_strength'),
     }),
     ...(upscale ? { upscale } : {}),
