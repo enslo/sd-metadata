@@ -3,7 +3,7 @@ import path from 'node:path';
 import { read } from '../../src/index';
 import type { InternalParseResult } from '../../src/parsers/types';
 import { readPngMetadata } from '../../src/readers/png';
-import { pngChunksToRecord } from '../../src/utils/convert';
+import { pngRawToRecord } from '../../src/utils/convert';
 import type { EntryRecord } from '../../src/utils/entries';
 
 /**
@@ -26,7 +26,7 @@ export function parsePngSample<T>(
     throw new Error(`Failed to read PNG metadata: ${chunksResult.error}`);
   }
 
-  const entries = pngChunksToRecord(chunksResult.value);
+  const entries = pngRawToRecord(chunksResult.value);
   const result = parser(entries);
 
   if (!result.ok) {

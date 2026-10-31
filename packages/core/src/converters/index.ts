@@ -145,16 +145,20 @@ type ConverterFn = (
 type PngToSegmentsFn = (
   chunks: import('../types').PngTextChunk[],
 ) => import('../types').MetadataSegment[];
+type PngRaw = Extract<RawMetadata, { format: 'png' }>;
+// A converter answers with text chunks, or with text chunks plus the
+// segments of an eXIf chunk
 type SegmentsToPngFn = (
   segments: import('../types').MetadataSegment[],
-) => import('../types').PngTextChunk[];
+) => import('../types').PngTextChunk[] | Omit<PngRaw, 'format'>;
 
 /**
  * Factory function to create format converters
  *
  * All converters follow the same pattern:
- * - PNG → JPEG/WebP: convert chunks to segments
- * - JPEG/WebP → PNG: convert segments to chunks
+ * - PNG → JPEG/WebP: convert chunks to segments; segments already held in
+ *   an eXIf chunk are carried over as they are
+ * - JPEG/WebP → PNG: convert segments to chunks (or to an eXIf chunk)
  * - Same format: return as-is
  */
 function createFormatConverter(
@@ -168,7 +172,10 @@ function createFormatConverter(
         return Result.ok(raw);
       }
       // PNG → JPEG/WebP
-      const segments = pngToSegments(raw.chunks);
+      const segments = [
+        ...(raw.chunks.length > 0 ? pngToSegments(raw.chunks) : []),
+        ...(raw.exif ?? []),
+      ];
       return Result.ok({ format: targetFormat, segments });
     }
 
@@ -178,8 +185,12 @@ function createFormatConverter(
     }
 
     // JPEG/WebP → PNG
-    const chunks = segmentsToPng(raw.segments);
-    return Result.ok({ format: 'png', chunks });
+    const png = segmentsToPng(raw.segments);
+    return Result.ok(
+      Array.isArray(png)
+        ? { format: 'png', chunks: png }
+        : { format: 'png', ...png },
+    );
   };
 }
 

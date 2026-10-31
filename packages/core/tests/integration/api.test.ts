@@ -149,6 +149,8 @@ describe('API Integration Tests', () => {
           file: 'stability-matrix.png',
           software: 'stability-matrix',
         },
+        // CivitAI (PNG download: EXIF in an eXIf chunk)
+        { format: 'png', file: 'civitai-lora.png', software: 'civitai' },
         // Easy Diffusion
         {
           format: 'png',

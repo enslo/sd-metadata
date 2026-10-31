@@ -1,4 +1,9 @@
-import type { ITXtChunk, PngTextChunk, TExtChunk } from '../types';
+import type {
+  ITXtChunk,
+  MetadataSegment,
+  PngTextChunk,
+  TExtChunk,
+} from '../types';
 import { Result } from '../types';
 import {
   isPng,
@@ -6,6 +11,7 @@ import {
   readUint32BE,
   writeUint32BE,
 } from '../utils/binary';
+import { buildExifTiffData } from './exif';
 
 // Internal types (co-located with writer)
 type PngWriteError = { type: 'invalidSignature' } | { type: 'noIhdrChunk' };
@@ -18,16 +24,20 @@ const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
 /**
  * Write PNG metadata to binary data
  *
- * Replaces all existing tEXt and iTXt chunks with the provided chunks.
- * Chunks are inserted immediately after the IHDR chunk (PNG spec recommended).
+ * Replaces all existing tEXt, iTXt and eXIf chunks with the provided
+ * metadata. The eXIf chunk (if any) and then the text chunks are inserted
+ * immediately after the IHDR chunk (PNG spec recommended).
  *
  * @param data - Original PNG file data as Uint8Array
  * @param chunks - Text chunks to embed
+ * @param exif - Segments to store in an eXIf chunk (CivitAI layout); omit
+ *   to write none
  * @returns Result containing new PNG data with embedded metadata
  */
 export function writePngMetadata(
   data: Uint8Array,
   chunks: PngTextChunk[],
+  exif?: MetadataSegment[],
 ): PngWriteResult {
   // Validate PNG signature
   if (!isPng(data)) {
@@ -40,8 +50,13 @@ export function writePngMetadata(
     return Result.error({ type: 'noIhdrChunk' });
   }
 
-  // Collect non-text chunks from original data
-  const originalChunks = collectNonTextChunks(data);
+  // Collect the chunks we do not manage from the original data
+  const originalChunks = collectOtherChunks(data);
+
+  // Serialize the eXIf chunk (only EXIF-type segments can live there)
+  const tiff = exif && exif.length > 0 ? buildExifTiffData(exif) : null;
+  const serializedExif =
+    tiff && tiff.length > 0 ? [buildChunk('eXIf', tiff)] : [];
 
   // Serialize new text chunks
   const serializedTextChunks = chunks.map((chunk) =>
@@ -54,6 +69,7 @@ export function writePngMetadata(
   const totalSize =
     PNG_SIGNATURE.length +
     originalChunks.ihdr.length +
+    serializedExif.reduce((sum, chunk) => sum + chunk.length, 0) +
     serializedTextChunks.reduce((sum, chunk) => sum + chunk.length, 0) +
     originalChunks.others.reduce((sum, chunk) => sum + chunk.length, 0);
 
@@ -69,8 +85,8 @@ export function writePngMetadata(
   output.set(originalChunks.ihdr, offset);
   offset += originalChunks.ihdr.length;
 
-  // Write text chunks (immediately after IHDR)
-  for (const chunk of serializedTextChunks) {
+  // Write eXIf and text chunks (immediately after IHDR)
+  for (const chunk of [...serializedExif, ...serializedTextChunks]) {
     output.set(chunk, offset);
     offset += chunk.length;
   }
@@ -107,9 +123,10 @@ function findIhdrChunkEnd(data: Uint8Array): number {
 }
 
 /**
- * Collect chunks from PNG, separating IHDR and non-text chunks
+ * Collect chunks from PNG, separating IHDR from the chunks we do not manage
+ * (everything except tEXt, iTXt and eXIf)
  */
-function collectNonTextChunks(data: Uint8Array): {
+function collectOtherChunks(data: Uint8Array): {
   ihdr: Uint8Array;
   others: Uint8Array[];
 } {
@@ -144,7 +161,11 @@ function collectNonTextChunks(data: Uint8Array): {
 
     if (chunkType === 'IHDR') {
       ihdr = chunkData;
-    } else if (chunkType !== 'tEXt' && chunkType !== 'iTXt') {
+    } else if (
+      chunkType !== 'tEXt' &&
+      chunkType !== 'iTXt' &&
+      chunkType !== 'eXIf'
+    ) {
       others.push(chunkData);
     }
 

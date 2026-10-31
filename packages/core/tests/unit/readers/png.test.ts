@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readPngMetadata } from '../../../src/readers/png';
-import type { ITXtChunk, TExtChunk } from '../../../src/types';
+import type { ITXtChunk, MetadataSegment, TExtChunk } from '../../../src/types';
+import { buildExifTiffData } from '../../../src/writers/exif';
 
 /**
  * Create a minimal valid PNG with signature and IEND chunk
@@ -214,7 +215,7 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value).toEqual([]);
+        expect(result.value.chunks).toEqual([]);
       }
     });
 
@@ -225,8 +226,8 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value).toHaveLength(1);
-        expect(result.value.at(0)).toMatchObject({
+        expect(result.value.chunks).toHaveLength(1);
+        expect(result.value.chunks.at(0)).toMatchObject({
           type: 'tEXt',
           keyword: 'Software',
           text: 'TestApp',
@@ -241,8 +242,8 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value).toHaveLength(1);
-        expect(result.value.at(0)).toMatchObject({
+        expect(result.value.chunks).toHaveLength(1);
+        expect(result.value.chunks.at(0)).toMatchObject({
           type: 'iTXt',
           keyword: 'Comment',
           text: 'Test comment',
@@ -260,10 +261,10 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value).toHaveLength(3);
-        expect(result.value.at(0)?.keyword).toBe('Software');
-        expect(result.value.at(1)?.keyword).toBe('Comment');
-        expect(result.value.at(2)?.keyword).toBe('parameters');
+        expect(result.value.chunks).toHaveLength(3);
+        expect(result.value.chunks.at(0)?.keyword).toBe('Software');
+        expect(result.value.chunks.at(1)?.keyword).toBe('Comment');
+        expect(result.value.chunks.at(2)?.keyword).toBe('parameters');
       }
     });
   });
@@ -276,9 +277,9 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value).toHaveLength(1);
-        expect(result.value.at(0)?.keyword).toBe('');
-        expect(result.value.at(0)?.text).toBe('text content');
+        expect(result.value.chunks).toHaveLength(1);
+        expect(result.value.chunks.at(0)?.keyword).toBe('');
+        expect(result.value.chunks.at(0)?.text).toBe('text content');
       }
     });
 
@@ -289,9 +290,9 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value).toHaveLength(1);
-        expect(result.value.at(0)?.keyword).toBe('Software');
-        expect(result.value.at(0)?.text).toBe('');
+        expect(result.value.chunks).toHaveLength(1);
+        expect(result.value.chunks.at(0)?.keyword).toBe('Software');
+        expect(result.value.chunks.at(0)?.text).toBe('');
       }
     });
 
@@ -303,7 +304,7 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.at(0)?.text).toBe(specialText);
+        expect(result.value.chunks.at(0)?.text).toBe(specialText);
       }
     });
 
@@ -315,7 +316,7 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.at(0)?.text).toBe(unicodeText);
+        expect(result.value.chunks.at(0)?.text).toBe(unicodeText);
       }
     });
 
@@ -368,7 +369,7 @@ describe('readPngMetadata - Unit Tests', () => {
       // Should handle gracefully (parseTExtChunk returns null for malformed chunks)
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value).toHaveLength(0);
+        expect(result.value.chunks).toHaveLength(0);
       }
     });
 
@@ -419,7 +420,7 @@ describe('readPngMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         // Malformed iTXt should be skipped
-        expect(result.value).toHaveLength(0);
+        expect(result.value.chunks).toHaveLength(0);
       }
     });
 
@@ -477,7 +478,7 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value).toHaveLength(0);
+        expect(result.value.chunks).toHaveLength(0);
       }
     });
 
@@ -489,9 +490,77 @@ describe('readPngMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value).toHaveLength(1);
-        expect(result.value.at(0)?.text).toBe(longText);
+        expect(result.value.chunks).toHaveLength(1);
+        expect(result.value.chunks.at(0)?.text).toBe(longText);
       }
     });
+  });
+});
+
+describe('readPngMetadata - eXIf chunk', () => {
+  /** Wrap a TIFF structure in an eXIf chunk (the reader does not verify CRC) */
+  function createExifChunk(segments: MetadataSegment[]): Uint8Array {
+    const tiff = buildExifTiffData(segments);
+    const chunk = new Uint8Array(12 + tiff.length);
+    new DataView(chunk.buffer).setUint32(0, tiff.length, false);
+    chunk.set([0x65, 0x58, 0x49, 0x66], 4); // "eXIf"
+    chunk.set(tiff, 8);
+    return chunk;
+  }
+
+  const userComment: MetadataSegment = {
+    source: { type: 'exifUserComment' },
+    data: 'a prompt\nSteps: 20, Seed: 1070944611, Civitai resources: []',
+  };
+
+  it('should expose the segments of an eXIf chunk', () => {
+    const png = createPngWithChunks(createExifChunk([userComment]));
+
+    const result = readPngMetadata(png);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.chunks).toEqual([]);
+      expect(result.value.exif).toEqual([userComment]);
+    }
+  });
+
+  it('should leave exif absent when the PNG has no eXIf chunk', () => {
+    const png = createPngWithChunks(createTextChunk('parameters', 'x'));
+
+    const result = readPngMetadata(png);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.exif).toBeUndefined();
+    }
+  });
+
+  it('should read text chunks and the eXIf chunk side by side', () => {
+    const png = createPngWithChunks(
+      createExifChunk([userComment]),
+      createTextChunk('Software', 'x'),
+    );
+
+    const result = readPngMetadata(png);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.chunks.map((c) => c.keyword)).toEqual(['Software']);
+      expect(result.value.exif).toEqual([userComment]);
+    }
+  });
+
+  it('should ignore an eXIf chunk without a TIFF structure', () => {
+    const bogus = new Uint8Array([
+      0, 0, 0, 4, 0x65, 0x58, 0x49, 0x66, 1, 2, 3, 4, 0, 0, 0, 0,
+    ]);
+
+    const result = readPngMetadata(createPngWithChunks(bogus));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.exif).toBeUndefined();
+    }
   });
 });

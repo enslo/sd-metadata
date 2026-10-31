@@ -28,11 +28,14 @@ describe('PNG Readers - Samples', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        // Empty file has no chunks, others should have at least some
+        // Empty file has no metadata chunks, others carry text chunks or an
+        // eXIf chunk (CivitAI)
+        const count =
+          result.value.chunks.length + (result.value.exif?.length ?? 0);
         if (file === 'empty.png') {
-          expect(result.value.length).toBe(0);
+          expect(count).toBe(0);
         } else {
-          expect(result.value.length).toBeGreaterThan(0);
+          expect(count).toBeGreaterThan(0);
         }
       }
     });

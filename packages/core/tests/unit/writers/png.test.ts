@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { readPngMetadata } from '../../../src/readers/png';
-import type { ITXtChunk, PngTextChunk, TExtChunk } from '../../../src/types';
+import type {
+  ITXtChunk,
+  MetadataSegment,
+  PngTextChunk,
+  TExtChunk,
+} from '../../../src/types';
 import { writePngMetadata } from '../../../src/writers/png';
 import { createMinimalPng } from '../../helpers/minimal-images';
 
@@ -51,8 +56,8 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value).toHaveLength(1);
-          expect(readResult.value.at(0)).toMatchObject({
+          expect(readResult.value.chunks).toHaveLength(1);
+          expect(readResult.value.chunks.at(0)).toMatchObject({
             type: 'tEXt',
             keyword: 'Software',
             text: 'TestApp',
@@ -82,8 +87,8 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value).toHaveLength(1);
-          expect(readResult.value.at(0)).toMatchObject({
+          expect(readResult.value.chunks).toHaveLength(1);
+          expect(readResult.value.chunks.at(0)).toMatchObject({
             type: 'iTXt',
             keyword: 'Comment',
             text: 'Test comment',
@@ -123,10 +128,10 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value).toHaveLength(3);
-          expect(readResult.value.at(0)?.keyword).toBe('Software');
-          expect(readResult.value.at(1)?.keyword).toBe('Comment');
-          expect(readResult.value.at(2)?.keyword).toBe('parameters');
+          expect(readResult.value.chunks).toHaveLength(3);
+          expect(readResult.value.chunks.at(0)?.keyword).toBe('Software');
+          expect(readResult.value.chunks.at(1)?.keyword).toBe('Comment');
+          expect(readResult.value.chunks.at(2)?.keyword).toBe('parameters');
         }
       }
     });
@@ -155,7 +160,7 @@ describe('writePngMetadata - Unit Tests', () => {
       const readBeforeStrip = readPngMetadata(resultWithMetadata.value);
       expect(readBeforeStrip.ok).toBe(true);
       if (readBeforeStrip.ok) {
-        expect(readBeforeStrip.value).toHaveLength(2);
+        expect(readBeforeStrip.value.chunks).toHaveLength(2);
       }
 
       // Now strip metadata with empty array
@@ -170,7 +175,7 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(resultStripped.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value).toHaveLength(0);
+          expect(readResult.value.chunks).toHaveLength(0);
         }
       }
     });
@@ -194,9 +199,9 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value).toHaveLength(1);
-          expect(readResult.value.at(0)?.keyword).toBe('');
-          expect(readResult.value.at(0)?.text).toBe('');
+          expect(readResult.value.chunks).toHaveLength(1);
+          expect(readResult.value.chunks.at(0)?.keyword).toBe('');
+          expect(readResult.value.chunks.at(0)?.text).toBe('');
         }
       }
     });
@@ -219,7 +224,7 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value.at(0)?.text).toBe(specialText);
+          expect(readResult.value.chunks.at(0)?.text).toBe(specialText);
         }
       }
     });
@@ -245,7 +250,7 @@ describe('writePngMetadata - Unit Tests', () => {
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           // Verify Unicode survives the round-trip
-          expect(readResult.value.at(0)?.text).toBe(unicodeText);
+          expect(readResult.value.chunks.at(0)?.text).toBe(unicodeText);
         }
       }
     });
@@ -272,7 +277,7 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value.at(0)?.text).toBe(unicodeText);
+          expect(readResult.value.chunks.at(0)?.text).toBe(unicodeText);
         }
       }
     });
@@ -300,8 +305,8 @@ describe('writePngMetadata - Unit Tests', () => {
         const readResult = readPngMetadata(result.value);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
-          expect(readResult.value).toHaveLength(1);
-          const chunk = readResult.value.at(0);
+          expect(readResult.value.chunks).toHaveLength(1);
+          const chunk = readResult.value.chunks.at(0);
           expect(chunk?.type).toBe('iTXt');
           if (chunk?.type === 'iTXt') {
             expect(chunk.keyword).toBe('Description');
@@ -312,5 +317,83 @@ describe('writePngMetadata - Unit Tests', () => {
         }
       }
     });
+  });
+});
+
+describe('writePngMetadata - eXIf chunk', () => {
+  const userComment: MetadataSegment = {
+    source: { type: 'exifUserComment' },
+    data: '{"resource-stack":{"class_type":"CheckpointLoaderSimple"}}',
+  };
+
+  it('should write the segments into an eXIf chunk and read them back', () => {
+    const result = writePngMetadata(createMinimalPng(), [], [userComment]);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const readResult = readPngMetadata(result.value);
+      expect(readResult.ok).toBe(true);
+      if (readResult.ok) {
+        expect(readResult.value.chunks).toEqual([]);
+        expect(readResult.value.exif).toEqual([userComment]);
+      }
+    }
+  });
+
+  it('should place the eXIf chunk right after IHDR, before the text chunks', () => {
+    const result = writePngMetadata(
+      createMinimalPng(),
+      [{ type: 'tEXt', keyword: 'Software', text: 'x' }],
+      [userComment],
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      // signature (8) + IHDR chunk (4 + 4 + 13 + 4) + next chunk's length (4)
+      const type = new TextDecoder('latin1').decode(
+        result.value.subarray(37, 41),
+      );
+      expect(type).toBe('eXIf');
+    }
+  });
+
+  it('should replace an existing eXIf chunk and strip it when none is given', () => {
+    const withExif = writePngMetadata(createMinimalPng(), [], [userComment]);
+    expect(withExif.ok).toBe(true);
+    if (!withExif.ok) return;
+
+    const replaced = writePngMetadata(
+      withExif.value,
+      [],
+      [{ source: { type: 'exifUserComment' }, data: 'other' }],
+    );
+    expect(replaced.ok).toBe(true);
+    if (replaced.ok) {
+      const readResult = readPngMetadata(replaced.value);
+      expect(
+        readResult.ok && readResult.value.exif?.map((s) => s.data),
+      ).toEqual(['other']);
+    }
+
+    const stripped = writePngMetadata(withExif.value, []);
+    expect(stripped.ok).toBe(true);
+    if (stripped.ok) {
+      const readResult = readPngMetadata(stripped.value);
+      expect(readResult.ok && readResult.value.exif).toBeUndefined();
+    }
+  });
+
+  it('should write no eXIf chunk when no segment can live in EXIF', () => {
+    const result = writePngMetadata(
+      createMinimalPng(),
+      [],
+      [{ source: { type: 'jpegCom' }, data: 'comment' }],
+    );
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const readResult = readPngMetadata(result.value);
+      expect(readResult.ok && readResult.value.exif).toBeUndefined();
+    }
   });
 });
