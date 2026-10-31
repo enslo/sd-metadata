@@ -23,6 +23,10 @@ type JsonObject = Record<string, unknown>;
 /**
  * Internal parameter bag for generation metadata.
  *
+ * Every field is text: the output is A1111-format text and lite never does
+ * arithmetic on these values, so numbers are kept exactly as the tool wrote
+ * them (64-bit seeds included). An empty string means "not found".
+ *
  * Property names are kept to 1-2 characters because esbuild does not
  * mangle object properties — shorter keys keep the IIFE bundle small.
  * Hover over each field for its full description via JSDoc.
@@ -32,36 +36,36 @@ interface GenerationParams {
   p?: string;
   /** Negative prompt text */
   n?: string;
-  /** Random seed (string seeds pass through: 64-bit values exceed Number precision) */
-  se?: string | number;
+  /** Random seed */
+  se?: string;
   /** Sampling steps */
-  st?: number;
+  st?: string;
   /** CFG scale (classifier-free guidance) */
-  cf?: number;
+  cf?: string;
   /** Sampler algorithm name */
   sa?: string;
   /** Noise scheduler */
   sc?: string;
   /** Image width in pixels */
-  w?: number;
+  w?: string;
   /** Image height in pixels */
-  h?: number;
+  h?: string;
   /** Model filename */
   md?: string;
   /** Model hash */
   mh?: string;
   /** CLIP skip */
-  cs?: number;
+  cs?: string;
   /** Denoising strength */
-  dn?: number;
+  dn?: string;
   /** Hires upscale factor */
-  hs?: number;
+  hs?: string;
   /** Hires upscaler name */
   hu?: string;
   /** Hires denoising strength */
-  hd?: number;
+  hd?: string;
   /** Hires sampling steps */
-  ht?: number;
+  ht?: string;
 }
 
 // ComfyUI node-graph key. Extracted as a constant so the string literal
@@ -322,7 +326,7 @@ function readC2paName(manifest: string | undefined): string {
  */
 function tryJsonTool(obj: JsonObject, text: string): string | null {
   // RuinedFooocus: identified by "software" field containing "RuinedFooocus".
-  if (asString(obj.software).includes('RuinedFooocus'))
+  if (asText(obj.software).includes('RuinedFooocus'))
     return buildA1111(extractCommon(obj));
 
   // EasyDiffusion (JSON variant): identified by "use_stable_diffusion_model".
@@ -331,10 +335,7 @@ function tryJsonTool(obj: JsonObject, text: string): string | null {
   // Fooocus: identified by having both "Model" (capital M) and "resolution"
   // keys. Resolution format: "1024x1024". Also has optional upscaler data.
   if (text.includes('"Model"') && text.includes('"resolution"')) {
-    const [w, h] = parseDimensions(
-      asString(obj.resolution),
-      /(\d+)\s*x\s*(\d+)/,
-    );
+    const [w, h] = parseDimensions(asText(obj.resolution), /(\d+)\s*x\s*(\d+)/);
     return buildA1111({ ...extractCommon(obj), w, h });
   }
 
@@ -342,7 +343,7 @@ function tryJsonTool(obj: JsonObject, text: string): string | null {
   // Resolution format: "(1024, 1024)" (Python tuple string).
   if ('base_model' in obj) {
     const [w, h] = parseDimensions(
-      asString(obj.resolution),
+      asText(obj.resolution),
       /\(\s*(\d+)\s*,\s*(\d+)\s*\)/,
     );
     return buildA1111({ ...extractCommon(obj), w, h });
@@ -369,29 +370,29 @@ function tryJsonTool(obj: JsonObject, text: string): string | null {
  * Fooocus, RuinedFooocus, EasyDiffusion, HF Space.
  */
 function extractCommon(obj: Record<string, unknown>): GenerationParams {
-  const sa = asString(obj.sampler ?? obj.sampler_name);
-  const sc = asString(obj.scheduler ?? obj.noise_schedule);
+  const sa = asText(obj.sampler ?? obj.sampler_name);
+  const sc = asText(obj.scheduler ?? obj.noise_schedule);
   const mod = obj.model as JsonObject | undefined;
   const base = obj.baseModel as JsonObject | undefined;
   const up = obj.use_upscaler as JsonObject | undefined;
   return {
     // Prompt: "prompt" (most tools) → "Prompt" (Fooocus) → "positive_prompt" (RuinedFooocus)
-    p: asString(obj.prompt ?? obj.Prompt ?? obj.positive_prompt),
+    p: asText(obj.prompt ?? obj.Prompt ?? obj.positive_prompt),
     // Negative: multiple naming conventions across tools
     // "uc" = NovelAI's "undesired content"
-    n: asString(
+    n: asText(
       obj.negative_prompt ??
         obj.Negative ??
         obj.negativeprompt ??
         obj.negativePrompt ??
         obj.uc,
     ),
-    se: asSeed(obj.seed),
+    se: asText(obj.seed),
     // "num_inference_steps" = HF Space / Civitai generator
-    st: asNumber(obj.steps ?? obj.num_inference_steps),
+    st: asText(obj.steps ?? obj.num_inference_steps),
     // CFG: many naming variants across tools
     // "scale" = NovelAI, "guidance_scale" = HF Space
-    cf: asNumber(
+    cf: asText(
       obj.cfg ??
         obj.cfg_scale ??
         obj.cfgScale ??
@@ -403,8 +404,8 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
     // and has no separate sampler field. If sa is empty, use sc as sa.
     sa: sa || sc,
     sc: sa ? sc : undefined,
-    w: asNumber(obj.width),
-    h: asNumber(obj.height),
+    w: asText(obj.width),
+    h: asText(obj.height),
     // Model name: extensive fallback chain covering all known patterns.
     // "model" (string)          → InvokeAI, SwarmUI, Civitai
     // "Model" (capital)         → Fooocus
@@ -415,30 +416,29 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
     // "baseModel.modelFileName" → TensorArt (nested object)
     // "use_stable_diffusion_model" → EasyDiffusion (full path, take filename)
     md:
-      asString(mod) ||
-      asString(obj.Model) ||
-      asString(obj.base_model) ||
-      asString(obj.base_model_name) ||
-      asString(base) ||
-      asString(mod?.name) ||
-      asString(base?.modelFileName) ||
-      asString(obj[EASY_DIFF_KEY]).split(/[\\/]/).pop(),
+      asText(mod) ||
+      asText(obj.Model) ||
+      asText(obj.base_model) ||
+      asText(obj.base_model_name) ||
+      asText(base) ||
+      asText(mod?.name) ||
+      asText(base?.modelFileName) ||
+      asText(obj[EASY_DIFF_KEY]).split(/[\\/]/).pop(),
     // Model hash: similar multi-tool fallback chain.
     // "Model hash"    → Fooocus
     // "model.hash"    → Civitai (nested)
     // "baseModel.hash" → TensorArt (nested)
     mh:
-      asString(obj.base_model_hash) ||
-      asString(obj['Model hash']) ||
-      asString(mod?.hash) ||
-      asString(base?.hash),
-    cs: asNumber(obj.clip_skip ?? obj.clipSkip),
+      asText(obj.base_model_hash) ||
+      asText(obj['Model hash']) ||
+      asText(mod?.hash) ||
+      asText(base?.hash),
+    cs: asText(obj.clip_skip ?? obj.clipSkip),
     // Hires/upscaler: use_upscaler (Fooocus, HF Space) → refiner* (SwarmUI)
-    hs: asNumber(up?.upscale_by) ?? asNumber(obj.refinerupscale),
-    hu: asString(up?.upscale_method) || asString(obj.refinerupscalemethod),
-    hd:
-      asNumber(up?.upscaler_strength) ?? asNumber(obj.refinercontrolpercentage),
-    ht: asNumber(up?.upscale_steps),
+    hs: asText(up?.upscale_by) || asText(obj.refinerupscale),
+    hu: asText(up?.upscale_method) || asText(obj.refinerupscalemethod),
+    hd: asText(up?.upscaler_strength) || asText(obj.refinercontrolpercentage),
+    ht: asText(up?.upscale_steps),
   };
 }
 
@@ -463,8 +463,8 @@ function buildNovelAI(obj: JsonObject): string {
   return buildA1111({
     ...extractCommon(obj),
     // Prefer v4 captions, fall back to legacy flat fields.
-    p: asString(v4Caption?.base_caption) || asString(obj.prompt),
-    n: asString(v4NegCaption?.base_caption) || asString(obj.uc),
+    p: asText(v4Caption?.base_caption) || asText(obj.prompt),
+    n: asText(v4NegCaption?.base_caption) || asText(obj.uc),
   });
 }
 
@@ -498,12 +498,12 @@ function flatScan(json: string): GenerationParams {
   for (const key in nodes) {
     const node = nodes[key] as JsonObject;
     if (!node || typeof node !== 'object') continue;
-    const classType = asString(node[CT]);
+    const classType = asText(node[CT]);
     const inputs = node.inputs as JsonObject | undefined;
     if (!inputs) continue;
 
-    if (/User Prompt/.test(asString((node._meta as JsonObject)?.title)))
-      up ||= asString(inputs.value);
+    if (/User Prompt/.test(asText((node._meta as JsonObject)?.title)))
+      up ||= asText(inputs.value);
 
     // --- Prompt text nodes -------------------------------------------
     // Matches CLIPTextEncode (and variants like SDXL, Flux) via "TextEncode",
@@ -515,11 +515,11 @@ function flatScan(json: string): GenerationParams {
     // otherwise first-come-first-served (1st → positive, 2nd → negative).
     if (/Text(Encode|.?Box)|ShowText|PromptStash/.test(classType)) {
       const txt =
-        asString(inputs.text) ||
-        asString(inputs.prompt) ||
-        asString(inputs.Text) ||
-        asString(inputs.prompt_text) ||
-        asString(inputs.text_0);
+        asText(inputs.text) ||
+        asText(inputs.prompt) ||
+        asText(inputs.Text) ||
+        asText(inputs.prompt_text) ||
+        asText(inputs.text_0);
       if (txt) {
         if (/neg/i.test(classType)) {
           result.n ??= txt;
@@ -534,21 +534,21 @@ function flatScan(json: string): GenerationParams {
     // Class-type guard is required here: "steps" and "seed" also appear
     // on non-sampler nodes (BasicScheduler, RandomNoise, etc.).
     if (classType.includes('Sampler')) {
-      result.se ??= asSeed(inputs.seed) ?? asSeed(inputs.noise_seed);
-      result.st ??= asNumber(inputs.steps);
-      result.cf ??= asNumber(inputs.cfg);
-      result.sa ||= asString(inputs.sampler_name);
-      result.sc ||= asString(inputs.scheduler);
+      result.se ||= asText(inputs.seed) || asText(inputs.noise_seed);
+      result.st ||= asText(inputs.steps);
+      result.cf ||= asText(inputs.cfg);
+      result.sa ||= asText(inputs.sampler_name);
+      result.sc ||= asText(inputs.scheduler);
     }
 
     // --- Model loader nodes ------------------------------------------
     // ckpt_name / unet_name are unique to checkpoint and UNET loaders —
     // no class_type guard needed; unconditional ||= is safe here.
-    result.md ||= asString(inputs.ckpt_name) || asString(inputs.unet_name);
+    result.md ||= asText(inputs.ckpt_name) || asText(inputs.unet_name);
 
     // --- Latent image nodes (for dimensions) -------------------------
-    result.w ??= asNumber(inputs.width);
-    result.h ??= asNumber(inputs.height);
+    result.w ||= asText(inputs.width);
+    result.h ||= asText(inputs.height);
   }
   result.p ||= up;
   return result;
@@ -572,8 +572,8 @@ function buildA1111(params: GenerationParams): string {
   if (params.n) lines.push(`Negative prompt: ${params.n}`);
 
   const fields: string[] = [];
-  // addField only appends when value is truthy (skips 0, undefined, "").
-  const addField = (key: string, value: string | number | undefined) => {
+  // addField only appends when value is non-empty (skips undefined and "").
+  const addField = (key: string, value: string | undefined) => {
     if (value) fields.push(`${key}: ${value}`);
   };
 
@@ -611,11 +611,16 @@ function parseJson(text: string | undefined): JsonObject | null {
 }
 
 /**
- * Coerce unknown value to string. Returns "" for non-strings.
- * Returning "" (falsy) enables `||` fallback chains: `asString(a) || asString(b)`.
+ * Coerce a scalar to text. Strings pass through unchanged (so 64-bit seeds
+ * keep every digit), numbers are stringified, and anything else — missing,
+ * null, objects, ComfyUI node references like ["95", 0] — becomes "".
+ *
+ * Every value ends up interpolated into A1111 text, so there is no reason to
+ * hold numbers as numbers. Returning "" (falsy) enables `||` fallback chains:
+ * `asText(a) || asText(b)`.
  */
-function asString(v: unknown): string {
-  return typeof v === 'string' ? v : '';
+function asText(v: unknown): string {
+  return typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '';
 }
 
 /**
@@ -631,27 +636,6 @@ function stringifyValue(v: unknown): string {
 }
 
 /**
- * Coerce unknown value to number. Returns undefined for non-numeric values.
- * Accepts both number and numeric string inputs (e.g. "42" → 42).
- * NaN values are filtered out and returned as undefined.
- */
-/** Seed: strings pass through untouched (64-bit seeds exceed Number precision). */
-function asSeed(v: unknown): string | number | undefined {
-  return typeof v === 'string' ? v || undefined : asNumber(v);
-}
-
-function asNumber(v: unknown): number | undefined {
-  // biome-ignore lint/suspicious/noSelfCompare: intentional NaN check (IEEE 754: NaN !== NaN)
-  if (typeof v === 'number') return v === v ? v : undefined;
-  if (typeof v === 'string') {
-    const n = +v;
-    // biome-ignore lint/suspicious/noSelfCompare: intentional NaN check (IEEE 754: NaN !== NaN)
-    return n === n ? n : undefined;
-  }
-  return undefined;
-}
-
-/**
  * Extract width/height from a dimension string using the given regex.
  * Different tools use different formats:
  *   - Fooocus:  "1024x1024"       → /(\d+)\s*x\s*(\d+)/
@@ -660,8 +644,8 @@ function asNumber(v: unknown): number | undefined {
 function parseDimensions(
   text: string | undefined,
   pattern: RegExp,
-): [number?, number?] {
+): [string?, string?] {
   if (!text) return [];
   const match = text.match(pattern);
-  return match ? [Number(match[1]), Number(match[2])] : [];
+  return match ? [match[1], match[2]] : [];
 }
