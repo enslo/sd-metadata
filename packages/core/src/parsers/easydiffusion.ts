@@ -31,6 +31,16 @@ import type { InternalParseResult } from './types';
 const UNSET_VALUES = new Set(['', 'None', 'null']);
 
 /**
+ * Easy Diffusion's latent upscaler
+ *
+ * Unlike the other `use_upscale` choices (RealESRGAN and friends, which are
+ * image post-processing), this one is a second diffusion pass over the
+ * latents with its own step count (`latent_upscaler_steps`), i.e. a hires
+ * fix.
+ */
+const LATENT_UPSCALER = 'latent_upscaler';
+
+/**
  * Extract model name from path
  *
  * Easy Diffusion stores full path like "path/to/model.safetensors"
@@ -101,12 +111,31 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
   const negativePrompt = (str('negative_prompt') ?? '').trim();
   const modelPath = opt('use_stable_diffusion_model');
 
-  // Upscale settings (post-processing); `use_upscale` is unset unless an
-  // upscaler was chosen
-  const upscale = trimObject({
-    upscaler: opt('use_upscale'),
-    scale: num('upscale_amount'),
-  });
+  // Easy Diffusion's clip_skip is a boolean; when set, sdkit takes CLIP's
+  // penultimate hidden states, which is what A1111 calls "Clip skip: 2".
+  // A plain number (not something Easy Diffusion writes) is taken as-is.
+  const clipSkip =
+    data.clip_skip === true || data.clip_skip === 'True'
+      ? 2
+      : typeof data.clip_skip === 'boolean'
+        ? undefined
+        : num('clip_skip');
+
+  // Upscaling (unset unless chosen): the latent upscaler is a hires pass,
+  // everything else is post-generation image upscaling
+  const upscaler = opt('use_upscale');
+  const hires =
+    upscaler === LATENT_UPSCALER
+      ? trimObject({
+          scale: num('upscale_amount'),
+          upscaler,
+          steps: num('latent_upscaler_steps'),
+        })
+      : undefined;
+  const upscale =
+    upscaler && upscaler !== LATENT_UPSCALER
+      ? trimObject({ upscaler, scale: num('upscale_amount') })
+      : undefined;
 
   const metadata: StandardMetadata = {
     software: 'easydiffusion',
@@ -125,14 +154,10 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
       cfg: num('guidance_scale'),
       // Seed 0 means unset (same rule as num()); otherwise keep the exact text
       seed: num('seed') === undefined ? undefined : toSeedString(data.seed),
-      // Easy Diffusion's clip_skip is a boolean ("skip the last CLIP layer");
-      // no sample verifies how it maps to the A1111-style layer count, so
-      // only a numeric value is taken over (PNG "False"/"True" are NaN, a
-      // JSON `true` would otherwise read as 1)
-      clipSkip:
-        typeof data.clip_skip === 'boolean' ? undefined : num('clip_skip'),
+      clipSkip,
       denoise: num('prompt_strength'),
     }),
+    ...(hires ? { hires } : {}),
     ...(upscale ? { upscale } : {}),
   };
 
