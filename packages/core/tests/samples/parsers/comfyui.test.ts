@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parseMetadata } from '../../../src/parsers';
 import { parseComfyUI } from '../../../src/parsers/comfyui';
 import type { ComfyUIMetadata } from '../../../src/types';
 import { expectComfyNodeGraph } from '../../helpers/comfy-node-graph';
@@ -733,6 +734,43 @@ describe('ComfyUI Parsers - Samples', () => {
         nodes: expect.any(Object),
       });
       expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse civitai-lora-hires.png (eXIf chunk)', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'civitai-lora-hires.png',
+        parseMetadata,
+      );
+
+      // The same orchestration JSON as the JPEGs, stored in an eXIf chunk.
+      // This img2img hires graph has no EmptyLatentImage, so the parser
+      // reports no dimensions (read() fills them from the image header).
+      expect(meta).toEqual({
+        software: 'civitai',
+        prompt: 'perfect eyes, 1girl, solo, hatsune miku, double v, #テスト',
+        negativePrompt: 'bad quality, worst quality, 3d, jpeg artifacts,',
+        width: 0,
+        height: 0,
+        model: {
+          name: 'urn:air:sdxl:checkpoint:civitai:2904237@3284240',
+        },
+        sampling: {
+          sampler: 'euler_ancestral',
+          scheduler: 'normal',
+          seed: '933381418',
+          steps: 20,
+          cfg: 4.5,
+          denoise: 0.75,
+        },
+        hires: {
+          upscaler: 'urn:air:other:upscaler:civitai:147759@164821',
+          scale: undefined,
+          steps: 20,
+          denoise: 0.75,
+        },
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes, ['extra', 'extraMetadata']);
     });
 
     it('should parse civitai-hires.jpg', () => {

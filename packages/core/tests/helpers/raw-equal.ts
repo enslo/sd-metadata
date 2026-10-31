@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import type { RawMetadata } from '../../src/types';
+import type { MetadataSegment, RawMetadata } from '../../src/types';
 
 /**
  * Options for raw metadata comparison
@@ -111,20 +111,33 @@ export function expectRawEqual(
         );
       }
     }
+
+    // The eXIf chunk is compared at the segment level (byte order and the
+    // UserComment charset may differ between writers)
+    expectSegmentsEqual(actual.exif ?? [], expected.exif ?? []);
   } else if (actual.format !== 'png' && expected.format !== 'png') {
-    // Compare segments with JSON-aware data comparison
-    expect(actual.segments.length).toBe(expected.segments.length);
+    expectSegmentsEqual(actual.segments, expected.segments);
+  }
+}
 
-    for (let i = 0; i < actual.segments.length; i++) {
-      const actualSeg = actual.segments[i];
-      const expectedSeg = expected.segments[i];
+/**
+ * Compare segment lists with JSON-aware data comparison
+ */
+function expectSegmentsEqual(
+  actual: MetadataSegment[],
+  expected: MetadataSegment[],
+): void {
+  expect(actual.length).toBe(expected.length);
 
-      expect(actualSeg?.source).toEqual(expectedSeg?.source);
+  for (let i = 0; i < actual.length; i++) {
+    const actualSeg = actual[i];
+    const expectedSeg = expected[i];
 
-      // Use JSON-aware comparison for data
-      if (actualSeg && expectedSeg) {
-        expectJsonEqual(actualSeg.data, expectedSeg.data);
-      }
+    expect(actualSeg?.source).toEqual(expectedSeg?.source);
+
+    // Use JSON-aware comparison for data
+    if (actualSeg && expectedSeg) {
+      expectJsonEqual(actualSeg.data, expectedSeg.data);
     }
   }
 }

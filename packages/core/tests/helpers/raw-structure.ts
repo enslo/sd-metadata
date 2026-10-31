@@ -120,10 +120,9 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
   // Stability Matrix: uses prompt + parameters + parameters-json + smproj
   'stability-matrix': [['prompt', 'parameters', 'parameters-json', 'smproj']],
 
-  // CivitAI: Single chunk containing all metadata
-  // - Orchestration format: all JSON in single "prompt" chunk
-  // - A1111 format: parameters chunk
-  civitai: [['prompt'], ['parameters']],
+  // CivitAI: the EXIF goes into an eXIf chunk (pseudo keyword, see
+  // expectRawStructure), no text chunks
+  civitai: [['eXIf']],
 
   // InvokeAI: invokeai_metadata + invokeai_graph
   invokeai: [['invokeai_metadata', 'invokeai_graph']],
@@ -199,7 +198,11 @@ export function expectRawStructure(
       return;
     }
 
-    const actualKeywords = raw.chunks.map((c) => c.keyword);
+    // The eXIf chunk has no keyword; it is matched as the pseudo keyword eXIf
+    const actualKeywords = [
+      ...raw.chunks.map((c) => c.keyword),
+      ...(raw.exif && raw.exif.length > 0 ? ['eXIf'] : []),
+    ];
     const matches = matchesAnyChunkPattern(actualKeywords, expectedPatterns);
 
     expect(

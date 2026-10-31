@@ -34,46 +34,35 @@ export function RawTabContent({ parseResult, t }: RawTabContentProps) {
   }
 
   if (parseResult.raw.format === 'png') {
-    const { chunks } = parseResult.raw;
-    const defaultValues = chunks.map((c) => c.keyword);
+    // CivitAI PNGs keep their EXIF in an eXIf chunk; list those segments
+    // after the text chunks, tagged with the chunk type like the others.
+    const { chunks, exif = [] } = parseResult.raw;
+    const exifValue = (segment: MetadataSegment) =>
+      `eXIf:${segment.source.type}`;
+    const defaultValues = [
+      ...chunks.map((c) => c.keyword),
+      ...exif.map(exifValue),
+    ];
     return (
       <Accordion multiple variant="separated" defaultValue={defaultValues}>
-        {chunks.map((chunk: PngTextChunk) => {
-          const { formatted, isJson } = formatJson(chunk.text);
-          return (
-            <Accordion.Item value={chunk.keyword} key={chunk.keyword}>
-              <Accordion.Control>
-                <Group gap="xs">
-                  <span>{chunk.keyword}</span>
-                  <Badge size="xs" variant="light">
-                    {chunk.type}
-                  </Badge>
-                  {isJson && (
-                    <Badge size="xs" variant="light" color="teal">
-                      JSON
-                    </Badge>
-                  )}
-                </Group>
-              </Accordion.Control>
-              <Accordion.Panel>
-                <ContentPanel>
-                  <pre
-                    style={{
-                      fontFamily: 'var(--mantine-font-family-monospace)',
-                      fontSize: '0.8rem',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      lineHeight: 1.5,
-                      margin: 0,
-                    }}
-                  >
-                    {formatted}
-                  </pre>
-                </ContentPanel>
-              </Accordion.Panel>
-            </Accordion.Item>
-          );
-        })}
+        {chunks.map((chunk: PngTextChunk) => (
+          <RawItem
+            key={chunk.keyword}
+            value={chunk.keyword}
+            label={chunk.keyword}
+            badge={chunk.type}
+            text={chunk.text}
+          />
+        ))}
+        {exif.map((segment) => (
+          <RawItem
+            key={exifValue(segment)}
+            value={exifValue(segment)}
+            label={SOURCE_LABELS[segment.source.type]}
+            badge="eXIf"
+            text={segment.data}
+          />
+        ))}
       </Accordion>
     );
   }
@@ -82,39 +71,65 @@ export function RawTabContent({ parseResult, t }: RawTabContentProps) {
   const defaultValues = segments.map((s) => s.source.type);
   return (
     <Accordion multiple variant="separated" defaultValue={defaultValues}>
-      {segments.map((segment: MetadataSegment) => {
-        const { formatted, isJson } = formatJson(segment.data);
-        return (
-          <Accordion.Item value={segment.source.type} key={segment.source.type}>
-            <Accordion.Control>
-              <Group gap="xs">
-                <span>{SOURCE_LABELS[segment.source.type]}</span>
-                {isJson && (
-                  <Badge size="xs" variant="light" color="teal">
-                    JSON
-                  </Badge>
-                )}
-              </Group>
-            </Accordion.Control>
-            <Accordion.Panel>
-              <ContentPanel>
-                <pre
-                  style={{
-                    fontFamily: 'var(--mantine-font-family-monospace)',
-                    fontSize: '0.8rem',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    lineHeight: 1.5,
-                    margin: 0,
-                  }}
-                >
-                  {formatted}
-                </pre>
-              </ContentPanel>
-            </Accordion.Panel>
-          </Accordion.Item>
-        );
-      })}
+      {segments.map((segment: MetadataSegment) => (
+        <RawItem
+          key={segment.source.type}
+          value={segment.source.type}
+          label={SOURCE_LABELS[segment.source.type]}
+          text={segment.data}
+        />
+      ))}
     </Accordion>
+  );
+}
+
+interface RawItemProps {
+  value: string;
+  label: string;
+  /** Container the data came from (PNG chunk type), shown as a badge */
+  badge?: string;
+  text: string;
+}
+
+/**
+ * One collapsible raw entry: a PNG text chunk, an eXIf segment, or a
+ * JPEG/WebP segment
+ */
+function RawItem({ value, label, badge, text }: RawItemProps) {
+  const { formatted, isJson } = formatJson(text);
+  return (
+    <Accordion.Item value={value}>
+      <Accordion.Control>
+        <Group gap="xs">
+          <span>{label}</span>
+          {badge && (
+            <Badge size="xs" variant="light">
+              {badge}
+            </Badge>
+          )}
+          {isJson && (
+            <Badge size="xs" variant="light" color="teal">
+              JSON
+            </Badge>
+          )}
+        </Group>
+      </Accordion.Control>
+      <Accordion.Panel>
+        <ContentPanel>
+          <pre
+            style={{
+              fontFamily: 'var(--mantine-font-family-monospace)',
+              fontSize: '0.8rem',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              lineHeight: 1.5,
+              margin: 0,
+            }}
+          >
+            {formatted}
+          </pre>
+        </ContentPanel>
+      </Accordion.Panel>
+    </Accordion.Item>
   );
 }

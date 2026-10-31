@@ -716,6 +716,33 @@ describe('A1111 Parsers - Samples', () => {
       });
     });
 
+    it('should parse civitai-lora.png (eXIf chunk)', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'civitai-lora.png',
+        parseMetadata,
+      );
+
+      // CivitAI PNG downloads keep the same A1111-style UserComment as the
+      // JPEGs, but inside an eXIf chunk and without any text chunk
+      expect(meta).toEqual({
+        software: 'civitai',
+        prompt: 'perfect eyes, 1girl, solo, hatsune miku, double v, #テスト',
+        negativePrompt: 'bad quality, worst quality, 3d, jpeg artifacts,',
+        width: 1024,
+        height: 1024,
+        model: undefined,
+        sampling: {
+          sampler: 'Euler a',
+          steps: 20,
+          cfg: 4.5,
+          seed: '1070944611',
+          clipSkip: 2,
+        },
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+
     it('should parse sd-next.jpg', () => {
       const meta = parseConvertedSample<StandardMetadata>(
         'jpeg',

@@ -27,6 +27,26 @@ export function pngChunksToRecord(chunks: PngTextChunk[]): EntryRecord {
 }
 
 /**
+ * Convert PNG raw metadata to an entry record
+ *
+ * Text chunks map by keyword; the segments of an `eXIf` chunk map exactly
+ * like JPEG/WebP segments (UserComment, Make, ...), so a CivitAI PNG yields
+ * the same entries as its JPEG counterpart.
+ *
+ * @param raw - PNG text chunks plus optional eXIf segments
+ * @returns Entry record for keyword lookup
+ */
+export function pngRawToRecord(raw: {
+  chunks: PngTextChunk[];
+  exif?: MetadataSegment[];
+}): EntryRecord {
+  return {
+    ...pngChunksToRecord(raw.chunks),
+    ...(raw.exif ? segmentsToRecord(raw.exif) : {}),
+  };
+}
+
+/**
  * Convert JPEG/WebP metadata segments to entry record
  *
  * Maps segment sources to conventional keywords:

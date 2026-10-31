@@ -116,7 +116,7 @@ function writeRaw(
   raw: import('../types').RawMetadata,
 ): WriteResult {
   if (targetFormat === 'png' && raw.format === 'png') {
-    const result = writePngMetadata(data, raw.chunks);
+    const result = writePngMetadata(data, raw.chunks, raw.exif);
     if (!result.ok) {
       return {
         ok: false,

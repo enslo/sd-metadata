@@ -80,7 +80,15 @@ export interface MetadataSegment {
  * Raw metadata for write-back (preserves original format)
  */
 export type RawMetadata =
-  | { format: 'png'; chunks: PngTextChunk[] }
+  | {
+      format: 'png';
+      chunks: PngTextChunk[];
+      /**
+       * Segments stored in an `eXIf` chunk (CivitAI PNGs); absent when the
+       * file has none. Written back as an eXIf chunk, never as text chunks.
+       */
+      exif?: MetadataSegment[];
+    }
   | { format: 'jpeg'; segments: MetadataSegment[] }
   | { format: 'webp'; segments: MetadataSegment[] };
 

@@ -9,18 +9,17 @@ import { parseMetadata } from '../parsers';
 import { detectC2pa } from '../parsers/c2pa';
 import { readImageDimensions } from '../readers/dimensions';
 import { readJpegMetadata } from '../readers/jpeg';
-import { readPngMetadata } from '../readers/png';
+import { type PngMetadata, readPngMetadata } from '../readers/png';
 import { readWebpMetadata } from '../readers/webp';
 import type {
   GenerationMetadata,
   MetadataSegment,
   ParseResult,
-  PngTextChunk,
   RawMetadata,
   ReadOptions,
 } from '../types';
 import { detectFormat, type ImageFormat, toUint8Array } from '../utils/binary';
-import { pngChunksToRecord, segmentsToRecord } from '../utils/convert';
+import { pngRawToRecord, segmentsToRecord } from '../utils/convert';
 
 /**
  * Read and parse metadata from an image
@@ -56,7 +55,7 @@ export function read(
     const { raw } = rawResult;
     const entries =
       raw.format === 'png'
-        ? pngChunksToRecord(raw.chunks)
+        ? pngRawToRecord(raw)
         : segmentsToRecord(raw.segments);
 
     const parseResult = parseMetadata(entries);
@@ -134,17 +133,16 @@ function readRawMetadata(data: Uint8Array, format: ImageFormat): RawReadResult {
     return { status: 'invalid', message };
   }
 
-  if (result.value.length === 0) return { status: 'empty' };
-
-  // PNG uses PngTextChunk[], JPEG/WebP use MetadataSegment[]
+  // PNG yields text chunks plus optional eXIf segments, JPEG/WebP segments
   if (format === 'png') {
+    const { chunks, exif } = result.value as PngMetadata;
+    if (chunks.length === 0 && !exif) return { status: 'empty' };
     return {
       status: 'success',
-      raw: { format: 'png', chunks: result.value as PngTextChunk[] },
+      raw: exif ? { format: 'png', chunks, exif } : { format: 'png', chunks },
     };
   }
-  return {
-    status: 'success',
-    raw: { format, segments: result.value as MetadataSegment[] },
-  };
+  const segments = result.value as MetadataSegment[];
+  if (segments.length === 0) return { status: 'empty' };
+  return { status: 'success', raw: { format, segments } };
 }

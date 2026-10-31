@@ -1,13 +1,30 @@
-import type { ITXtChunk, PngTextChunk, TExtChunk } from '../types';
+import type {
+  ITXtChunk,
+  MetadataSegment,
+  PngTextChunk,
+  TExtChunk,
+} from '../types';
 import { Result } from '../types';
 import { isPng, readChunkType, readUint32BE } from '../utils/binary';
+import { parseExifMetadataSegments } from './exif';
 
 // Internal types (co-located with reader)
 type PngReadError =
   | { type: 'invalidSignature' }
   | { type: 'corruptedChunk'; message: string };
 
-type PngMetadataResult = Result<PngTextChunk[], PngReadError>;
+/**
+ * Metadata chunks of a PNG
+ *
+ * `exif` holds the segments of an `eXIf` chunk (CivitAI writes its EXIF
+ * there instead of text chunks) and is absent when the file has none.
+ */
+export interface PngMetadata {
+  chunks: PngTextChunk[];
+  exif?: MetadataSegment[];
+}
+
+type PngMetadataResult = Result<PngMetadata, PngReadError>;
 
 /**
  * Read PNG metadata from binary data
@@ -20,28 +37,20 @@ export function readPngMetadata(data: Uint8Array): PngMetadataResult {
     return Result.error({ type: 'invalidSignature' });
   }
 
-  // Extract text chunks
-  const chunksResult = extractTextChunks(data);
-  if (!chunksResult.ok) {
-    return chunksResult;
-  }
-
-  return Result.ok(chunksResult.value);
+  return extractMetadataChunks(data);
 }
 
-/**
- * Extract tEXt and iTXt chunks from PNG data
- */
 // 8 bytes for PNG signature
 const PNG_SIGNATURE_LENGTH = 8;
 
 /**
- * Extract tEXt and iTXt chunks from PNG data
+ * Extract tEXt, iTXt and eXIf chunks from PNG data
  */
-function extractTextChunks(
+function extractMetadataChunks(
   data: Uint8Array,
-): Result<PngTextChunk[], PngReadError> {
+): Result<PngMetadata, PngReadError> {
   const chunks: PngTextChunk[] = [];
+  const exif: MetadataSegment[] = [];
   let offset = PNG_SIGNATURE_LENGTH;
 
   while (offset < data.length) {
@@ -89,6 +98,9 @@ function extractTextChunks(
       if (parsed) {
         chunks.push(parsed);
       }
+    } else if (chunkType === 'eXIf') {
+      // eXIf holds a TIFF structure, the same layout as a JPEG APP1 payload
+      exif.push(...parseExifMetadataSegments(chunkData));
     }
 
     // Stop at IEND
@@ -97,7 +109,7 @@ function extractTextChunks(
     }
   }
 
-  return Result.ok(chunks);
+  return Result.ok(exif.length > 0 ? { chunks, exif } : { chunks });
 }
 
 /**

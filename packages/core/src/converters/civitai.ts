@@ -13,13 +13,25 @@
  *    - Should be converted like regular A1111
  *
  * This converter handles BOTH formats by detecting the data type.
+ *
+ * CivitAI PNG downloads carry the EXIF (the same UserComment as the JPEG)
+ * in an eXIf chunk and have no text chunks, so JPEG/WebP → PNG moves the
+ * segments into `exif` (see convertCivitaiSegmentsToPng). PNGs holding
+ * text chunks (e.g. written by earlier versions of this library) are still
+ * converted back by convertCivitaiPngToSegments.
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
-import { convertA1111PngToSegments, convertA1111SegmentsToPng } from './a1111';
-import { createEncodedChunk } from './chunk-encoding';
-import { findSegment } from './utils';
+import { convertA1111PngToSegments } from './a1111';
+
+/** Segment sources an eXIf chunk (a TIFF structure) can hold */
+const EXIF_SOURCES = new Set<MetadataSegment['source']['type']>([
+  'exifUserComment',
+  'exifImageDescription',
+  'exifMake',
+  'exifModel',
+]);
 
 /**
  * Convert CivitAI PNG chunks to JPEG/WebP segments
@@ -71,30 +83,21 @@ export function convertCivitaiPngToSegments(
 }
 
 /**
- * Convert JPEG/WebP segments to CivitAI PNG chunks
+ * Convert JPEG/WebP segments to a CivitAI PNG
  *
- * Handles BOTH CivitAI formats:
- * - Orchestration (JSON): Store entire JSON in single "prompt" chunk
- * - A1111 (text): Fall back to A1111 converter
+ * CivitAI PNGs carry their EXIF in an eXIf chunk and no text chunks, so the
+ * EXIF-type segments move into `exif` unchanged; nothing is rewritten into
+ * tEXt/iTXt (other segment kinds have no place in an eXIf chunk).
  *
  * @param segments - Metadata segments from JPEG/WebP
- * @returns PNG text chunks
+ * @returns PNG raw structure with the segments in `exif`
  */
-export function convertCivitaiSegmentsToPng(
-  segments: MetadataSegment[],
-): PngTextChunk[] {
-  const userComment = findSegment(segments, 'exifUserComment');
-  if (!userComment) return [];
-
-  // Check if data is JSON (CivitAI Orchestration) or text (CivitAI A1111)
-  const isJson = userComment.data.trimStart().startsWith('{');
-
-  if (!isJson) {
-    // Fall back to A1111 conversion for text format
-    return convertA1111SegmentsToPng(segments);
-  }
-
-  // Orchestration format: store entire JSON as single "prompt" chunk
-  // This preserves the original structure for round-trip compatibility
-  return createEncodedChunk('prompt', userComment.data, 'text-unicode-escape');
+export function convertCivitaiSegmentsToPng(segments: MetadataSegment[]): {
+  chunks: PngTextChunk[];
+  exif: MetadataSegment[];
+} {
+  return {
+    chunks: [],
+    exif: segments.filter((s) => EXIF_SOURCES.has(s.source.type)),
+  };
 }
