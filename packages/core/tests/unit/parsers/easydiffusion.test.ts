@@ -110,7 +110,7 @@ describe('parseEasyDiffusion - Unit Tests', () => {
           sampler: 'euler_a',
           steps: 25,
           cfg: 7.5,
-          seed: 12345,
+          seed: '12345',
           clipSkip: 1,
         });
       }
@@ -151,7 +151,7 @@ describe('parseEasyDiffusion - Unit Tests', () => {
         expect(result.value.software).toBe('easydiffusion');
         expect(result.value.prompt).toBe('a cat sitting');
         expect(result.value.width).toBe(1024);
-        expect(result.value.sampling?.seed).toBe(99999);
+        expect(result.value.sampling?.seed).toBe('99999');
       }
     });
 

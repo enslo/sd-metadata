@@ -21,7 +21,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 422847914351919,
+          seed: '422847914351919',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -53,7 +53,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 1116526567339338,
+          seed: '1116526567339338',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -90,7 +90,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 511796159331902,
+          seed: '511796159331902',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -125,7 +125,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'novaPixelsXL_v30.safetensors',
         },
         sampling: {
-          seed: 667022537790957,
+          seed: '667022537790957',
           steps: 40,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -158,7 +158,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 434067965194649,
+          seed: '434067965194649',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -190,7 +190,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 779742380066441,
+          seed: '779742380066441',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -222,7 +222,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 38802053347333,
+          seed: '38802053347333',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -254,7 +254,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 106744160813738,
+          seed: '106744160813738',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -287,7 +287,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiNSFWIllustrious_v140.safetensors',
         },
         sampling: {
-          seed: 942975376742792,
+          seed: '942975376742792',
           steps: 30,
           cfg: 6,
           sampler: 'euler_ancestral',
@@ -324,7 +324,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 1038684211150939,
+          seed: '1038684211150939',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -353,7 +353,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 963381484256655,
+          seed: '963381484256655',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -382,7 +382,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'anima-preview.safetensors',
         },
         sampling: {
-          seed: 662066908990052,
+          seed: '662066908990052',
           steps: 24,
           cfg: 5,
           sampler: 'euler',
@@ -418,7 +418,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'krea2_turbo_int8_convrot.safetensors',
         },
         sampling: {
-          seed: 371644226245214,
+          seed: '371644226245214',
           steps: 8,
           cfg: 1,
           sampler: 'euler',
@@ -451,7 +451,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 453851843419278,
+          seed: '453851843419278',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -483,7 +483,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 602057552457611,
+          seed: '602057552457611',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -515,7 +515,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 270932924124066,
+          seed: '270932924124066',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -548,7 +548,7 @@ describe('ComfyUI Parsers - Samples', () => {
           hash: '45a21ea00a',
         },
         sampling: {
-          seed: 827555711811618,
+          seed: '827555711811618',
           steps: 20,
           cfg: 5,
           sampler: 'Euler a',
@@ -574,7 +574,7 @@ describe('ComfyUI Parsers - Samples', () => {
           hash: '217daae812',
         },
         sampling: {
-          seed: 0,
+          seed: '0',
           steps: 20,
           cfg: 8,
           sampler: 'euler_simple',
@@ -602,7 +602,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 577723948579568,
+          seed: '577723948579568',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -634,7 +634,7 @@ describe('ComfyUI Parsers - Samples', () => {
           name: 'waiIllustriousSDXL_v160.safetensors',
         },
         sampling: {
-          seed: 813617545434765,
+          seed: '813617545434765',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral',
@@ -667,7 +667,7 @@ describe('ComfyUI Parsers - Samples', () => {
           hash: '45a21ea00a',
         },
         sampling: {
-          seed: 347382230306562,
+          seed: '347382230306562',
           steps: 20,
           cfg: 5,
           sampler: 'euler_ancestral_karras',
@@ -693,7 +693,7 @@ describe('ComfyUI Parsers - Samples', () => {
           hash: '217daae812',
         },
         sampling: {
-          seed: 0,
+          seed: '0',
           steps: 20,
           cfg: 8,
           sampler: 'euler_simple',
@@ -721,7 +721,7 @@ describe('ComfyUI Parsers - Samples', () => {
         sampling: {
           sampler: 'euler_ancestral',
           scheduler: 'normal',
-          seed: 1311178179,
+          seed: '1311178179',
           steps: 25,
           cfg: 5,
           denoise: 0.3,
@@ -756,7 +756,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         sampling: {
           sampler: 'Euler a',
-          seed: 1311178179,
+          seed: '1311178179',
           steps: 25,
           cfg: 5,
         },

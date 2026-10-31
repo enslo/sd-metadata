@@ -27,7 +27,7 @@ describe('Stability Matrix Parsers - Samples', () => {
         sampling: {
           sampler: 'euler_ancestral',
           scheduler: 'karras',
-          seed: 395309383,
+          seed: '395309383',
           cfg: 5,
           steps: 20,
           clipSkip: 2,
@@ -60,7 +60,7 @@ describe('Stability Matrix Parsers - Samples', () => {
         sampling: {
           sampler: 'euler_ancestral',
           scheduler: 'karras',
-          seed: 2073041550,
+          seed: '2073041550',
           steps: 20,
           cfg: 5,
           clipSkip: 2,
@@ -98,7 +98,7 @@ describe('Stability Matrix Parsers - Samples', () => {
         sampling: {
           sampler: 'euler_ancestral',
           scheduler: 'karras',
-          seed: 963022979,
+          seed: '963022979',
           steps: 20,
           cfg: 5,
           clipSkip: 2,

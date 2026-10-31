@@ -646,7 +646,7 @@ describe('parseComfyUI - Unit Tests', () => {
       expect(result.value.height).toBe(1216);
       expect(result.value.model).toEqual({ name: 'fallback-test.safetensors' });
       expect(result.value.sampling).toMatchObject({
-        seed: 42,
+        seed: '42',
         steps: 25,
         cfg: 7,
         sampler: 'euler_ancestral',
@@ -749,7 +749,7 @@ describe('parseComfyUI - Unit Tests', () => {
       if (!result.ok) return;
 
       expect(result.value.sampling).toMatchObject({
-        seed: 777,
+        seed: '777',
         steps: 30,
         cfg: 6,
         sampler: 'dpmpp_2m',

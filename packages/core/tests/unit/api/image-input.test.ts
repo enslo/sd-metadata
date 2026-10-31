@@ -211,7 +211,7 @@ describe('ImageInput type support', () => {
         width: 512,
         height: 768,
         sampling: {
-          seed: 12345,
+          seed: '12345',
           steps: 20,
           cfg: 7,
           sampler: 'Euler a',
@@ -230,7 +230,7 @@ describe('ImageInput type support', () => {
         if (readResult.status === 'success') {
           expect(readResult.metadata.prompt).toBe('masterpiece, 1girl');
           expect(readResult.metadata.negativePrompt).toBe('lowres');
-          expect(readResult.metadata.sampling?.seed).toBe(12345);
+          expect(readResult.metadata.sampling?.seed).toBe('12345');
         }
       }
     });

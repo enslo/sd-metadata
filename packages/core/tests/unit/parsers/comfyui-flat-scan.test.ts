@@ -122,7 +122,7 @@ describe('flatScanComfyMetadata', () => {
       };
       const result = flatScanComfyMetadata(nodes);
       expect(result.sampling).toEqual({
-        seed: 12345,
+        seed: '12345',
         steps: 25,
         cfg: 7,
         sampler: 'euler',
@@ -138,7 +138,7 @@ describe('flatScanComfyMetadata', () => {
         },
       };
       const result = flatScanComfyMetadata(nodes);
-      expect(result.sampling?.seed).toBe(99);
+      expect(result.sampling?.seed).toBe('99');
     });
 
     it('should only read sampler fields from nodes with "Sampler" in class_type', () => {
@@ -154,7 +154,7 @@ describe('flatScanComfyMetadata', () => {
         },
       };
       const result = flatScanComfyMetadata(nodes);
-      expect(result.sampling?.seed).toBe(42);
+      expect(result.sampling?.seed).toBe('42');
       expect(result.sampling?.steps).toBe(20);
     });
 
@@ -170,7 +170,7 @@ describe('flatScanComfyMetadata', () => {
         },
       };
       const result = flatScanComfyMetadata(nodes);
-      expect(result.sampling?.seed).toBe(100);
+      expect(result.sampling?.seed).toBe('100');
       expect(result.sampling?.steps).toBe(10);
     });
   });
@@ -248,7 +248,7 @@ describe('flatScanComfyMetadata', () => {
         '2': { class_type: 'KSampler', inputs: { seed: 7, steps: 10 } },
       } as ComfyNodeGraph;
       const result = flatScanComfyMetadata(nodes);
-      expect(result.sampling?.seed).toBe(7);
+      expect(result.sampling?.seed).toBe('7');
     });
   });
 });

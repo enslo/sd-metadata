@@ -121,7 +121,7 @@ describe('parseHfSpace - Unit Tests', () => {
           sampler: 'Euler a',
           steps: 30,
           cfg: 7.5,
-          seed: 42,
+          seed: '42',
         });
       }
     });

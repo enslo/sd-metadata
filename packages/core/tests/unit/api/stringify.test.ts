@@ -76,7 +76,7 @@ describe('buildEmbedText - Unit Tests', () => {
           sampler: 'Euler a',
           scheduler: 'Automatic',
           cfg: 7.5,
-          seed: 123456,
+          seed: '123456',
           clipSkip: 2,
         },
         model: {
@@ -206,7 +206,7 @@ describe('buildEmbedText - Unit Tests', () => {
           steps: 20,
           sampler: 'Euler a',
           cfg: 7,
-          seed: 42,
+          seed: '42',
         },
       };
 
@@ -637,7 +637,7 @@ describe('stringify - Unit Tests', () => {
           steps: 20,
           sampler: 'Euler a',
           cfg: 7,
-          seed: 12345,
+          seed: '12345',
         },
         model: {
           name: 'animagine-xl',
@@ -678,7 +678,7 @@ describe('stringify - Unit Tests', () => {
         negativePrompt: 'lowres',
         width: 512,
         height: 768,
-        sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
+        sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: '12345' },
       };
 
       expect(stringify(metadata)).toBe(buildEmbedText(metadata));

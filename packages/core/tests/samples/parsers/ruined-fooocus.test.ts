@@ -26,7 +26,7 @@ describe('Ruined Fooocus Parsers - Samples', () => {
         sampling: {
           sampler: 'dpmpp_2m_sde_gpu',
           scheduler: 'karras',
-          seed: 2020047614,
+          seed: '2020047614',
           steps: 30,
           cfg: 8,
           clipSkip: 1,

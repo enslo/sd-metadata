@@ -24,7 +24,7 @@ describe('InvokeAI Parsers - Samples', () => {
           hash: 'blake3:7c1631b481e1566448f49db7e3b67a8a9d04742fa3c7d4548a0c81b619160c56',
         },
         sampling: {
-          seed: 3951921344,
+          seed: '3951921344',
           steps: 24,
           cfg: 6,
           sampler: 'euler_a',
@@ -53,7 +53,7 @@ describe('InvokeAI Parsers - Samples', () => {
           hash: 'blake3:7c1631b481e1566448f49db7e3b67a8a9d04742fa3c7d4548a0c81b619160c56',
         },
         sampling: {
-          seed: 1731018819,
+          seed: '1731018819',
           steps: 24,
           cfg: 2,
           sampler: 'kdpm_2',

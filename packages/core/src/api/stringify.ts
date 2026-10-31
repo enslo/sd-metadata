@@ -161,7 +161,7 @@ export function formatRaw(raw: RawMetadata): string {
  *   negativePrompt: '',
  *   width: 512,
  *   height: 768,
- *   sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
+ *   sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: '12345' },
  *   extras: { Version: 'v1.10.0' },
  * });
  * ```

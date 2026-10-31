@@ -12,6 +12,7 @@ import type {
   ModelSettings,
   SamplingSettings,
 } from '../types';
+import { toSeedString } from '../utils/seed';
 
 // =============================================================================
 // Node Class Type Constants
@@ -402,7 +403,7 @@ export function extractSampling(
   }
 
   return {
-    seed: seed as number,
+    seed: toSeedString(seed),
     steps: sampler.inputs.steps as number,
     cfg: sampler.inputs.cfg as number,
     sampler: sampler.inputs.sampler_name as string,
@@ -430,7 +431,7 @@ function extractAdvancedSampling(
   const schedulerNode = resolveNode(nodes, sampler.inputs.sigmas);
 
   return {
-    seed: noiseNode?.inputs.noise_seed as number,
+    seed: toSeedString(noiseNode?.inputs.noise_seed),
     steps: schedulerNode?.inputs.steps as number,
     cfg: guiderNode?.inputs.cfg as number,
     sampler: samplerSelectNode?.inputs.sampler_name as string,
@@ -464,7 +465,7 @@ function extractCustomSampling(
   }
 
   return {
-    seed: seed as number,
+    seed: toSeedString(seed),
     steps: schedulerNode?.inputs.steps as number,
     cfg: sampler.inputs.cfg as number,
     sampler: samplerSelectNode?.inputs.sampler_name as string,

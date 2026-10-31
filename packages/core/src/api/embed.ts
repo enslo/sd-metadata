@@ -44,7 +44,7 @@ import { buildEmbedText } from './stringify';
  *   negativePrompt: 'lowres, bad quality',
  *   width: 512,
  *   height: 768,
- *   sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
+ *   sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: '12345' },
  *   model: { name: 'model.safetensors' },
  * };
  *

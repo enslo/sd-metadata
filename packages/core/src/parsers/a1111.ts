@@ -2,6 +2,7 @@ import type { GenerationSoftware } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { trimObject } from '../utils/object';
+import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
 
 /** Software identifiers that use A1111-compatible text format */
@@ -69,7 +70,7 @@ export function parseA1111(
   const cfg = parseNumber(
     settingsMap.get('CFG scale') ?? settingsMap.get('CFG Scale'),
   );
-  const seed = parseNumber(settingsMap.get('Seed'));
+  const seed = toSeedString(settingsMap.get('Seed'));
   const clipSkip = parseNumber(settingsMap.get('Clip skip'));
 
   // Extract hires settings

@@ -90,7 +90,7 @@ describe('parseNovelAI - Unit Tests', () => {
         expect(result.value.sampling).toMatchObject({
           steps: 28,
           cfg: 7.5,
-          seed: 123456,
+          seed: '123456',
           sampler: 'k_euler',
           scheduler: 'native',
         });

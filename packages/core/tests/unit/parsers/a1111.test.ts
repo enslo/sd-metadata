@@ -86,7 +86,7 @@ Steps: 28, Sampler: Euler a, Schedule type: Automatic, CFG scale: 7.5, Seed: 123
           sampler: 'Euler a',
           scheduler: 'Automatic',
           cfg: 7.5,
-          seed: 123456,
+          seed: '123456',
           clipSkip: 2,
         });
       }
@@ -210,6 +210,20 @@ Negative prompt: negative`;
         expect(result.value.negativePrompt).toBe('negative');
         expect(result.value.width).toBe(0);
         expect(result.value.height).toBe(0);
+      }
+    });
+
+    it('should keep a 64-bit seed exact instead of rounding it to a number', () => {
+      // Fooocus (a1111 scheme) writes 64-bit seeds that exceed 2^53
+      const parameters = `test
+Steps: 30, Sampler: DPM++ 2M SDE Karras, Seed: 4575475577937763433, Version: Fooocus v2.5.5`;
+      const entries = createA1111Entry(parameters);
+
+      const result = parseA1111(entries, 'fooocus');
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.sampling?.seed).toBe('4575475577937763433');
       }
     });
   });

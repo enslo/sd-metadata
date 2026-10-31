@@ -23,7 +23,7 @@ describe('NovelAI Parsers - Samples', () => {
         sampling: {
           steps: 23,
           cfg: 5,
-          seed: 2156638429,
+          seed: '2156638429',
           sampler: 'k_euler_ancestral',
           scheduler: 'karras',
         },
@@ -53,7 +53,7 @@ describe('NovelAI Parsers - Samples', () => {
         sampling: {
           steps: 28,
           cfg: 5,
-          seed: 2043807047,
+          seed: '2043807047',
           sampler: 'k_euler_ancestral',
           scheduler: 'karras',
         },
@@ -83,7 +83,7 @@ describe('NovelAI Parsers - Samples', () => {
         sampling: {
           steps: 28,
           cfg: 5,
-          seed: 1702945580,
+          seed: '1702945580',
           sampler: 'k_euler_ancestral',
           scheduler: 'karras',
         },
@@ -128,7 +128,7 @@ describe('NovelAI Parsers - Samples', () => {
         sampling: {
           steps: 23,
           cfg: 5,
-          seed: 880673757,
+          seed: '880673757',
           sampler: 'k_euler_ancestral',
           scheduler: 'karras',
         },
@@ -158,7 +158,7 @@ describe('NovelAI Parsers - Samples', () => {
         sampling: {
           steps: 28,
           cfg: 5,
-          seed: 447042893,
+          seed: '447042893',
           sampler: 'k_euler_ancestral',
           scheduler: 'karras',
         },

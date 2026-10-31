@@ -3,6 +3,7 @@ import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
 
 /**
@@ -26,7 +27,8 @@ interface FooocusJsonMetadata {
   vae?: string;
   sampler?: string;
   scheduler?: string;
-  seed?: number;
+  /** Written as a string by Fooocus (64-bit seeds); older builds may emit a number */
+  seed?: number | string;
   guidance_scale?: number;
   steps?: number;
   clip_skip?: number;
@@ -97,7 +99,7 @@ export function parseFooocus(entries: EntryRecord): InternalParseResult {
       scheduler: json.scheduler,
       steps: json.steps,
       cfg: json.guidance_scale,
-      seed: json.seed,
+      seed: toSeedString(json.seed),
       clipSkip: json.clip_skip,
     }),
   };

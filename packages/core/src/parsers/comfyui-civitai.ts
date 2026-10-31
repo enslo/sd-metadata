@@ -15,6 +15,7 @@ import type {
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import { toSeedString } from '../utils/seed';
 import { calculateScale } from './comfyui-nodes';
 
 // =============================================================================
@@ -31,7 +32,7 @@ export interface CivitaiExtraMetadata {
   sampler?: string;
   clipSkip?: number;
   steps?: number;
-  seed?: number;
+  seed?: number | string;
   width?: number;
   height?: number;
   baseModel?: string;
@@ -166,7 +167,7 @@ function buildCivitaiSampling(
 
   return {
     sampling: {
-      seed: extraMeta.seed,
+      seed: toSeedString(extraMeta.seed),
       steps: extraMeta.steps,
       cfg: extraMeta.cfgScale,
       sampler: extraMeta.sampler,

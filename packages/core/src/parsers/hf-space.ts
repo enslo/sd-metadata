@@ -3,6 +3,7 @@ import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
+import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
 
 /**
@@ -28,7 +29,7 @@ interface HfSpaceJsonMetadata {
   guidance_scale?: number;
   num_inference_steps?: number;
   style_preset?: string;
-  seed?: number;
+  seed?: number | string;
   sampler?: string;
   Model?: string;
   'Model hash'?: string;
@@ -90,7 +91,7 @@ export function parseHfSpace(entries: EntryRecord): InternalParseResult {
       sampler: json.sampler,
       steps: json.num_inference_steps,
       cfg: json.guidance_scale,
-      seed: json.seed,
+      seed: toSeedString(json.seed),
     }),
     hires: json.use_upscaler
       ? trimObject({

@@ -338,8 +338,14 @@ export interface SamplingSettings {
   steps?: number;
   /** CFG scale */
   cfg?: number;
-  /** Random seed */
-  seed?: number;
+  /**
+   * Random seed as a decimal string
+   *
+   * Seeds are identifiers rather than quantities, and some tools (e.g.
+   * Fooocus) use 64-bit seeds beyond `Number.MAX_SAFE_INTEGER`, so the
+   * value is kept as text to avoid silent rounding.
+   */
+  seed?: string;
   /** CLIP skip layers */
   clipSkip?: number;
   /** Denoising strength (ComfyUI only, typically 1.0 for txt2img) */

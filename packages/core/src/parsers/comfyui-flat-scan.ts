@@ -31,6 +31,7 @@
  */
 
 import type { ComfyNodeGraph, SamplingSettings } from '../types';
+import { toSeedString } from '../utils/seed';
 import type { PartialMetadata } from './types';
 
 // =============================================================================
@@ -86,7 +87,7 @@ export function flatScanComfyMetadata(nodes: ComfyNodeGraph): PartialMetadata {
   let prompt: string | undefined;
   let negativePrompt: string | undefined;
 
-  let seed: number | undefined;
+  let seed: string | undefined;
   let steps: number | undefined;
   let cfg: number | undefined;
   let samplerName: string | undefined;
@@ -126,7 +127,7 @@ export function flatScanComfyMetadata(nodes: ComfyNodeGraph): PartialMetadata {
     // appear on non-sampler nodes (BasicScheduler, RandomNoise, etc.).
     if (classType.includes('Sampler')) {
       if (seed === undefined) {
-        seed = asNumber(inputs.seed) ?? asNumber(inputs.noise_seed);
+        seed = toSeedString(inputs.seed) ?? toSeedString(inputs.noise_seed);
       }
       if (steps === undefined) steps = asNumber(inputs.steps);
       if (cfg === undefined) cfg = asNumber(inputs.cfg);
