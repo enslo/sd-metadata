@@ -9,14 +9,18 @@ import { parseConvertedSample, parsePngSample } from '../helpers';
  * Fooocus lets the user pick the metadata scheme under Advanced →
  * Developer Debug Mode → Save Metadata to Images:
  * - `fooocus` (default): a JSON object; non-ASCII characters are
- *   `\uXXXX`-escaped, so prompts survive every container unchanged
+ *   `\uXXXX`-escaped, so prompts survive every container unchanged.
+ *   Prompts are read from `full_prompt` / `full_negative_prompt`, the
+ *   style-expanded text Fooocus actually encoded (styles "Artstyle
+ *   Watercolor" and "Misc Kawaii" here), so both schemes agree
  * - `a1111`: A1111-compatible text, dispatched to parseA1111 with
  *   software `fooocus`; style expansion and prompt expansion are already
  *   merged into the prompt, `Scheduler: karras` is not the A1111
  *   `Schedule type` key, and the sampler name carries the scheduler
  *
- * All five files share the same generation settings except the seed,
- * which is a 64-bit value and therefore kept as a string.
+ * The three JSON-scheme files share one configuration except the seed; the
+ * two a1111-scheme files were generated with other style and performance
+ * settings. Every seed is a 64-bit value and therefore kept as a string.
  */
 describe('Fooocus Parsers - Samples', () => {
   describe('fooocus scheme (JSON)', () => {
@@ -29,9 +33,9 @@ describe('Fooocus Parsers - Samples', () => {
       expect(meta).toEqual({
         software: 'fooocus',
         prompt:
-          'general, masterpiece, best quality, amazing quality\n1girl, solo, hatsune miku, double v, #テスト',
+          'watercolor painting general, masterpiece, best quality, amazing quality . vibrant, beautiful, painterly, detailed, textural, artistic, kawaii style general, masterpiece, best quality, amazing quality . cute, adorable, brightly colored, cheerful, anime influence, highly detailed, 1girl, solo, hatsune miku, double v, #テスト',
         negativePrompt:
-          'bad quality, worst quality, worst detail, sketch, censor',
+          'anime, photorealistic, 35mm film, deformed, glitch, low contrast, noisy, dark, scary, realistic, monochrome, abstract, bad quality, worst quality, worst detail, sketch, censor',
         width: 1024,
         height: 1024,
         model: {
@@ -61,9 +65,9 @@ describe('Fooocus Parsers - Samples', () => {
       expect(meta).toEqual({
         software: 'fooocus',
         prompt:
-          'general, masterpiece, best quality, amazing quality\n1girl, solo, hatsune miku, double v, #テスト',
+          'watercolor painting general, masterpiece, best quality, amazing quality . vibrant, beautiful, painterly, detailed, textural, artistic, kawaii style general, masterpiece, best quality, amazing quality . cute, adorable, brightly colored, cheerful, anime influence, highly detailed, 1girl, solo, hatsune miku, double v, #テスト',
         negativePrompt:
-          'bad quality, worst quality, worst detail, sketch, censor',
+          'anime, photorealistic, 35mm film, deformed, glitch, low contrast, noisy, dark, scary, realistic, monochrome, abstract, bad quality, worst quality, worst detail, sketch, censor',
         width: 1024,
         height: 1024,
         model: {
@@ -93,9 +97,9 @@ describe('Fooocus Parsers - Samples', () => {
       expect(meta).toEqual({
         software: 'fooocus',
         prompt:
-          'general, masterpiece, best quality, amazing quality\n1girl, solo, hatsune miku, double v, #テスト',
+          'watercolor painting general, masterpiece, best quality, amazing quality . vibrant, beautiful, painterly, detailed, textural, artistic, kawaii style general, masterpiece, best quality, amazing quality . cute, adorable, brightly colored, cheerful, anime influence, highly detailed, 1girl, solo, hatsune miku, double v, #テスト',
         negativePrompt:
-          'bad quality, worst quality, worst detail, sketch, censor',
+          'anime, photorealistic, 35mm film, deformed, glitch, low contrast, noisy, dark, scary, realistic, monochrome, abstract, bad quality, worst quality, worst detail, sketch, censor',
         width: 1024,
         height: 1024,
         model: {

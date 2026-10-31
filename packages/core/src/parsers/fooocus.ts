@@ -25,8 +25,21 @@ import type { InternalParseResult } from './types';
  * Verified against real Fooocus v2.5 output in `samples/`.
  */
 interface FooocusJsonMetadata {
+  /** Prompt as typed by the user (the a1111 scheme calls it "Raw prompt") */
   prompt?: string;
+  /** Negative prompt as typed by the user */
   negative_prompt?: string;
+  /**
+   * Prompt actually encoded for generation
+   *
+   * Selected styles wrap the first prompt line in their template (adding
+   * quality tags and style words), one entry per style; the remaining
+   * prompt lines and the prompt-expansion result follow as further entries.
+   * Fooocus's own a1111 scheme writes `', '.join(full_prompt)`.
+   */
+  full_prompt?: string[];
+  /** Negative prompt actually encoded: one entry per style, then the user text */
+  full_negative_prompt?: string[];
   resolution?: string;
   base_model?: string;
   base_model_hash?: string;
@@ -64,9 +77,34 @@ function parseResolution(resolution: string | undefined): {
 }
 
 /**
+ * Join the resolved prompt parts the way Fooocus's a1111 scheme does
+ *
+ * Each entry of `full_prompt` / `full_negative_prompt` is encoded
+ * separately by Fooocus; its A1111-style output joins them with ", ".
+ * Non-string and blank entries are skipped.
+ *
+ * @param parts - `full_prompt` or `full_negative_prompt` value
+ * @returns Joined text, or undefined when there is nothing to join
+ */
+function joinPromptParts(parts: unknown): string | undefined {
+  if (!Array.isArray(parts)) return undefined;
+
+  const text = parts
+    .filter((p): p is string => typeof p === 'string' && p.trim() !== '')
+    .join(', ');
+
+  return text === '' ? undefined : text;
+}
+
+/**
  * Parse Fooocus JSON metadata from entries
  *
  * Reads from `parameters` (PNG) or `UserComment` (JPEG/WebP).
+ *
+ * Prompts come from `full_prompt` / `full_negative_prompt` because that is
+ * the text the image was generated from (styles add quality tags and
+ * templates); the raw `prompt` / `negative_prompt` are used only when the
+ * resolved lists are missing or empty.
  *
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
@@ -91,8 +129,11 @@ export function parseFooocus(entries: EntryRecord): InternalParseResult {
 
   const metadata: StandardMetadata = {
     software: 'fooocus',
-    prompt: json.prompt?.trim() ?? '',
-    negativePrompt: json.negative_prompt?.trim() ?? '',
+    prompt: joinPromptParts(json.full_prompt) ?? json.prompt?.trim() ?? '',
+    negativePrompt:
+      joinPromptParts(json.full_negative_prompt) ??
+      json.negative_prompt?.trim() ??
+      '',
     width,
     height,
     model: trimObject({
