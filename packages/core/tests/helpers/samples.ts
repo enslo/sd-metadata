@@ -62,6 +62,22 @@ const RAW_MISMATCH_EXPECTED = [
 ];
 
 /**
+ * Files written by an older version of their tool, matched by exact name
+ *
+ * Stability Matrix before v2.16.0 stored non-Latin-1 text in tEXt chunks
+ * (raw UTF-8, a PNG spec violation it fixed in #1535) and `\u`-escaped its
+ * JSON chunks. The converter emulates the fixed writer (iTXt for non-Latin-1
+ * text, raw Unicode JSON), so these pre-fix files come back with other
+ * chunk types. `stability-matrix-lora` was written by the fixed version and
+ * keeps its raw comparison, hence exact names instead of the prefix rule.
+ */
+const RAW_MISMATCH_EXPECTED_EXACT = [
+  'stability-matrix',
+  'stability-matrix-hires',
+  'stability-matrix-upscale',
+];
+
+/**
  * Get the samples directory path for a given format
  */
 function getSamplesDir(format: 'png' | 'jpg' | 'webp'): string {
@@ -86,6 +102,7 @@ function isExcluded(filename: string): boolean {
  */
 export function isRawMismatchExpected(filename: string): boolean {
   const baseName = path.basename(filename, path.extname(filename));
+  if (RAW_MISMATCH_EXPECTED_EXACT.includes(baseName)) return true;
   return RAW_MISMATCH_EXPECTED.some(
     (pattern) => baseName === pattern || baseName.startsWith(`${pattern}-`),
   );
