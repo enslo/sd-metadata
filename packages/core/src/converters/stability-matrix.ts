@@ -1,13 +1,20 @@
 /**
  * Stability Matrix metadata conversion utilities
  *
- * Stability Matrix stores metadata with multiple PNG chunks:
- * - parameters: A1111-style text (RAW UTF-8 - non-compliant but matches original)
- * - parameters-json: JSON with generation params (Unicode escape)
- * - smproj: Project data (Unicode escape)
- * - prompt: ComfyUI node graph JSON (Unicode escape)
+ * Stability Matrix (Inference) stores metadata in four PNG chunks:
+ * - prompt: ComfyUI node graph, written by the ComfyUI backend itself as
+ *   ASCII JSON with `\uXXXX` escapes in a tEXt chunk
+ * - parameters: A1111-style text
+ * - parameters-json: JSON with the generation parameters
+ * - smproj: project document (JSON)
  *
- * Per-chunk encoding is critical for round-trip compatibility.
+ * The three Stability Matrix chunks are written by `PngDataHelper`
+ * (StabilityMatrix.Avalonia/Helpers). Since v2.16.0 (#1535) it emits an
+ * iTXt chunk whenever the text contains characters beyond Latin-1 and a
+ * tEXt chunk otherwise, with JSON serialized as raw Unicode. Earlier
+ * versions always wrote tEXt (raw UTF-8 for `parameters`, `\u`-escaped
+ * JSON for the rest); those files are still read, but the writer below
+ * emulates the current, spec-compliant layout.
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
@@ -22,12 +29,13 @@ import { findSegment, stringify } from './utils';
 /**
  * Chunk encoding map for Stability Matrix
  *
- * - parameters: RAW UTF-8 (A1111-style text with Japanese chars)
- * - All others: Unicode escape (JSON should be ASCII-safe)
+ * - prompt: ComfyUI's own chunk, ASCII JSON with Unicode escapes
+ * - everything else: Stability Matrix >= 2.16.0 behaviour, iTXt for
+ *   non-Latin-1 text and tEXt otherwise
  */
 const STABILITY_MATRIX_ENCODING: ChunkEncodingMap = {
-  parameters: 'text-utf8-raw',
-  default: 'text-unicode-escape',
+  prompt: 'text-unicode-escape',
+  default: 'dynamic',
 };
 
 /**

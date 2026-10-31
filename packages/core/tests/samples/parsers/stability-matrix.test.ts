@@ -39,6 +39,42 @@ describe('Stability Matrix Parsers - Samples', () => {
       expectComfyNodeGraph(meta.nodes);
     });
 
+    it('should parse stability-matrix-lora.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'stability-matrix-lora.png',
+        parseStabilityMatrix,
+      );
+
+      // Written by Stability Matrix >= 2.16.0: parameters, parameters-json
+      // and smproj are iTXt chunks because the prompt is not Latin-1. The
+      // graph chains three LoraLoader nodes (not parsed yet) and has no
+      // CLIPSetLastLayer, so there is no clipSkip.
+      expect(meta).toEqual({
+        software: 'stability-matrix',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \r\n1girl, solo, hatsune miku, double v, #テスト',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+          hash: 'F116B0C78FF441467B0CDC8F1936E1ED18EA31E9997C7B132B1B8DB533F0BD04',
+        },
+        sampling: {
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+          seed: '395309383',
+          cfg: 5,
+          steps: 20,
+        },
+        hires: undefined,
+        upscale: undefined,
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
     it('should parse stability-matrix-hires.png', () => {
       const meta = parsePngSample<ComfyUIMetadata>(
         'stability-matrix-hires.png',

@@ -7,6 +7,7 @@ import {
 } from '../helpers/minimal-images';
 import { expectNovelAIRawEqual, expectRawEqual } from '../helpers/raw-equal';
 import {
+  isItxtUpgradeExpected,
   isRawMismatchExpected,
   JPEG_SAMPLES,
   loadSample,
@@ -51,7 +52,9 @@ describe('Round-trip preservation', () => {
 
         // Raw comparison (skip for raw mismatch expected files)
         if (!isRawMismatchExpected(filename)) {
-          expectRawEqual(finalRead.raw, originalMetadata.raw);
+          expectRawEqual(finalRead.raw, originalMetadata.raw, {
+            allowItxtUpgrade: isItxtUpgradeExpected(filename),
+          });
         }
       });
     }
@@ -88,7 +91,9 @@ describe('Round-trip preservation', () => {
 
         // Raw comparison (skip for raw mismatch expected files)
         if (!isRawMismatchExpected(filename)) {
-          expectRawEqual(finalRead.raw, originalMetadata.raw);
+          expectRawEqual(finalRead.raw, originalMetadata.raw, {
+            allowItxtUpgrade: isItxtUpgradeExpected(filename),
+          });
         }
       });
     }

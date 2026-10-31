@@ -2,6 +2,32 @@ import { expect } from 'vitest';
 import type { RawMetadata } from '../../src/types';
 
 /**
+ * Options for raw metadata comparison
+ */
+export interface RawEqualOptions {
+  /**
+   * Tolerate a tEXt chunk coming back as iTXt when the restored text is not
+   * Latin-1 (the only case in which the current writers emit iTXt)
+   *
+   * Some tools used to store non-Latin-1 text in tEXt chunks, a PNG spec
+   * violation they later fixed by switching to iTXt. The converters emulate
+   * the fixed writer, so files from the old version legitimately come back
+   * with those chunks upgraded. Keyword, order, text (JSON-aware) and the
+   * iTXt fields are still compared; a downgrade (iTXt → tEXt) or an upgrade
+   * of Latin-1 text still fails.
+   */
+  allowItxtUpgrade?: boolean;
+}
+
+/**
+ * Check if text contains characters beyond Latin-1 (the tEXt range)
+ */
+function hasNonLatin1(text: string): boolean {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: checking for non-Latin-1 characters
+  return /[^\x00-\xFF]/.test(text);
+}
+
+/**
  * Compare two strings, treating them as JSON if possible
  *
  * If both strings are valid JSON, compare the parsed objects.
@@ -29,10 +55,12 @@ export function expectJsonEqual(actual: string, expected: string): void {
  *
  * @param actual - Actual raw metadata
  * @param expected - Expected raw metadata
+ * @param options - Tolerated differences, see RawEqualOptions
  */
 export function expectRawEqual(
   actual: RawMetadata,
   expected: RawMetadata,
+  options: RawEqualOptions = {},
 ): void {
   // Format must match
   expect(actual.format).toBe(expected.format);
@@ -44,27 +72,43 @@ export function expectRawEqual(
     for (let i = 0; i < actual.chunks.length; i++) {
       const actualChunk = actual.chunks[i];
       const expectedChunk = expected.chunks[i];
+      expect(actualChunk).toBeDefined();
+      expect(expectedChunk).toBeDefined();
+      if (!actualChunk || !expectedChunk) continue;
 
-      expect(actualChunk?.type).toBe(expectedChunk?.type);
-      expect(actualChunk?.keyword).toBe(expectedChunk?.keyword);
+      expect(actualChunk.keyword).toBe(expectedChunk.keyword);
+
+      if (
+        options.allowItxtUpgrade &&
+        expectedChunk.type === 'tEXt' &&
+        actualChunk.type === 'iTXt' &&
+        hasNonLatin1(actualChunk.text)
+      ) {
+        // Legacy tEXt holding non-Latin-1 text came back as the uncompressed,
+        // untagged iTXt the current writer emits; only the type may differ
+        expectJsonEqual(actualChunk.text, expectedChunk.text);
+        expect(actualChunk.compressionFlag).toBe(0);
+        expect(actualChunk.compressionMethod).toBe(0);
+        expect(actualChunk.languageTag).toBe('');
+        expect(actualChunk.translatedKeyword).toBe('');
+        continue;
+      }
+
+      expect(actualChunk.type).toBe(expectedChunk.type);
 
       // Use JSON-aware comparison for text
-      if (actualChunk && expectedChunk) {
-        expectJsonEqual(actualChunk.text, expectedChunk.text);
+      expectJsonEqual(actualChunk.text, expectedChunk.text);
 
-        // For iTXt chunks, compare other fields
-        if (actualChunk.type === 'iTXt' && expectedChunk.type === 'iTXt') {
-          expect(actualChunk.compressionFlag).toBe(
-            expectedChunk.compressionFlag,
-          );
-          expect(actualChunk.compressionMethod).toBe(
-            expectedChunk.compressionMethod,
-          );
-          expect(actualChunk.languageTag).toBe(expectedChunk.languageTag);
-          expect(actualChunk.translatedKeyword).toBe(
-            expectedChunk.translatedKeyword,
-          );
-        }
+      // For iTXt chunks, compare other fields
+      if (actualChunk.type === 'iTXt' && expectedChunk.type === 'iTXt') {
+        expect(actualChunk.compressionFlag).toBe(expectedChunk.compressionFlag);
+        expect(actualChunk.compressionMethod).toBe(
+          expectedChunk.compressionMethod,
+        );
+        expect(actualChunk.languageTag).toBe(expectedChunk.languageTag);
+        expect(actualChunk.translatedKeyword).toBe(
+          expectedChunk.translatedKeyword,
+        );
       }
     }
   } else if (actual.format !== 'png' && expected.format !== 'png') {

@@ -62,6 +62,24 @@ const RAW_MISMATCH_EXPECTED = [
 ];
 
 /**
+ * Files written before their tool switched from tEXt to iTXt, by exact name
+ *
+ * Stability Matrix before v2.16.0 stored non-Latin-1 text in tEXt chunks
+ * (raw UTF-8, a PNG spec violation it fixed in #1535). The converter
+ * emulates the fixed writer, so after a JPEG/WebP round-trip those chunks
+ * come back as iTXt. Everything else about their raw chunks (keyword order,
+ * text, iTXt fields) is still compared, see expectRawEqual's
+ * allowItxtUpgrade. `stability-matrix-lora` was written by the fixed version
+ * and gets the strict comparison, hence exact names instead of the prefix
+ * rule.
+ */
+const ITXT_UPGRADE_EXPECTED = [
+  'stability-matrix',
+  'stability-matrix-hires',
+  'stability-matrix-upscale',
+];
+
+/**
  * Get the samples directory path for a given format
  */
 function getSamplesDir(format: 'png' | 'jpg' | 'webp'): string {
@@ -89,6 +107,17 @@ export function isRawMismatchExpected(filename: string): boolean {
   return RAW_MISMATCH_EXPECTED.some(
     (pattern) => baseName === pattern || baseName.startsWith(`${pattern}-`),
   );
+}
+
+/**
+ * Check if a PNG may come back with tEXt chunks upgraded to iTXt
+ *
+ * See ITXT_UPGRADE_EXPECTED. The raw comparison still runs for these files;
+ * only that one difference is tolerated.
+ */
+export function isItxtUpgradeExpected(filename: string): boolean {
+  const baseName = path.basename(filename, path.extname(filename));
+  return ITXT_UPGRADE_EXPECTED.includes(baseName);
 }
 
 /**
