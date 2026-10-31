@@ -168,6 +168,84 @@ describe('parseFooocus - Unit Tests', () => {
     });
   });
 
+  describe('resolved prompts', () => {
+    it('should join full_prompt and full_negative_prompt like the a1111 scheme', () => {
+      // Styles wrap the first prompt line; later lines and the expansion follow
+      const metadata = {
+        prompt: 'quality tags\n1girl',
+        negative_prompt: 'lowres',
+        full_prompt: [
+          'watercolor painting quality tags . painterly',
+          '1girl',
+          'quality tags, very detailed',
+        ],
+        full_negative_prompt: ['anime, photorealistic', 'lowres'],
+      };
+      const entries = createFooocusEntry(metadata);
+
+      const result = parseFooocus(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.prompt).toBe(
+          'watercolor painting quality tags . painterly, 1girl, quality tags, very detailed',
+        );
+        expect(result.value.negativePrompt).toBe(
+          'anime, photorealistic, lowres',
+        );
+      }
+    });
+
+    it('should fall back to the raw prompts when the resolved lists are missing', () => {
+      const metadata = {
+        prompt: 'raw prompt',
+        negative_prompt: 'raw negative',
+      };
+      const entries = createFooocusEntry(metadata);
+
+      const result = parseFooocus(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.prompt).toBe('raw prompt');
+        expect(result.value.negativePrompt).toBe('raw negative');
+      }
+    });
+
+    it('should fall back to the raw prompts when the resolved lists are empty', () => {
+      const metadata = {
+        prompt: 'raw prompt',
+        negative_prompt: 'raw negative',
+        full_prompt: [],
+        full_negative_prompt: ['', '   '],
+      };
+      const entries = createFooocusEntry(metadata);
+
+      const result = parseFooocus(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.prompt).toBe('raw prompt');
+        expect(result.value.negativePrompt).toBe('raw negative');
+      }
+    });
+
+    it('should skip non-string and blank entries in the resolved lists', () => {
+      const metadata = {
+        prompt: 'raw',
+        full_prompt: ['a', '', 42, null, 'b'],
+      };
+      const entries = createFooocusEntry(metadata);
+
+      const result = parseFooocus(entries);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.prompt).toBe('a, b');
+      }
+    });
+  });
+
   describe('edge cases', () => {
     it('should trim prompt whitespace', () => {
       const metadata = {

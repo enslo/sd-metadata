@@ -130,8 +130,8 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
   // HF-Space: parameters
   'hf-space': [['parameters']],
 
-  // Fooocus: parameters chunk
-  fooocus: [['parameters']],
+  // Fooocus: parameters chunk + fooocus_scheme marker ('fooocus' | 'a1111')
+  fooocus: [['parameters', 'fooocus_scheme']],
 
   // Ruined Fooocus: parameters chunk
   'ruined-fooocus': [['parameters']],
