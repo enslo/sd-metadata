@@ -32,8 +32,8 @@ interface GenerationParams {
   p?: string;
   /** Negative prompt text */
   n?: string;
-  /** Random seed (kept as text: 64-bit seeds exceed Number precision) */
-  se?: string;
+  /** Random seed (string seeds pass through: 64-bit values exceed Number precision) */
+  se?: string | number;
   /** Sampling steps */
   st?: number;
   /** CFG scale (classifier-free guidance) */
@@ -635,10 +635,9 @@ function stringifyValue(v: unknown): string {
  * Accepts both number and numeric string inputs (e.g. "42" → 42).
  * NaN values are filtered out and returned as undefined.
  */
-/** Seed as text: numbers are stringified, non-empty strings pass through. */
-function asSeed(v: unknown): string | undefined {
-  if (typeof v === 'number') return String(v);
-  return typeof v === 'string' && v ? v : undefined;
+/** Seed: strings pass through untouched (64-bit seeds exceed Number precision). */
+function asSeed(v: unknown): string | number | undefined {
+  return typeof v === 'string' ? v || undefined : asNumber(v);
 }
 
 function asNumber(v: unknown): number | undefined {
