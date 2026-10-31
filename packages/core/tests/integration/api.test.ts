@@ -149,6 +149,13 @@ describe('API Integration Tests', () => {
           file: 'stability-matrix.png',
           software: 'stability-matrix',
         },
+        // Fooocus (both metadata schemes)
+        { format: 'png', file: 'fooocus.png', software: 'fooocus' },
+        {
+          format: 'png',
+          file: 'fooocus-a1111.png',
+          software: 'fooocus',
+        },
         // Ruined Fooocus
         {
           format: 'png',

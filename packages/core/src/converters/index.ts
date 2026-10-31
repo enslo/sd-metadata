@@ -25,6 +25,10 @@ import {
   convertEasyDiffusionSegmentsToPng,
 } from './easydiffusion';
 import {
+  convertFooocusPngToSegments,
+  convertFooocusSegmentsToPng,
+} from './fooocus';
+import {
   convertInvokeAIPngToSegments,
   convertInvokeAISegmentsToPng,
 } from './invokeai';
@@ -201,8 +205,8 @@ const convertEasyDiffusion = createFormatConverter(
 );
 
 const convertFooocus = createFormatConverter(
-  createPngToSegments('parameters'),
-  createSegmentsToPng('parameters', 'text-unicode-escape'),
+  convertFooocusPngToSegments,
+  convertFooocusSegmentsToPng,
 );
 
 const convertRuinedFooocus = createFormatConverter(

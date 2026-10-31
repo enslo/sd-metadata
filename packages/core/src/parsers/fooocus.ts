@@ -9,14 +9,20 @@ import type { InternalParseResult } from './types';
 /**
  * Fooocus JSON metadata structure
  *
- * ⚠️ UNVERIFIED: This parser has not been verified with actual Fooocus samples.
- * The implementation is based on source code analysis of Fooocus
- * (github.com/lllyasviel/Fooocus). Please report any issues if you encounter
- * problems with Fooocus metadata parsing.
+ * Fooocus offers two user-selectable metadata schemes (Advanced →
+ * Developer Debug Mode → Save Metadata to Images → Metadata Scheme):
+ * - `fooocus`: JSON (this parser)
+ * - `a1111`: A1111-compatible text, handled by `parseA1111` with
+ *   software `fooocus`
  *
- * Fooocus uses the "fooocus" metadata scheme which embeds JSON in:
- * - PNG: `parameters` tEXt chunk
- * - JPEG/WebP: EXIF UserComment (0x9286)
+ * The JSON scheme embeds the object in:
+ * - PNG: `parameters` tEXt chunk (non-ASCII escaped), plus a
+ *   `fooocus_scheme` tEXt chunk holding the scheme name
+ * - JPEG/WebP: EXIF UserComment (0x9286); the scheme name goes to
+ *   MakerNote (0x927C), which this library does not read, so the
+ *   scheme is inferred from the UserComment content instead
+ *
+ * Verified against real Fooocus v2.5 output in `samples/`.
  */
 interface FooocusJsonMetadata {
   prompt?: string;
