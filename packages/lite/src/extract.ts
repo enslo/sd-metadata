@@ -254,9 +254,12 @@ export function extract(rawEntries: Entries): string {
   }
 
   // --- EasyDiffusion (PNG, non-JSON parameters) ------------------------
-  // EasyDiffusion stores fields as top-level PNG tEXt entries
-  // with a distinctive "use_stable_diffusion_model" key.
-  if (entries[EASY_DIFF_KEY]) return buildA1111(extractCommon(entries));
+  // EasyDiffusion stores fields as top-level PNG tEXt entries with a
+  // distinctive "use_stable_diffusion_model" key. Its clip_skip is a boolean
+  // written as "False"/"True", not an A1111 layer count, so the field is
+  // dropped (the JSON form is `false` and already comes out blank).
+  if (entries[EASY_DIFF_KEY])
+    return buildA1111({ ...extractCommon(entries), cs: '' });
 
   // --- ComfyUI (PNG, no parameters field) ------------------------------
   // Some ComfyUI outputs only have a "prompt" PNG tEXt chunk
