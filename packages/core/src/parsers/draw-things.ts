@@ -1,6 +1,7 @@
 import type { LoraSettings, StandardMetadata } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
+import { fromFloat32 } from '../utils/float';
 import { parseJson } from '../utils/json';
 import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
@@ -27,6 +28,10 @@ import type { InternalParseResult } from './types';
  * - strength: denoising strength
  * - size: image size (e.g., "960x1280")
  * - v2: the configuration as saved by the app, with `loras[]`
+ *
+ * The app keeps `scale` and `strength` in single precision and writes them
+ * through a double (1.4 arrives as 1.3999999761581421); they are restored
+ * to the decimal the user set, see fromFloat32.
  */
 
 /**
@@ -132,6 +137,11 @@ function buildMetadata(
     if (typeof v === 'number' && v !== 0) return v;
     return undefined;
   };
+  // Single-precision settings widened to doubles, see the header comment
+  const float = (key: string): number | undefined => {
+    const v = num(key);
+    return v === undefined ? undefined : fromFloat32(v);
+  };
 
   const prompt = (str('c') ?? '').trim();
   const negativePrompt = (str('uc') ?? '').trim();
@@ -150,10 +160,10 @@ function buildMetadata(
     sampling: trimObject({
       sampler: str('sampler'),
       steps: num('steps'),
-      cfg: num('scale'),
+      cfg: float('scale'),
       // Seed 0 means unset (same rule as num()); otherwise keep the exact text
       seed: num('seed') === undefined ? undefined : toSeedString(data.seed),
-      denoise: num('strength'),
+      denoise: float('strength'),
     }),
     ...optionalLoras(loras),
   };

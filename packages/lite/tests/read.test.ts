@@ -27,7 +27,8 @@ function baseName(file: string): string {
 const EMPTY = new Set(['empty']);
 
 // Samples whose only metadata is an XMP packet (Draw Things): lite does not
-// read XMP, so it must return '' while full parses the packet
+// read XMP (Draw Things is deliberately out of lite's scope), so it must
+// return '' while full parses the packet
 const XMP_ONLY = new Set(['draw-things-lora']);
 
 // Samples with non-generation metadata — just check both produce non-empty

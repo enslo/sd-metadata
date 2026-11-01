@@ -253,3 +253,27 @@ describe('parseDrawThings - LoRA extraction', () => {
     }
   });
 });
+
+describe('parseDrawThings - float32 values', () => {
+  it('should restore scale and strength from their float32 widening', () => {
+    // As written by Draw Things: Float settings printed through a double
+    const entries = createEntries({
+      ...minimalJson,
+      scale: 1.3999999761581421,
+      strength: 0.69999998807907104,
+    });
+
+    const result = parseDrawThings(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.sampling).toEqual({
+        sampler: 'DPM++ 2M AYS',
+        steps: 20,
+        cfg: 1.4,
+        seed: '12345',
+        denoise: 0.7,
+      });
+    }
+  });
+});

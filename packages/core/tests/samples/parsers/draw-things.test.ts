@@ -10,8 +10,9 @@ import { parsePngSample } from '../helpers';
  * layer expands into `CreatorTool`, `UserComment` (JSON) and `parameters`
  * (the A1111-like dc:description). The parser reads the JSON: `c`, `uc`,
  * `model`, `sampler`, `scale`, `seed`, `steps`, `strength`, `size`, and the
- * LoRAs from `v2.loras[]` (`file`, `weight`). `scale` is a float32 value
- * (1.4 stored as 1.399999976158142) and is reproduced as written; the
+ * LoRAs from `v2.loras[]` (`file`, `weight`). `scale` and `strength` are
+ * single-precision values widened to doubles (1.4 stored as
+ * 1.3999999761581421) and come back as the decimal the user set; the
  * top-level `lora[]` list carries the same float32 noise and is not read.
  */
 describe('Draw Things Parsers - Samples', () => {
@@ -35,7 +36,7 @@ describe('Draw Things Parsers - Samples', () => {
         sampling: {
           sampler: 'LCM',
           steps: 8,
-          cfg: 1.399999976158142,
+          cfg: 1.4,
           seed: '1656867057',
           denoise: 1,
         },
