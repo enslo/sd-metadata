@@ -47,8 +47,8 @@ describe('Stability Matrix Parsers - Samples', () => {
 
       // Written by Stability Matrix >= 2.16.0: parameters, parameters-json
       // and smproj are iTXt chunks because the prompt is not Latin-1. The
-      // graph chains three LoraLoader nodes (not parsed yet) and has no
-      // CLIPSetLastLayer, so there is no clipSkip.
+      // graph chains three LoraLoader nodes (strength_clip fixed at 1 by
+      // Stability Matrix) and has no CLIPSetLastLayer, so there is no clipSkip.
       expect(meta).toEqual({
         software: 'stability-matrix',
         prompt:
@@ -70,6 +70,15 @@ describe('Stability Matrix Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
+        loras: [
+          { name: 'LECO_GoodHands.safetensors', weight: -0.8, clipWeight: 1 },
+          { name: 'LECO_BadHands.safetensors', weight: 0.9, clipWeight: 1 },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565.safetensors',
+            weight: 0.4,
+            clipWeight: 1,
+          },
+        ],
         nodes: expect.any(Object),
       });
       expectComfyNodeGraph(meta.nodes);

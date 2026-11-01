@@ -40,11 +40,18 @@ const FALLBACK = new Set(['gimp', 'gimp-en']);
 const NON_COMPATIBLE = new Set([
   // `parameters` has inaccurate values from Save node inputs; full traces actual node graph.
   'comfyui-comfy-image-saver.png',
-  // Flat scan picks a different KSampler node than recursive traversal (different Seed).
-  'comfyui-comfyroll.png',
   // Same Image Saver node with embed_workflow on: UserComment holds its unwired
   // placeholder text (Seed 0); full reads the graph from Make/Model instead.
   'comfyui-comfy-image-saver-with-workflow.jpeg',
+]);
+
+// Seed-only differences: the flat scan takes the first sampler it meets, which
+// in these ComfyRoll hires graphs is the second pass (its own seed), while
+// full traces the main sampler, seeded by a CR Seed node. Steps, model and
+// hires fields are still compared strictly.
+const SEED_DIFFERS = new Set([
+  'comfyui-comfyroll.png',
+  'comfyui-comfyroll-lora.png',
 ]);
 
 // All sample files per format
@@ -115,7 +122,7 @@ function assertKeyFieldsMatch(lite: string, full: string, file: string): void {
 
   const liteSeed = field(lite, 'Seed');
   const fullSeed = field(full, 'Seed');
-  if (liteSeed && fullSeed && strict) {
+  if (liteSeed && fullSeed && strict && !SEED_DIFFERS.has(file)) {
     expect(liteSeed, `Seed mismatch in ${file}`).toBe(fullSeed);
   }
 

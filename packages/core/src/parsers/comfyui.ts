@@ -9,12 +9,14 @@ import type { BaseMetadata, ComfyNodeGraph, SamplingSettings } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { optionalLoras } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import {
   extractCivitaiMetadata,
   extractExtraMetadata,
 } from './comfyui-civitai';
 import { flatScanComfyMetadata } from './comfyui-flat-scan';
+import { extractComfyLoras } from './comfyui-loras';
 import {
   type ClassifiedNodes,
   calculateScale,
@@ -232,7 +234,7 @@ function hasWorkflowOnlyChunk(entryRecord: EntryRecord): boolean {
 /**
  * Extract metadata from ComfyUI nodes
  *
- * Extracts prompt, dimensions, model, sampling, and hires settings
+ * Extracts prompt, dimensions, model, sampling, hires settings and LoRAs
  * from standard ComfyUI node structure using class_type-based lookup.
  *
  * @param nodes - Parsed ComfyUI prompt (node graph)
@@ -275,6 +277,7 @@ export function extractComfyUIMetadata(
     model: extractModel(c.checkpoint, c.unetLoader),
     sampling: trimObject({ ...rawSampling, clipSkip }),
     ...buildHiresOrUpscale(upscalerName, hiresScale, hiresSampling),
+    ...optionalLoras(extractComfyLoras(nodes)),
   });
 }
 
@@ -385,7 +388,8 @@ function mergeObjects<T extends object>(
  * picked — so an empty string or zero from a higher-priority source does
  * not mask a usable value from a lower one. Nested objects (model,
  * sampling, hires, upscale) are merged field-by-field via {@link mergeObjects}
- * so partial coverage from each source is preserved.
+ * so partial coverage from each source is preserved. `loras` is taken whole
+ * from the highest-priority source that lists any.
  *
  * @param sources - Partial metadata in increasing priority order
  * @returns Merged base metadata with required fields defaulted
@@ -410,5 +414,6 @@ function mergeMetadata(
       hires: mergeObjects(...sources.map((s) => s?.hires)),
       upscale: mergeObjects(...sources.map((s) => s?.upscale)),
     }),
+    ...optionalLoras(pick('loras') ?? []),
   };
 }

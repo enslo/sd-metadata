@@ -782,3 +782,49 @@ describe('parseComfyUI - Unit Tests', () => {
     });
   });
 });
+
+describe('parseComfyUI - LoRA loader nodes', () => {
+  it('should list the LoRAs applied by loader nodes', () => {
+    const entries = createComfyUIEntries({
+      '1': {
+        class_type: 'LoraLoader',
+        inputs: {
+          lora_name: 'A.safetensors',
+          strength_model: 0.5,
+          strength_clip: 0.4,
+        },
+      },
+      '2': { class_type: 'KSampler', inputs: { seed: 1, steps: 20, cfg: 5 } },
+    });
+
+    const result = parseComfyUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'A.safetensors', weight: 0.5, clipWeight: 0.4 },
+      ]);
+    }
+  });
+
+  it('should omit loras when no loader applies one', () => {
+    const entries = createComfyUIEntries({
+      '1': {
+        class_type: 'CR LoRA Stack',
+        inputs: {
+          switch_1: 'Off',
+          lora_name_1: 'A.safetensors',
+          model_weight_1: 1,
+        },
+      },
+      '2': { class_type: 'KSampler', inputs: { seed: 1, steps: 20, cfg: 5 } },
+    });
+
+    const result = parseComfyUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).not.toHaveProperty('loras');
+    }
+  });
+});

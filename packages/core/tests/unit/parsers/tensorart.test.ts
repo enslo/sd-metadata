@@ -272,3 +272,60 @@ describe('parseTensorArt - LoRA extraction', () => {
     }
   });
 });
+
+describe('parseTensorArt - LoRA fallback', () => {
+  it('should fall back to the LoraTagLoader node when models lists no LoRA', () => {
+    const entries = createTensorArtEntries(
+      {
+        prompt: 'test',
+        models: [{ type: 'BASE_MODEL', modelFileName: 'WAI' }],
+      },
+      {
+        '2': {
+          class_type: 'LoraTagLoader',
+          inputs: { text: '<lora:EMS-1-EMS.safetensors:0.200000>' },
+        },
+      },
+    );
+
+    const result = parseTensorArt(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'EMS-1-EMS.safetensors', weight: 0.2 },
+      ]);
+    }
+  });
+
+  it('should prefer generation_data over the LoraTagLoader node', () => {
+    const entries = createTensorArtEntries(
+      {
+        prompt: 'test',
+        models: [
+          {
+            type: 'LORA',
+            modelFileName: 'lora.by_tusi',
+            weight: 0.2,
+            hash: 'FCE0',
+          },
+        ],
+      },
+      {
+        '2': {
+          class_type: 'LoraTagLoader',
+          inputs: { text: '<lora:EMS-1-EMS.safetensors:0.200000>' },
+        },
+      },
+    );
+
+    const result = parseTensorArt(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'lora.by_tusi', weight: 0.2, hash: 'FCE0' },
+      ]);
+    }
+  });
+});

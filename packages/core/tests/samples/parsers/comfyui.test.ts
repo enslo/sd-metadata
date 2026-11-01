@@ -431,6 +431,430 @@ describe('ComfyUI Parsers - Samples', () => {
       });
       expectComfyNodeGraph(meta.nodes);
     });
+
+    it('should parse comfyui-comfyroll-lora.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-comfyroll-lora.png',
+        parseComfyUI,
+      );
+
+      // CR LoRA Stack with all three slots On (model and clip weights per
+      // slot); the stack is applied before a hires SamplerCustom pass
+      // whose scale comes from a CR Integer Multiple chain that is not
+      // resolved
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, /* テスト */',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+        },
+        sampling: {
+          seed: '297361930056211',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'sgm_uniform',
+        },
+        hires: {
+          upscaler: 'ESRGAN-Remacri-4x.pth',
+          scale: undefined,
+          steps: 10,
+          denoise: 0.3,
+        },
+        loras: [
+          {
+            name: 'LECO_GoodHands.safetensors',
+            weight: -0.7,
+            clipWeight: -0.6,
+          },
+          { name: 'LECO_BadHands.safetensors', weight: 0.95, clipWeight: 0.92 },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565.safetensors',
+            weight: 0.25,
+            clipWeight: 0.2,
+          },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-easy-lora-stack.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-easy-lora-stack.png',
+        parseComfyUI,
+      );
+
+      // easy fullLoader applies its own LoRA slot, then easy loraStack in
+      // advanced mode applies num_loras (2) of its slots with separate model
+      // and clip strengths. The loader also holds the prompts and the
+      // resolution, which the parser does not read from it yet
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt: '',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+        },
+        sampling: {
+          seed: '553815940690748',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'sgm_uniform',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565.safetensors',
+            weight: 0.6,
+            clipWeight: 0.5,
+          },
+          {
+            name: 'LECO_GoodHands.safetensors',
+            weight: -0.9,
+            clipWeight: -0.85,
+          },
+          { name: 'LECO_BadHands.safetensors', weight: 0.4, clipWeight: 0.2 },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-easy-lora-switcher.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-easy-lora-switcher.png',
+        parseComfyUI,
+      );
+
+      // easy loraSwitcher applies only its selected slot (select: 2) with the
+      // shared lora_strength and no clip weight, after the loader's own slot
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt: '',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+        },
+        sampling: {
+          seed: '299501584249486',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'sgm_uniform',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          {
+            name: 'LECO_GoodHands.safetensors',
+            weight: -0.8,
+            clipWeight: -0.7,
+          },
+          { name: '8be1e5d2cc7cd938037337603fb51565.safetensors', weight: 0.8 },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-efficiency-lora.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-efficiency-lora.png',
+        parseComfyUI,
+      );
+
+      // Efficient Loader applies its own slot, then the LoRA Stacker in
+      // advanced mode applies lora_count (2) slots with model_str / clip_str
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt: '',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+        },
+        sampling: {
+          seed: '865501734321328',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'sgm_uniform',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565.safetensors',
+            weight: 0.8,
+            clipWeight: 0.3,
+          },
+          {
+            name: 'LECO_GoodHands.safetensors',
+            weight: -0.5,
+            clipWeight: -0.4,
+          },
+          { name: 'LECO_BadHands.safetensors', weight: 0.8, clipWeight: 0.6 },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-lora-manager.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-lora-manager.png',
+        parseComfyUI,
+      );
+
+      // Lora Loader (LoraManager): the structured `loras` list has string
+      // strengths and an active flag (LECO_BadHands is inactive and left
+      // out); names are written without extension
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+        },
+        sampling: {
+          seed: '244827317388313',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.55, clipWeight: -0.55 },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565',
+            weight: 0.65,
+            clipWeight: 0.65,
+          },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-lora-model-only.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-lora-model-only.png',
+        parseComfyUI,
+      );
+
+      // Three chained LoraLoaderModelOnly nodes: a model strength each, no
+      // clip weight
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+        },
+        sampling: {
+          seed: '1024902053740272',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          { name: 'LECO_GoodHands.safetensors', weight: -0.75 },
+          { name: 'LECO_BadHands.safetensors', weight: 0.85 },
+          { name: '8be1e5d2cc7cd938037337603fb51565.safetensors', weight: 0.3 },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-lora.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-lora.png',
+        parseComfyUI,
+      );
+
+      // Three chained LoraLoader nodes in graph key order with model and
+      // clip strengths
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, ',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+        },
+        sampling: {
+          seed: '304694856009568',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          {
+            name: 'LECO_GoodHands.safetensors',
+            weight: -0.8,
+            clipWeight: -0.7,
+          },
+          { name: 'LECO_BadHands.safetensors', weight: 0.9, clipWeight: 0.8 },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565.safetensors',
+            weight: 0.4,
+            clipWeight: 0.2,
+          },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-rgthree-lora-loader-stack.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-rgthree-lora-loader-stack.png',
+        parseComfyUI,
+      );
+
+      // Lora Loader Stack (rgthree): four slots with one strength each,
+      // lora_04 is None
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, テスト, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: '762216108755372',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'sgm_uniform',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          { name: 'LECO_GoodHands.safetensors', weight: -0.4 },
+          { name: 'LECO_BadHands.safetensors', weight: 0.6 },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565.safetensors',
+            weight: 0.35,
+          },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-rgthree-lora-tag.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-rgthree-lora-tag.png',
+        parseComfyUI,
+      );
+
+      // Power Prompt (rgthree) applies the <lora:...> tags of its prompt
+      // text; the text itself reaches CLIPTextEncode, so the tags stay in
+      // the prompt
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, テスト, \n<lora:LECO_GoodHands:-0.5> <lora:LECO_BadHands:0.8> <lora:8be1e5d2cc7cd938037337603fb51565:0.2>',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: '5081952596075',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'sgm_uniform',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.5 },
+          { name: 'LECO_BadHands', weight: 0.8 },
+          { name: '8be1e5d2cc7cd938037337603fb51565', weight: 0.2 },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
+
+    it('should parse comfyui-rgthree-power-lora-loader.png', () => {
+      const meta = parsePngSample<ComfyUIMetadata>(
+        'comfyui-rgthree-power-lora-loader.png',
+        parseComfyUI,
+      );
+
+      // Power Lora Loader (rgthree): one object per slot with an on flag;
+      // lora_2 is off and left out. The API prompt carries a single strength
+      expect(meta).toEqual({
+        software: 'comfyui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, テスト, ',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v160.safetensors',
+        },
+        sampling: {
+          seed: '1080288578822251',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'sgm_uniform',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          { name: 'LECO_GoodHands.safetensors', weight: -0.5 },
+          { name: '8be1e5d2cc7cd938037337603fb51565.safetensors', weight: 0.4 },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes);
+    });
   });
 
   describe('WebP samples', () => {
@@ -762,7 +1186,8 @@ describe('ComfyUI Parsers - Samples', () => {
 
       // Image Saver with embed_workflow on writes the Make/Model tag pair next
       // to its A1111-style UserComment; the node's text inputs were left
-      // unwired ("unknown", Seed 0), so the graph is the source of truth
+      // unwired ("unknown", Seed 0), so the graph is the source of truth,
+      // including the three chained LoraLoader nodes
       expect(meta).toEqual({
         software: 'comfyui',
         prompt:
@@ -783,6 +1208,23 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: undefined,
         upscale: undefined,
+        loras: [
+          {
+            name: 'LECO_GoodHands.safetensors',
+            weight: -0.8,
+            clipWeight: -0.7,
+          },
+          {
+            name: 'LECO_BadHands.safetensors',
+            weight: 0.9,
+            clipWeight: 0.8,
+          },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565.safetensors',
+            weight: 0.4,
+            clipWeight: 0.2,
+          },
+        ],
         nodes: expect.any(Object),
       });
       expectComfyNodeGraph(meta.nodes);
@@ -820,6 +1262,76 @@ describe('ComfyUI Parsers - Samples', () => {
           steps: 20,
           denoise: 0.75,
         },
+        loras: [
+          {
+            name: 'urn:air:sdxl:lora:civitai:1547435@1750914',
+            weight: 0.4,
+            clipWeight: 1,
+          },
+          {
+            name: 'urn:air:sdxl:lora:civitai:200255@2212079',
+            weight: 0.95,
+            clipWeight: 1,
+          },
+          {
+            name: 'urn:air:sdxl:lora:civitai:1826240@2066663',
+            weight: 0.35,
+            clipWeight: 1,
+          },
+        ],
+        nodes: expect.any(Object),
+      });
+      expectComfyNodeGraph(meta.nodes, ['extra', 'extraMetadata']);
+    });
+
+    it('should parse civitai-lora-hires.jpg', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'jpeg',
+        'civitai-lora-hires.jpg',
+      );
+
+      // Same orchestration graph as the eXIf PNG: three LoraLoader nodes in
+      // the resource stack, named by Civitai URN with strength_clip fixed at 1
+      expect(meta).toEqual({
+        software: 'civitai',
+        prompt: 'perfect eyes, 1girl, solo, hatsune miku, double v, #テスト',
+        negativePrompt: 'bad quality, worst quality, 3d, jpeg artifacts,',
+        width: 1536,
+        height: 1536,
+        model: {
+          name: 'urn:air:sdxl:checkpoint:civitai:2904237@3284240',
+        },
+        sampling: {
+          sampler: 'euler_ancestral',
+          scheduler: 'normal',
+          seed: '772182288',
+          steps: 20,
+          cfg: 4.5,
+          denoise: 0.75,
+        },
+        hires: {
+          upscaler: 'urn:air:other:upscaler:civitai:147759@164821',
+          scale: undefined,
+          steps: 20,
+          denoise: 0.75,
+        },
+        loras: [
+          {
+            name: 'urn:air:sdxl:lora:civitai:1547435@1750914',
+            weight: 0.4,
+            clipWeight: 1,
+          },
+          {
+            name: 'urn:air:sdxl:lora:civitai:200255@2212079',
+            weight: 0.95,
+            clipWeight: 1,
+          },
+          {
+            name: 'urn:air:sdxl:lora:civitai:1826240@2066663',
+            weight: 0.35,
+            clipWeight: 1,
+          },
+        ],
         nodes: expect.any(Object),
       });
       expectComfyNodeGraph(meta.nodes, ['extra', 'extraMetadata']);
