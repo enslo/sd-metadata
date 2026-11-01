@@ -440,8 +440,7 @@ describe('ComfyUI Parsers - Samples', () => {
 
       // CR LoRA Stack with all three slots On (model and clip weights per
       // slot); the stack is applied before a hires SamplerCustom pass
-      // whose scale comes from a CR Integer Multiple chain that is not
-      // resolved
+      // whose scale is the CR Integer Multiple factor, a PrimitiveFloat
       expect(meta).toEqual({
         software: 'comfyui',
         prompt:
@@ -462,7 +461,7 @@ describe('ComfyUI Parsers - Samples', () => {
         },
         hires: {
           upscaler: 'ESRGAN-Remacri-4x.pth',
-          scale: undefined,
+          scale: 1.5,
           steps: 10,
           denoise: 0.3,
         },
@@ -492,14 +491,16 @@ describe('ComfyUI Parsers - Samples', () => {
 
       // easy fullLoader applies its own LoRA slot, then easy loraStack in
       // advanced mode applies num_loras (2) of its slots with separate model
-      // and clip strengths. The loader also holds the prompts and the
-      // resolution, which the parser does not read from it yet
+      // and clip strengths. The loader also holds the prompts, the resolution
+      // preset (1024 x 1024, over its 512 size inputs) and clip_skip -2
       expect(meta).toEqual({
         software: 'comfyui',
-        prompt: '',
-        negativePrompt: '',
-        width: 0,
-        height: 0,
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, テスト, /* コメント */\n',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
         model: {
           name: 'waiIllustriousSDXL_v170.safetensors',
         },
@@ -509,6 +510,7 @@ describe('ComfyUI Parsers - Samples', () => {
           cfg: 5,
           sampler: 'euler_ancestral',
           scheduler: 'sgm_uniform',
+          clipSkip: 2,
         },
         hires: undefined,
         upscale: undefined,
@@ -537,13 +539,16 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       // easy loraSwitcher applies only its selected slot (select: 2) with the
-      // shared lora_strength and no clip weight, after the loader's own slot
+      // shared lora_strength and no clip weight, after the loader's own slot;
+      // prompts, resolution preset and clip_skip come from the loader
       expect(meta).toEqual({
         software: 'comfyui',
-        prompt: '',
-        negativePrompt: '',
-        width: 0,
-        height: 0,
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, テスト, /* コメント */\n',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
         model: {
           name: 'waiIllustriousSDXL_v170.safetensors',
         },
@@ -553,6 +558,7 @@ describe('ComfyUI Parsers - Samples', () => {
           cfg: 5,
           sampler: 'euler_ancestral',
           scheduler: 'sgm_uniform',
+          clipSkip: 2,
         },
         hires: undefined,
         upscale: undefined,
@@ -576,13 +582,17 @@ describe('ComfyUI Parsers - Samples', () => {
       );
 
       // Efficient Loader applies its own slot, then the LoRA Stacker in
-      // advanced mode applies lora_count (2) slots with model_str / clip_str
+      // advanced mode applies lora_count (2) slots with model_str / clip_str;
+      // prompts, empty latent size and clip_skip come from the loader, the
+      // seed is the noise_seed of KSampler Adv. (Efficient)
       expect(meta).toEqual({
         software: 'comfyui',
-        prompt: '',
-        negativePrompt: '',
-        width: 0,
-        height: 0,
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, テスト, /* コメント */',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor, \n',
+        width: 1024,
+        height: 1024,
         model: {
           name: 'waiIllustriousSDXL_v170.safetensors',
         },
@@ -592,6 +602,7 @@ describe('ComfyUI Parsers - Samples', () => {
           cfg: 5,
           sampler: 'euler_ancestral',
           scheduler: 'sgm_uniform',
+          clipSkip: 2,
         },
         hires: undefined,
         upscale: undefined,

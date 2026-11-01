@@ -28,6 +28,7 @@ import {
   extractSampling,
   findHiresSampler,
   isNodeReference,
+  resolveNumberInput,
 } from './comfyui-nodes';
 import type { InternalParseResult, PartialMetadata } from './types';
 
@@ -251,6 +252,7 @@ export function extractComfyUIMetadata(
   const { width, height } = extractDimensions(
     c.latentImage,
     c.latentImageRgthree,
+    c.allInOneLoader,
   );
 
   // Find hires sampler and resolve its sampling parameters
@@ -267,7 +269,7 @@ export function extractComfyUIMetadata(
     | undefined;
 
   const rawSampling = normalizeDenoise(extractSampling(nodes, c.sampler));
-  const clipSkip = extractClipSkip(c.clipSetLastLayer);
+  const clipSkip = extractClipSkip(c.clipSetLastLayer, c.allInOneLoader);
 
   return trimObject({
     prompt: promptText || undefined,
@@ -287,6 +289,7 @@ export function extractComfyUIMetadata(
  * Priority:
  * 1. LatentUpscaleBy.scale_by (direct value)
  * 2. ImageScale.width as node reference → source node's clip_scale (rgthree)
+ *    or, for CR Integer Multiple (ComfyRoll), its `multiple` factor
  * 3. ImageScale.width as number → calculate ratio against base width
  */
 function resolveHiresScale(
@@ -307,6 +310,10 @@ function resolveHiresScale(
     const sourceNode = nodes[String(widthInput[0])];
     if (typeof sourceNode?.inputs.clip_scale === 'number') {
       return sourceNode.inputs.clip_scale;
+    }
+    // CR Integer Multiple: base width × multiple (literal or PrimitiveFloat)
+    if (sourceNode?.class_type === 'CR Integer Multiple') {
+      return resolveNumberInput(nodes, sourceNode.inputs.multiple);
     }
     return undefined;
   }
