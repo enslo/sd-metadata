@@ -1,7 +1,8 @@
-import type { StandardMetadata } from '../types';
+import type { LoraSettings, StandardMetadata } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
@@ -39,6 +40,9 @@ const UNSET_VALUES = new Set(['', 'None', 'null']);
  * fix.
  */
 const LATENT_UPSCALER = 'latent_upscaler';
+
+/** Backslash escapes Python's repr uses inside quoted strings */
+const PYTHON_ESCAPES: Record<string, string> = { n: '\n', t: '\t', r: '\r' };
 
 /**
  * Extract model name from path
@@ -84,6 +88,118 @@ export function parseEasyDiffusion(entries: EntryRecord): InternalParseResult {
   }
 
   return buildMetadata(parsed.value);
+}
+
+/**
+ * Read a quoted Python string starting at `start`
+ *
+ * @returns The string value and the index just after the closing quote
+ */
+function readQuoted(
+  text: string,
+  start: number,
+  end: number,
+): [string, number] {
+  const quote = text[start];
+  let value = '';
+  let i = start + 1;
+  while (i < end && text[i] !== quote) {
+    if (text[i] === '\\' && i + 1 < end) {
+      const escaped = text[i + 1] ?? '';
+      value += PYTHON_ESCAPES[escaped] ?? escaped;
+      i += 2;
+    } else {
+      value += text[i];
+      i++;
+    }
+  }
+  return [value, i + 1];
+}
+
+/**
+ * Interpret a bare Python token: None, True, False or a number; anything
+ * else stays text
+ */
+function parseToken(token: string): unknown {
+  if (token === 'None') return null;
+  if (token === 'True') return true;
+  if (token === 'False') return false;
+  const num = Number(token);
+  return token !== '' && Number.isFinite(num) ? num : token;
+}
+
+/**
+ * Parse the Python repr of a flat list, e.g. `['a', "it's", -0.72, None]`
+ *
+ * Only what `str()` produces for a list of strings and numbers is handled:
+ * single- or double-quoted strings with backslash escapes, and bare tokens.
+ * Returns [] when the text is not a list.
+ *
+ * @param text - Python list repr
+ * @returns List items
+ */
+function parsePythonList(text: string): unknown[] {
+  const body = text.trim();
+  if (!body.startsWith('[') || !body.endsWith(']')) return [];
+
+  const items: unknown[] = [];
+  const end = body.length - 1;
+  let i = 1;
+  while (i < end) {
+    const ch = body[i];
+    if (ch === ' ' || ch === ',') {
+      i++;
+    } else if (ch === "'" || ch === '"') {
+      const [value, next] = readQuoted(body, i, end);
+      items.push(value);
+      i = next;
+    } else {
+      const comma = body.indexOf(',', i);
+      const next = comma < 0 || comma > end ? end : comma;
+      items.push(parseToken(body.slice(i, next).trim()));
+      i = next;
+    }
+  }
+  return items;
+}
+
+/**
+ * Normalize a list-or-scalar field to a list
+ *
+ * Arrays (JSON) are returned as they are; a string starting with `[` is a
+ * Python list repr from a PNG chunk; an unset value yields an empty list;
+ * any other value is a single entry (Easy Diffusion's request type allows a
+ * bare string or number for a single LoRA).
+ */
+function toList(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (value === null || value === undefined) return [];
+  if (typeof value === 'string') {
+    if (UNSET_VALUES.has(value)) return [];
+    if (value.startsWith('[')) return parsePythonList(value);
+  }
+  return [value];
+}
+
+/**
+ * Read the LoRA fields
+ *
+ * `use_lora_model` and `lora_alpha` are parallel lists: one name (file stem,
+ * folder prefix kept) and one strength per LoRA. Easy Diffusion drops
+ * `lora_alpha` when no LoRA is used, so a missing strength is left out.
+ *
+ * @param data - PNG entries or parsed JSON
+ * @returns LoRAs in list order
+ */
+function extractLoras(data: Record<string, unknown>): LoraSettings[] {
+  const names = toList(data.use_lora_model);
+  const weights = toList(data.lora_alpha);
+
+  return names.flatMap((name, i) =>
+    typeof name === 'string' && !UNSET_VALUES.has(name)
+      ? [lora({ name, weight: toWeight(weights[i]) })]
+      : [],
+  );
 }
 
 /**
@@ -137,6 +253,8 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
       ? trimObject({ upscaler, scale: num('upscale_amount') })
       : undefined;
 
+  const loras = extractLoras(data);
+
   const metadata: StandardMetadata = {
     software: 'easydiffusion',
     prompt,
@@ -159,6 +277,7 @@ function buildMetadata(data: Record<string, unknown>): InternalParseResult {
     }),
     ...(hires ? { hires } : {}),
     ...(upscale ? { upscale } : {}),
+    ...optionalLoras(loras),
   };
 
   return Result.ok(metadata);

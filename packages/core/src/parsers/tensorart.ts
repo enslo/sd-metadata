@@ -1,7 +1,8 @@
-import type { ComfyNodeGraph } from '../types';
+import type { ComfyNodeGraph, LoraSettings } from '../types';
 import { Result } from '../types';
 import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { extractComfyUIMetadata } from './comfyui';
 import type { InternalParseResult } from './types';
@@ -9,9 +10,10 @@ import type { InternalParseResult } from './types';
 /**
  * TensorArt generation_data JSON structure
  *
- * Only prompt, negativePrompt, and baseModel are used from generation_data.
- * All other parameters (sampling, dimensions, etc.) are extracted from the
- * ComfyUI node graph, which provides more complete information.
+ * Only prompt, negativePrompt, baseModel and the LoRA entries of models are
+ * used from generation_data. All other parameters (sampling, dimensions,
+ * etc.) are extracted from the ComfyUI node graph, which provides more
+ * complete information.
  */
 interface TensorArtGenerationData {
   prompt?: string;
@@ -20,6 +22,44 @@ interface TensorArtGenerationData {
     modelFileName?: string;
     hash?: string;
   };
+  /** Every model that took part; LoRAs carry `type: "LORA"` */
+  models?: Array<{
+    type?: unknown;
+    modelFileName?: unknown;
+    weight?: unknown;
+    hash?: unknown;
+  }>;
+}
+
+/**
+ * Read the LoRAs of `generation_data.models`
+ *
+ * `modelFileName` is the file name the LoRA was uploaded under (without
+ * extension); `label` is its version label in the UI and `modelId` /
+ * `modelFileId` are TensorArt's IDs, none of which are read. The node graph
+ * names the same files `EMS-<id>-EMS.safetensors` in a LoraTagLoader tag.
+ *
+ * @param models - `models` list
+ * @returns LoRAs in the order TensorArt listed them
+ */
+function extractLoras(models: unknown): LoraSettings[] {
+  if (!Array.isArray(models)) return [];
+
+  return models.flatMap((model) => {
+    if (model?.type !== 'LORA') return [];
+    const name = model.modelFileName;
+    if (typeof name !== 'string' || name === '') return [];
+    return [
+      lora({
+        name,
+        weight: toWeight(model.weight),
+        hash:
+          typeof model.hash === 'string' && model.hash !== ''
+            ? model.hash
+            : undefined,
+      }),
+    ];
+  });
 }
 
 /**
@@ -30,9 +70,10 @@ interface TensorArtGenerationData {
  * - prompt: ComfyUI-style node graph (workflow)
  *
  * Strategy: Delegate node graph parsing to the ComfyUI parser for sampling,
- * dimensions, hires, and upscale. Only prompt text and model info are taken
- * from generation_data, since TensorArt uses a custom checkpoint loader
- * (ECHOCheckpointLoaderSimple) that the standard ComfyUI parser cannot detect.
+ * dimensions, hires, and upscale. Only prompt text, model info and LoRAs are
+ * taken from generation_data, since TensorArt uses a custom checkpoint
+ * loader (ECHOCheckpointLoaderSimple) that the standard ComfyUI parser
+ * cannot detect.
  *
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
@@ -83,6 +124,7 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
     name: data.baseModel?.modelFileName,
     hash: data.baseModel?.hash,
   });
+  const loras = extractLoras(data.models);
 
   return Result.ok({
     software: 'tensorart',
@@ -99,5 +141,6 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
     sampling: comfy?.sampling,
     hires: comfy?.hires,
     upscale: comfy?.upscale,
+    ...optionalLoras(loras),
   });
 }

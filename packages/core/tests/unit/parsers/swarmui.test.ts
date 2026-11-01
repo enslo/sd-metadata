@@ -194,3 +194,67 @@ describe('parseSwarmUI - Unit Tests', () => {
     });
   });
 });
+
+describe('parseSwarmUI - LoRA extraction', () => {
+  it('should pair loras with loraweights and match hashes from sui_models', () => {
+    const entries = createSwarmUIEntries({
+      sui_image_params: {
+        prompt: 'test',
+        loras: ['LECO_BadHands', 'styles/LECO_GoodHands'],
+        loraweights: ['-0.5', '0.6'],
+      },
+      sui_models: [
+        { name: 'model.safetensors', param: 'model', hash: '0xaaaa' },
+        { name: 'LECO_BadHands.safetensors', param: 'loras', hash: '0xbbbb' },
+        {
+          name: 'styles/LECO_GoodHands.safetensors',
+          param: 'loras',
+          hash: '0xcccc',
+        },
+      ],
+    });
+
+    const result = parseSwarmUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'LECO_BadHands', weight: -0.5, hash: '0xbbbb' },
+        { name: 'styles/LECO_GoodHands', weight: 0.6, hash: '0xcccc' },
+      ]);
+    }
+  });
+
+  it('should leave out weights and hashes that are not recorded', () => {
+    const entries = createSwarmUIEntries({
+      sui_image_params: {
+        prompt: 'test',
+        loras: ['a', 'b'],
+        loraweights: ['0.8'],
+      },
+    });
+
+    const result = parseSwarmUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'a', weight: 0.8 },
+        { name: 'b' },
+      ]);
+    }
+  });
+
+  it('should omit loras when the list is missing or empty', () => {
+    for (const params of [{ prompt: 'test' }, { prompt: 'test', loras: [] }]) {
+      const result = parseSwarmUI(
+        createSwarmUIEntries({ sui_image_params: params }),
+      );
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).not.toHaveProperty('loras');
+      }
+    }
+  });
+});

@@ -1,7 +1,8 @@
-import type { StandardMetadata } from '../types';
+import type { LoraSettings, StandardMetadata } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
@@ -51,6 +52,12 @@ interface FooocusJsonMetadata {
   guidance_scale?: number;
   steps?: number;
   clip_skip?: number;
+  /**
+   * LoRAs actually applied, one `[name, weight, hash]` list per entry (file
+   * stem, number, 10-hex AutoV2 hash). The `lora_combined_N` keys repeat
+   * the same data as text and are not read.
+   */
+  loras?: unknown[];
 }
 
 /**
@@ -97,6 +104,33 @@ function joinPromptParts(parts: unknown): string | undefined {
 }
 
 /**
+ * Read the `loras` list
+ *
+ * Fooocus writes only the LoRA slots that are enabled and not set to
+ * "None", in slot order. Entries that are not a list starting with a name
+ * are skipped; a missing or blank hash is left out.
+ *
+ * @param entries - `loras` value
+ * @returns LoRAs in slot order
+ */
+function extractLoras(entries: unknown): LoraSettings[] {
+  if (!Array.isArray(entries)) return [];
+
+  return entries.flatMap((entry) => {
+    if (!Array.isArray(entry)) return [];
+    const [name, weight, hash] = entry;
+    if (typeof name !== 'string' || name === '' || name === 'None') return [];
+    return [
+      lora({
+        name,
+        weight: toWeight(weight),
+        hash: typeof hash === 'string' && hash !== '' ? hash : undefined,
+      }),
+    ];
+  });
+}
+
+/**
  * Parse Fooocus JSON metadata from entries
  *
  * Reads from `parameters` (PNG) or `UserComment` (JPEG/WebP).
@@ -126,6 +160,7 @@ export function parseFooocus(entries: EntryRecord): InternalParseResult {
   const json = parsed.value;
 
   const { width, height } = parseResolution(json.resolution);
+  const loras = extractLoras(json.loras);
 
   const metadata: StandardMetadata = {
     software: 'fooocus',
@@ -149,6 +184,7 @@ export function parseFooocus(entries: EntryRecord): InternalParseResult {
       seed: toSeedString(json.seed),
       clipSkip: json.clip_skip,
     }),
+    ...optionalLoras(loras),
   };
 
   return Result.ok(metadata);

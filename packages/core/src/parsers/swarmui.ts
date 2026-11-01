@@ -1,7 +1,8 @@
-import type { ComfyNodeGraph } from '../types';
+import type { ComfyNodeGraph, LoraSettings } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
@@ -25,7 +26,13 @@ interface SwarmUIParameters {
     refinerupscale?: number;
     refinerupscalemethod?: string;
     refinercontrolpercentage?: number;
+    /** LoRA names as selected in the UI: file stem, folder prefix kept */
+    loras?: unknown[];
+    /** One weight per LoRA, written as text ("0.6") */
+    loraweights?: unknown[];
   };
+  /** Model files that took part, each with the parameter it was used for and its hash */
+  sui_models?: Array<{ name?: unknown; param?: unknown; hash?: unknown }>;
 }
 
 /**
@@ -58,6 +65,48 @@ function extractSwarmUIParameters(
   }
 
   return undefined;
+}
+
+/**
+ * Read the LoRA list of `sui_image_params`
+ *
+ * `loras[i]` and `loraweights[i]` are parallel lists. `sui_models` lists the
+ * same files with their extension and sha256 hash under `param: "loras"`, so
+ * the hash is matched by file name without the extension. Names stay as
+ * SwarmUI wrote them.
+ *
+ * @param params - `sui_image_params` object
+ * @param models - `sui_models` list, if present
+ * @returns LoRAs in UI order
+ */
+function extractLoras(
+  params: NonNullable<SwarmUIParameters['sui_image_params']>,
+  models: SwarmUIParameters['sui_models'],
+): LoraSettings[] {
+  if (!Array.isArray(params.loras)) return [];
+  const weights = Array.isArray(params.loraweights) ? params.loraweights : [];
+
+  const hashes = new Map<string, string>();
+  for (const model of models ?? []) {
+    if (model.param !== 'loras') continue;
+    if (typeof model.name !== 'string' || typeof model.hash !== 'string') {
+      continue;
+    }
+    hashes.set(stripExtension(model.name), model.hash);
+  }
+
+  return params.loras.flatMap((name, i) =>
+    typeof name === 'string' && name !== ''
+      ? [lora({ name, weight: toWeight(weights[i]), hash: hashes.get(name) })]
+      : [],
+  );
+}
+
+/**
+ * Remove the file extension (`LECO_BadHands.safetensors` → `LECO_BadHands`)
+ */
+function stripExtension(fileName: string): string {
+  return fileName.replace(/\.[^./\\]*$/, '');
 }
 
 /**
@@ -109,6 +158,8 @@ export function parseSwarmUI(entries: EntryRecord): InternalParseResult {
       ? promptParsed.value
       : undefined;
 
+  const loras = extractLoras(params, parsed.value.sui_models);
+
   return Result.ok({
     software: 'swarmui',
     prompt: params.prompt ?? '',
@@ -129,5 +180,6 @@ export function parseSwarmUI(entries: EntryRecord): InternalParseResult {
       upscaler: params.refinerupscalemethod,
       denoise: params.refinercontrolpercentage,
     }),
+    ...optionalLoras(loras),
   });
 }

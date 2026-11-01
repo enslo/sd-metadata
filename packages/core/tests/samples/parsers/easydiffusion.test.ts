@@ -16,7 +16,8 @@ import { parseConvertedSample, parsePngSample } from '../helpers';
  *
  * Unset options must not surface (no `upscale`, no `vae`, no `scheduler`).
  * The hires sample enables clip skip and the latent upscaler.
- * The LoRA fields (`use_lora_model`, `lora_alpha`) are not parsed yet.
+ * `use_lora_model` and `lora_alpha` are parallel lists read into `loras`;
+ * Easy Diffusion records no LoRA hashes.
  */
 describe('Easy Diffusion Parsers - Samples', () => {
   describe('PNG samples', () => {
@@ -72,6 +73,11 @@ describe('Easy Diffusion Parsers - Samples', () => {
           cfg: 5.1,
           seed: '216312615',
         },
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.72 },
+          { name: 'LECO_BadHands', weight: 0.64 },
+          { name: '8be1e5d2cc7cd938037337603fb51565', weight: 0.58 },
+        ],
         hires: undefined,
         upscale: undefined,
       });
@@ -84,7 +90,7 @@ describe('Easy Diffusion Parsers - Samples', () => {
       );
 
       // clip_skip "True" = A1111 Clip skip 2; latent_upscaler is a hires pass
-      // with `upscale_amount` and `latent_upscaler_steps`
+      // with `upscale_amount` and `latent_upscaler_steps`; two LoRAs
       expect(meta).toEqual({
         software: 'easydiffusion',
         prompt:
@@ -103,6 +109,10 @@ describe('Easy Diffusion Parsers - Samples', () => {
           seed: '1306385491',
           clipSkip: 2,
         },
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.72 },
+          { name: '8be1e5d2cc7cd938037337603fb51565', weight: 0.58 },
+        ],
         hires: {
           scale: 2,
           upscaler: 'latent_upscaler',
@@ -168,6 +178,11 @@ describe('Easy Diffusion Parsers - Samples', () => {
           cfg: 5.1,
           seed: '3052478612',
         },
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.72 },
+          { name: 'LECO_BadHands', weight: 0.64 },
+          { name: '8be1e5d2cc7cd938037337603fb51565', weight: 0.58 },
+        ],
         hires: undefined,
         upscale: undefined,
       });

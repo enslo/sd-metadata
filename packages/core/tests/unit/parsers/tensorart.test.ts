@@ -211,3 +211,64 @@ describe('parseTensorArt - Unit Tests', () => {
     });
   });
 });
+
+describe('parseTensorArt - LoRA extraction', () => {
+  it('should read models of type LORA by modelFileName, weight and hash', () => {
+    const entries = createTensorArtEntries({
+      prompt: 'test',
+      models: [
+        {
+          label: 'v17',
+          type: 'BASE_MODEL',
+          modelFileName: 'WAI-Nsfw-Illustrious-17',
+          weight: 1,
+          hash: 'F116B0C7',
+        },
+        {
+          label: ' Perfect Hands ',
+          type: 'LORA',
+          modelId: '834420109029179667',
+          modelFileId: '834420109028131092',
+          weight: 0.2,
+          modelFileName: 'lora.by_tusi',
+          hash: 'FCE04DA7',
+        },
+        {
+          label: 'v2',
+          type: 'LORA',
+          weight: 0.4,
+          modelFileName: 'lighting_v2',
+        },
+      ],
+    });
+
+    const result = parseTensorArt(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'lora.by_tusi', weight: 0.2, hash: 'FCE04DA7' },
+        { name: 'lighting_v2', weight: 0.4 },
+      ]);
+    }
+  });
+
+  it('should omit loras when models has no LORA entry', () => {
+    const results = [
+      parseTensorArt(
+        createTensorArtEntries({
+          prompt: 'test',
+          models: [{ type: 'BASE_MODEL', modelFileName: 'WAI' }],
+        }),
+      ),
+      parseTensorArt(createTensorArtEntries({ prompt: 'test' })),
+    ];
+
+    for (const result of results) {
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).not.toHaveProperty('loras');
+      }
+    }
+  });
+});
