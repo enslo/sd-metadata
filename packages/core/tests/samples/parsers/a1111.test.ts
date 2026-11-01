@@ -195,6 +195,86 @@ describe('A1111 Parsers - Samples', () => {
         upscale: undefined,
       });
     });
+
+    it('should parse forge-classic-lora.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'forge-classic-lora.png',
+        parseMetadata,
+      );
+
+      // Three tags, one in the two-value form <lora:name:te:unet>; the hashes
+      // come from "Lora hashes" (Forge Classic writes 12 hex digits)
+      expect(meta).toEqual({
+        software: 'forge-classic',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, テスト\n <lora:LECO_GoodHands:-0.8> <lora:LECO_BadHands:0.8> <lora:Smooth_Booster_v5:0.1:0.5>',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiNSFWIllustrious_v140',
+          hash: 'c9b4dab236',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 6,
+          seed: '4155927651',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.8, hash: 'fe3806374a03' },
+          { name: 'LECO_BadHands', weight: 0.8, hash: '37c8880f409c' },
+          {
+            name: 'Smooth_Booster_v5',
+            weight: 0.5,
+            clipWeight: 0.1,
+            hash: 'c121dd957230',
+          },
+        ],
+      });
+    });
+
+    it('should parse forge-classic-lora_with_comma.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'forge-classic-lora_with_comma.png',
+        parseMetadata,
+      );
+
+      // A1111 keeps the comma in the tag but strips it when writing
+      // "Lora hashes" (SmoothBooster_v3), so the hash is matched after the
+      // same stripping
+      expect(meta).toEqual({
+        software: 'forge-classic',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, テスト\n<lora:LECO_GoodHands:-0.8> <lora:LECO_BadHands:0.8> <lora:Smooth,Booster_v3:1>',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiNSFWIllustrious_v140',
+          hash: 'c9b4dab236',
+        },
+        sampling: {
+          sampler: 'DPM++ 2M',
+          scheduler: 'Karras',
+          steps: 20,
+          cfg: 5.5,
+          seed: '2694730617',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.8, hash: 'fe3806374a03' },
+          { name: 'LECO_BadHands', weight: 0.8, hash: '37c8880f409c' },
+          { name: 'Smooth,Booster_v3', weight: 1, hash: '61d7ee6c08bd' },
+        ],
+      });
+    });
   });
 
   describe('Forge Neo samples', () => {
@@ -493,6 +573,7 @@ describe('A1111 Parsers - Samples', () => {
           upscaler: 'Latent (nearest-exact)',
           denoise: 0.6,
         },
+        loras: [{ name: 'NoobV065sHyperDmd', weight: 1, hash: '45b5bd0819cf' }],
         upscale: undefined,
       });
     });
@@ -557,6 +638,41 @@ describe('A1111 Parsers - Samples', () => {
           upscaler: 'ESRGAN 4x Ultrasharp',
         },
         upscale: undefined,
+      });
+    });
+
+    it('should parse sd-next-lora.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'sd-next-lora.png',
+        parseMetadata,
+      );
+
+      // SD.Next echoes both prompts as "Template:" / "Negative template:"
+      // lines after the negative prompt; they are dropped, so the tags count
+      // once. No hashes: SD.Next only writes "LoRA networks" (names)
+      expect(meta).toEqual({
+        software: 'sd-next',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, テスト\n<lora:LECO_GoodHands:-0.5> <lora:LECO_BadHands:1.0>',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170',
+          hash: 'f116b0c78f',
+        },
+        sampling: {
+          sampler: 'Default',
+          steps: 20,
+          seed: '123778995',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.5 },
+          { name: 'LECO_BadHands', weight: 1 },
+        ],
       });
     });
   });
@@ -738,8 +854,57 @@ describe('A1111 Parsers - Samples', () => {
           seed: '1070944611',
           clipSkip: 2,
         },
+        loras: [
+          {
+            name: 'Eyes for Illustrious Lora (Perfect anime eyes)',
+            weight: 0.35,
+          },
+          { name: 'Detailed anime style - Illustrious V2.0', weight: 0.4 },
+          {
+            name: 'Hands XL + SD 1.5 + F1D + Pony + Illustrious + zit + ZIB',
+            weight: 0.95,
+          },
+        ],
         hires: undefined,
         upscale: undefined,
+      });
+    });
+
+    it('should parse civitai-lora.jpg', () => {
+      const meta = parseConvertedSample<StandardMetadata>(
+        'jpeg',
+        'civitai-lora.jpg',
+      );
+
+      // CivitAI's A1111-style text has no tags; the LoRAs come from the
+      // "Civitai resources" JSON (display names, weights, no hashes)
+      expect(meta).toEqual({
+        software: 'civitai',
+        prompt: 'perfect eyes, 1girl, solo, hatsune miku, double v, #テスト',
+        negativePrompt: 'bad quality, worst quality, 3d, jpeg artifacts,',
+        width: 1024,
+        height: 1024,
+        model: undefined,
+        sampling: {
+          sampler: 'Euler a',
+          steps: 20,
+          cfg: 4.5,
+          seed: '667264311',
+          clipSkip: 2,
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          {
+            name: 'Hands XL + SD 1.5 + F1D + Pony + Illustrious + zit + ZIB',
+            weight: 0.95,
+          },
+          { name: 'Detailed anime style - Illustrious V2.0', weight: 0.4 },
+          {
+            name: 'Eyes for Illustrious Lora (Perfect anime eyes)',
+            weight: 0.35,
+          },
+        ],
       });
     });
 

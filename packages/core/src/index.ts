@@ -36,6 +36,7 @@ export type {
   GenerationSoftware,
   HiresSettings,
   ITXtChunk,
+  LoraSettings,
   MetadataSegment,
   MetadataSegmentSource,
   ModelSettings,
