@@ -148,6 +148,16 @@ describe('Fooocus Parsers - Samples', () => {
           seed: '4575475577937763433',
           clipSkip: 2,
         },
+        // Fooocus a1111 scheme: no tags, LoRAs come from "Lora weights" and "Lora hashes"
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.38, hash: 'ba19c53aee' },
+          { name: 'LECO_BadHands', weight: 0.33, hash: 'd63dde547c' },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565',
+            weight: 0.31,
+            hash: 'fed2ff2ef9',
+          },
+        ],
         hires: undefined,
         upscale: undefined,
       });
@@ -183,6 +193,16 @@ describe('Fooocus Parsers - Samples', () => {
           seed: '4879207425105948821',
           clipSkip: 2,
         },
+        // Fooocus a1111 scheme: no tags, LoRAs come from "Lora weights" and "Lora hashes"
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.38, hash: 'ba19c53aee' },
+          { name: 'LECO_BadHands', weight: 0.33, hash: 'd63dde547c' },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565',
+            weight: 0.31,
+            hash: 'fed2ff2ef9',
+          },
+        ],
         hires: undefined,
         upscale: undefined,
       });

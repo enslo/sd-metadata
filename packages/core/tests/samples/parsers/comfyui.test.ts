@@ -558,6 +558,58 @@ describe('ComfyUI Parsers - Samples', () => {
       });
     });
 
+    it('should parse comfyui-saveimagewithmetadata-lora.webp', () => {
+      const meta = parseConvertedSample<ComfyUIMetadata>(
+        'webp',
+        'comfyui-saveimagewithmetadata-lora.webp',
+      );
+
+      // The node writes one "Lora_N Model name / Model hash / Strength model /
+      // Strength clip" group per LoRA (N from 0) and a "Hashes" JSON object;
+      // the text has no tags, so the LoRAs come from those keys
+      expect(meta).toEqual({
+        software: 'sd-webui',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v,',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170.safetensors',
+          hash: 'f116b0c78f',
+        },
+        sampling: {
+          sampler: 'euler_ancestral_karras',
+          steps: 20,
+          cfg: 5,
+          seed: '703968518513702',
+        },
+        hires: undefined,
+        upscale: undefined,
+        loras: [
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565.safetensors',
+            weight: 0.4,
+            clipWeight: 0.2,
+            hash: '59d5706a66',
+          },
+          {
+            name: 'LECO_BadHands.safetensors',
+            weight: 0.9,
+            clipWeight: 0.8,
+            hash: '4c0259af91',
+          },
+          {
+            name: 'LECO_GoodHands.safetensors',
+            weight: -0.8,
+            clipWeight: -0.7,
+            hash: '37c4455d21',
+          },
+        ],
+      });
+    });
+
     it('should parse comfyui-comfy-image-saver.webp', () => {
       const meta = parseConvertedSample<ComfyUIMetadata>(
         'webp',

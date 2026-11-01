@@ -140,6 +140,8 @@ export interface BaseMetadata {
   hires?: HiresSettings;
   /** Upscale settings (if applied) */
   upscale?: UpscaleSettings;
+  /** LoRAs that affected the image, in the order the tool lists them; absent when none */
+  loras?: LoraSettings[];
   /** Image width */
   width: number;
   /** Image height */
@@ -382,6 +384,20 @@ export interface UpscaleSettings {
   upscaler?: string;
   /** Scale factor */
   scale?: number;
+}
+
+/**
+ * A LoRA (or LyCORIS) applied to the generation
+ */
+export interface LoraSettings {
+  /** Name exactly as the tool wrote it: file stem, file name, path, URN or display name */
+  name: string;
+  /** Strength applied to the diffusion model (UNet); the only weight for single-value tools */
+  weight?: number;
+  /** Strength applied to the text encoder (CLIP), present only when the tool records it separately */
+  clipWeight?: number;
+  /** Hash exactly as the tool wrote it (AutoV2, sha256, "blake3:..."); never normalized */
+  hash?: string;
 }
 
 // ============================================================================
