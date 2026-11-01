@@ -83,6 +83,37 @@ describe('Easy Diffusion Parsers - Samples', () => {
       });
     });
 
+    it('should parse easy-diffusion-single-lora.png', () => {
+      const meta = parsePngSample<StandardMetadata>(
+        'easy-diffusion-single-lora.png',
+        parseMetadata,
+      );
+
+      // A single LoRA: `use_lora_model` / `lora_alpha` are a bare name and
+      // number, not a Python list (types.py: Union[str, List[str]])
+      expect(meta).toEqual({
+        software: 'easydiffusion',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, 1girl, solo, hatsune miku,',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170',
+        },
+        sampling: {
+          sampler: 'dpmpp_2m',
+          steps: 22,
+          cfg: 4.6,
+          seed: '4160249439',
+        },
+        loras: [{ name: 'Smooth_Booster_v5', weight: 0.22 }],
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+
     it('should parse easy-diffusion-hires.png', () => {
       const meta = parsePngSample<StandardMetadata>(
         'easy-diffusion-hires.png',
@@ -183,6 +214,37 @@ describe('Easy Diffusion Parsers - Samples', () => {
           { name: 'LECO_BadHands', weight: 0.64 },
           { name: '8be1e5d2cc7cd938037337603fb51565', weight: 0.58 },
         ],
+        hires: undefined,
+        upscale: undefined,
+      });
+    });
+
+    it('should parse easy-diffusion-single-lora.webp', () => {
+      const meta = parseConvertedSample<StandardMetadata>(
+        'webp',
+        'easy-diffusion-single-lora.webp',
+      );
+
+      // A single LoRA: `use_lora_model` is a JSON string and `lora_alpha`
+      // a JSON number, not arrays
+      expect(meta).toEqual({
+        software: 'easydiffusion',
+        prompt:
+          'general, masterpiece, best quality, amazing quality, 1girl, solo, hatsune miku,',
+        negativePrompt:
+          'bad quality, worst quality, worst detail, sketch, censor,',
+        width: 1024,
+        height: 1024,
+        model: {
+          name: 'waiIllustriousSDXL_v170',
+        },
+        sampling: {
+          sampler: 'dpmpp_2m',
+          steps: 22,
+          cfg: 4.6,
+          seed: '2042920005',
+        },
+        loras: [{ name: 'Smooth_Booster_v5', weight: 0.08 }],
         hires: undefined,
         upscale: undefined,
       });
