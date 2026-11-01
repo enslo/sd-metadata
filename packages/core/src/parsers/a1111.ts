@@ -4,6 +4,7 @@ import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import {
   lora,
+  optionalLoras,
   parseLoraTags,
   parseNameValueList,
   withLoraHashes,
@@ -114,7 +115,7 @@ export function parseA1111(
       clipSkip,
     }),
     hires: trimObject({ scale, upscaler, steps: hiresSteps, denoise }),
-    ...(loras.length > 0 ? { loras } : {}),
+    ...optionalLoras(loras),
   });
 }
 

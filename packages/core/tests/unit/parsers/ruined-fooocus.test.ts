@@ -165,3 +165,63 @@ describe('parseRuinedFooocus - Unit Tests', () => {
     });
   });
 });
+
+describe('parseRuinedFooocus - LoRA extraction', () => {
+  it('should split "weight - path" entries and keep the hash when present', () => {
+    // async_worker.py: [sha256 or "", f"{weight} - {name}"]
+    const entries = createRuinedFooocusEntry({
+      software: 'RuinedFooocus',
+      loras: [
+        ['', '0.05 - Lora\\LECO_GoodHands.safetensors'],
+        ['FED2FF2EF9C09C5F', '0.75 - Lora\\8be1e5d2.safetensors'],
+      ],
+    });
+
+    const result = parseRuinedFooocus(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'Lora\\LECO_GoodHands.safetensors', weight: 0.05 },
+        {
+          name: 'Lora\\8be1e5d2.safetensors',
+          weight: 0.75,
+          hash: 'FED2FF2EF9C09C5F',
+        },
+      ]);
+    }
+  });
+
+  it('should take the whole text as the name when there is no separator', () => {
+    const entries = createRuinedFooocusEntry({
+      software: 'RuinedFooocus',
+      loras: [['', 'LECO_BadHands.safetensors'], ['', ''], [null]],
+    });
+
+    const result = parseRuinedFooocus(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'LECO_BadHands.safetensors' },
+      ]);
+    }
+  });
+
+  it('should omit loras and a null model hash when absent', () => {
+    const entries = createRuinedFooocusEntry({
+      software: 'RuinedFooocus',
+      base_model_name: 'model.safetensors',
+      base_model_hash: null,
+      loras: [],
+    });
+
+    const result = parseRuinedFooocus(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.model).toEqual({ name: 'model.safetensors' });
+      expect(result.value).not.toHaveProperty('loras');
+    }
+  });
+});

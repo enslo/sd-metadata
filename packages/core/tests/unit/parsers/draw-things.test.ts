@@ -185,3 +185,95 @@ describe('parseDrawThings - Unit Tests', () => {
     });
   });
 });
+
+describe('parseDrawThings - LoRA extraction', () => {
+  it('should read v2.loras and ignore the float32 lora list', () => {
+    const entries = createEntries({
+      ...minimalJson,
+      lora: [{ model: 'a.ckpt', weight: 0.30000001192092896 }],
+      v2: {
+        loras: [
+          { file: 'a.ckpt', mode: 'all', weight: 0.3 },
+          { file: 'b.ckpt', mode: 'all', weight: 0.7 },
+        ],
+      },
+    });
+
+    const result = parseDrawThings(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'a.ckpt', weight: 0.3 },
+        { name: 'b.ckpt', weight: 0.7 },
+      ]);
+    }
+  });
+
+  it('should fall back to the LoRA N Model / Weight pairs of dc:description', () => {
+    const entries = createEntries(
+      {
+        ...minimalJson,
+        lora: [{ model: 'a.ckpt', weight: 0.30000001192092896 }],
+      },
+      {
+        parameters:
+          'prompt\nSteps: 8, Sampler: LCM, LoRA 1 Model: a.ckpt, LoRA 1 Weight: 0.3, LoRA 2 Model: b.ckpt, LoRA 2 Weight: 0.7',
+      },
+    );
+
+    const result = parseDrawThings(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'a.ckpt', weight: 0.3 },
+        { name: 'b.ckpt', weight: 0.7 },
+      ]);
+    }
+  });
+
+  it('should omit loras when none are listed', () => {
+    const results = [
+      parseDrawThings(createEntries(minimalJson)),
+      // An empty v2 list is authoritative; the description is not consulted
+      parseDrawThings(
+        createEntries(
+          { ...minimalJson, v2: { loras: [] } },
+          { parameters: 'LoRA 1 Model: a.ckpt, LoRA 1 Weight: 0.3' },
+        ),
+      ),
+    ];
+
+    for (const result of results) {
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).not.toHaveProperty('loras');
+      }
+    }
+  });
+});
+
+describe('parseDrawThings - float32 values', () => {
+  it('should restore scale and strength from their float32 widening', () => {
+    // As written by Draw Things: Float settings printed through a double
+    const entries = createEntries({
+      ...minimalJson,
+      scale: 1.3999999761581421,
+      strength: 0.69999998807907104,
+    });
+
+    const result = parseDrawThings(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.sampling).toEqual({
+        sampler: 'DPM++ 2M AYS',
+        steps: 20,
+        cfg: 1.4,
+        seed: '12345',
+        denoise: 0.7,
+      });
+    }
+  });
+});

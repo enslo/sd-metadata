@@ -26,6 +26,11 @@ function baseName(file: string): string {
 // Samples that produce no output at all
 const EMPTY = new Set(['empty']);
 
+// Samples whose only metadata is an XMP packet (Draw Things): lite does not
+// read XMP (Draw Things is deliberately out of lite's scope), so it must
+// return '' while full parses the packet
+const XMP_ONLY = new Set(['draw-things-lora']);
+
 // Samples with non-generation metadata — just check both produce non-empty
 const FALLBACK = new Set(['gimp', 'gimp-en']);
 
@@ -61,6 +66,12 @@ function runSampleTest(format: string, file: string): void {
 
   if (EMPTY.has(base)) {
     expect(lite).toBe('');
+    return;
+  }
+
+  if (XMP_ONLY.has(base)) {
+    expect(lite, `lite read XMP for ${file}`).toBe('');
+    expect(full.length, `full empty for ${file}`).toBeGreaterThan(0);
     return;
   }
 

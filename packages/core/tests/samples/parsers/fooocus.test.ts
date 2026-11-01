@@ -12,7 +12,8 @@ import { parseConvertedSample, parsePngSample } from '../helpers';
  *   `\uXXXX`-escaped, so prompts survive every container unchanged.
  *   Prompts are read from `full_prompt` / `full_negative_prompt`, the
  *   style-expanded text Fooocus actually encoded (styles "Artstyle
- *   Watercolor" and "Misc Kawaii" here), so both schemes agree
+ *   Watercolor" and "Misc Kawaii" here), so both schemes agree. LoRAs
+ *   come from `loras`, one `[name, weight, hash]` list per enabled slot
  * - `a1111`: A1111-compatible text, dispatched to parseA1111 with
  *   software `fooocus`; style expansion and prompt expansion are already
  *   merged into the prompt, `Scheduler: karras` is not the A1111
@@ -51,6 +52,15 @@ describe('Fooocus Parsers - Samples', () => {
           seed: '7100816951239959675',
           clipSkip: 2,
         },
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.48, hash: 'ba19c53aee' },
+          { name: 'LECO_BadHands', weight: 0.77, hash: 'd63dde547c' },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565',
+            weight: 0.65,
+            hash: 'fed2ff2ef9',
+          },
+        ],
         hires: undefined,
         upscale: undefined,
       });
@@ -83,6 +93,15 @@ describe('Fooocus Parsers - Samples', () => {
           seed: '7997558647298758616',
           clipSkip: 2,
         },
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.48, hash: 'ba19c53aee' },
+          { name: 'LECO_BadHands', weight: 0.77, hash: 'd63dde547c' },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565',
+            weight: 0.65,
+            hash: 'fed2ff2ef9',
+          },
+        ],
         hires: undefined,
         upscale: undefined,
       });
@@ -115,6 +134,15 @@ describe('Fooocus Parsers - Samples', () => {
           seed: '8636439303874759085',
           clipSkip: 2,
         },
+        loras: [
+          { name: 'LECO_GoodHands', weight: -0.48, hash: 'ba19c53aee' },
+          { name: 'LECO_BadHands', weight: 0.77, hash: 'd63dde547c' },
+          {
+            name: '8be1e5d2cc7cd938037337603fb51565',
+            weight: 0.65,
+            hash: 'fed2ff2ef9',
+          },
+        ],
         hires: undefined,
         upscale: undefined,
       });

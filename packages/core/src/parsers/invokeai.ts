@@ -1,6 +1,8 @@
+import type { LoraSettings } from '../types';
 import { Result } from '../types';
 import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
@@ -21,6 +23,11 @@ interface InvokeAIMetadataJson {
     name?: string;
     hash?: string;
   };
+  /** LoRAs applied to the model, each with its InvokeAI model record and weight */
+  loras?: Array<{
+    model?: { name?: unknown; hash?: unknown };
+    weight?: unknown;
+  }>;
   upscale_model?: {
     name?: string;
   };
@@ -37,6 +44,34 @@ function extractInvokeAIMetadata(entryRecord: EntryRecord): string | undefined {
     entryRecord.invokeai_metadata ??
     extractFromCommentJson(entryRecord, 'invokeai_metadata')
   );
+}
+
+/**
+ * Read the LoRA list
+ *
+ * `loras[].model` is the same record InvokeAI writes for the main model
+ * (`name` without extension, `hash` with its `blake3:` prefix, plus `key`,
+ * `base` and `type`, which are not read); `weight` applies to both the UNet
+ * and the text encoder.
+ *
+ * @param data - Parsed invokeai_metadata
+ * @returns LoRAs in the order InvokeAI listed them
+ */
+function extractLoras(data: InvokeAIMetadataJson): LoraSettings[] {
+  if (!Array.isArray(data.loras)) return [];
+
+  return data.loras.flatMap((entry) => {
+    const name = entry?.model?.name;
+    if (typeof name !== 'string' || name === '') return [];
+    const hash = entry.model?.hash;
+    return [
+      lora({
+        name,
+        weight: toWeight(entry.weight),
+        hash: typeof hash === 'string' && hash !== '' ? hash : undefined,
+      }),
+    ];
+  });
 }
 
 /**
@@ -75,6 +110,7 @@ export function parseInvokeAI(entries: EntryRecord): InternalParseResult {
 
   // Build upscale settings if present
   const upscale = buildUpscale(data);
+  const loras = extractLoras(data);
 
   return Result.ok({
     software: 'invokeai',
@@ -93,6 +129,7 @@ export function parseInvokeAI(entries: EntryRecord): InternalParseResult {
       sampler: data.scheduler,
     }),
     ...upscale,
+    ...optionalLoras(loras),
   });
 }
 

@@ -357,3 +357,42 @@ describe('parseFooocus - Unit Tests', () => {
     });
   });
 });
+
+describe('parseFooocus - LoRA extraction', () => {
+  it('should read the [name, weight, hash] entries of loras', () => {
+    const entries = createFooocusEntry({
+      prompt: 'test',
+      loras: [
+        ['LECO_GoodHands', -0.48, 'ba19c53aee'],
+        ['LECO_BadHands', 0.77],
+      ],
+      lora_combined_1: 'LECO_GoodHands : -0.48',
+      lora_combined_2: 'LECO_BadHands : 0.77',
+    });
+
+    const result = parseFooocus(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'LECO_GoodHands', weight: -0.48, hash: 'ba19c53aee' },
+        { name: 'LECO_BadHands', weight: 0.77 },
+      ]);
+    }
+  });
+
+  it('should skip malformed entries and omit loras when none remain', () => {
+    const entries = createFooocusEntry({
+      prompt: 'test',
+      loras: ['LECO_GoodHands', [], ['None', 0.5, 'ba19c53aee'], [42, 0.5]],
+      lora_combined_1: 'LECO_GoodHands : -0.48',
+    });
+
+    const result = parseFooocus(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).not.toHaveProperty('loras');
+    }
+  });
+});

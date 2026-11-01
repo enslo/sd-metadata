@@ -447,3 +447,103 @@ describe('parseEasyDiffusion - Unit Tests', () => {
     });
   });
 });
+
+describe('parseEasyDiffusion - LoRA extraction', () => {
+  it('should read the Python list repr of PNG chunks', () => {
+    const entries = createPngEntries({
+      use_lora_model: "['LECO_GoodHands', 'LECO_BadHands']",
+      lora_alpha: '[-0.72, 0.64]',
+    });
+
+    const result = parseEasyDiffusion(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'LECO_GoodHands', weight: -0.72 },
+        { name: 'LECO_BadHands', weight: 0.64 },
+      ]);
+    }
+  });
+
+  it('should read names quoted and escaped the way Python prints them', () => {
+    // repr() switches to double quotes for a name with an apostrophe and
+    // doubles backslashes; commas inside quotes do not split
+    const entries = createPngEntries({
+      use_lora_model: String.raw`["it's", 'back\\slash', 'a, b']`,
+      lora_alpha: '[1, 0.5, 0]',
+    });
+
+    const result = parseEasyDiffusion(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: "it's", weight: 1 },
+        { name: 'back\\slash', weight: 0.5 },
+        { name: 'a, b', weight: 0 },
+      ]);
+    }
+  });
+
+  it('should read a single LoRA written as a bare string and number', () => {
+    // types.py: use_lora_model: Union[str, List[str]], lora_alpha: Union[float, List[float]]
+    const png = parseEasyDiffusion(
+      createPngEntries({ use_lora_model: 'LECO_GoodHands', lora_alpha: '0.5' }),
+    );
+    const json = parseEasyDiffusion(
+      createJsonEntry({
+        prompt: 'test',
+        use_lora_model: 'LECO_GoodHands',
+        lora_alpha: 0.5,
+      }),
+    );
+
+    for (const result of [png, json]) {
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.loras).toEqual([
+          { name: 'LECO_GoodHands', weight: 0.5 },
+        ]);
+      }
+    }
+  });
+
+  it('should read JSON arrays and omit loras for unset values', () => {
+    const withLoras = parseEasyDiffusion(
+      createJsonEntry({
+        prompt: 'test',
+        use_lora_model: ['a', 'b'],
+        lora_alpha: [0.1, 0.2],
+      }),
+    );
+    expect(withLoras.ok).toBe(true);
+    if (withLoras.ok) {
+      expect(withLoras.value.loras).toEqual([
+        { name: 'a', weight: 0.1 },
+        { name: 'b', weight: 0.2 },
+      ]);
+    }
+
+    const unset = [
+      parseEasyDiffusion(
+        createJsonEntry({
+          prompt: 'test',
+          use_lora_model: null,
+          lora_alpha: 0,
+        }),
+      ),
+      parseEasyDiffusion(createPngEntries({ use_lora_model: 'None' })),
+      parseEasyDiffusion(
+        createPngEntries({ use_lora_model: '[]', lora_alpha: '[]' }),
+      ),
+      parseEasyDiffusion(createPngEntries()),
+    ];
+    for (const result of unset) {
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).not.toHaveProperty('loras');
+      }
+    }
+  });
+});

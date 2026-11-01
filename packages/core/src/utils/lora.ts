@@ -138,3 +138,29 @@ function parseWeight(value: string | undefined): number | undefined {
   const num = Number(trimmed);
   return Number.isFinite(num) ? num : undefined;
 }
+
+/**
+ * Read a weight written as a number or as text
+ *
+ * JSON tools write numbers; SwarmUI, RuinedFooocus and Easy Diffusion PNG
+ * chunks write text. Anything else, blank text or a non-finite value yields
+ * undefined.
+ */
+export function toWeight(value: unknown): number | undefined {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  return typeof value === 'string' ? parseWeight(value) : undefined;
+}
+
+/**
+ * Spread helper that adds `loras` only when at least one LoRA was read
+ *
+ * @example
+ * Result.ok({ software, prompt, ...optionalLoras(loras) })
+ */
+export function optionalLoras(
+  loras: LoraSettings[],
+): { loras: LoraSettings[] } | Record<string, never> {
+  return loras.length > 0 ? { loras } : {};
+}

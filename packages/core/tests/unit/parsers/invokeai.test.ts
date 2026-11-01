@@ -151,3 +151,48 @@ describe('parseInvokeAI - Unit Tests', () => {
     });
   });
 });
+
+describe('parseInvokeAI - LoRA extraction', () => {
+  it('should read name, hash and weight of each LoRA record', () => {
+    const metadata = JSON.stringify({
+      positive_prompt: 'test',
+      loras: [
+        {
+          model: {
+            key: 'ef4977be',
+            hash: 'blake3:bfd3808a',
+            name: 'LECO_GoodHands',
+            base: 'sdxl',
+            type: 'lora',
+          },
+          weight: -0.8,
+        },
+        { model: { name: 'plain' }, weight: 1 },
+      ],
+    });
+
+    const result = parseInvokeAI(createInvokeAIEntries(metadata));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'LECO_GoodHands', weight: -0.8, hash: 'blake3:bfd3808a' },
+        { name: 'plain', weight: 1 },
+      ]);
+    }
+  });
+
+  it('should skip records without a model name and omit loras when none remain', () => {
+    const metadata = JSON.stringify({
+      positive_prompt: 'test',
+      loras: [{ weight: 0.5 }, { model: { hash: 'blake3:x' } }],
+    });
+
+    const result = parseInvokeAI(createInvokeAIEntries(metadata));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).not.toHaveProperty('loras');
+    }
+  });
+});
