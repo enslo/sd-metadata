@@ -124,6 +124,8 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
     name: data.baseModel?.modelFileName,
     hash: data.baseModel?.hash,
   });
+  // LoRAs from generation_data (upload names and hashes); the LoraTagLoader
+  // node in the graph is the fallback when the list has none
   const loras = extractLoras(data.models);
 
   return Result.ok({
@@ -141,6 +143,6 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
     sampling: comfy?.sampling,
     hires: comfy?.hires,
     upscale: comfy?.upscale,
-    ...optionalLoras(loras),
+    ...optionalLoras(loras.length > 0 ? loras : (comfy?.loras ?? [])),
   });
 }

@@ -9,12 +9,14 @@ import type { BaseMetadata, ComfyNodeGraph, SamplingSettings } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
+import { optionalLoras } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import {
   extractCivitaiMetadata,
   extractExtraMetadata,
 } from './comfyui-civitai';
 import { flatScanComfyMetadata } from './comfyui-flat-scan';
+import { extractComfyLoras } from './comfyui-loras';
 import {
   type ClassifiedNodes,
   calculateScale,
@@ -26,6 +28,7 @@ import {
   extractSampling,
   findHiresSampler,
   isNodeReference,
+  resolveNumberInput,
 } from './comfyui-nodes';
 import type { InternalParseResult, PartialMetadata } from './types';
 
@@ -232,7 +235,7 @@ function hasWorkflowOnlyChunk(entryRecord: EntryRecord): boolean {
 /**
  * Extract metadata from ComfyUI nodes
  *
- * Extracts prompt, dimensions, model, sampling, and hires settings
+ * Extracts prompt, dimensions, model, sampling, hires settings and LoRAs
  * from standard ComfyUI node structure using class_type-based lookup.
  *
  * @param nodes - Parsed ComfyUI prompt (node graph)
@@ -249,6 +252,7 @@ export function extractComfyUIMetadata(
   const { width, height } = extractDimensions(
     c.latentImage,
     c.latentImageRgthree,
+    c.allInOneLoader,
   );
 
   // Find hires sampler and resolve its sampling parameters
@@ -265,7 +269,7 @@ export function extractComfyUIMetadata(
     | undefined;
 
   const rawSampling = normalizeDenoise(extractSampling(nodes, c.sampler));
-  const clipSkip = extractClipSkip(c.clipSetLastLayer);
+  const clipSkip = extractClipSkip(c.clipSetLastLayer, c.allInOneLoader);
 
   return trimObject({
     prompt: promptText || undefined,
@@ -275,6 +279,7 @@ export function extractComfyUIMetadata(
     model: extractModel(c.checkpoint, c.unetLoader),
     sampling: trimObject({ ...rawSampling, clipSkip }),
     ...buildHiresOrUpscale(upscalerName, hiresScale, hiresSampling),
+    ...optionalLoras(extractComfyLoras(nodes)),
   });
 }
 
@@ -284,6 +289,7 @@ export function extractComfyUIMetadata(
  * Priority:
  * 1. LatentUpscaleBy.scale_by (direct value)
  * 2. ImageScale.width as node reference → source node's clip_scale (rgthree)
+ *    or, for CR Integer Multiple (ComfyRoll), its `multiple` factor
  * 3. ImageScale.width as number → calculate ratio against base width
  */
 function resolveHiresScale(
@@ -304,6 +310,10 @@ function resolveHiresScale(
     const sourceNode = nodes[String(widthInput[0])];
     if (typeof sourceNode?.inputs.clip_scale === 'number') {
       return sourceNode.inputs.clip_scale;
+    }
+    // CR Integer Multiple: base width × multiple (literal or PrimitiveFloat)
+    if (sourceNode?.class_type === 'CR Integer Multiple') {
+      return resolveNumberInput(nodes, sourceNode.inputs.multiple);
     }
     return undefined;
   }
@@ -385,7 +395,8 @@ function mergeObjects<T extends object>(
  * picked — so an empty string or zero from a higher-priority source does
  * not mask a usable value from a lower one. Nested objects (model,
  * sampling, hires, upscale) are merged field-by-field via {@link mergeObjects}
- * so partial coverage from each source is preserved.
+ * so partial coverage from each source is preserved. `loras` is taken whole
+ * from the highest-priority source that lists any.
  *
  * @param sources - Partial metadata in increasing priority order
  * @returns Merged base metadata with required fields defaulted
@@ -410,5 +421,6 @@ function mergeMetadata(
       hires: mergeObjects(...sources.map((s) => s?.hires)),
       upscale: mergeObjects(...sources.map((s) => s?.upscale)),
     }),
+    ...optionalLoras(pick('loras') ?? []),
   };
 }
