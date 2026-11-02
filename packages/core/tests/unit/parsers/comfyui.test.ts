@@ -1047,3 +1047,179 @@ describe('parseComfyUI - all-in-one loaders', () => {
     }
   });
 });
+
+describe('parseComfyUI - conditioning wiring', () => {
+  const sampler = (positive: unknown, negative: unknown) => ({
+    class_type: 'KSampler',
+    inputs: {
+      seed: 1,
+      steps: 10,
+      cfg: 5,
+      sampler_name: 'euler',
+      scheduler: 'normal',
+      positive,
+      negative,
+      latent_image: ['90', 0],
+      model: ['91', 0],
+    },
+  });
+  const common = {
+    '90': {
+      class_type: 'EmptyLatentImage',
+      inputs: { width: 512, height: 512 },
+    },
+    '91': {
+      class_type: 'CheckpointLoaderSimple',
+      inputs: { ckpt_name: 'ok.safetensors' },
+    },
+  };
+
+  function parse(prompt: Record<string, unknown>) {
+    const result = parseComfyUI({ prompt: JSON.stringify(prompt) });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    return result.value;
+  }
+
+  it('should leave the negative prompt empty when both sides share one output', () => {
+    // MOSS-Image style graph: positive and negative wired to the same
+    // CLIPTextEncode output, a second "Negative Prompt" node left unconnected
+    const value = parse({
+      '1': { class_type: 'CLIPTextEncode', inputs: { text: 'shared prompt' } },
+      '2': {
+        class_type: 'CLIPTextEncode',
+        inputs: { text: 'orphan negative' },
+      },
+      '3': sampler(['1', 0], ['1', 0]),
+      ...common,
+    });
+    expect(value.prompt).toBe('shared prompt');
+    expect(value.negativePrompt).toBe('');
+  });
+
+  it('should read negative_prompt from an encoder that outputs both sides', () => {
+    // TextEncodeQwenImage21: output 0 is the positive conditioning,
+    // output 1 the negative one, built from `negative_prompt`
+    const graph = (negativePrompt: string) => ({
+      '1': {
+        class_type: 'TextEncodeQwenImage21',
+        inputs: {
+          prompt: 'cut out the background',
+          negative_prompt: negativePrompt,
+          clip: ['92', 0],
+        },
+      },
+      '3': sampler(['1', 0], ['1', 1]),
+      ...common,
+    });
+    const empty = parse(graph(''));
+    expect(empty.prompt).toBe('cut out the background');
+    expect(empty.negativePrompt).toBe('');
+
+    const filled = parse(graph('blurry'));
+    expect(filled.prompt).toBe('cut out the background');
+    expect(filled.negativePrompt).toBe('blurry');
+  });
+
+  it('should read the populated text of an Impact wildcard processor', () => {
+    const value = parse({
+      '1': { class_type: 'CLIPTextEncode', inputs: { text: ['9', 0] } },
+      '2': { class_type: 'CLIPTextEncode', inputs: { text: 'low quality' } },
+      '3': sampler(['1', 0], ['2', 0]),
+      '9': {
+        class_type: 'ImpactWildcardProcessor',
+        inputs: {
+          wildcard_text: '__character__, 1girl',
+          populated_text: 'alice, 1girl',
+          mode: 'reproduce',
+          seed: 7,
+          'Select to add Wildcard': 'Select the Wildcard to add to the text',
+        },
+      },
+      ...common,
+    });
+    expect(value.prompt).toBe('alice, 1girl');
+    expect(value.negativePrompt).toBe('low quality');
+  });
+
+  it('should not borrow the negative text when the wired positive is unreadable', () => {
+    // The positive wire ends at a node whose text input is unknown; the flat
+    // scan must not fill the prompt with the negative encoder's text. (A
+    // sampler with no wiring at all still gets the flat-scan backfill, see
+    // "should backfill prompt via flat scan".)
+    const value = parse({
+      '1': {
+        class_type: 'MysteryEncode',
+        inputs: { words: 'the real prompt', clip: ['92', 0] },
+      },
+      '2': { class_type: 'CLIPTextEncode', inputs: { text: 'low quality' } },
+      '3': sampler(['1', 0], ['2', 0]),
+      ...common,
+    });
+    expect(value.prompt).toBe('');
+    expect(value.negativePrompt).toBe('low quality');
+  });
+
+  it('should follow conditioning inputs through intermediate nodes', () => {
+    // ControlNetApply (single `conditioning`) and ConditioningCombine
+    // (`conditioning_1` / `conditioning_2`): the first branch carrying text wins
+    const value = parse({
+      '1': { class_type: 'CLIPTextEncode', inputs: { text: 'via controlnet' } },
+      '2': {
+        class_type: 'ControlNetApply',
+        inputs: { conditioning: ['1', 0], control_net: ['93', 0], strength: 1 },
+      },
+      '4': { class_type: 'CLIPTextEncode', inputs: { text: 'first branch' } },
+      '5': { class_type: 'CLIPTextEncode', inputs: { text: 'second branch' } },
+      '6': {
+        class_type: 'ConditioningCombine',
+        inputs: { conditioning_1: ['4', 0], conditioning_2: ['5', 0] },
+      },
+      '3': sampler(['2', 0], ['6', 0]),
+      ...common,
+    });
+    expect(value.prompt).toBe('via controlnet');
+    expect(value.negativePrompt).toBe('first branch');
+  });
+});
+
+describe('parseComfyUI - zeroed-out conditioning', () => {
+  it('should leave the side fed by ConditioningZeroOut empty', () => {
+    // Flux-style graph: the negative input takes the positive encoder's
+    // conditioning through ConditioningZeroOut, which discards the text
+    const prompt = {
+      '1': { class_type: 'CLIPTextEncode', inputs: { text: 'flux prompt' } },
+      '2': {
+        class_type: 'ConditioningZeroOut',
+        inputs: { conditioning: ['1', 0] },
+      },
+      '3': {
+        class_type: 'KSampler',
+        inputs: {
+          seed: 1,
+          steps: 10,
+          cfg: 1,
+          sampler_name: 'euler',
+          scheduler: 'simple',
+          positive: ['1', 0],
+          negative: ['2', 0],
+          latent_image: ['4', 0],
+          model: ['5', 0],
+        },
+      },
+      '4': {
+        class_type: 'EmptyLatentImage',
+        inputs: { width: 1024, height: 1024 },
+      },
+      '5': {
+        class_type: 'UNETLoader',
+        inputs: { unet_name: 'flux.safetensors' },
+      },
+    };
+    const result = parseComfyUI({ prompt: JSON.stringify(prompt) });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.prompt).toBe('flux prompt');
+    expect(result.value.negativePrompt).toBe('');
+  });
+});

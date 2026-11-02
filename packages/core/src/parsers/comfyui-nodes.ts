@@ -240,6 +240,10 @@ export function extractText(
   // (rgthree, inputs.prompt), ComfyRoll text boxes (inputs.Text) and
   // PromptStashSaver (inputs.prompt_text — a user-provided string stored on
   // the node itself, treated the same as a direct text input).
+  // ImpactWildcardProcessor / ImpactWildcardEncode (ComfyUI-Impact-Pack)
+  // keep the template in wildcard_text and the expanded text the run used
+  // in populated_text; in "populate" mode the stored value may be the
+  // previous run's, the closest record there is.
   // PrimitiveString / PrimitiveStringMultiline (comfy-core) hold their
   // literal in `value`.
   const textValue =
@@ -247,6 +251,7 @@ export function extractText(
     node.inputs.prompt ??
     node.inputs.Text ??
     node.inputs.prompt_text ??
+    node.inputs.populated_text ??
     (node.class_type.startsWith('PrimitiveString')
       ? node.inputs.value
       : undefined);
@@ -312,29 +317,67 @@ export function extractPromptTexts(
   // Resolve the node that holds positive/negative conditioning references.
   // KSampler/KSamplerAdvanced: directly on sampler inputs
   // SamplerCustomAdvanced: on the CFGGuider node via guider input
-  const conditioningSource = resolveConditioningSource(nodes, sampler);
+  const { positive, negative } = resolveConditioningSource(
+    nodes,
+    sampler,
+  ).inputs;
 
   return {
-    promptText: extractTextFromConditioning(
-      nodes,
-      conditioningSource.inputs.positive,
-      'positive',
-    ),
-    negativeText: extractTextFromConditioning(
-      nodes,
-      conditioningSource.inputs.negative,
-      'negative',
-    ),
+    promptText: extractTextFromConditioning(nodes, positive, 'positive'),
+    // Both sides on one output: the negative conditioning is the positive
+    // one, which CFG cancels out, so the graph runs without a negative prompt
+    negativeText: isSameReference(positive, negative)
+      ? ''
+      : extractTextFromConditioning(nodes, negative, 'negative'),
   };
+}
+
+/**
+ * Which conditioning sides the sampler wires to another node
+ *
+ * A wired side is authoritative: its text is whatever the wire leads to,
+ * possibly nothing readable. Only an unwired side may be filled from the
+ * flat scan.
+ */
+export function wiredConditioning(
+  nodes: ComfyNodeGraph,
+  sampler: ComfyNode | undefined,
+): { positive: boolean; negative: boolean } {
+  if (!sampler) return { positive: false, negative: false };
+  const { positive, negative } = resolveConditioningSource(
+    nodes,
+    sampler,
+  ).inputs;
+  return {
+    positive: isNodeReference(positive),
+    negative: isNodeReference(negative),
+  };
+}
+
+/**
+ * Whether two inputs reference the same output of the same node
+ */
+function isSameReference(a: unknown, b: unknown): boolean {
+  return (
+    isNodeReference(a) &&
+    isNodeReference(b) &&
+    String(a[0]) === String(b[0]) &&
+    a[1] === b[1]
+  );
 }
 
 /**
  * Extract text by following a conditioning chain
  *
- * Conditioning may pass through intermediate nodes (e.g. ControlNet apply)
- * before reaching the CLIPTextEncode that holds the actual text.
- * This function first tries extractText on the target node; if no text is
- * found, it follows the same conditioning key (positive/negative) deeper.
+ * The node a wire leads to may name the side itself: encoders that output
+ * both conditionings (TextEncodeQwenImage21: `prompt` / `negative_prompt`)
+ * and all-in-one loaders (Efficient Loader, easy fullLoader: `positive` /
+ * `negative` strings). That input wins over the generic text inputs, so the
+ * negative side never reads the positive prompt, and an empty string is a
+ * valid answer. Otherwise the node's own text is used; when it has none the
+ * chain continues through the same side (ControlNetApplyAdvanced) and then
+ * through `conditioning*` inputs (ControlNetApply, ConditioningCombine,
+ * ConditioningConcat, ...), first branch with text wins.
  */
 function extractTextFromConditioning(
   nodes: ComfyNodeGraph,
@@ -345,18 +388,37 @@ function extractTextFromConditioning(
   if (maxDepth <= 0 || !isNodeReference(ref)) return '';
 
   const nodeId = String(ref[0]);
-  const text = extractText(nodes, nodeId);
-  if (text) return text;
-
-  // No text found — follow the conditioning chain
   const node = nodes[nodeId];
   if (!node) return '';
 
-  // All-in-one loaders (Efficient Loader, easy fullLoader) take the prompt
-  // strings as their own positive/negative inputs
-  const next = node.inputs[condKey];
-  if (typeof next === 'string') return next;
-  return extractTextFromConditioning(nodes, next, condKey, maxDepth - 1);
+  // ConditioningZeroOut (comfy-core) discards the text it receives, so the
+  // side it feeds runs without a prompt
+  if (node.class_type === 'ConditioningZeroOut') return '';
+
+  const own = node.inputs[`${condKey}_prompt`] ?? node.inputs[condKey];
+  if (typeof own === 'string') return own;
+
+  const text = extractText(nodes, nodeId);
+  if (text) return text;
+
+  const upstream = [
+    own,
+    ...Object.entries(node.inputs)
+      .filter(
+        ([key]) => key === 'conditioning' || key.startsWith('conditioning_'),
+      )
+      .map(([, value]) => value),
+  ];
+  for (const next of upstream) {
+    const found = extractTextFromConditioning(
+      nodes,
+      next,
+      condKey,
+      maxDepth - 1,
+    );
+    if (found) return found;
+  }
+  return '';
 }
 
 // =============================================================================
