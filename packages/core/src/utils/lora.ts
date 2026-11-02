@@ -164,3 +164,137 @@ export function optionalLoras(
 ): { loras: LoraSettings[] } | Record<string, never> {
   return loras.length > 0 ? { loras } : {};
 }
+
+// ============================================================================
+// Writing
+// ============================================================================
+
+/** Extensions A1111 drops when it registers a LoRA file under its stem */
+const LORA_EXTENSION = /\.(safetensors|ckpt|pt|bin)$/i;
+
+/** Characters that cannot appear inside an extra-network tag */
+const UNTAGGABLE = /[:>]/;
+
+/** CivitAI AIR identifier: `urn:air:<ecosystem>:<type>:civitai:<modelId>@<modelVersionId>` */
+const CIVITAI_URN = /^urn:air:[^:]+:[^:]+:civitai:(\d+)@(\d+)$/;
+
+/**
+ * Name A1111 looks a LoRA up by: the file name without directory and extension
+ *
+ * A1111 registers each LoRA file under
+ * `os.path.splitext(os.path.basename(filename))[0]`
+ * (`extensions-builtin/Lora/networks.py`), so a tag must carry the stem.
+ * Names that are not file names (URNs, display names) have neither part and
+ * pass through unchanged.
+ */
+export function toLoraStem(name: string): string {
+  const start = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\')) + 1;
+  return name.slice(start).replace(LORA_EXTENSION, '');
+}
+
+/**
+ * Write a LoRA as an A1111 extra-network tag
+ *
+ * `<lora:stem:weight>`, or `<lora:stem:clipWeight:weight>` when the
+ * text-encoder strength is recorded separately (the positional order of
+ * `extra_networks_lora.py`). Without a weight the tag is `<lora:stem>`,
+ * which A1111 applies at 1; a clipWeight alone needs the two-value form, so
+ * the UNet weight is written as 1 in that case.
+ */
+export function formatLoraTag(entry: LoraSettings): string {
+  const stem = toLoraStem(entry.name);
+  if (entry.clipWeight !== undefined) {
+    return `<lora:${stem}:${entry.clipWeight}:${entry.weight ?? 1}>`;
+  }
+  return entry.weight === undefined
+    ? `<lora:${stem}>`
+    : `<lora:${stem}:${entry.weight}>`;
+}
+
+/**
+ * Append the tags of the LoRAs a prompt does not mention yet
+ *
+ * Tags go to the end of the prompt, separated by single spaces. A LoRA whose
+ * stem is already tagged (compared the way A1111 matches `Lora hashes`, see
+ * `toHashesName`) is left out, so rebuilding A1111 metadata does not double
+ * its tags. Names containing `:` or `>` cannot be written as a tag and are
+ * skipped; duplicates among the remaining LoRAs are written as often as
+ * they are listed.
+ *
+ * @param prompt - Positive prompt
+ * @param loras - LoRAs to mention
+ * @returns Prompt with the missing tags appended
+ */
+export function injectLoraTags(prompt: string, loras: LoraSettings[]): string {
+  const present = new Set(
+    parseLoraTags(prompt).map((tag) => toMatchKey(tag.name)),
+  );
+  const tags = loras
+    .filter(
+      (entry) =>
+        !UNTAGGABLE.test(entry.name) && !present.has(toMatchKey(entry.name)),
+    )
+    .map(formatLoraTag);
+  if (tags.length === 0) return prompt;
+
+  const separator = prompt === '' || /\s$/.test(prompt) ? '' : ' ';
+  return `${prompt}${separator}${tags.join(' ')}`;
+}
+
+/**
+ * Build the value of `Lora hashes` the way A1111 writes it
+ *
+ * `name: hash, …` over the LoRAs that have a hash, each name being the tag
+ * stem with `:` and `,` removed (`networks.py` strips both from the
+ * mentioned name). A1111 loads a network once however often it is
+ * mentioned, so a name listed twice keeps its first hash. The value is
+ * returned unquoted.
+ *
+ * @returns The list, or undefined when no LoRA has a hash
+ */
+export function formatLoraHashes(loras: LoraSettings[]): string | undefined {
+  const hashes = new Map<string, string>();
+  for (const entry of loras) {
+    const name = toMatchKey(entry.name);
+    if (entry.hash && !hashes.has(name)) hashes.set(name, entry.hash);
+  }
+  if (hashes.size === 0) return undefined;
+
+  return [...hashes].map(([name, hash]) => `${name}: ${hash}`).join(', ');
+}
+
+/**
+ * Build the `Civitai resources` list of CivitAI's A1111-style text
+ *
+ * One `{"type":"lora", …}` entry per LoRA: a URN name yields `modelId` and
+ * `modelVersionId`, any other name is written as `modelName` (the key
+ * CivitAI uses for the display name). `weight` is included when known;
+ * the list has no place for a clipWeight.
+ *
+ * @returns The JSON list, or undefined without LoRAs
+ */
+export function formatCivitaiResources(
+  loras: LoraSettings[],
+): string | undefined {
+  if (loras.length === 0) return undefined;
+
+  return JSON.stringify(
+    loras.map((entry) => {
+      const urn = CIVITAI_URN.exec(entry.name);
+      return {
+        type: 'lora',
+        ...(entry.weight === undefined ? {} : { weight: entry.weight }),
+        ...(urn
+          ? { modelId: Number(urn[1]), modelVersionId: Number(urn[2]) }
+          : { modelName: entry.name }),
+      };
+    }),
+  );
+}
+
+/**
+ * Key two mentions of the same LoRA share: the stem as written into `Lora hashes`
+ */
+function toMatchKey(name: string): string {
+  return toHashesName(toLoraStem(name));
+}

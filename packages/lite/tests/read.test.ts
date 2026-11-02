@@ -169,6 +169,8 @@ function assertKeyFieldsMatch(lite: string, full: string, file: string): void {
 // Fooocus JSON scheme: both lite and core join `full_prompt` /
 // `full_negative_prompt` (the style-resolved text Fooocus actually encoded)
 // with ", ", so the prompt lines must match exactly, not just overlap.
+// Lite does not write LoRAs (out of its scope), so core's text is rebuilt
+// without them for the comparison.
 describe('Fooocus JSON scheme resolved prompts', () => {
   it('should produce the same prompt lines as core for every container', () => {
     const files: Array<[string, string]> = [
@@ -179,7 +181,15 @@ describe('Fooocus JSON scheme resolved prompts', () => {
     for (const [format, file] of files) {
       const data = load(format, file);
       const lite = liteRead(data).split('\n');
-      const full = stringify(fullRead(data)).split('\n');
+      const parsed = fullRead(data);
+      if (parsed.status !== 'success')
+        throw new Error(`${file}: ${parsed.status}`);
+      // Core writes the three LoRAs as tags; lite leaves them out
+      expect(stringify(parsed), file).toContain('<lora:');
+      expect(lite.join('\n'), file).not.toContain('<lora:');
+      const full = stringify({ ...parsed.metadata, loras: undefined }).split(
+        '\n',
+      );
       // Everything but the trailing settings line
       expect(lite.slice(0, -1), file).toEqual(full.slice(0, -1));
       // The style template, not the raw user prompt, must be present

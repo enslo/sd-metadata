@@ -6,6 +6,7 @@ import {
 } from '../../../src/api/stringify';
 import type {
   EmbedMetadata,
+  GenerationMetadata,
   ParseResult,
   RawMetadata,
   StandardMetadata,
@@ -367,6 +368,124 @@ describe('buildEmbedText - Unit Tests', () => {
       expect(result).toContain('char1\nchar2');
     });
   });
+
+  describe('LoRAs', () => {
+    const loras = [
+      {
+        name: 'Lora\\LECO_GoodHands.safetensors',
+        weight: -0.8,
+        hash: 'fe3806374a03',
+      },
+      { name: 'LECO_BadHands', weight: 0.9, clipWeight: 0.8 },
+    ];
+
+    it('should append tags to the prompt and list the hashes on the settings line', () => {
+      const metadata: EmbedMetadata = {
+        prompt: 'masterpiece, 1girl',
+        negativePrompt: 'lowres',
+        width: 512,
+        height: 512,
+        sampling: { steps: 20 },
+        hires: { upscaler: 'Latent' },
+        loras,
+      };
+
+      const expected = [
+        'masterpiece, 1girl <lora:LECO_GoodHands:-0.8> <lora:LECO_BadHands:0.8:0.9>',
+        'Negative prompt: lowres',
+        'Steps: 20, Size: 512x512, Hires upscaler: Latent, Lora hashes: "LECO_GoodHands: fe3806374a03"',
+      ].join('\n');
+
+      expect(buildEmbedText(metadata)).toBe(expected);
+    });
+
+    it('should put Lora hashes before extras and let extras override it', () => {
+      const metadata: EmbedMetadata = {
+        prompt: 'test',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        loras,
+        extras: { Version: 'v1.10.1' },
+      };
+      const prompt =
+        'test <lora:LECO_GoodHands:-0.8> <lora:LECO_BadHands:0.8:0.9>';
+
+      expect(buildEmbedText(metadata)).toBe(
+        `${prompt}\nLora hashes: "LECO_GoodHands: fe3806374a03", Version: v1.10.1`,
+      );
+      expect(
+        buildEmbedText({
+          ...metadata,
+          extras: { 'Lora hashes': 'custom', Version: 'v1.10.1' },
+        }),
+      ).toBe(`${prompt}\nLora hashes: custom, Version: v1.10.1`);
+    });
+
+    it('should not double tags the prompt already has', () => {
+      const metadata: EmbedMetadata = {
+        prompt: '1girl <lora:LECO_GoodHands:-0.8>',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        loras,
+      };
+
+      expect(buildEmbedText(metadata)).toBe(
+        '1girl <lora:LECO_GoodHands:-0.8> <lora:LECO_BadHands:0.8:0.9>\nLora hashes: "LECO_GoodHands: fe3806374a03"',
+      );
+    });
+
+    it('should omit Lora hashes when no LoRA has a hash', () => {
+      const metadata: EmbedMetadata = {
+        prompt: 'test',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        loras: [{ name: 'a', weight: 1 }],
+      };
+
+      expect(buildEmbedText(metadata)).toBe('test <lora:a:1>');
+    });
+
+    it('should write Civitai resources instead of tags for civitai metadata', () => {
+      const metadata: StandardMetadata = {
+        software: 'civitai',
+        prompt: 'test',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        sampling: { steps: 20 },
+        loras: [
+          {
+            name: 'urn:air:sdxl:lora:civitai:1547435@1750914',
+            weight: 0.4,
+            clipWeight: 1,
+          },
+          { name: 'Detailed anime style - Illustrious V2.0', weight: 0.4 },
+        ],
+      };
+
+      expect(buildEmbedText(metadata)).toBe(
+        'test\nSteps: 20, Civitai resources: [{"type":"lora","weight":0.4,"modelId":1547435,"modelVersionId":1750914},{"type":"lora","weight":0.4,"modelName":"Detailed anime style - Illustrious V2.0"}]',
+      );
+    });
+
+    it('should write tags for the metadata of other software', () => {
+      const metadata: StandardMetadata = {
+        software: 'invokeai',
+        prompt: 'test',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        loras: [{ name: 'a', weight: 0.5, hash: 'blake3:abc' }],
+      };
+
+      expect(buildEmbedText(metadata)).toBe(
+        'test <lora:a:0.5>\nLora hashes: "a: blake3:abc"',
+      );
+    });
+  });
 });
 
 // ============================================================================
@@ -626,31 +745,119 @@ describe('formatRaw - Unit Tests', () => {
 
 describe('stringify - Unit Tests', () => {
   describe('success status', () => {
-    it('should produce same output as buildEmbedText', () => {
+    it('should transcribe A1111 text as written, normalizing line endings', () => {
       const metadata: StandardMetadata = {
         software: 'sd-webui',
         prompt: 'masterpiece, 1girl',
-        negativePrompt: 'lowres, bad anatomy',
+        negativePrompt: 'lowres',
         width: 512,
         height: 768,
-        sampling: {
-          steps: 20,
-          sampler: 'Euler a',
-          cfg: 7,
-          seed: '12345',
-        },
-        model: {
-          name: 'animagine-xl',
-          hash: 'abc123',
-        },
+        sampling: { steps: 20, seed: '12345' },
       };
       const raw: RawMetadata = {
         format: 'png',
-        chunks: [{ type: 'tEXt', keyword: 'parameters', text: 'raw text' }],
+        chunks: [
+          {
+            type: 'tEXt',
+            keyword: 'parameters',
+            text: 'masterpiece, 1girl\r\nNegative prompt: lowres\r\nSteps: 20, Seed: 12345, RNG: CPU, Version: v1.10.1',
+          },
+        ],
       };
       const result: ParseResult = { status: 'success', metadata, raw };
 
-      expect(stringify(result)).toBe(buildEmbedText(metadata));
+      expect(stringify(result)).toBe(
+        'masterpiece, 1girl\nNegative prompt: lowres\nSteps: 20, Seed: 12345, RNG: CPU, Version: v1.10.1',
+      );
+    });
+
+    it('should transcribe the Exif UserComment of JPEG and WebP results', () => {
+      const metadata: StandardMetadata = {
+        software: 'forge',
+        prompt: 'test',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+      };
+
+      for (const format of ['jpeg', 'webp'] as const) {
+        const raw: RawMetadata = {
+          format,
+          segments: [
+            {
+              source: { type: 'exifUserComment' },
+              data: 'test\nSteps: 20, Version: f2.0',
+            },
+          ],
+        };
+
+        expect(stringify({ status: 'success', metadata, raw })).toBe(
+          'test\nSteps: 20, Version: f2.0',
+        );
+      }
+    });
+
+    it('should rebuild JSON-scheme results of A1111-family software', () => {
+      const metadata: StandardMetadata = {
+        software: 'fooocus',
+        prompt: 'test',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        sampling: { steps: 30 },
+      };
+      const raw: RawMetadata = {
+        format: 'png',
+        chunks: [
+          { type: 'tEXt', keyword: 'parameters', text: '{"steps": 30}' },
+        ],
+      };
+
+      expect(stringify({ status: 'success', metadata, raw })).toBe(
+        'test\nSteps: 30',
+      );
+    });
+
+    it('should rebuild results of other software from the metadata', () => {
+      const metadata: GenerationMetadata = {
+        software: 'comfyui',
+        prompt: 'test',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        sampling: { steps: 20 },
+        nodes: {},
+      };
+      const raw: RawMetadata = {
+        format: 'png',
+        chunks: [
+          {
+            type: 'tEXt',
+            keyword: 'parameters',
+            text: 'unknown\nSteps: 20, Version: ComfyUI',
+          },
+        ],
+      };
+
+      expect(stringify({ status: 'success', metadata, raw })).toBe(
+        'test\nSteps: 20',
+      );
+    });
+
+    it('should rebuild when the raw data holds no text', () => {
+      const metadata: StandardMetadata = {
+        software: 'sd-webui',
+        prompt: 'test',
+        negativePrompt: '',
+        width: 0,
+        height: 0,
+        sampling: { steps: 20 },
+      };
+      const raw: RawMetadata = { format: 'png', chunks: [] };
+
+      expect(stringify({ status: 'success', metadata, raw })).toBe(
+        'test\nSteps: 20',
+      );
     });
 
     it('should handle minimal metadata', () => {
@@ -667,7 +874,7 @@ describe('stringify - Unit Tests', () => {
       };
       const result: ParseResult = { status: 'success', metadata, raw };
 
-      expect(stringify(result)).toBe(buildEmbedText(metadata));
+      expect(stringify(result)).toBe('test');
     });
   });
 

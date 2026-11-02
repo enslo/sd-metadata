@@ -61,7 +61,12 @@
     "hiresScale": "Hiresスケール",
     "hiresSteps": "Hiresステップ数",
     "hiresDenoise": "Hiresデノイズ",
-    "upscaleFactor": "拡大率"
+    "upscaleFactor": "拡大率",
+    "loras": "LoRA",
+    "loraName": "名前",
+    "loraWeight": "強度",
+    "loraClipWeight": "CLIP強度",
+    "loraHash": "ハッシュ"
   },
   "languageSwitcher": {
     "label": "JA",

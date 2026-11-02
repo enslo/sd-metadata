@@ -13,19 +13,29 @@ import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
 import type { InternalParseResult } from './types';
 
+/** Software whose metadata is A1111-style text (civitai and fooocus: their text schemes) */
+const A1111_SOFTWARE_LIST = [
+  'sd-webui',
+  'sd-next',
+  'forge',
+  'forge-classic',
+  'forge-neo',
+  'reforge',
+  'easy-reforge',
+  'civitai',
+  'fooocus',
+] as const satisfies readonly GenerationSoftware[];
+
 /** Software identifiers that use A1111-compatible text format */
-type A1111Software = Extract<
-  GenerationSoftware,
-  | 'sd-webui'
-  | 'sd-next'
-  | 'forge'
-  | 'forge-classic'
-  | 'forge-neo'
-  | 'reforge'
-  | 'easy-reforge'
-  | 'civitai'
-  | 'fooocus'
->;
+type A1111Software = (typeof A1111_SOFTWARE_LIST)[number];
+
+/**
+ * Software whose text parseA1111 reads
+ *
+ * civitai and fooocus also have JSON formats; a parse result of theirs went
+ * through parseA1111 only when the text does not start with `{`.
+ */
+export const A1111_SOFTWARE: ReadonlySet<string> = new Set(A1111_SOFTWARE_LIST);
 
 /**
  * Parse A1111-format metadata from entries
