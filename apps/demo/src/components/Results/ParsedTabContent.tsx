@@ -1,6 +1,7 @@
 import type {
   CharacterPrompt,
   GenerationMetadata,
+  LoraSettings,
   ParseResult,
 } from '@enslo/sd-metadata';
 import { Group, Stack, Table, Text } from '@mantine/core';
@@ -116,6 +117,13 @@ export function ParsedTabContent({ parseResult, t }: ParsedTabContentProps) {
           </ParsedSection>
         )}
 
+      {/* LoRAs */}
+      {metadata.loras && metadata.loras.length > 0 && (
+        <ParsedSection title={t.fields.loras}>
+          <LoraTable loras={metadata.loras} f={t.fields} />
+        </ParsedSection>
+      )}
+
       {/* Generation Settings */}
       {settings.length > 0 && (
         <ParsedSection title={t.fields.generationSettings}>
@@ -150,6 +158,86 @@ export function ParsedTabContent({ parseResult, t }: ParsedTabContentProps) {
         </ParsedSection>
       )}
     </Stack>
+  );
+}
+
+interface LoraTableProps {
+  loras: LoraSettings[];
+  f: I18nMessages['fields'];
+}
+
+/**
+ * LoRAs in the order the tool listed them; the CLIP weight and hash columns
+ * appear only when at least one entry has them
+ */
+function LoraTable({ loras, f }: LoraTableProps) {
+  const hasClipWeight = loras.some((lora) => lora.clipWeight !== undefined);
+  const hasHash = loras.some((lora) => lora.hash !== undefined);
+  const numeric = { textAlign: 'right' as const, width: '6rem' };
+
+  return (
+    <Table
+      highlightOnHover
+      horizontalSpacing="xs"
+      verticalSpacing="xs"
+      layout="fixed"
+    >
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>
+            <Text size="xs" c="dimmed">
+              {f.loraName}
+            </Text>
+          </Table.Th>
+          <Table.Th style={numeric}>
+            <Text size="xs" c="dimmed">
+              {f.loraWeight}
+            </Text>
+          </Table.Th>
+          {hasClipWeight && (
+            <Table.Th style={numeric}>
+              <Text size="xs" c="dimmed">
+                {f.loraClipWeight}
+              </Text>
+            </Table.Th>
+          )}
+          {hasHash && (
+            <Table.Th>
+              <Text size="xs" c="dimmed">
+                {f.loraHash}
+              </Text>
+            </Table.Th>
+          )}
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {loras.map((lora, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: the same LoRA can be listed twice
+          <Table.Tr key={`lora-${i}`}>
+            <Table.Td>
+              <Text size="sm" fw={500} style={{ wordBreak: 'break-all' }}>
+                {lora.name}
+              </Text>
+            </Table.Td>
+            <Table.Td style={numeric}>
+              <Text size="sm">{lora.weight ?? ''}</Text>
+            </Table.Td>
+            {hasClipWeight && (
+              <Table.Td style={numeric}>
+                <Text size="sm">{lora.clipWeight ?? ''}</Text>
+              </Table.Td>
+            )}
+            {hasHash && (
+              <Table.Td>
+                <Text size="sm" c="dimmed" style={{ wordBreak: 'break-all' }}>
+                  {lora.hash ?? ''}
+                </Text>
+              </Table.Td>
+            )}
+          </Table.Tr>
+        ))}
+      </Table.Tbody>
+    </Table>
   );
 }
 

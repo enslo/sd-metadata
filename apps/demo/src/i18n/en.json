@@ -61,7 +61,12 @@
     "hiresScale": "Hires Scale",
     "hiresSteps": "Hires Steps",
     "hiresDenoise": "Hires Denoise",
-    "upscaleFactor": "Upscale Factor"
+    "upscaleFactor": "Upscale Factor",
+    "loras": "LoRA",
+    "loraName": "Name",
+    "loraWeight": "Weight",
+    "loraClipWeight": "CLIP Weight",
+    "loraHash": "Hash"
   },
   "languageSwitcher": {
     "label": "EN",

@@ -5,15 +5,30 @@
  * public API for converting any metadata type to a human-readable string.
  */
 
+import { A1111_SOFTWARE } from '../parsers/a1111';
 import type {
-  BaseMetadata,
   CharacterPrompt,
   EmbedMetadata,
   GenerationMetadata,
+  GenerationSoftware,
   HiresSettings,
   ParseResult,
   RawMetadata,
 } from '../types';
+import { pngRawToRecord, segmentsToRecord } from '../utils/convert';
+import {
+  formatCivitaiResources,
+  formatLoraHashes,
+  injectLoraTags,
+} from '../utils/lora';
+
+/**
+ * Metadata the text is built from
+ *
+ * GenerationMetadata fits EmbedMetadata structurally; `software` is read
+ * when present to pick CivitAI's own LoRA notation.
+ */
+type TextMetadata = EmbedMetadata & { software?: GenerationSoftware };
 
 // ============================================================================
 // Internal Helpers
@@ -24,6 +39,24 @@ import type {
  */
 function normalizeLineEndings(text: string): string {
   return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
+/**
+ * Quote a settings value the way A1111's infotext `quote()` does
+ *
+ * JSON-quoted when the value contains a comma, colon or newline (which
+ * would otherwise break the `key: value, …` line), plain otherwise.
+ */
+function quoteValue(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return /[,:\n]/.test(value) ? JSON.stringify(value) : value;
+}
+
+/**
+ * CivitAI's A1111-style text lists LoRAs in `Civitai resources`, not as tags
+ */
+function isCivitai(metadata: TextMetadata): boolean {
+  return metadata.software === 'civitai';
 }
 
 /**
@@ -44,17 +77,24 @@ function buildCharacterPromptsSection(
 }
 
 /**
- * Build settings line from BaseMetadata and optional extras
+ * Build settings line from metadata and optional extras
  *
  * Structured fields are output in A1111-standard order. Extras can override
  * structured fields (taking their position) or append as new entries at the end.
  */
 function buildSettingsLine(
-  metadata: BaseMetadata,
+  metadata: TextMetadata,
   extras?: Record<string, string | number>,
 ): string {
   const hires: HiresSettings | undefined = metadata.hires ?? metadata.upscale;
+  const loras = metadata.loras ?? [];
+  const loraHashes = quoteValue(formatLoraHashes(loras));
+  const civitaiResources = isCivitai(metadata)
+    ? formatCivitaiResources(loras)
+    : undefined;
 
+  // The LoRA keys exist only when they have a value, so an extras entry of
+  // the same name keeps its own position when no LoRA is written
   const fields: Record<string, string | number | undefined> = {
     Steps: metadata.sampling?.steps,
     Sampler: metadata.sampling?.sampler,
@@ -72,6 +112,10 @@ function buildSettingsLine(
     'Hires upscale': hires?.scale,
     'Hires steps': hires?.steps,
     'Hires upscaler': hires?.upscaler,
+    ...(loraHashes === undefined ? {} : { 'Lora hashes': loraHashes }),
+    ...(civitaiResources === undefined
+      ? {}
+      : { 'Civitai resources': civitaiResources }),
   };
 
   return Object.entries({ ...fields, ...extras })
@@ -80,25 +124,60 @@ function buildSettingsLine(
     .join(', ');
 }
 
+/**
+ * Return the A1111 text of a parse result as the tool wrote it
+ *
+ * Applies to software whose metadata parseA1111 reads, when the text
+ * (`parameters` chunk or Exif UserComment) is not JSON. Only line endings
+ * are normalized, so keys the parser does not model (`Version`,
+ * `Civitai resources`, Fooocus's `Raw prompt`, …) survive.
+ *
+ * @returns The text, or undefined when the result must be rebuilt instead
+ */
+function transcribeA1111(result: {
+  metadata: GenerationMetadata;
+  raw: RawMetadata;
+}): string | undefined {
+  if (!A1111_SOFTWARE.has(result.metadata.software)) return undefined;
+
+  const entries =
+    result.raw.format === 'png'
+      ? pngRawToRecord(result.raw)
+      : segmentsToRecord(result.raw.segments);
+  const text = entries.parameters ?? entries.UserComment;
+  if (text === undefined || text.trimStart().startsWith('{')) return undefined;
+
+  return normalizeLineEndings(text);
+}
+
 // ============================================================================
 // Public API
 // ============================================================================
 
 /**
- * Build A1111-format text from EmbedMetadata
+ * Build A1111-format text from metadata
  *
  * Output structure:
- * 1. Positive prompt (line-ending normalized)
+ * 1. Positive prompt (line-ending normalized), followed by a `<lora:…>` tag
+ *    for each LoRA the prompt does not mention yet
  * 2. Character prompts (if present)
  * 3. Negative prompt (if non-empty)
- * 4. Settings line (structured fields + extras)
+ * 4. Settings line (structured fields, `Lora hashes` when a LoRA has a
+ *    hash, extras)
  *
- * @param metadata - Embed metadata (extras included via `metadata.extras`)
+ * Metadata parsed from CivitAI keeps CivitAI's notation instead: no tags,
+ * the LoRAs go into a `Civitai resources` list on the settings line.
+ *
+ * @param metadata - Embed or generation metadata (extras included via `metadata.extras`)
  * @returns A1111-format plain text
  */
-export function buildEmbedText(metadata: EmbedMetadata): string {
+export function buildEmbedText(metadata: TextMetadata): string {
+  const prompt = isCivitai(metadata)
+    ? metadata.prompt
+    : injectLoraTags(metadata.prompt, metadata.loras ?? []);
+
   return [
-    normalizeLineEndings(metadata.prompt),
+    normalizeLineEndings(prompt),
     metadata.characterPrompts?.length
       ? buildCharacterPromptsSection(metadata.characterPrompts).join('\n')
       : undefined,
@@ -135,9 +214,15 @@ export function formatRaw(raw: RawMetadata): string {
  * Convert metadata to a human-readable string
  *
  * Accepts multiple input types:
- * - `ParseResult`: Automatically selects the best representation based on status
+ * - `ParseResult`: Automatically selects the best representation based on status.
+ *   A1111-style text (sd-webui, the Forge family, SD.Next, and the text
+ *   schemes of CivitAI and Fooocus) is returned as the tool wrote it, with
+ *   line endings normalized; everything else is rebuilt from the metadata.
  * - `GenerationMetadata`: Formats as A1111 text (parsed metadata from any tool)
  * - `EmbedMetadata`: Formats as A1111 text (user-created custom metadata)
+ *
+ * When the text is rebuilt, LoRAs become `<lora:name:weight>` tags at the
+ * end of the prompt plus a `Lora hashes` entry (see {@link buildEmbedText}).
  *
  * @param input - Parse result, generation metadata, or embed metadata
  * @returns Human-readable text representation, or empty string if no data
@@ -172,7 +257,7 @@ export function stringify(
   if ('status' in input) {
     switch (input.status) {
       case 'success':
-        return buildEmbedText(input.metadata);
+        return transcribeA1111(input) ?? buildEmbedText(input.metadata);
       case 'c2pa':
         return input.c2pa.claimGenerator ?? '';
       case 'unrecognized':
