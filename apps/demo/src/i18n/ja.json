@@ -64,8 +64,8 @@
     "upscaleFactor": "拡大率",
     "loras": "LoRA",
     "loraName": "名前",
-    "loraWeight": "重み",
-    "loraClipWeight": "CLIP重み",
+    "loraWeight": "強度",
+    "loraClipWeight": "CLIP強度",
     "loraHash": "ハッシュ"
   },
   "languageSwitcher": {
