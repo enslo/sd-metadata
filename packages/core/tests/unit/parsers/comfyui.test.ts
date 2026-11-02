@@ -782,3 +782,268 @@ describe('parseComfyUI - Unit Tests', () => {
     });
   });
 });
+
+describe('parseComfyUI - LoRA loader nodes', () => {
+  it('should list the LoRAs applied by loader nodes', () => {
+    const entries = createComfyUIEntries({
+      '1': {
+        class_type: 'LoraLoader',
+        inputs: {
+          lora_name: 'A.safetensors',
+          strength_model: 0.5,
+          strength_clip: 0.4,
+        },
+      },
+      '2': { class_type: 'KSampler', inputs: { seed: 1, steps: 20, cfg: 5 } },
+    });
+
+    const result = parseComfyUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.loras).toEqual([
+        { name: 'A.safetensors', weight: 0.5, clipWeight: 0.4 },
+      ]);
+    }
+  });
+
+  it('should omit loras when no loader applies one', () => {
+    const entries = createComfyUIEntries({
+      '1': {
+        class_type: 'CR LoRA Stack',
+        inputs: {
+          switch_1: 'Off',
+          lora_name_1: 'A.safetensors',
+          model_weight_1: 1,
+        },
+      },
+      '2': { class_type: 'KSampler', inputs: { seed: 1, steps: 20, cfg: 5 } },
+    });
+
+    const result = parseComfyUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).not.toHaveProperty('loras');
+    }
+  });
+});
+
+describe('parseComfyUI - all-in-one loaders', () => {
+  it('should read prompts, size and clip skip from Efficient Loader', () => {
+    const entries = createComfyUIEntries({
+      '1': {
+        class_type: 'Efficient Loader',
+        inputs: {
+          ckpt_name: 'model.safetensors',
+          clip_skip: -2,
+          lora_name: 'None',
+          positive: 'a positive prompt',
+          negative: 'a negative prompt',
+          empty_latent_width: 1024,
+          empty_latent_height: 768,
+        },
+      },
+      '3': {
+        class_type: 'KSampler Adv. (Efficient)',
+        inputs: {
+          noise_seed: 42,
+          steps: 20,
+          cfg: 5,
+          sampler_name: 'euler_ancestral',
+          scheduler: 'sgm_uniform',
+          model: ['1', 0],
+          positive: ['1', 1],
+          negative: ['1', 2],
+          latent_image: ['1', 3],
+        },
+      },
+    });
+
+    const result = parseComfyUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value).toEqual({
+        software: 'comfyui',
+        prompt: 'a positive prompt',
+        negativePrompt: 'a negative prompt',
+        width: 1024,
+        height: 768,
+        model: { name: 'model.safetensors' },
+        sampling: {
+          seed: '42',
+          steps: 20,
+          cfg: 5,
+          sampler: 'euler_ancestral',
+          scheduler: 'sgm_uniform',
+          clipSkip: 2,
+        },
+        nodes: expect.any(Object),
+      });
+    }
+  });
+
+  it('should take the easy fullLoader resolution preset over its size inputs', () => {
+    const loader = (resolution: string) => ({
+      class_type: 'easy fullLoader',
+      inputs: {
+        ckpt_name: 'model.safetensors',
+        clip_skip: -1,
+        lora_name: 'None',
+        resolution,
+        empty_latent_width: 512,
+        empty_latent_height: 640,
+        positive: 'a positive prompt\n',
+        negative: 'a negative prompt\n',
+      },
+    });
+    const sampler = {
+      class_type: 'easy fullkSampler',
+      inputs: {
+        seed: 7,
+        steps: 20,
+        cfg: 5,
+        sampler_name: 'euler_ancestral',
+        scheduler: 'sgm_uniform',
+        denoise: 1,
+        pipe: ['5', 0],
+        model: ['5', 1],
+        positive: ['5', 4],
+        negative: ['5', 5],
+        latent: ['5', 6],
+      },
+    };
+
+    const preset = parseComfyUI(
+      createComfyUIEntries({ '5': loader('1024 x 1024'), '8': sampler }),
+    );
+    expect(preset.ok).toBe(true);
+    if (preset.ok) {
+      expect(preset.value.prompt).toBe('a positive prompt\n');
+      expect(preset.value.negativePrompt).toBe('a negative prompt\n');
+      expect(preset.value.width).toBe(1024);
+      expect(preset.value.height).toBe(1024);
+      expect(preset.value.sampling?.seed).toBe('7');
+      expect(preset.value.sampling?.clipSkip).toBe(1);
+    }
+
+    // The custom-size sentinel hands over to the width / height inputs
+    const custom = parseComfyUI(
+      createComfyUIEntries({
+        '5': loader('width x height (custom)'),
+        '8': sampler,
+      }),
+    );
+    expect(custom.ok).toBe(true);
+    if (custom.ok) {
+      expect(custom.value.width).toBe(512);
+      expect(custom.value.height).toBe(640);
+    }
+  });
+
+  it('should resolve the hires scale through CR Integer Multiple', () => {
+    const graph = (multiple: unknown) => ({
+      '1': {
+        class_type: 'CheckpointLoaderSimple',
+        inputs: { ckpt_name: 'model.safetensors' },
+      },
+      '2': {
+        class_type: 'CLIPTextEncode',
+        inputs: { text: 'pos', clip: ['1', 1] },
+      },
+      '3': {
+        class_type: 'CLIPTextEncode',
+        inputs: { text: 'neg', clip: ['1', 1] },
+      },
+      '4': {
+        class_type: 'EmptyLatentImage',
+        inputs: { width: 1024, height: 1024, batch_size: 1 },
+      },
+      '5': {
+        class_type: 'KSampler',
+        inputs: {
+          seed: 1,
+          steps: 20,
+          cfg: 5,
+          sampler_name: 'euler_ancestral',
+          scheduler: 'normal',
+          denoise: 1,
+          model: ['1', 0],
+          positive: ['2', 0],
+          negative: ['3', 0],
+          latent_image: ['4', 0],
+        },
+      },
+      '6': {
+        class_type: 'VAEDecode',
+        inputs: { samples: ['5', 0], vae: ['1', 2] },
+      },
+      '7': {
+        class_type: 'UpscaleModelLoader',
+        inputs: { model_name: 'ESRGAN-Remacri-4x.pth' },
+      },
+      '8': {
+        class_type: 'ImageUpscaleWithModel',
+        inputs: { upscale_model: ['7', 0], image: ['6', 0] },
+      },
+      '9': { class_type: 'PrimitiveFloat', inputs: { value: 1.5 } },
+      '10': {
+        class_type: 'CR Integer Multiple',
+        inputs: { integer: ['4', 1], multiple },
+      },
+      '11': {
+        class_type: 'CR Integer Multiple',
+        inputs: { integer: ['4', 2], multiple },
+      },
+      '12': {
+        class_type: 'ImageScale',
+        inputs: {
+          upscale_method: 'bicubic',
+          width: ['10', 0],
+          height: ['11', 0],
+          crop: 'disabled',
+          image: ['8', 0],
+        },
+      },
+      '13': {
+        class_type: 'VAEEncode',
+        inputs: { pixels: ['12', 0], vae: ['1', 2] },
+      },
+      '14': {
+        class_type: 'KSampler',
+        inputs: {
+          seed: 2,
+          steps: 10,
+          cfg: 6,
+          sampler_name: 'euler_ancestral',
+          scheduler: 'normal',
+          denoise: 0.3,
+          model: ['1', 0],
+          positive: ['2', 0],
+          negative: ['3', 0],
+          latent_image: ['13', 0],
+        },
+      },
+    });
+
+    // The multiple wired from a PrimitiveFloat
+    const wired = parseComfyUI(createComfyUIEntries(graph(['9', 0])));
+    expect(wired.ok).toBe(true);
+    if (wired.ok) {
+      expect(wired.value.hires).toEqual({
+        upscaler: 'ESRGAN-Remacri-4x.pth',
+        scale: 1.5,
+        steps: 10,
+        denoise: 0.3,
+      });
+    }
+
+    // The multiple as a literal
+    const literal = parseComfyUI(createComfyUIEntries(graph(2)));
+    expect(literal.ok).toBe(true);
+    if (literal.ok) {
+      expect(literal.value.hires?.scale).toBe(2);
+    }
+  });
+});

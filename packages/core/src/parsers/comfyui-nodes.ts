@@ -24,10 +24,25 @@ const SAMPLER_TYPES = [
   'SamplerCustomAdvanced',
   'SamplerCustom',
   'DetailerForEach',
+  // efficiency-nodes-comfyui: KSampler inputs, the Adv. variant names its
+  // seed noise_seed like KSamplerAdvanced
+  'KSampler (Efficient)',
+  'KSampler Adv. (Efficient)',
+  // ComfyUI-Easy-Use: KSampler inputs on a pipe
+  'easy fullkSampler',
 ];
 
 const LATENT_IMAGE_TYPES = ['EmptyLatentImage'];
 const LATENT_IMAGE_RGTHREE_TYPES = ['SDXL Empty Latent Image (rgthree)'];
+/**
+ * Loaders that hold the prompts, the empty latent size and the clip skip
+ * themselves (efficiency-nodes-comfyui, ComfyUI-Easy-Use): their
+ * `positive` / `negative` inputs are the prompt strings, the size comes
+ * from `empty_latent_width` / `empty_latent_height` (Easy-Use: overridden
+ * by `resolution` unless that is a custom-size sentinel) and `clip_skip`
+ * is CLIPSetLastLayer's stop_at_clip_layer
+ */
+const ALL_IN_ONE_LOADER_TYPES = ['Efficient Loader', 'easy fullLoader'];
 const CHECKPOINT_TYPES = ['CheckpointLoaderSimple', 'CheckpointLoader'];
 const UNET_LOADER_TYPES = ['UNETLoader'];
 const CLIP_SET_LAST_LAYER_TYPES = ['CLIPSetLastLayer'];
@@ -49,6 +64,7 @@ export interface ClassifiedNodes {
   sampler?: ComfyNode;
   latentImage?: ComfyNode;
   latentImageRgthree?: ComfyNode;
+  allInOneLoader?: ComfyNode;
   checkpoint?: ComfyNode;
   unetLoader?: ComfyNode;
   clipSetLastLayer?: ComfyNode;
@@ -79,6 +95,8 @@ export function classifyNodes(nodes: ComfyNodeGraph): ClassifiedNodes {
       LATENT_IMAGE_RGTHREE_TYPES.includes(ct)
     ) {
       result.latentImageRgthree = node;
+    } else if (!result.allInOneLoader && ALL_IN_ONE_LOADER_TYPES.includes(ct)) {
+      result.allInOneLoader = node;
     } else if (!result.checkpoint && CHECKPOINT_TYPES.includes(ct)) {
       result.checkpoint = node;
     } else if (!result.unetLoader && UNET_LOADER_TYPES.includes(ct)) {
@@ -146,6 +164,20 @@ function resolveBooleanInput(
   if (typeof value === 'boolean') return value;
   const node = resolveNode(nodes, value);
   if (typeof node?.inputs.value === 'boolean') return node.inputs.value;
+  return undefined;
+}
+
+/**
+ * Resolve a number input that may be a literal or a reference to a
+ * primitive node (e.g. PrimitiveFloat) holding the literal in `value`.
+ */
+export function resolveNumberInput(
+  nodes: ComfyNodeGraph,
+  value: unknown,
+): number | undefined {
+  if (typeof value === 'number') return value;
+  const node = resolveNode(nodes, value);
+  if (typeof node?.inputs.value === 'number') return node.inputs.value;
   return undefined;
 }
 
@@ -320,7 +352,10 @@ function extractTextFromConditioning(
   const node = nodes[nodeId];
   if (!node) return '';
 
+  // All-in-one loaders (Efficient Loader, easy fullLoader) take the prompt
+  // strings as their own positive/negative inputs
   const next = node.inputs[condKey];
+  if (typeof next === 'string') return next;
   return extractTextFromConditioning(nodes, next, condKey, maxDepth - 1);
 }
 
@@ -329,18 +364,41 @@ function extractTextFromConditioning(
 // =============================================================================
 
 /**
+ * Read "W x H" from a dimensions string
+ *
+ * Custom-size sentinels ("width x height (custom)", "自定义 x 自定义") do not
+ * match and yield undefined.
+ */
+function parseDimensionsString(
+  value: unknown,
+): { width: number; height: number } | undefined {
+  if (typeof value !== 'string') return undefined;
+  const match = value.match(/^(\d+)\s*x\s*(\d+)/);
+  if (!match?.[1] || !match[2]) return undefined;
+  return {
+    width: Number.parseInt(match[1], 10),
+    height: Number.parseInt(match[2], 10),
+  };
+}
+
+/**
  * Extract dimensions from pre-classified LatentImage nodes
  *
- * Handles two node types separately:
+ * Handles three node types separately:
  * - EmptyLatentImage: inputs.width and inputs.height as numbers
  * - SDXL Empty Latent Image (rgthree): inputs.dimensions as string like "1024 x 1024 (square)"
+ * - All-in-one loaders: inputs.resolution as "1024 x 1024" (Easy-Use,
+ *   unless set to a custom-size sentinel), else inputs.empty_latent_width
+ *   and inputs.empty_latent_height
  *
  * @param latentImage - Standard EmptyLatentImage node
  * @param latentImageRgthree - rgthree SDXL latent image node
+ * @param allInOneLoader - Efficient Loader / easy fullLoader node
  */
 export function extractDimensions(
   latentImage: ComfyNode | undefined,
   latentImageRgthree: ComfyNode | undefined,
+  allInOneLoader?: ComfyNode,
 ): {
   width: number;
   height: number;
@@ -353,18 +411,17 @@ export function extractDimensions(
   }
 
   // Try rgthree latent image (dimensions string like "1024 x 1024 (square)")
-  if (
-    latentImageRgthree &&
-    typeof latentImageRgthree.inputs.dimensions === 'string'
-  ) {
-    const match =
-      latentImageRgthree.inputs.dimensions.match(/^(\d+)\s*x\s*(\d+)/);
-    if (match?.[1] && match[2]) {
-      return {
-        width: Number.parseInt(match[1], 10),
-        height: Number.parseInt(match[2], 10),
-      };
-    }
+  const rgthree = parseDimensionsString(latentImageRgthree?.inputs.dimensions);
+  if (rgthree) return rgthree;
+
+  // Try an all-in-one loader: the resolution preset wins over the width and
+  // height inputs, which only apply to the custom-size sentinel
+  if (allInOneLoader) {
+    const preset = parseDimensionsString(allInOneLoader.inputs.resolution);
+    if (preset) return preset;
+    const width = Number(allInOneLoader.inputs.empty_latent_width) || 0;
+    const height = Number(allInOneLoader.inputs.empty_latent_height) || 0;
+    if (width > 0 && height > 0) return { width, height };
   }
 
   return { width: 0, height: 0 };
@@ -394,8 +451,9 @@ export function extractSampling(
     return extractCustomSampling(nodes, sampler);
   }
 
-  // Handle seed which may be a reference or direct value
-  let seed = sampler.inputs.seed;
+  // Handle seed which may be a reference or direct value; KSamplerAdvanced
+  // and KSampler Adv. (Efficient) name it noise_seed
+  let seed = sampler.inputs.seed ?? sampler.inputs.noise_seed;
   if (isNodeReference(seed)) {
     // Seed is from another node (e.g., CR Seed), try to extract it
     const seedNode = nodes[String(seed[0])];
@@ -503,16 +561,20 @@ export function extractModel(
 /**
  * Extract CLIP skip value from CLIPSetLastLayer node
  *
- * stop_at_clip_layer is negative (-2 = clip skip 2).
+ * stop_at_clip_layer is negative (-2 = clip skip 2). All-in-one loaders
+ * carry the same value as `clip_skip` and are the fallback.
  * Returns undefined if no node is present.
  *
  * @param clipSetLastLayer - Pre-classified CLIPSetLastLayer node
+ * @param allInOneLoader - Efficient Loader / easy fullLoader node
  */
 export function extractClipSkip(
   clipSetLastLayer: ComfyNode | undefined,
+  allInOneLoader?: ComfyNode,
 ): number | undefined {
-  if (!clipSetLastLayer) return undefined;
-  const stopAt = clipSetLastLayer.inputs.stop_at_clip_layer;
+  const stopAt =
+    clipSetLastLayer?.inputs.stop_at_clip_layer ??
+    allInOneLoader?.inputs.clip_skip;
   if (typeof stopAt !== 'number') return undefined;
   return -stopAt;
 }
