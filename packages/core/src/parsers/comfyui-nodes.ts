@@ -51,6 +51,54 @@ const HIRES_IMAGE_SCALE_TYPES = ['ImageScale', 'ImageScaleBy'];
 const LATENT_UPSCALE_TYPES = ['LatentUpscale', 'LatentUpscaleBy'];
 const VAE_ENCODE_TYPES = ['VAEEncode', 'VAEEncodeTiled'];
 
+/**
+ * Empty-latent nodes by name: comfy-core calls them Empty<Model>LatentImage
+ * or Empty<Model>LatentVideo (EmptySD3LatentImage, EmptyFlux2LatentImage,
+ * EmptyHunyuanLatentVideo, ...)
+ */
+const EMPTY_LATENT_NAME = /^Empty\w*Latent/;
+
+// =============================================================================
+// Shape Fallbacks
+// =============================================================================
+
+/**
+ * Whether a node outside SAMPLER_TYPES has the shape of a sampler
+ *
+ * Custom samplers (ImpactKSamplerBasicPipe, ...) keep the KSampler inputs:
+ * `Sampler` in the class name, `steps` and a `seed` or `noise_seed`.
+ * Selector nodes (KSamplerSelect) carry only a sampler name and do not
+ * qualify.
+ */
+function hasSamplerShape(node: ComfyNode): boolean {
+  // The graph may carry non-node entries (CivitAI's extraMetadata)
+  return (
+    typeof node?.class_type === 'string' &&
+    node.class_type.includes('Sampler') &&
+    node.inputs?.steps !== undefined &&
+    (node.inputs.seed !== undefined || node.inputs.noise_seed !== undefined)
+  );
+}
+
+/**
+ * Known sampler node, or one recognized by shape
+ */
+function isSampler(node: ComfyNode): boolean {
+  return SAMPLER_TYPES.includes(node.class_type) || hasSamplerShape(node);
+}
+
+/**
+ * Whether a node is an empty-latent node by name with a literal size
+ */
+function hasEmptyLatentShape(node: ComfyNode): boolean {
+  return (
+    typeof node?.class_type === 'string' &&
+    EMPTY_LATENT_NAME.test(node.class_type) &&
+    typeof node.inputs?.width === 'number' &&
+    typeof node.inputs.height === 'number'
+  );
+}
+
 // =============================================================================
 // Node Classification (Single-Pass)
 // =============================================================================
@@ -121,6 +169,14 @@ export function classifyNodes(nodes: ComfyNodeGraph): ClassifiedNodes {
     } else if (!result.vaeEncode && VAE_ENCODE_TYPES.includes(ct)) {
       result.vaeEncode = node;
     }
+  }
+
+  // Shape fallbacks, only for a role no known node filled
+  if (!result.sampler) {
+    result.sampler = Object.values(nodes).find(hasSamplerShape);
+  }
+  if (!result.latentImage && !result.latentImageRgthree) {
+    result.latentImage = Object.values(nodes).find(hasEmptyLatentShape);
   }
 
   return result;
@@ -287,6 +343,9 @@ export function extractText(
  *
  * KSampler/KSamplerAdvanced have positive/negative directly.
  * SamplerCustomAdvanced routes through a guider node (e.g. CFGGuider).
+ * Pipe samplers (ImpactKSamplerBasicPipe) take both sides bundled in a pipe
+ * input (basic_pipe, detailer_pipe, pipe) built by a node such as
+ * ToBasicPipe; the walk hops along pipe inputs until a node names the sides.
  */
 function resolveConditioningSource(
   nodes: ComfyNodeGraph,
@@ -294,7 +353,23 @@ function resolveConditioningSource(
 ): ComfyNode {
   const guiderNode = resolveNode(nodes, sampler.inputs.guider);
   if (guiderNode) return guiderNode;
-  return sampler;
+
+  let node = sampler;
+  for (let hop = 0; hop < 5 && node.inputs.positive === undefined; hop++) {
+    const pipe = resolveNode(nodes, pipeInput(node));
+    if (!pipe) break;
+    node = pipe;
+  }
+  return node;
+}
+
+/**
+ * The first pipe input of a node (`pipe` or `*_pipe`), if any
+ */
+function pipeInput(node: ComfyNode): unknown {
+  return Object.entries(node.inputs).find(
+    ([key]) => key === 'pipe' || key.endsWith('_pipe'),
+  )?.[1];
 }
 
 /**
@@ -707,7 +782,6 @@ function isHiresSampler(nodes: ComfyNodeGraph, sampler: ComfyNode): boolean {
  */
 export function findHiresSampler(nodes: ComfyNodeGraph): ComfyNode | undefined {
   return Object.values(nodes).find(
-    (node) =>
-      SAMPLER_TYPES.includes(node.class_type) && isHiresSampler(nodes, node),
+    (node) => isSampler(node) && isHiresSampler(nodes, node),
   );
 }

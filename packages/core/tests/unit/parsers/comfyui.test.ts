@@ -1223,3 +1223,219 @@ describe('parseComfyUI - zeroed-out conditioning', () => {
     expect(result.value.negativePrompt).toBe('');
   });
 });
+
+describe('parseComfyUI - sampler and latent shape fallbacks', () => {
+  const encoders = {
+    '1': { class_type: 'CLIPTextEncode', inputs: { text: 'piped positive' } },
+    '2': { class_type: 'CLIPTextEncode', inputs: { text: 'piped negative' } },
+  };
+  const loaders = {
+    '90': {
+      class_type: 'EmptyLatentImage',
+      inputs: { width: 1000, height: 1200, batch_size: 1 },
+    },
+    '91': {
+      class_type: 'CheckpointLoaderSimple',
+      inputs: { ckpt_name: 'ok.safetensors' },
+    },
+  };
+  // ComfyUI-Impact-Pack: the pipe bundles model, clip, vae and both prompts
+  const pipe = {
+    '20': {
+      class_type: 'ToBasicPipe',
+      inputs: {
+        model: ['91', 0],
+        clip: ['91', 1],
+        vae: ['91', 2],
+        positive: ['1', 0],
+        negative: ['2', 0],
+      },
+    },
+  };
+  const pipeSampler = (extra: Record<string, unknown> = {}) => ({
+    class_type: 'ImpactKSamplerBasicPipe',
+    inputs: {
+      seed: 230,
+      steps: 30,
+      cfg: 7,
+      sampler_name: 'dpmpp_2m',
+      scheduler: 'karras',
+      denoise: 1,
+      latent_image: ['90', 0],
+      basic_pipe: ['20', 0],
+      ...extra,
+    },
+  });
+  const kSampler = (latent: string) => ({
+    class_type: 'KSampler',
+    inputs: {
+      seed: 999,
+      steps: 12,
+      cfg: 4,
+      sampler_name: 'euler',
+      scheduler: 'simple',
+      denoise: 1,
+      positive: ['1', 0],
+      negative: ['2', 0],
+      latent_image: [latent, 0],
+      model: ['91', 0],
+    },
+  });
+
+  function parse(prompt: Record<string, unknown>) {
+    const result = parseComfyUI({ prompt: JSON.stringify(prompt) });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    return result.value;
+  }
+
+  it('should accept a sampler by shape and read its prompts through basic_pipe', () => {
+    // An orphan text node comes first in key order: the flat scan would take
+    // it as the prompt, the structured walk must go through the pipe
+    const value = parse({
+      '0': { class_type: 'CLIPTextEncode', inputs: { text: 'ORPHAN TEXT' } },
+      ...encoders,
+      ...loaders,
+      ...pipe,
+      '30': pipeSampler(),
+    });
+    expect(value.prompt).toBe('piped positive');
+    expect(value.negativePrompt).toBe('piped negative');
+    expect(value.sampling).toEqual({
+      seed: '230',
+      steps: 30,
+      cfg: 7,
+      sampler: 'dpmpp_2m',
+      scheduler: 'karras',
+    });
+  });
+
+  it('should detect the hires pass of a shape-matched sampler', () => {
+    const value = parse({
+      ...encoders,
+      ...loaders,
+      ...pipe,
+      '30': pipeSampler(),
+      '31': {
+        class_type: 'LatentUpscaleBy',
+        inputs: {
+          samples: ['30', 0],
+          upscale_method: 'nearest-exact',
+          scale_by: 1.5,
+        },
+      },
+      '32': pipeSampler({
+        seed: 805,
+        steps: 20,
+        scheduler: 'normal',
+        denoise: 0.43,
+        latent_image: ['31', 0],
+      }),
+    });
+    expect(value.sampling?.seed).toBe('230');
+    expect(value.hires).toEqual({ scale: 1.5, steps: 20, denoise: 0.43 });
+  });
+
+  it('should prefer a known sampler over a shape match', () => {
+    const value = parse({
+      ...encoders,
+      ...loaders,
+      ...pipe,
+      '10': pipeSampler(),
+      '11': kSampler('90'),
+    });
+    expect(value.sampling?.seed).toBe('999');
+  });
+
+  it('should not take a Sampler-named node without steps and a seed', () => {
+    // Selector-style nodes carry only a sampler name; the prompt must then
+    // come from the flat scan (first literal text), not through the pipe
+    const value = parse({
+      '0': { class_type: 'CLIPTextEncode', inputs: { text: 'FIRST TEXT' } },
+      ...encoders,
+      ...loaders,
+      ...pipe,
+      '30': {
+        class_type: 'PipeSamplerSelect',
+        inputs: { sampler_name: 'euler', basic_pipe: ['20', 0] },
+      },
+    });
+    expect(value.prompt).toBe('FIRST TEXT');
+  });
+
+  it('should accept an Empty*Latent node by name for the size', () => {
+    // An EmptyImage with a bigger literal size comes first in key order; the
+    // flat scan would take it, the structured walk must take the latent
+    const value = parse({
+      ...encoders,
+      '5': {
+        class_type: 'EmptyImage',
+        inputs: { width: 2048, height: 2048, batch_size: 1, color: 0 },
+      },
+      '7': {
+        class_type: 'EmptySD3LatentImage',
+        inputs: { width: 1024, height: 1536, batch_size: 1 },
+      },
+      '8': kSampler('7'),
+      '91': loaders['91'],
+    });
+    expect(value.width).toBe(1024);
+    expect(value.height).toBe(1536);
+  });
+
+  it('should keep EmptyLatentImage ahead of a name-matched latent', () => {
+    const value = parse({
+      ...encoders,
+      '5': {
+        class_type: 'EmptySD3LatentImage',
+        inputs: { width: 1024, height: 1536, batch_size: 1 },
+      },
+      '7': {
+        class_type: 'EmptyLatentImage',
+        inputs: { width: 512, height: 768, batch_size: 1 },
+      },
+      '8': kSampler('7'),
+      '91': loaders['91'],
+    });
+    expect(value.width).toBe(512);
+    expect(value.height).toBe(768);
+  });
+
+  it('should skip Empty*Latent nodes without a literal size', () => {
+    // The audio latent has no size and the video latent's size is wired; the
+    // SD3 latent after them carries the literal size. The EmptyImage ahead of
+    // them is what the flat scan would report
+    const value = parse({
+      ...encoders,
+      '4': {
+        class_type: 'EmptyImage',
+        inputs: { width: 2048, height: 2048, batch_size: 1, color: 0 },
+      },
+      '5': {
+        class_type: 'EmptyAceStepLatentAudio',
+        inputs: { seconds: 120, batch_size: 1 },
+      },
+      '6': {
+        class_type: 'EmptyHunyuanLatentVideo',
+        inputs: {
+          width: ['13', 0],
+          height: ['13', 1],
+          length: 25,
+          batch_size: 1,
+        },
+      },
+      '7': {
+        class_type: 'EmptySD3LatentImage',
+        inputs: { width: 1024, height: 1536, batch_size: 1 },
+      },
+      '8': kSampler('7'),
+      '13': {
+        class_type: 'ResolutionSelector',
+        inputs: { aspect_ratio: '1:1 (Square)', megapixels: 1, multiple: 32 },
+      },
+      '91': loaders['91'],
+    });
+    expect(value.width).toBe(1024);
+    expect(value.height).toBe(1536);
+  });
+});
