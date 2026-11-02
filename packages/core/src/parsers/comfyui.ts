@@ -5,7 +5,12 @@
  * Also handles Civitai extraMetadata fallbacks for upscale workflows.
  */
 
-import type { BaseMetadata, ComfyNodeGraph, SamplingSettings } from '../types';
+import type {
+  BaseMetadata,
+  ComfyNode,
+  ComfyNodeGraph,
+  SamplingSettings,
+} from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
@@ -29,6 +34,7 @@ import {
   findHiresSampler,
   isNodeReference,
   resolveNumberInput,
+  upstreamNodeIds,
   wiredConditioning,
 } from './comfyui-nodes';
 import type { InternalParseResult, PartialMetadata } from './types';
@@ -275,6 +281,14 @@ export function extractComfyUIMetadata(
   const rawSampling = normalizeDenoise(extractSampling(nodes, c.sampler));
   const clipSkip = extractClipSkip(c.clipSetLastLayer, c.allInOneLoader);
 
+  // Loaders count only when a sampler depends on them; without a recognized
+  // sampler there is nothing to anchor on and every loader is listed
+  const samplers = [c.sampler, hiresSamplerNode].filter(
+    (node): node is ComfyNode => node !== undefined,
+  );
+  const reachable =
+    samplers.length > 0 ? upstreamNodeIds(nodes, samplers) : undefined;
+
   return trimObject({
     prompt: promptText || undefined,
     negativePrompt: negativeText || undefined,
@@ -283,7 +297,7 @@ export function extractComfyUIMetadata(
     model: extractModel(c.checkpoint, c.unetLoader),
     sampling: trimObject({ ...rawSampling, clipSkip }),
     ...buildHiresOrUpscale(upscalerName, hiresScale, hiresSampling),
-    ...optionalLoras(extractComfyLoras(nodes)),
+    ...optionalLoras(extractComfyLoras(nodes, reachable)),
   });
 }
 

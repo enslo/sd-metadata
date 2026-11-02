@@ -383,3 +383,124 @@ describe('extractComfyLoras', () => {
     });
   });
 });
+
+describe('extractComfyLoras - loaders by shape', () => {
+  it('should read a loader outside the table that copies the LoraLoader inputs', () => {
+    const nodes = graph([
+      'LoraLoaderAdvanced',
+      {
+        lora_name: 'A.safetensors',
+        strength_model: 0.7,
+        strength_clip: 1,
+        force_fetch: false,
+        append_loraname_if_empty: false,
+        model: ['0', 0],
+        clip: ['0', 1],
+      },
+    ]);
+
+    expect(extractComfyLoras(nodes)).toEqual([
+      { name: 'A.safetensors', weight: 0.7, clipWeight: 1 },
+    ]);
+  });
+
+  it('should skip a shape-matched loader that is switched off', () => {
+    const nodes = graph(
+      [
+        'LoraLoaderBlockWeight //Inspire',
+        {
+          lora_name: 'A.safetensors',
+          strength_model: 1,
+          strength_clip: 1,
+          bypass: true,
+        },
+      ],
+      [
+        'CR Load LoRA',
+        {
+          lora_name: 'B.safetensors',
+          strength_model: 1,
+          strength_clip: 1,
+          switch: 'Off',
+        },
+      ],
+      [
+        'Some Lora Loader',
+        { lora_name: 'C.safetensors', strength_model: 1, toggle: false },
+      ],
+      [
+        'CR Load LoRA',
+        {
+          lora_name: 'D.safetensors',
+          strength_model: 0.5,
+          strength_clip: 0.5,
+          switch: 'On',
+        },
+      ],
+    );
+
+    expect(extractComfyLoras(nodes)).toEqual([
+      { name: 'D.safetensors', weight: 0.5, clipWeight: 0.5 },
+    ]);
+  });
+
+  it('should ignore lora-ish inputs that are not a loader', () => {
+    const nodes = graph(
+      // rgthree's picker widget on a prompt node
+      [
+        'Some Prompt Node',
+        { prompt: 'text', insert_lora: 'Choose a LoRA to insert' },
+      ],
+      // ComfyUI-Impact-Pack's picker widget
+      [
+        'ImpactWildcardEncode',
+        {
+          wildcard_text: 'a',
+          populated_text: 'a',
+          'Select to add LoRA': 'Select the LoRA to add to the text',
+        },
+      ],
+      // a stack reference, not a name
+      [
+        'CR Apply LoRA Stack',
+        { model: ['0', 0], clip: ['0', 1], lora_stack: ['9', 0] },
+      ],
+      // efficiency XY plot candidates: numbered slots, no bare lora_name
+      [
+        'XY Input: LoRA',
+        {
+          input_mode: 'LoRA Names',
+          lora_count: 2,
+          lora_name_1: 'A.safetensors',
+          model_str_1: 1,
+          clip_str_1: 1,
+          lora_name_2: 'B.safetensors',
+          model_str_2: 1,
+          clip_str_2: 1,
+        },
+      ],
+      // a name without a strength
+      ['LoraInfo', { lora_name: 'A.safetensors' }],
+    );
+
+    expect(extractComfyLoras(nodes)).toEqual([]);
+  });
+
+  it('should list only loaders in the reachable set when one is given', () => {
+    const nodes = graph(
+      [
+        'LoraLoader',
+        { lora_name: 'A.safetensors', strength_model: 1, strength_clip: 1 },
+      ],
+      [
+        'LoraLoader',
+        { lora_name: 'B.safetensors', strength_model: 1, strength_clip: 1 },
+      ],
+    );
+
+    expect(extractComfyLoras(nodes, new Set(['2']))).toEqual([
+      { name: 'B.safetensors', weight: 1, clipWeight: 1 },
+    ]);
+    expect(extractComfyLoras(nodes, new Set())).toEqual([]);
+  });
+});

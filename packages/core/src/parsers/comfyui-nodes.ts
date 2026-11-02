@@ -785,3 +785,40 @@ export function findHiresSampler(nodes: ComfyNodeGraph): ComfyNode | undefined {
     (node) => isSampler(node) && isHiresSampler(nodes, node),
   );
 }
+
+// =============================================================================
+// Reachability
+// =============================================================================
+
+/**
+ * Ids of the nodes some nodes depend on
+ *
+ * Follows every node reference in the inputs upstream, so the set holds
+ * everything that ran for those nodes: the model and clip chain, the
+ * prompts and whatever feeds them. The starting nodes themselves are not
+ * included.
+ */
+export function upstreamNodeIds(
+  nodes: ComfyNodeGraph,
+  starts: ComfyNode[],
+): Set<string> {
+  const seen = new Set<string>();
+  const queue = starts.flatMap(referencedIds);
+  for (let id = queue.pop(); id !== undefined; id = queue.pop()) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const node = nodes[id];
+    if (node) queue.push(...referencedIds(node));
+  }
+  return seen;
+}
+
+/**
+ * Ids of the nodes the inputs of a node reference
+ */
+function referencedIds(node: ComfyNode): string[] {
+  if (!node.inputs || typeof node.inputs !== 'object') return [];
+  return Object.values(node.inputs)
+    .filter(isNodeReference)
+    .map((ref) => String(ref[0]));
+}

@@ -8,10 +8,13 @@ import { lora, parseLoraTags, toWeight } from '../utils/lora';
  * (input names as the nodes write them to the API prompt). A LoRA is listed
  * only when the node applies it: slots switched off or left at "None",
  * entries beyond a stack's count and switcher slots other than the selected
- * one are skipped. Nodes not in the table are ignored; in particular a
+ * one are skipped. A node outside the table counts when it has the shape of
+ * the core LoraLoader (`lora_name` with a numeric `strength_model`); a
  * `<lora:...>` tag inside CLIPTextEncode text is not read, because plain
- * ComfyUI does not interpret it. Order is graph key order, then slot order;
- * duplicates are kept.
+ * ComfyUI does not interpret it. Loaders the sampler does not depend on
+ * (their output goes nowhere) are left out when the caller passes the
+ * reachable set. Order is graph key order, then slot order; duplicates are
+ * kept.
  */
 
 type Inputs = ComfyNode['inputs'];
@@ -195,14 +198,47 @@ const READERS: Record<string, (inputs: Inputs) => LoraSettings[]> = {
 };
 
 /**
+ * Loader outside the table that copies the core LoraLoader inputs
+ *
+ * `lora_name` with a numeric `strength_model`, as LoraLoaderAdvanced,
+ * LoraLoader|pysssss, WAS's "Load Lora" or Inspire's block-weight loader
+ * write them. Picker widgets (`insert_lora`, "Select to add LoRA"), stack
+ * references (`lora_stack`) and numbered slots do not have that shape. A
+ * loader switched off applies nothing.
+ */
+function readByShape(inputs: Inputs): LoraSettings[] {
+  if (typeof inputs.strength_model !== 'number' || isSwitchedOff(inputs)) {
+    return [];
+  }
+  return entry(inputs.lora_name, inputs.strength_model, inputs.strength_clip);
+}
+
+/**
+ * Off switches seen on single loaders: Inspire `bypass`, ComfyRoll
+ * `switch`, Easy-Use `toggle`
+ */
+function isSwitchedOff(inputs: Inputs): boolean {
+  return (
+    inputs.bypass === true || inputs.switch === 'Off' || inputs.toggle === false
+  );
+}
+
+/**
  * Read the LoRAs applied by the loader nodes of a graph
  *
  * @param nodes - API prompt graph
+ * @param reachable - Ids of the nodes the sampler depends on; loaders outside
+ *   it are left out. Omit to list every loader.
  * @returns LoRAs in graph order; empty when the graph applies none
  */
-export function extractComfyLoras(nodes: ComfyNodeGraph): LoraSettings[] {
-  return Object.values(nodes).flatMap((node) => {
-    const reader = READERS[node?.class_type];
-    return reader && isRecord(node.inputs) ? reader(node.inputs) : [];
+export function extractComfyLoras(
+  nodes: ComfyNodeGraph,
+  reachable?: ReadonlySet<string>,
+): LoraSettings[] {
+  return Object.entries(nodes).flatMap(([id, node]) => {
+    if (reachable !== undefined && !reachable.has(id)) return [];
+    if (!isRecord(node?.inputs)) return [];
+    const reader = READERS[node.class_type] ?? readByShape;
+    return reader(node.inputs);
   });
 }
