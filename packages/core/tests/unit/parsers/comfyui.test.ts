@@ -794,7 +794,11 @@ describe('parseComfyUI - LoRA loader nodes', () => {
           strength_clip: 0.4,
         },
       },
-      '2': { class_type: 'KSampler', inputs: { seed: 1, steps: 20, cfg: 5 } },
+      // The sampler takes its model from the loader, so the LoRA is applied
+      '2': {
+        class_type: 'KSampler',
+        inputs: { seed: 1, steps: 20, cfg: 5, model: ['1', 0] },
+      },
     });
 
     const result = parseComfyUI(entries);
@@ -1437,5 +1441,144 @@ describe('parseComfyUI - sampler and latent shape fallbacks', () => {
     });
     expect(value.width).toBe(1024);
     expect(value.height).toBe(1536);
+  });
+});
+
+describe('parseComfyUI - LoRA reachability', () => {
+  const lora = (name: string, model: unknown, clip: unknown) => ({
+    class_type: 'LoraLoader',
+    inputs: {
+      lora_name: name,
+      strength_model: 0.5,
+      strength_clip: 0.5,
+      model,
+      clip,
+    },
+  });
+  const base = {
+    '1': {
+      class_type: 'CheckpointLoaderSimple',
+      inputs: { ckpt_name: 'ok.safetensors' },
+    },
+    '2': {
+      class_type: 'EmptyLatentImage',
+      inputs: { width: 512, height: 512, batch_size: 1 },
+    },
+    '3': {
+      class_type: 'CLIPTextEncode',
+      inputs: { text: 'pos', clip: ['1', 1] },
+    },
+    '4': {
+      class_type: 'CLIPTextEncode',
+      inputs: { text: 'neg', clip: ['1', 1] },
+    },
+  };
+  const sampler = (model: unknown, extra: Record<string, unknown> = {}) => ({
+    class_type: 'KSampler',
+    inputs: {
+      seed: 1,
+      steps: 10,
+      cfg: 5,
+      sampler_name: 'euler',
+      scheduler: 'normal',
+      denoise: 1,
+      model,
+      positive: ['3', 0],
+      negative: ['4', 0],
+      latent_image: ['2', 0],
+      ...extra,
+    },
+  });
+
+  function names(prompt: Record<string, unknown>): string[] | undefined {
+    const result = parseComfyUI({ prompt: JSON.stringify(prompt) });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    return result.value.loras?.map((entry) => entry.name);
+  }
+
+  it('should list only loaders the sampler depends on, in graph order', () => {
+    // 10 feeds the sampler through 11; 12 hangs off 11 but goes nowhere
+    expect(
+      names({
+        ...base,
+        '10': lora('first.safetensors', ['1', 0], ['1', 1]),
+        '11': lora('second.safetensors', ['10', 0], ['10', 1]),
+        '12': lora('dead.safetensors', ['11', 0], ['11', 1]),
+        '20': sampler(['11', 0]),
+      }),
+    ).toEqual(['first.safetensors', 'second.safetensors']);
+  });
+
+  it('should count a loader that only feeds the prompt encoder', () => {
+    expect(
+      names({
+        ...base,
+        '3': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: 'pos', clip: ['10', 1] },
+        },
+        '10': lora('clip-only.safetensors', ['1', 0], ['1', 1]),
+        '20': sampler(['1', 0]),
+      }),
+    ).toEqual(['clip-only.safetensors']);
+  });
+
+  it('should count the loaders of the hires sampler too', () => {
+    expect(
+      names({
+        ...base,
+        '10': lora('base.safetensors', ['1', 0], ['1', 1]),
+        '11': lora('hires-only.safetensors', ['1', 0], ['1', 1]),
+        '12': lora('dead.safetensors', ['1', 0], ['1', 1]),
+        '20': sampler(['10', 0]),
+        '21': {
+          class_type: 'LatentUpscaleBy',
+          inputs: {
+            samples: ['20', 0],
+            upscale_method: 'nearest-exact',
+            scale_by: 2,
+          },
+        },
+        '22': sampler(['11', 0], { latent_image: ['21', 0], denoise: 0.5 }),
+      }),
+    ).toEqual(['base.safetensors', 'hires-only.safetensors']);
+  });
+
+  it('should keep every loader when no sampler is recognized', () => {
+    expect(
+      names({
+        ...base,
+        '10': lora('a.safetensors', ['1', 0], ['1', 1]),
+        '12': lora('b.safetensors', ['1', 0], ['1', 1]),
+      }),
+    ).toEqual(['a.safetensors', 'b.safetensors']);
+  });
+
+  it('should list the wired shape-matched loader instead of a dead known one', () => {
+    const result = parseComfyUI({
+      prompt: JSON.stringify({
+        ...base,
+        '23': lora('dead.safetensors', ['1', 0], ['1', 1]),
+        '24': {
+          class_type: 'LoraLoaderAdvanced',
+          inputs: {
+            lora_name: 'used.safetensors',
+            strength_model: 0.7,
+            strength_clip: 1,
+            force_fetch: false,
+            append_loraname_if_empty: false,
+            model: ['1', 0],
+            clip: ['1', 1],
+          },
+        },
+        '30': sampler(['24', 0]),
+      }),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.loras).toEqual([
+      { name: 'used.safetensors', weight: 0.7, clipWeight: 1 },
+    ]);
   });
 });

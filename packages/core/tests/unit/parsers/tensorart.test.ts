@@ -281,6 +281,8 @@ describe('parseTensorArt - LoRA fallback', () => {
         models: [{ type: 'BASE_MODEL', modelFileName: 'WAI' }],
       },
       {
+        // The sampler takes its model from the loader, so the LoRA is applied
+        '1': { class_type: 'KSampler', inputs: { model: ['2', 0] } },
         '2': {
           class_type: 'LoraTagLoader',
           inputs: { text: '<lora:EMS-1-EMS.safetensors:0.200000>' },
