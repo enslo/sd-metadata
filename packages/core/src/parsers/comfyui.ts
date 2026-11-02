@@ -29,6 +29,7 @@ import {
   findHiresSampler,
   isNodeReference,
   resolveNumberInput,
+  wiredConditioning,
 } from './comfyui-nodes';
 import type { InternalParseResult, PartialMetadata } from './types';
 
@@ -98,10 +99,14 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
   // that catches custom-node and non-standard topology cases the structured
   // parser cannot resolve; CivitAI extraMetadata fills any remaining gaps;
   // the structured ComfyUI walk is most trustworthy when it succeeds.
+  const classified = classifyNodes(prompt);
   const final = mergeMetadata(
-    flatScanComfyMetadata(prompt),
+    withoutWiredPrompts(
+      flatScanComfyMetadata(prompt),
+      wiredConditioning(prompt, classified.sampler),
+    ),
     extractCivitaiMetadata(extractExtraMetadata(prompt, entries)),
-    extractComfyUIMetadata(prompt),
+    extractComfyUIMetadata(prompt, classified),
   );
 
   return Result.ok({
@@ -239,14 +244,13 @@ function hasWorkflowOnlyChunk(entryRecord: EntryRecord): boolean {
  * from standard ComfyUI node structure using class_type-based lookup.
  *
  * @param nodes - Parsed ComfyUI prompt (node graph)
+ * @param c - The nodes classified by role, when the caller has them already
  * @returns Partial metadata from ComfyUI nodes
  */
 export function extractComfyUIMetadata(
   nodes: ComfyNodeGraph,
+  c: ClassifiedNodes = classifyNodes(nodes),
 ): PartialMetadata | undefined {
-  // Classify all nodes in a single pass
-  const c = classifyNodes(nodes);
-
   // Extract from pre-classified nodes
   const { promptText, negativeText } = extractPromptTexts(nodes, c.sampler);
   const { width, height } = extractDimensions(
@@ -366,6 +370,26 @@ function buildHiresOrUpscale(
 // =============================================================================
 // Metadata Merging
 // =============================================================================
+
+/**
+ * Drop the flat-scan prompts of the sides the sampler wires
+ *
+ * A wire's text is whatever the structured walk finds at its end, possibly
+ * nothing when the node there is unknown. The flat scan cannot read that
+ * node either, so the text it offers belongs to some other node, typically
+ * the negative encoder, and would show up as the positive prompt.
+ */
+function withoutWiredPrompts(
+  flat: PartialMetadata,
+  wired: { positive: boolean; negative: boolean },
+): PartialMetadata | undefined {
+  const { prompt, negativePrompt, ...rest } = flat;
+  return trimObject({
+    ...rest,
+    prompt: wired.positive ? undefined : prompt,
+    negativePrompt: wired.negative ? undefined : negativePrompt,
+  });
+}
 
 /**
  * Shallow merge any number of objects, skipping undefined values.
