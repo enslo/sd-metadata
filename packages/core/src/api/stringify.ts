@@ -260,9 +260,9 @@ export function stringify(
       case 'success':
         return transcribeA1111(input) ?? buildEmbedText(input.metadata);
       case 'vendor':
-        // Without a known vendor, the declared product says the most.
+        // Without a known vendor, the product (or "Unknown") stands alone.
         return input.info.vendor === 'unknown'
-          ? (input.info.product ?? vendorLabels.unknown)
+          ? productLabel(input.info)
           : `${vendorLabels[input.info.vendor]} ${productLabel(input.info)}`;
       case 'unrecognized':
         return formatRaw(input.raw);

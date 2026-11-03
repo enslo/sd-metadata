@@ -1004,7 +1004,7 @@ describe('stringify - vendor status', () => {
     );
   });
 
-  it('names an unknown vendor without a product as such', () => {
-    expect(vendor({ vendor: 'unknown', source: 'xmp' })).toBe('Unknown vendor');
+  it('names an unknown vendor without a product Unknown', () => {
+    expect(vendor({ vendor: 'unknown', source: 'xmp' })).toBe('Unknown');
   });
 });

@@ -56,7 +56,7 @@ export const vendorLabels: Readonly<Record<Vendor, string>> = Object.freeze({
   google: 'Google',
   xai: 'xAI',
   meta: 'Meta',
-  unknown: 'Unknown vendor',
+  unknown: 'Unknown',
 });
 
 /** @deprecated Use {@link vendorLabels}. Labels are company names since v4. */
@@ -86,7 +86,7 @@ const DEFAULT_PRODUCTS: Readonly<Record<Vendor, string>> = {
   google: 'Gemini',
   xai: 'Grok Imagine',
   meta: 'Muse',
-  unknown: 'Unknown',
+  unknown: vendorLabels.unknown,
 };
 
 /**

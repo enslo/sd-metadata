@@ -70,7 +70,7 @@ describe('vendorLabels', () => {
       google: 'Google',
       xai: 'xAI',
       meta: 'Meta',
-      unknown: 'Unknown vendor',
+      unknown: 'Unknown',
     });
   });
 

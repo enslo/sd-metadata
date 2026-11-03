@@ -26,7 +26,7 @@ const EXPECTED_TEXT: Record<
   'gemini_unknown.png': 'Google Gemini',
   'gemini_3.1pro-latest.jpg': 'Google Gemini',
   'grok-imagine2.jpg': 'xAI Grok Imagine',
-  'muse-free.jpg': 'Unknown vendor',
+  'muse-free.jpg': 'Unknown',
   'muse.webp': 'Meta Muse',
 };
 
