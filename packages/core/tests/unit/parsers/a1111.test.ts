@@ -123,6 +123,33 @@ Steps: 20, Size: 512x512, Hires upscale: 2, Hires upscaler: Latent, Hires steps:
           steps: 10,
           denoise: 0.5,
         });
+        expect(result.value.sampling?.denoise).toBeUndefined();
+      }
+    });
+
+    it('should read Denoising strength without Hires settings as the main pass strength', () => {
+      // Forge writes it from img2img's init too (Wan image-to-video runs as
+      // img2img), not only from the hires pass.
+      const parameters = `test
+Steps: 4, Sampler: Euler, Size: 512x512, Denoising strength: 0.8, Refiner: low_noise, Refiner switch at: 0.9`;
+      const result = parseA1111(createA1111Entry(parameters), 'forge-neo');
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.sampling?.denoise).toBe(0.8);
+        expect(result.value.hires).toBeUndefined();
+      }
+    });
+
+    it('should treat Hires size alone as hires settings', () => {
+      const parameters = `test
+Steps: 20, Size: 512x512, Hires size: 1024x1024, Denoising strength: 0.4`;
+      const result = parseA1111(createA1111Entry(parameters), 'sd-webui');
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.hires).toEqual({ scale: 2, denoise: 0.4 });
+        expect(result.value.sampling?.denoise).toBeUndefined();
       }
     });
   });

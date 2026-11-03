@@ -358,7 +358,11 @@ export interface SamplingSettings {
   seed?: string;
   /** CLIP skip layers */
   clipSkip?: number;
-  /** Denoising strength (ComfyUI only, typically 1.0 for txt2img) */
+  /**
+   * Denoising strength of the main pass: img2img's strength, or a lowered
+   * strength in a plain generation. 1 means full denoising. A hires pass's
+   * strength is {@link HiresSettings.denoise}.
+   */
   denoise?: number;
 }
 

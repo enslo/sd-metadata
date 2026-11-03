@@ -69,9 +69,17 @@ const forgeNeo = (seed: string) => ({
   width: 512,
   height: 512,
   model: { name: 'wan2.2_i2v_high_noise_14B_fp8_scaled', hash: '6122e79d55' },
-  sampling: { sampler: 'Euler', scheduler: 'Simple', steps: 4, cfg: 1, seed },
+  // "Denoising strength: 1" without Hires keys: image-to-video runs as
+  // img2img, so it is the main pass's strength.
+  sampling: {
+    sampler: 'Euler',
+    scheduler: 'Simple',
+    steps: 4,
+    cfg: 1,
+    seed,
+    denoise: 1,
+  },
   loras: [{ name: 'wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise', weight: 1 }],
-  hires: { denoise: 1 },
 });
 
 /** Generation-metadata samples: expected metadata and raw tags. */

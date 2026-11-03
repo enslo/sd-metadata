@@ -115,7 +115,12 @@ function buildSettingsLine(
     'Model hash': metadata.model?.hash,
     Model: metadata.model?.name,
     'Clip skip': metadata.sampling?.clipSkip,
-    'Denoising strength': hires?.denoise,
+    // A main-pass strength of 1 (full denoising) is the default and left out
+    'Denoising strength':
+      hires?.denoise ??
+      (metadata.sampling?.denoise !== 1
+        ? metadata.sampling?.denoise
+        : undefined),
     'Hires upscale': hires?.scale,
     'Hires steps': hires?.steps,
     'Hires upscaler': hires?.upscaler,
