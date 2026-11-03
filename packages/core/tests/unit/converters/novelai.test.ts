@@ -11,7 +11,7 @@ import type { MetadataSegment, PngTextChunk } from '../../../src/types';
 function novelaiChunks(timeKey: string): PngTextChunk[] {
   return [
     { type: 'tEXt', keyword: 'Title', text: 'NovelAI generated image' },
-    { type: 'tEXt', keyword: 'Description', text: 'solo' },
+    { type: 'tEXt', keyword: 'Description', text: '1girl' },
     { type: 'tEXt', keyword: 'Software', text: 'NovelAI' },
     { type: 'tEXt', keyword: 'Source', text: 'NovelAI Diffusion V5 70AB5786' },
     { type: 'tEXt', keyword: timeKey, text: '1.5' },
@@ -24,12 +24,12 @@ function novelaiChunks(timeKey: string): PngTextChunk[] {
  */
 function novelaiSegments(timeKey: string): MetadataSegment[] {
   return [
-    { source: { type: 'exifImageDescription' }, data: 'solo' },
+    { source: { type: 'exifImageDescription' }, data: '1girl' },
     {
       source: { type: 'exifUserComment' },
       data: JSON.stringify({
         Comment: '{"prompt": "1girl"}',
-        Description: 'solo',
+        Description: '1girl',
         [timeKey]: '1.5',
         Software: 'NovelAI',
         Source: 'NovelAI Diffusion V5 70AB5786',
@@ -48,7 +48,8 @@ describe('NovelAI converter', () => {
 
       expect(segments[0]).toEqual({
         source: { type: 'exifImageDescription' },
-        data: '\0\0\0\0solo',
+        // \x00 rather than \0: "\01" would be read as one octal escape
+        data: '\x00\x00\x00\x001girl',
       });
       const json = JSON.parse(segments[1]?.data ?? '');
       expect(Object.keys(json)).toEqual([
@@ -68,7 +69,7 @@ describe('NovelAI converter', () => {
 
       expect(segments[0]).toEqual({
         source: { type: 'exifImageDescription' },
-        data: 'solo',
+        data: '1girl',
       });
       const json = JSON.parse(segments[1]?.data ?? '');
       expect(Object.keys(json)).toEqual([
