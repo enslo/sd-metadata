@@ -209,3 +209,26 @@ describe('Easy Diffusion boolean clip_skip', () => {
     }
   });
 });
+
+// NovelAI V5: the web client appends the quoted texts as ", teXt: ...",
+// which both lite and core drop, and an img2img request's strength is the
+// Denoising strength. The cross-test above only checks prompt overlap, so
+// the whole text is compared here.
+describe('NovelAI V5 text block and img2img strength', () => {
+  it('should produce the same text as core', () => {
+    const files: Array<[string, string]> = [
+      ['png', 'novelai-v5-full.png'],
+      ['webp', 'novelai-v5-full.webp'],
+      ['png', 'novelai-v5-full-i2i.png'],
+    ];
+    for (const [format, file] of files) {
+      const data = load(format, file);
+      const lite = liteRead(data);
+      expect(lite, file).not.toContain('teXt:');
+      expect(lite, file).toBe(stringify(fullRead(data)));
+    }
+    expect(liteRead(load('png', 'novelai-v5-full-i2i.png'))).toContain(
+      'Denoising strength: 0.4',
+    );
+  });
+});

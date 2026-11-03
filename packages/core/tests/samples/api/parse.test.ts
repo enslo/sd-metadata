@@ -163,6 +163,7 @@ describe('parse - Stealth PNGInfo samples', () => {
     const NOVELAI_WEBP_SAMPLES = [
       'novelai-curated.webp',
       'novelai-full-3char.webp',
+      'novelai-v5-full.webp',
     ];
 
     for (const filename of NOVELAI_WEBP_SAMPLES) {

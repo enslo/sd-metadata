@@ -475,9 +475,15 @@ function buildNovelAI(obj: JsonObject): string {
     | undefined;
   return buildA1111({
     ...extractCommon(obj),
-    // Prefer v4 captions, fall back to legacy flat fields.
-    p: asText(v4Caption?.base_caption) || asText(obj.prompt),
+    // Prefer v4 captions, fall back to legacy flat fields. The V5 web
+    // client appends quoted texts as ", teXt: ..."; drop that block.
+    p: (asText(v4Caption?.base_caption) || asText(obj.prompt)).replace(
+      /(^|, )teXt:(?!:).*/s,
+      '',
+    ),
     n: asText(v4NegCaption?.base_caption) || asText(obj.uc),
+    // img2img strength (Img2ImgRequest only)
+    dn: asText(obj.strength),
   });
 }
 

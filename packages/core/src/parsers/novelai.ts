@@ -19,6 +19,8 @@ interface NovelAIComment {
   seed?: number | string;
   noise_schedule?: string;
   sampler?: string;
+  /** img2img strength (Img2ImgRequest only) */
+  strength?: number;
   /** V4 prompt structure */
   v4_prompt?: V4Prompt;
   /** V4 negative prompt structure */
@@ -38,6 +40,44 @@ interface V4Prompt {
   };
   use_coords?: boolean;
   use_order?: boolean;
+}
+
+/**
+ * Opening of the text block the NovelAI web client adds for V5
+ *
+ * When the prompt quotes text and has no `Text:` of its own, the client
+ * appends `, teXt: <quoted texts>` (separated by empty lines) so that
+ * text rendering picks them up. The unusual casing tells it apart from a
+ * `Text:` written by the user; `teXt::` is emphasis syntax instead.
+ */
+const AUTO_TEXT_PATTERN = /(?:^|[\s,.:[\]{}、。])teXt:(?!:)/;
+
+/**
+ * Remove the text block the NovelAI web client appended to a prompt
+ *
+ * The block is removed only when every text in it also appears in the
+ * prompt before it or in a character prompt, which is where the client
+ * collects them from. Anything else is kept as the user's own text.
+ *
+ * @param prompt - Base prompt as stored
+ * @param characterPrompts - Character prompts the client also collects from
+ * @returns Prompt without the appended block
+ */
+function stripAutoText(prompt: string, characterPrompts: string[]): string {
+  const match = AUTO_TEXT_PATTERN.exec(prompt);
+  if (!match) return prompt;
+
+  const blockStart = match.index + match[0].length - 'teXt:'.length;
+  const before = prompt.slice(0, blockStart);
+  const texts = prompt
+    .slice(match.index + match[0].length)
+    .trim()
+    .split('\n\n');
+  const sources = [before, ...characterPrompts];
+  const collected = texts.every(
+    (text) => text !== '' && sources.some((source) => source.includes(text)),
+  );
+  return collected ? before.replace(/[\s,]+$/, '') : prompt;
 }
 
 /**
@@ -75,12 +115,6 @@ export function parseNovelAI(entries: EntryRecord): InternalParseResult {
   const width = comment.width ?? 0;
   const height = comment.height ?? 0;
 
-  // Extract prompt - prefer V4 base_caption if available
-  const prompt =
-    comment.v4_prompt?.caption?.base_caption ?? comment.prompt ?? '';
-  const negativePrompt =
-    comment.v4_negative_prompt?.caption?.base_caption ?? comment.uc ?? '';
-
   // Extract V4 character prompts
   const charCaptions = comment.v4_prompt?.caption?.char_captions;
   const characterPrompts =
@@ -96,6 +130,14 @@ export function parseNovelAI(entries: EntryRecord): InternalParseResult {
           .filter((cp): cp is CharacterPrompt => cp !== null)
       : undefined;
 
+  // Extract prompt - prefer V4 base_caption if available
+  const prompt = stripAutoText(
+    comment.v4_prompt?.caption?.base_caption ?? comment.prompt ?? '',
+    characterPrompts?.map((cp) => cp.prompt) ?? [],
+  );
+  const negativePrompt =
+    comment.v4_negative_prompt?.caption?.base_caption ?? comment.uc ?? '';
+
   return Result.ok({
     software: 'novelai',
     prompt,
@@ -108,6 +150,7 @@ export function parseNovelAI(entries: EntryRecord): InternalParseResult {
       seed: toSeedString(comment.seed),
       sampler: comment.sampler,
       scheduler: comment.noise_schedule,
+      denoise: comment.strength,
     }),
     characterPrompts,
     useCoords: characterPrompts ? comment.v4_prompt?.use_coords : undefined,
