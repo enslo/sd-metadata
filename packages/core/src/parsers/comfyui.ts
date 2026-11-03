@@ -13,6 +13,7 @@ import type {
 } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
+import { withoutFloatNoise } from '../utils/float';
 import { parseJson } from '../utils/json';
 import { optionalLoras } from '../utils/lora';
 import { trimObject } from '../utils/object';
@@ -124,8 +125,32 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
         ([key]) => !CIVITAI_EXTENSION_KEYS.includes(key),
       ),
     ),
-    ...final,
+    ...withoutFrontendNoise(final),
   });
+}
+
+/**
+ * Drop the rounding errors ComfyUI's frontend leaves on settings it computes
+ * (`1.0000000000000002` for a LoRA strength of 1; see
+ * {@link withoutFloatNoise}) from the sampling, hires, upscale and LoRA
+ * numbers.
+ */
+function withoutFrontendNoise(metadata: BaseMetadata): BaseMetadata {
+  const clean = <T extends object>(settings: T): T =>
+    Object.fromEntries(
+      Object.entries(settings).map(([key, value]) => [
+        key,
+        typeof value === 'number' ? withoutFloatNoise(value) : value,
+      ]),
+    ) as T;
+
+  return {
+    ...metadata,
+    ...(metadata.sampling ? { sampling: clean(metadata.sampling) } : {}),
+    ...(metadata.hires ? { hires: clean(metadata.hires) } : {}),
+    ...(metadata.upscale ? { upscale: clean(metadata.upscale) } : {}),
+    ...(metadata.loras ? { loras: metadata.loras.map(clean) } : {}),
+  };
 }
 
 // =============================================================================

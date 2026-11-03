@@ -298,9 +298,9 @@ describe('ComfyUI Parsers - Samples', () => {
         // Hires detected from LatentUpscaleBy → KSampler connection pattern
         hires: {
           upscaler: 'ESRGAN-Remacri-4x.pth',
-          scale: 1.5000000000000002, // from LatentUpscaleBy.scale_by
+          scale: 1.5, // LatentUpscaleBy.scale_by, written as 1.5000000000000002
           steps: 20,
-          denoise: 0.6000000000000001,
+          denoise: 0.6, // written as 0.6000000000000001
         },
         nodes: expect.any(Object),
       });
@@ -393,7 +393,7 @@ describe('ComfyUI Parsers - Samples', () => {
           upscaler: 'RealESRGAN_x4plus_anime_6B.pth',
           scale: 1.5,
           steps: 14,
-          denoise: 0.35000000000000003,
+          denoise: 0.35, // written as 0.35000000000000003
         },
         nodes: expect.any(Object),
       });

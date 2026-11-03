@@ -33,3 +33,32 @@ export function fromFloat32(value: number): number {
   }
   return value;
 }
+
+/** Significant digits any double reproduces exactly (DBL_DIG) */
+const DOUBLE_SAFE_DIGITS = 15;
+
+/** Longest decimal taken as the value behind a rounding error */
+const MAX_INTENDED_DIGITS = 12;
+
+/**
+ * Drop the rounding error a JavaScript frontend leaves on a short decimal
+ *
+ * ComfyUI's frontend computes widget values in double precision and saves
+ * the result as is, so a LoRA strength set to 1 arrives as
+ * `1.0000000000000002` and a scale of 1.5 as `1.5000000000000002`. The
+ * error sits past the 15th significant digit: rounded to 15 digits, such a
+ * value collapses to the short decimal the user set. Only that case is
+ * rewritten; a value that still needs more than {@link MAX_INTENDED_DIGITS}
+ * digits after rounding is a genuine one (e.g. Stability Matrix's denoise
+ * `0.2958477508650519`) and is returned unchanged.
+ *
+ * @param value - Number read from JSON
+ * @returns The short decimal behind the error, or `value` itself
+ */
+export function withoutFloatNoise(value: number): number {
+  if (!Number.isFinite(value)) return value;
+  const rounded = Number(value.toPrecision(DOUBLE_SAFE_DIGITS));
+  return rounded === Number(rounded.toPrecision(MAX_INTENDED_DIGITS))
+    ? rounded
+    : value;
+}

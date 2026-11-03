@@ -2032,3 +2032,51 @@ describe('parseComfyUI - model of the main sampler', () => {
     });
   });
 });
+
+describe('parseComfyUI - frontend rounding errors', () => {
+  it('reports the short decimals behind the rounding errors', () => {
+    const prompt = {
+      '1': {
+        class_type: 'CheckpointLoaderSimple',
+        inputs: { ckpt_name: 'model.safetensors' },
+      },
+      '2': {
+        class_type: 'LoraLoader',
+        inputs: {
+          lora_name: 'style.safetensors',
+          strength_model: 1.0000000000000002,
+          strength_clip: 0.7000000000000001,
+          model: ['1', 0],
+          clip: ['1', 1],
+        },
+      },
+      '3': { class_type: 'CLIPTextEncode', inputs: { text: 'a fox' } },
+      '4': {
+        class_type: 'EmptyLatentImage',
+        inputs: { width: 512, height: 512, batch_size: 1 },
+      },
+      '5': {
+        class_type: 'KSampler',
+        inputs: {
+          seed: 1,
+          steps: 20,
+          cfg: 5.000000000000001,
+          sampler_name: 'euler',
+          scheduler: 'normal',
+          denoise: 0.35000000000000003,
+          model: ['2', 0],
+          positive: ['3', 0],
+          negative: ['3', 0],
+          latent_image: ['4', 0],
+        },
+      },
+    };
+    const result = parseComfyUI(createComfyUIEntries(prompt));
+    if (!result.ok) throw new Error('unreachable');
+
+    expect(result.value.sampling).toMatchObject({ cfg: 5, denoise: 0.35 });
+    expect(result.value.loras).toEqual([
+      { name: 'style.safetensors', weight: 1, clipWeight: 0.7 },
+    ]);
+  });
+});
