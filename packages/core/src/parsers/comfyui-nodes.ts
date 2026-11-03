@@ -224,17 +224,56 @@ function resolveBooleanInput(
 }
 
 /**
- * Resolve a number input that may be a literal or a reference to a
- * primitive node (e.g. PrimitiveFloat) holding the literal in `value`.
+ * Resolve an input to the literal it carries at run time
+ *
+ * Follows references to primitive nodes (e.g. PrimitiveInt) holding the
+ * literal in `value`, and ComfySwitchNode (comfy-core If/Else) to its
+ * selected branch. Unlike prompt text, a switch whose state cannot be
+ * resolved yields undefined: taking either branch could report a value
+ * the run did not use. Callers check the literal's type, so an
+ * unresolvable reference never surfaces as a value.
+ */
+function resolveLiteralInput(
+  nodes: ComfyNodeGraph,
+  value: unknown,
+  maxDepth = 10,
+): unknown {
+  if (!isNodeReference(value)) return value;
+  const node = resolveNode(nodes, value);
+  if (!node || maxDepth <= 0) return undefined;
+
+  if (node.class_type === 'ComfySwitchNode') {
+    const selected = resolveBooleanInput(nodes, node.inputs.switch);
+    if (selected === undefined) return undefined;
+    const branch = selected ? node.inputs.on_true : node.inputs.on_false;
+    return resolveLiteralInput(nodes, branch, maxDepth - 1);
+  }
+
+  return node.inputs.value;
+}
+
+/**
+ * Resolve a number input that may be a literal, a reference to a
+ * primitive node (e.g. PrimitiveFloat) holding the literal in `value`,
+ * or a ComfySwitchNode selecting between such inputs.
  */
 export function resolveNumberInput(
   nodes: ComfyNodeGraph,
   value: unknown,
 ): number | undefined {
-  if (typeof value === 'number') return value;
-  const node = resolveNode(nodes, value);
-  if (typeof node?.inputs.value === 'number') return node.inputs.value;
-  return undefined;
+  const literal = resolveLiteralInput(nodes, value);
+  return typeof literal === 'number' ? literal : undefined;
+}
+
+/**
+ * Resolve a string input the same way as {@link resolveNumberInput}.
+ */
+function resolveStringInput(
+  nodes: ComfyNodeGraph,
+  value: unknown,
+): string | undefined {
+  const literal = resolveLiteralInput(nodes, value);
+  return typeof literal === 'string' ? literal : undefined;
 }
 
 /**
@@ -599,11 +638,11 @@ export function extractSampling(
 
   return {
     seed: toSeedString(seed),
-    steps: sampler.inputs.steps as number,
-    cfg: sampler.inputs.cfg as number,
-    sampler: sampler.inputs.sampler_name as string,
-    scheduler: sampler.inputs.scheduler as string,
-    denoise: sampler.inputs.denoise as number | undefined,
+    steps: resolveNumberInput(nodes, sampler.inputs.steps),
+    cfg: resolveNumberInput(nodes, sampler.inputs.cfg),
+    sampler: resolveStringInput(nodes, sampler.inputs.sampler_name),
+    scheduler: resolveStringInput(nodes, sampler.inputs.scheduler),
+    denoise: resolveNumberInput(nodes, sampler.inputs.denoise),
   };
 }
 
@@ -627,11 +666,11 @@ function extractAdvancedSampling(
 
   return {
     seed: toSeedString(noiseNode?.inputs.noise_seed),
-    steps: schedulerNode?.inputs.steps as number,
-    cfg: guiderNode?.inputs.cfg as number,
-    sampler: samplerSelectNode?.inputs.sampler_name as string,
-    scheduler: schedulerNode?.inputs.scheduler as string,
-    denoise: schedulerNode?.inputs.denoise as number | undefined,
+    steps: resolveNumberInput(nodes, schedulerNode?.inputs.steps),
+    cfg: resolveNumberInput(nodes, guiderNode?.inputs.cfg),
+    sampler: resolveStringInput(nodes, samplerSelectNode?.inputs.sampler_name),
+    scheduler: resolveStringInput(nodes, schedulerNode?.inputs.scheduler),
+    denoise: resolveNumberInput(nodes, schedulerNode?.inputs.denoise),
   };
 }
 
@@ -661,11 +700,11 @@ function extractCustomSampling(
 
   return {
     seed: toSeedString(seed),
-    steps: schedulerNode?.inputs.steps as number,
-    cfg: sampler.inputs.cfg as number,
-    sampler: samplerSelectNode?.inputs.sampler_name as string,
-    scheduler: schedulerNode?.inputs.scheduler as string,
-    denoise: schedulerNode?.inputs.denoise as number | undefined,
+    steps: resolveNumberInput(nodes, schedulerNode?.inputs.steps),
+    cfg: resolveNumberInput(nodes, sampler.inputs.cfg),
+    sampler: resolveStringInput(nodes, samplerSelectNode?.inputs.sampler_name),
+    scheduler: resolveStringInput(nodes, schedulerNode?.inputs.scheduler),
+    denoise: resolveNumberInput(nodes, schedulerNode?.inputs.denoise),
   };
 }
 
