@@ -26,14 +26,17 @@
       "noRawData": "データがありません",
       "noPlainText": "テキスト表現がありません"
     },
-    "c2pa": {
-      "title": "Content Credentials",
-      "vendor": "生成元",
-      "aiGenerated": "AI生成",
-      "claimGenerator": "Claim generator",
-      "digitalSourceType": "Digital source type",
-      "yes": "はい",
-      "no": "いいえ"
+    "vendor": {
+      "title": "AI サービス",
+      "vendor": "提供元",
+      "product": "サービス",
+      "declaredProduct": "記載名",
+      "source": "読み取り元",
+      "sources": {
+        "c2pa": "Content Credentials (C2PA)",
+        "xmp": "XMP (IPTC)",
+        "signature": "署名 (EXIF)"
+      }
     }
   },
   "fields": {

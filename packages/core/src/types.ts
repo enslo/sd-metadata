@@ -401,45 +401,50 @@ export interface LoraSettings {
 }
 
 // ============================================================================
-// Content Credentials (C2PA)
+// Vendor (commercial AI services)
 // ============================================================================
 
 /**
- * Vendor that signed an image's C2PA Content Credentials.
+ * Vendor whose AI service declared an image as AI-generated.
  *
- * Coarse by design: a C2PA manifest identifies the producing vendor but not the
- * specific model (e.g. Imagen and Gemini "Nano Banana" both map to `google`).
+ * Coarse by design: the declaration identifies the vendor, and only sometimes
+ * the service (see {@link VendorInfo.product}).
  */
-export type C2paVendor = 'openai' | 'google' | 'unknown';
+export type Vendor = 'openai' | 'google' | 'xai' | 'meta' | 'unknown';
 
 /**
- * Content Credentials (C2PA) read from an image's signed manifest.
+ * Where a vendor declaration was read from.
+ *
+ * - `c2pa`: C2PA Content Credentials manifest (PNG `caBX`, JPEG APP11)
+ * - `xmp`: IPTC DigitalSourceType in the XMP packet (JPEG APP1, WebP `XMP `)
+ * - `signature`: xAI's `Signature: <base64>` value in EXIF ImageDescription
+ */
+export type VendorSource = 'c2pa' | 'xmp' | 'signature';
+
+/**
+ * A commercial AI service's declaration that it made an image.
  *
  * Unlike {@link GenerationMetadata}, this carries no prompt/sampling/size data:
- * commercial AI tools (ChatGPT, Gemini, ...) embed provenance, not generation
- * parameters. The manifest is read as declared — the cryptographic signature is
- * NOT verified, so presence is not proof of authenticity (the strings are
- * forgeable). Likewise,
- * absence is not proof of human origin: Content Credentials are routinely
- * stripped by screenshots, re-encoding, and social-media re-uploads.
+ * commercial AI services (ChatGPT, Gemini, Grok, ...) embed provenance, not
+ * generation parameters. The declaration is read as written — no signature is
+ * verified, so presence is not proof of authenticity (the strings are
+ * forgeable). Likewise, absence is not proof of human origin: these markers are
+ * routinely stripped by screenshots, re-encoding, and social-media re-uploads.
  */
-export interface C2paMetadata {
+export interface VendorInfo {
   /**
-   * Coarse vendor attribution from the manifest's claim generator / signer.
-   * Declared, not cryptographically verified — never treat as proof of origin.
+   * Vendor that made the image. Declared, not cryptographically verified —
+   * never treat as proof of origin.
    */
-  vendor: C2paVendor;
+  vendor: Vendor;
   /**
-   * `true` when the manifest declares a trained-algorithmic (AI-generated) IPTC
-   * DigitalSourceType. Camera/scan source types are not flagged. This is the
-   * image's *declared*, unverified status: a `false`/absent result is not proof
-   * of human origin, and a `true` result is forgeable.
+   * The vendor's AI service as declared, verbatim (e.g. `"ChatGPT"`,
+   * `"gpt-image"`, `"Grok Imagine"`). Absent when the declaration names none.
+   * Use {@link productLabel} for a normalized display name.
    */
-  aiGenerated: boolean;
-  /** Raw IPTC DigitalSourceType URI, surfaced verbatim when present. */
-  digitalSourceType?: string;
-  /** C2PA `claim_generator_info.name`, when present. */
-  claimGenerator?: string;
+  product?: string;
+  /** Where the declaration was found. */
+  source: VendorSource;
 }
 
 // ============================================================================
@@ -450,7 +455,7 @@ export interface C2paMetadata {
  * Parse result with 5-status design
  *
  * - `success`: Generation metadata parsed; metadata and raw data available
- * - `c2pa`: C2PA Content Credentials found (AI provenance, no generation params)
+ * - `vendor`: A commercial AI service declared the image as its own (no generation params)
  * - `empty`: No metadata found in the file
  * - `unrecognized`: Metadata exists but format is not recognized
  * - `invalid`: File is corrupted or not a valid image
@@ -466,7 +471,7 @@ export type ParseResult =
        */
       stealth?: boolean;
     }
-  | { status: 'c2pa'; c2pa: C2paMetadata }
+  | { status: 'vendor'; info: VendorInfo }
   | { status: 'empty' }
   | {
       status: 'unrecognized';

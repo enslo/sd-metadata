@@ -1,5 +1,10 @@
 import type { ParseResult } from '@enslo/sd-metadata';
-import { c2paVendorLabels, parse, softwareLabels } from '@enslo/sd-metadata';
+import {
+  parse,
+  productLabel,
+  softwareLabels,
+  vendorLabels,
+} from '@enslo/sd-metadata';
 import {
   Anchor,
   Container,
@@ -98,7 +103,7 @@ export function App() {
 
   const getSoftwareLabelForDisplay = (): {
     label: string;
-    status: 'success' | 'c2pa' | 'empty' | 'unrecognized' | 'invalid';
+    status: 'success' | 'vendor' | 'empty' | 'unrecognized' | 'invalid';
     stealth?: boolean;
   } | null => {
     switch (state.parseResult?.status) {
@@ -109,11 +114,16 @@ export function App() {
           status: 'success',
           stealth: state.parseResult.stealth === true,
         };
-      case 'c2pa':
+      case 'vendor': {
+        const { info } = state.parseResult;
         return {
-          label: c2paVendorLabels[state.parseResult.c2pa.vendor],
-          status: 'c2pa',
+          label:
+            info.vendor === 'unknown'
+              ? productLabel(info)
+              : `${vendorLabels[info.vendor]} ${productLabel(info)}`,
+          status: 'vendor',
         };
+      }
       case 'empty':
         return { label: 'Empty', status: 'empty' };
       case 'unrecognized':

@@ -7,7 +7,7 @@ import { readPng } from '../src/read';
 const SAMPLES = join(import.meta.dirname, '../../../samples');
 
 function load(file: string): Uint8Array {
-  return new Uint8Array(readFileSync(join(SAMPLES, 'c2pa/png', file)));
+  return new Uint8Array(readFileSync(join(SAMPLES, 'vendor/png', file)));
 }
 
 function loadPng(file: string): Uint8Array {

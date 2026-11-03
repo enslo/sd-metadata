@@ -5,6 +5,7 @@
  * public API for converting any metadata type to a human-readable string.
  */
 
+import { productLabel, vendorLabels } from '../constants';
 import { A1111_SOFTWARE } from '../parsers/a1111';
 import type {
   CharacterPrompt,
@@ -258,8 +259,11 @@ export function stringify(
     switch (input.status) {
       case 'success':
         return transcribeA1111(input) ?? buildEmbedText(input.metadata);
-      case 'c2pa':
-        return input.c2pa.claimGenerator ?? '';
+      case 'vendor':
+        // Without a known vendor, the product (or "Unknown") stands alone.
+        return input.info.vendor === 'unknown'
+          ? productLabel(input.info)
+          : `${vendorLabels[input.info.vendor]} ${productLabel(input.info)}`;
       case 'unrecognized':
         return formatRaw(input.raw);
       case 'empty':

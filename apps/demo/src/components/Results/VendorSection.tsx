@@ -1,39 +1,34 @@
-import type { C2paMetadata } from '@enslo/sd-metadata';
-import { c2paVendorLabels } from '@enslo/sd-metadata';
+import type { VendorInfo } from '@enslo/sd-metadata';
+import { productLabel, vendorLabels } from '@enslo/sd-metadata';
 import { Table, Text } from '@mantine/core';
 import type { I18nMessages } from '../../i18n';
 import { ParsedSection } from './ParsedSection';
 
-interface C2paSectionProps {
-  c2pa: C2paMetadata;
+interface VendorSectionProps {
+  info: VendorInfo;
   t: I18nMessages;
 }
 
 /**
  * @package
- * Content Credentials (C2PA) view: no generation parameters, just the declared
- * (unverified) vendor and manifest details.
+ * Vendor view: no generation parameters, just the declared (unverified)
+ * vendor, its AI service and where the declaration was found.
  */
-export function C2paSection({ c2pa, t }: C2paSectionProps) {
+export function VendorSection({ info, t }: VendorSectionProps) {
   const rows = [
-    { label: t.results.c2pa.vendor, value: c2paVendorLabels[c2pa.vendor] },
+    { label: t.results.vendor.vendor, value: vendorLabels[info.vendor] },
+    { label: t.results.vendor.product, value: productLabel(info) },
+    info.product
+      ? { label: t.results.vendor.declaredProduct, value: info.product }
+      : null,
     {
-      label: t.results.c2pa.aiGenerated,
-      value: c2pa.aiGenerated ? t.results.c2pa.yes : t.results.c2pa.no,
+      label: t.results.vendor.source,
+      value: t.results.vendor.sources[info.source],
     },
-    c2pa.claimGenerator
-      ? { label: t.results.c2pa.claimGenerator, value: c2pa.claimGenerator }
-      : null,
-    c2pa.digitalSourceType
-      ? {
-          label: t.results.c2pa.digitalSourceType,
-          value: c2pa.digitalSourceType,
-        }
-      : null,
   ].filter((r): r is { label: string; value: string } => r !== null);
 
   return (
-    <ParsedSection title={t.results.c2pa.title}>
+    <ParsedSection title={t.results.vendor.title}>
       <Table
         highlightOnHover
         horizontalSpacing={0}

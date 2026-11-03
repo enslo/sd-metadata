@@ -19,13 +19,15 @@ export {
 } from './api/stringify';
 export { write } from './api/write';
 // Export constants
-export { c2paVendorLabels, softwareLabels } from './constants';
+export {
+  productLabel,
+  softwareLabels,
+  vendorLabels,
+} from './constants';
 
 // Export types (minimal public API)
 export type {
   BaseMetadata,
-  C2paMetadata,
-  C2paVendor,
   CharacterPrompt,
   ComfyNode,
   ComfyNodeGraph,
@@ -48,6 +50,9 @@ export type {
   SamplingSettings,
   TExtChunk,
   UpscaleSettings,
+  Vendor,
+  VendorInfo,
+  VendorSource,
   WriteResult,
   WriteWarning,
 } from './types';

@@ -55,14 +55,15 @@ export function write(
     };
   }
 
-  // Content Credentials are read-only: the signed C2PA manifest is hash-bound,
-  // so re-serializing it is out of scope. Refuse rather than silently strip it.
-  if (metadata.status === 'c2pa') {
+  // Vendor declarations are read-only: a signed C2PA manifest is hash-bound,
+  // and moving a vendor's marker onto another image would misattribute it.
+  // Refuse rather than silently strip it.
+  if (metadata.status === 'vendor') {
     return {
       ok: false,
       error: {
         type: 'writeFailed',
-        message: 'Cannot write Content Credentials (C2PA) metadata',
+        message: 'Cannot write vendor (AI service) metadata',
       },
     };
   }

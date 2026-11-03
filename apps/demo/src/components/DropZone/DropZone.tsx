@@ -10,7 +10,7 @@ interface DropZoneProps {
   filename: string | null;
   softwareInfo: {
     label: string;
-    status: 'success' | 'c2pa' | 'empty' | 'unrecognized' | 'invalid';
+    status: 'success' | 'vendor' | 'empty' | 'unrecognized' | 'invalid';
     /** True when the result was recovered from pixel LSBs (Stealth PNGInfo) */
     stealth?: boolean;
   } | null;
@@ -19,7 +19,7 @@ interface DropZoneProps {
 
 const STATUS_COLORS: Record<string, string> = {
   success: 'indigo',
-  c2pa: 'grape',
+  vendor: 'grape',
   empty: 'gray',
   unrecognized: 'yellow',
   invalid: 'red',

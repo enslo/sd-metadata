@@ -7,9 +7,9 @@ import type {
 import { Group, Stack, Table, Text } from '@mantine/core';
 import type { I18nMessages } from '../../i18n';
 import { CopyButton } from '../CopyButton';
-import { C2paSection } from './C2paSection';
 import { ErrorMessage } from './ErrorMessage';
 import { ParsedSection } from './ParsedSection';
+import { VendorSection } from './VendorSection';
 
 interface ParsedTabContentProps {
   parseResult: Exclude<ParseResult, { status: 'invalid' }>;
@@ -29,8 +29,8 @@ export function ParsedTabContent({ parseResult, t }: ParsedTabContentProps) {
     return <ErrorMessage message={t.results.errors.unrecognized} />;
   }
 
-  if (parseResult.status === 'c2pa') {
-    return <C2paSection c2pa={parseResult.c2pa} t={t} />;
+  if (parseResult.status === 'vendor') {
+    return <VendorSection info={parseResult.info} t={t} />;
   }
 
   const { metadata } = parseResult;
