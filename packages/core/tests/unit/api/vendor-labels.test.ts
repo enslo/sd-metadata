@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  c2paVendorLabels,
-  productLabel,
-  vendorLabels,
-} from '../../../src/index';
+import { productLabel, vendorLabels } from '../../../src/index';
 
 describe('productLabel', () => {
   it('maps the product values vendors declare to service names', () => {
@@ -72,9 +68,5 @@ describe('vendorLabels', () => {
       meta: 'Meta',
       unknown: 'Unknown',
     });
-  });
-
-  it('keeps the deprecated c2paVendorLabels as the same table', () => {
-    expect(c2paVendorLabels).toBe(vendorLabels);
   });
 });

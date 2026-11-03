@@ -59,9 +59,6 @@ export const vendorLabels: Readonly<Record<Vendor, string>> = Object.freeze({
   unknown: 'Unknown',
 });
 
-/** @deprecated Use {@link vendorLabels}. Labels are company names since v4. */
-export const c2paVendorLabels: Readonly<Record<Vendor, string>> = vendorLabels;
-
 /**
  * Service names for product values vendors are known to declare.
  *

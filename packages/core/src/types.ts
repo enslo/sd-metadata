@@ -447,16 +447,6 @@ export interface VendorInfo {
   source: VendorSource;
 }
 
-/** @deprecated Use {@link Vendor}. */
-export type C2paVendor = Vendor;
-
-/**
- * @deprecated Use {@link VendorInfo}. The shape changed in v4: `aiGenerated`,
- * `digitalSourceType` and `claimGenerator` were removed, and `product` and
- * `source` were added.
- */
-export type C2paMetadata = VendorInfo;
-
 // ============================================================================
 // Parse Result
 // ============================================================================

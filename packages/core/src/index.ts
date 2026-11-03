@@ -20,7 +20,6 @@ export {
 export { write } from './api/write';
 // Export constants
 export {
-  c2paVendorLabels,
   productLabel,
   softwareLabels,
   vendorLabels,
@@ -29,8 +28,6 @@ export {
 // Export types (minimal public API)
 export type {
   BaseMetadata,
-  C2paMetadata,
-  C2paVendor,
   CharacterPrompt,
   ComfyNode,
   ComfyNodeGraph,
