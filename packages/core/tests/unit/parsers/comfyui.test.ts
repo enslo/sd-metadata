@@ -1798,3 +1798,237 @@ describe('parseComfyUI - linked sampling inputs', () => {
     expect(sampling(prompt)).toMatchObject({ seed: '42', steps: 8, cfg: 3 });
   });
 });
+
+describe('parseComfyUI - BasicGuider', () => {
+  /**
+   * SamplerCustomAdvanced with BasicGuider, which takes one `conditioning`
+   * input and has no negative side (Flux and video templates).
+   */
+  function graph(
+    conditioning: unknown,
+    extraNodes: Record<string, unknown>,
+  ): Record<string, unknown> {
+    return {
+      '1': {
+        class_type: 'UNETLoader',
+        inputs: { unet_name: 'model.safetensors' },
+      },
+      '2': { class_type: 'RandomNoise', inputs: { noise_seed: 7 } },
+      '3': {
+        class_type: 'BasicGuider',
+        inputs: { model: ['1', 0], conditioning },
+      },
+      '4': { class_type: 'KSamplerSelect', inputs: { sampler_name: 'euler' } },
+      '5': {
+        class_type: 'BasicScheduler',
+        inputs: { scheduler: 'beta', steps: 8, denoise: 1, model: ['1', 0] },
+      },
+      '6': {
+        class_type: 'SamplerCustomAdvanced',
+        inputs: {
+          noise: ['2', 0],
+          guider: ['3', 0],
+          sampler: ['4', 0],
+          sigmas: ['5', 0],
+          latent_image: ['7', 0],
+        },
+      },
+      '7': {
+        class_type: 'EmptySD3LatentImage',
+        inputs: { width: 1024, height: 1024, batch_size: 1 },
+      },
+      ...extraNodes,
+    };
+  }
+
+  function parse(prompt: Record<string, unknown>) {
+    const result = parseComfyUI(createComfyUIEntries(prompt));
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    return result.value;
+  }
+
+  it('should read the prompt from a video node behind BasicGuider (MiniMax H3)', () => {
+    // MiniMaxH3ImageToVideo encodes its own `prompt` and outputs the
+    // conditioning BasicGuider takes.
+    const value = parse(
+      graph(['10', 0], {
+        '10': {
+          class_type: 'MiniMaxH3ImageToVideo',
+          inputs: {
+            prompt: '[Shot 1] Hatsune Miku turns to the camera and winks.',
+            width: 736,
+            height: 736,
+            clip: ['11', 0],
+          },
+        },
+        '11': {
+          class_type: 'CLIPLoader',
+          inputs: { clip_name: 'qwen3vl.safetensors', type: 'minimax' },
+        },
+      }),
+    );
+
+    expect(value.prompt).toBe(
+      '[Shot 1] Hatsune Miku turns to the camera and winks.',
+    );
+    expect(value.negativePrompt).toBe('');
+  });
+
+  it('should follow the conditioning chain behind BasicGuider (Flux)', () => {
+    const value = parse(
+      graph(['10', 0], {
+        '10': {
+          class_type: 'FluxGuidance',
+          inputs: { guidance: 3.5, conditioning: ['11', 0] },
+        },
+        '11': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: 'a red fox in snow', clip: ['12', 0] },
+        },
+        '12': { class_type: 'DualCLIPLoader', inputs: {} },
+      }),
+    );
+
+    expect(value.prompt).toBe('a red fox in snow');
+  });
+
+  it('should not fill a negative prompt from an unconnected text node', () => {
+    // BasicGuider runs without a negative side, so a stray encoder left in
+    // the graph is not the negative prompt.
+    const value = parse(
+      graph(['10', 0], {
+        '10': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: 'a red fox in snow' },
+        },
+        '11': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: 'unused leftover text' },
+        },
+      }),
+    );
+
+    expect(value.prompt).toBe('a red fox in snow');
+    expect(value.negativePrompt).toBe('');
+  });
+});
+
+describe('parseComfyUI - model of the main sampler', () => {
+  /**
+   * Wan 2.2's two-stage shape: the first KSamplerAdvanced denoises with the
+   * high-noise model and its LoRA, the second continues from its latent with
+   * the low-noise model and its LoRA. The low-noise loader comes first in
+   * node order.
+   */
+  function twoStageGraph(): Record<string, unknown> {
+    return {
+      '10': {
+        class_type: 'UNETLoader',
+        inputs: { unet_name: 'low_noise.safetensors' },
+      },
+      '11': {
+        class_type: 'UNETLoader',
+        inputs: { unet_name: 'high_noise.safetensors' },
+      },
+      '12': {
+        class_type: 'LoraLoaderModelOnly',
+        inputs: {
+          lora_name: 'low_lora.safetensors',
+          strength_model: 1,
+          model: ['10', 0],
+        },
+      },
+      '13': {
+        class_type: 'LoraLoaderModelOnly',
+        inputs: {
+          lora_name: 'high_lora.safetensors',
+          strength_model: 1,
+          model: ['11', 0],
+        },
+      },
+      '14': {
+        class_type: 'ModelSamplingSD3',
+        inputs: { shift: 5, model: ['13', 0] },
+      },
+      '20': { class_type: 'CLIPTextEncode', inputs: { text: 'a fox' } },
+      '21': { class_type: 'CLIPTextEncode', inputs: { text: 'blurry' } },
+      '22': {
+        class_type: 'EmptyLatentImage',
+        inputs: { width: 512, height: 512, batch_size: 1 },
+      },
+      '30': {
+        class_type: 'KSamplerAdvanced',
+        inputs: {
+          add_noise: 'enable',
+          noise_seed: 7,
+          steps: 4,
+          cfg: 1,
+          sampler_name: 'euler',
+          scheduler: 'simple',
+          start_at_step: 0,
+          end_at_step: 2,
+          model: ['14', 0],
+          positive: ['20', 0],
+          negative: ['21', 0],
+          latent_image: ['22', 0],
+        },
+      },
+      '31': {
+        class_type: 'KSamplerAdvanced',
+        inputs: {
+          add_noise: 'disable',
+          noise_seed: 0,
+          steps: 4,
+          cfg: 1,
+          sampler_name: 'euler',
+          scheduler: 'simple',
+          start_at_step: 2,
+          end_at_step: 4,
+          model: ['12', 0],
+          positive: ['20', 0],
+          negative: ['21', 0],
+          latent_image: ['30', 0],
+        },
+      },
+    };
+  }
+
+  function parse(prompt: Record<string, unknown>) {
+    const result = parseComfyUI(createComfyUIEntries(prompt));
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    return result.value;
+  }
+
+  it('reports the model and LoRA of the same (first) stage', () => {
+    const value = parse(twoStageGraph());
+    expect(value.model).toEqual({ name: 'high_noise.safetensors' });
+    expect(value.loras).toEqual([{ name: 'high_lora.safetensors', weight: 1 }]);
+  });
+
+  it('prefers the checkpoint the sampler uses over an unused one', () => {
+    const graph = twoStageGraph();
+    graph['40'] = {
+      class_type: 'CheckpointLoaderSimple',
+      inputs: { ckpt_name: 'unused.safetensors' },
+    };
+    expect(parse(graph).model).toEqual({ name: 'high_noise.safetensors' });
+  });
+
+  it('keeps the previous choice when no loader feeds the sampler', () => {
+    // The sampler's model comes from a node the parser does not know, so
+    // nothing upstream is a loader. The graph-wide choice stays as before:
+    // a checkpoint is preferred over a UNET loader listed earlier (the flat
+    // scan alone would take the first one).
+    const graph = twoStageGraph();
+    graph['14'] = { class_type: 'SomeModelLoader', inputs: { name: 'x' } };
+    graph['40'] = {
+      class_type: 'CheckpointLoaderSimple',
+      inputs: { ckpt_name: 'graph_checkpoint.safetensors' },
+    };
+    expect(parse(graph).model).toEqual({
+      name: 'graph_checkpoint.safetensors',
+    });
+  });
+});

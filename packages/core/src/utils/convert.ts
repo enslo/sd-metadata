@@ -2,6 +2,7 @@ import type {
   MetadataSegment,
   MetadataSegmentSource,
   PngTextChunk,
+  VideoTag,
 } from '../types';
 import type { EntryRecord } from './entries';
 import { parseJson } from './json';
@@ -150,4 +151,38 @@ function sourceToKeyword(source: MetadataSegmentSource): string {
     case 'xmpPacket':
       return 'XML:com.adobe.xmp';
   }
+}
+
+/**
+ * Video tag keys mapped to the entry keys the image parsers read.
+ *
+ * Matched case-insensitively: ComfyUI writes `workflow` / `prompt` as MP4
+ * mdta keys and `WORKFLOW` / `PROMPT` as Matroska tags; Forge Neo writes
+ * its A1111 text as MP4 `desc` and Matroska `DESCRIPTION`.
+ */
+const VIDEO_TAG_ENTRIES: ReadonlyMap<string, string> = new Map([
+  ['prompt', 'prompt'],
+  ['workflow', 'workflow'],
+  ['desc', 'parameters'],
+  ['description', 'parameters'],
+]);
+
+/**
+ * Convert video tags to an entry record for the image parsers
+ *
+ * Only the tags in {@link VIDEO_TAG_ENTRIES} are mapped; the first of each
+ * entry wins.
+ *
+ * @param tags - Video text tags
+ * @returns Entry record for keyword lookup
+ */
+export function videoTagsToRecord(tags: VideoTag[]): EntryRecord {
+  const record: Record<string, string> = {};
+  for (const { key, value } of tags) {
+    const entry = VIDEO_TAG_ENTRIES.get(key.toLowerCase());
+    if (entry !== undefined && !Object.hasOwn(record, entry)) {
+      record[entry] = value;
+    }
+  }
+  return record;
 }

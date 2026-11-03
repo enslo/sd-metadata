@@ -32,6 +32,7 @@ import {
   extractPromptTexts,
   extractSampling,
   findHiresSampler,
+  findModelLoaders,
   isNodeReference,
   resolveNumberInput,
   upstreamNodeIds,
@@ -289,12 +290,22 @@ export function extractComfyUIMetadata(
   const reachable =
     samplers.length > 0 ? upstreamNodeIds(nodes, samplers) : undefined;
 
+  // The model the main sampler ran with, matching its LoRAs. Without a
+  // loader upstream of it, fall back to the first loader in the graph.
+  const mainLoaders = c.sampler
+    ? findModelLoaders(nodes, upstreamNodeIds(nodes, [c.sampler]))
+    : {};
+  const modelLoaders =
+    mainLoaders.checkpoint || mainLoaders.unetLoader
+      ? mainLoaders
+      : { checkpoint: c.checkpoint, unetLoader: c.unetLoader };
+
   return trimObject({
     prompt: promptText || undefined,
     negativePrompt: negativeText || undefined,
     width: width > 0 ? width : undefined,
     height: height > 0 ? height : undefined,
-    model: extractModel(c.checkpoint, c.unetLoader),
+    model: extractModel(modelLoaders.checkpoint, modelLoaders.unetLoader),
     sampling: trimObject({ ...rawSampling, clipSkip }),
     ...buildHiresOrUpscale(upscalerName, hiresScale, hiresSampling),
     ...optionalLoras(extractComfyLoras(nodes, reachable)),

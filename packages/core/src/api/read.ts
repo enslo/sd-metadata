@@ -10,6 +10,7 @@ import { detectVendor } from '../parsers/vendor';
 import { readImageDimensions } from '../readers/dimensions';
 import { readJpegMetadata } from '../readers/jpeg';
 import { type PngMetadata, readPngMetadata } from '../readers/png';
+import { isVideoSignature } from '../readers/video';
 import { readWebpMetadata } from '../readers/webp';
 import type {
   GenerationMetadata,
@@ -42,7 +43,12 @@ export function read(
   const format = detectFormat(data);
 
   if (!format) {
-    return { status: 'invalid', message: 'Unknown image format' };
+    return {
+      status: 'invalid',
+      message: isVideoSignature(data)
+        ? 'Video files are read with parseVideo()'
+        : 'Unknown image format',
+    };
   }
 
   const rawResult = readRawMetadata(data, format);
@@ -75,7 +81,7 @@ export function read(
     rawResult.status === 'success' ? rawResult.raw : undefined,
   );
   if (info) {
-    return { status: 'vendor', info };
+    return { status: 'vendor', info: { ...info, media: 'image' } };
   }
 
   // 3. Otherwise distinguish "no metadata" from "metadata in an unknown format".

@@ -11,9 +11,10 @@
  * 3. xAI's `Signature: <base64>` in EXIF ImageDescription (Grok).
  */
 
-import type { MetadataSegment, RawMetadata, VendorInfo } from '../types';
+import type { MetadataSegment, RawMetadata } from '../types';
 import type { ImageFormat } from '../utils/binary';
 import { declaresAiDigitalSourceType, detectC2paVendor } from './c2pa';
+import type { VendorDeclaration } from './types';
 
 /**
  * Minimum decoded length of an xAI signature. Observed signatures are 128,
@@ -40,7 +41,7 @@ export function detectVendor(
   data: Uint8Array,
   format: ImageFormat,
   raw: RawMetadata | undefined,
-): VendorInfo | null {
+): VendorDeclaration | null {
   const c2pa = detectC2paVendor(data, format);
   if (c2pa) return c2pa;
 
@@ -49,30 +50,54 @@ export function detectVendor(
 }
 
 /**
- * XMP packet declaring AI generation; `dc:publisher` names the vendor.
+ * Read a vendor declaration from an XMP packet: an AI-generated
+ * DigitalSourceType, with the vendor in `dc:publisher`.
+ *
+ * @param xmp - XMP packet text
+ * @returns The declaration, or `null` without an AI DigitalSourceType
  */
-function detectXmpVendor(segments: MetadataSegment[]): VendorInfo | null {
+export function readXmpDeclaration(xmp: string): VendorDeclaration | null {
+  if (!declaresAiDigitalSourceType(xmp)) return null;
+  const publisher = xmp.match(XMP_PUBLISHER_RE)?.[1]?.trim();
+  return { vendor: publisher === 'Meta' ? 'meta' : 'unknown', source: 'xmp' };
+}
+
+/**
+ * Whether a value is the base64 payload of an xAI signature: the text after
+ * `Signature: `, at least {@link MIN_SIGNATURE_BYTES} bytes once decoded.
+ *
+ * @param payload - Value with the `Signature: ` label removed
+ */
+export function isXaiSignature(payload: string): boolean {
+  return (
+    BASE64_RE.test(payload) &&
+    base64DecodedLength(payload) >= MIN_SIGNATURE_BYTES
+  );
+}
+
+function detectXmpVendor(
+  segments: MetadataSegment[],
+): VendorDeclaration | null {
   for (const { source, data } of segments) {
-    if (source.type !== 'xmpPacket' || !declaresAiDigitalSourceType(data)) {
-      continue;
-    }
-    const publisher = data.match(XMP_PUBLISHER_RE)?.[1]?.trim();
-    return { vendor: publisher === 'Meta' ? 'meta' : 'unknown', source: 'xmp' };
+    if (source.type !== 'xmpPacket') continue;
+    const declaration = readXmpDeclaration(data);
+    if (declaration) return declaration;
   }
   return null;
 }
 
 /**
- * xAI's signature: an EXIF ImageDescription whose whole value is
- * `Signature: <base64>` of at least {@link MIN_SIGNATURE_BYTES} bytes.
+ * xAI's signature in an EXIF ImageDescription whose whole value is
+ * `Signature: <base64>`.
  */
-function detectSignatureVendor(segments: MetadataSegment[]): VendorInfo | null {
+function detectSignatureVendor(
+  segments: MetadataSegment[],
+): VendorDeclaration | null {
   const signed = segments.some(
     ({ source, data }) =>
       source.type === 'exifImageDescription' &&
       source.prefix === 'Signature' &&
-      BASE64_RE.test(data) &&
-      base64DecodedLength(data) >= MIN_SIGNATURE_BYTES,
+      isXaiSignature(data),
   );
   return signed ? { vendor: 'xai', source: 'signature' } : null;
 }

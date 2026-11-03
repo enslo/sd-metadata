@@ -993,18 +993,66 @@ describe('stringify - vendor status', () => {
 
   it('joins the company name and the service name', () => {
     expect(
-      vendor({ vendor: 'openai', product: 'ChatGPT', source: 'c2pa' }),
+      vendor({
+        vendor: 'openai',
+        product: 'ChatGPT',
+        source: 'c2pa',
+        media: 'image',
+      }),
     ).toBe('OpenAI GPT Image');
-    expect(vendor({ vendor: 'google', source: 'c2pa' })).toBe('Google Gemini');
-  });
-
-  it('shows only the declared product for an unknown vendor', () => {
-    expect(vendor({ vendor: 'unknown', product: 'Sora', source: 'c2pa' })).toBe(
-      'Sora',
+    expect(vendor({ vendor: 'google', source: 'c2pa', media: 'image' })).toBe(
+      'Google Gemini',
     );
   });
 
+  it('shows only the declared product for an unknown vendor', () => {
+    expect(
+      vendor({
+        vendor: 'unknown',
+        product: 'Sora',
+        source: 'c2pa',
+        media: 'image',
+      }),
+    ).toBe('Sora');
+  });
+
   it('names an unknown vendor without a product Unknown', () => {
-    expect(vendor({ vendor: 'unknown', source: 'xmp' })).toBe('Unknown');
+    expect(vendor({ vendor: 'unknown', source: 'xmp', media: 'image' })).toBe(
+      'Unknown',
+    );
+  });
+});
+
+describe('formatRaw / stringify - video raw metadata', () => {
+  const raw = {
+    format: 'mp4',
+    tags: [
+      { key: 'custom', value: 'first', source: 'mdta' },
+      { key: '©cmt', value: 'second', source: 'itunes' },
+    ],
+  } as const;
+
+  it('writes each video tag as key: value', () => {
+    expect(formatRaw({ ...raw, tags: [...raw.tags] })).toBe(
+      'custom: first\n\n©cmt: second',
+    );
+  });
+
+  it('formats an unrecognized video result the same way', () => {
+    expect(
+      stringify({
+        status: 'unrecognized',
+        raw: { ...raw, tags: [...raw.tags] },
+      }),
+    ).toBe('custom: first\n\n©cmt: second');
+  });
+
+  it('names a video vendor with its video service', () => {
+    expect(
+      stringify({
+        status: 'vendor',
+        info: { vendor: 'google', source: 'c2pa', media: 'video' },
+      }),
+    ).toBe('Google Veo');
   });
 });

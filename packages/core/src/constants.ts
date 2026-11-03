@@ -78,20 +78,33 @@ const PRODUCT_NAMES: Readonly<
 };
 
 /** Service name assumed when the declaration names no product. */
-const DEFAULT_PRODUCTS: Readonly<Record<Vendor, string>> = {
-  openai: 'GPT Image',
-  google: 'Gemini',
-  xai: 'Grok Imagine',
-  meta: 'Muse',
-  unknown: vendorLabels.unknown,
+const DEFAULT_PRODUCTS: Readonly<
+  Record<VendorInfo['media'], Readonly<Record<Vendor, string>>>
+> = {
+  image: {
+    openai: 'GPT Image',
+    google: 'Gemini',
+    xai: 'Grok Imagine',
+    meta: 'Muse',
+    unknown: vendorLabels.unknown,
+  },
+  video: {
+    openai: 'Sora',
+    google: 'Veo',
+    xai: 'Grok Imagine',
+    meta: 'Muse',
+    unknown: vendorLabels.unknown,
+  },
 };
 
 /**
- * Display name of the AI service that made a vendor image.
+ * Display name of the AI service that made a vendor image or video.
  *
  * Includes inference, for display only: a known product value is mapped to
- * the service's name, and a missing one falls back to the vendor's main image
- * service. A Google image is therefore reported as Gemini, even though Google
+ * the service's name, and a missing one falls back to the vendor's main
+ * service for the media (images: GPT Image, Gemini, Grok Imagine, Muse;
+ * videos: Sora, Veo, Grok Imagine, Muse). A Google image is therefore
+ * reported as Gemini, even though Google
  * also signs other AI edits (e.g. Pixel's Magic Editor), and an image made
  * with OpenAI's gpt-image API as GPT Image. An unknown product value is
  * returned as written, also for an unknown vendor, which is `Unknown` only
@@ -112,6 +125,8 @@ const DEFAULT_PRODUCTS: Readonly<Record<Vendor, string>> = {
  * @returns Service name to display
  */
 export function productLabel(info: VendorInfo): string {
-  if (info.product === undefined) return DEFAULT_PRODUCTS[info.vendor];
+  if (info.product === undefined) {
+    return DEFAULT_PRODUCTS[info.media][info.vendor];
+  }
   return PRODUCT_NAMES[info.vendor]?.get(info.product) ?? info.product;
 }

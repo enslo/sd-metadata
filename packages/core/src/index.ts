@@ -7,6 +7,7 @@
 export { embed, embed as writeAsWebUI } from './api/embed';
 // Export core API functions
 export { parse } from './api/parse';
+export { parseVideo } from './api/parse-video';
 /** @deprecated Use {@link parse} instead */
 export { read } from './api/read';
 // Export utility functions
@@ -53,6 +54,10 @@ export type {
   Vendor,
   VendorInfo,
   VendorSource,
+  VideoParseResult,
+  VideoRawMetadata,
+  VideoReadOptions,
+  VideoTag,
   WriteResult,
   WriteWarning,
 } from './types';
