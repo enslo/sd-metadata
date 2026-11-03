@@ -1582,3 +1582,219 @@ describe('parseComfyUI - LoRA reachability', () => {
     ]);
   });
 });
+
+describe('parseComfyUI - linked sampling inputs', () => {
+  /**
+   * A minimal graph around one sampler: prompts, a latent and a model.
+   * `extraNodes` holds the primitives and switches the sampler links to.
+   */
+  function graphWithSampler(
+    sampler: { class_type: string; inputs: Record<string, unknown> },
+    extraNodes: Record<string, unknown> = {},
+  ): Record<string, unknown> {
+    return {
+      '1': {
+        class_type: 'UNETLoader',
+        inputs: { unet_name: 'wan2.2_i2v.safetensors' },
+      },
+      '2': {
+        class_type: 'CLIPTextEncode',
+        inputs: { text: 'positive', clip: ['9', 0] },
+      },
+      '3': {
+        class_type: 'CLIPTextEncode',
+        inputs: { text: 'negative', clip: ['9', 0] },
+      },
+      '4': {
+        class_type: 'EmptyLatentImage',
+        inputs: { width: 512, height: 512, batch_size: 1 },
+      },
+      '5': sampler,
+      ...extraNodes,
+    };
+  }
+
+  /** KSamplerAdvanced wired like the Wan 2.2 template's two samplers. */
+  function kSamplerAdvanced(inputs: Record<string, unknown>) {
+    return {
+      class_type: 'KSamplerAdvanced',
+      inputs: {
+        add_noise: 'enable',
+        noise_seed: 643177897804252,
+        sampler_name: 'euler',
+        scheduler: 'simple',
+        model: ['1', 0],
+        positive: ['2', 0],
+        negative: ['3', 0],
+        latent_image: ['4', 0],
+        ...inputs,
+      },
+    };
+  }
+
+  /** The Wan 2.2 template's "4-step LoRA" toggle and its two value pairs. */
+  function switchNodes(enabled: unknown): Record<string, unknown> {
+    return {
+      '131': { class_type: 'PrimitiveBoolean', inputs: { value: enabled } },
+      '118': { class_type: 'PrimitiveInt', inputs: { value: 4 } },
+      '128': { class_type: 'PrimitiveInt', inputs: { value: 20 } },
+      '122': { class_type: 'PrimitiveFloat', inputs: { value: 1 } },
+      '126': { class_type: 'PrimitiveFloat', inputs: { value: 3.5 } },
+      '119': {
+        class_type: 'ComfySwitchNode',
+        inputs: {
+          switch: ['131', 0],
+          on_false: ['128', 0],
+          on_true: ['118', 0],
+        },
+      },
+      '120': {
+        class_type: 'ComfySwitchNode',
+        inputs: {
+          switch: ['131', 0],
+          on_false: ['126', 0],
+          on_true: ['122', 0],
+        },
+      },
+    };
+  }
+
+  function sampling(prompt: Record<string, unknown>) {
+    const result = parseComfyUI(createComfyUIEntries(prompt));
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    return result.value.sampling;
+  }
+
+  it('should follow ComfySwitchNode to the selected branch (Wan 2.2 template)', () => {
+    const prompt = graphWithSampler(
+      kSamplerAdvanced({ steps: ['119', 0], cfg: ['120', 0] }),
+      switchNodes(true),
+    );
+
+    expect(sampling(prompt)).toEqual({
+      seed: '643177897804252',
+      steps: 4,
+      cfg: 1,
+      sampler: 'euler',
+      scheduler: 'simple',
+    });
+  });
+
+  it('should take the on_false branch when the switch is off', () => {
+    const prompt = graphWithSampler(
+      kSamplerAdvanced({ steps: ['119', 0], cfg: ['120', 0] }),
+      switchNodes(false),
+    );
+
+    expect(sampling(prompt)).toMatchObject({ steps: 20, cfg: 3.5 });
+  });
+
+  it('should leave a value unset when the switch state cannot be resolved', () => {
+    // The switch is driven by a node with no literal boolean: guessing a
+    // branch would report a number the run may not have used.
+    const nodes = switchNodes(true);
+    nodes['131'] = { class_type: 'IsLoraEnabled', inputs: { lora: ['1', 0] } };
+    const prompt = graphWithSampler(
+      kSamplerAdvanced({ steps: ['119', 0], cfg: ['120', 0] }),
+      nodes,
+    );
+
+    const result = sampling(prompt);
+    expect(result?.steps).toBeUndefined();
+    expect(result?.cfg).toBeUndefined();
+  });
+
+  it('should resolve primitives linked straight into the sampler', () => {
+    const prompt = graphWithSampler(
+      kSamplerAdvanced({
+        steps: ['10', 0],
+        cfg: ['11', 0],
+        sampler_name: ['12', 0],
+        scheduler: ['13', 0],
+      }),
+      {
+        '10': { class_type: 'PrimitiveInt', inputs: { value: 30 } },
+        '11': { class_type: 'PrimitiveFloat', inputs: { value: 6.5 } },
+        '12': { class_type: 'PrimitiveString', inputs: { value: 'dpmpp_2m' } },
+        '13': { class_type: 'PrimitiveString', inputs: { value: 'karras' } },
+      },
+    );
+
+    expect(sampling(prompt)).toMatchObject({
+      steps: 30,
+      cfg: 6.5,
+      sampler: 'dpmpp_2m',
+      scheduler: 'karras',
+    });
+  });
+
+  it('should never surface an unresolvable link as a value', () => {
+    const prompt = graphWithSampler(
+      kSamplerAdvanced({ steps: ['10', 0], cfg: ['11', 0] }),
+      {
+        '10': { class_type: 'MathExpression', inputs: { expression: 'a*2' } },
+        '11': { class_type: 'MathExpression', inputs: { expression: 'a/2' } },
+      },
+    );
+
+    const result = sampling(prompt);
+    expect(result?.steps).toBeUndefined();
+    expect(result?.cfg).toBeUndefined();
+  });
+
+  it('should not surface a link held in a node value input', () => {
+    // A converter node whose own `value` is wired elsewhere carries no
+    // literal of its own.
+    const prompt = graphWithSampler(kSamplerAdvanced({ steps: ['10', 0] }), {
+      '10': { class_type: 'ToInt', inputs: { value: ['11', 0] } },
+      '11': { class_type: 'MathExpression', inputs: { expression: '4' } },
+    });
+
+    expect(sampling(prompt)?.steps).toBeUndefined();
+  });
+
+  it('should resolve linked inputs on the SamplerCustomAdvanced chain', () => {
+    const prompt = graphWithSampler(
+      {
+        class_type: 'SamplerCustomAdvanced',
+        inputs: {
+          noise: ['20', 0],
+          guider: ['21', 0],
+          sampler: ['22', 0],
+          sigmas: ['23', 0],
+          latent_image: ['4', 0],
+        },
+      },
+      {
+        '20': { class_type: 'RandomNoise', inputs: { noise_seed: 42 } },
+        '21': {
+          class_type: 'CFGGuider',
+          inputs: {
+            cfg: ['11', 0],
+            model: ['1', 0],
+            positive: ['2', 0],
+            negative: ['3', 0],
+          },
+        },
+        '22': {
+          class_type: 'KSamplerSelect',
+          inputs: { sampler_name: 'euler' },
+        },
+        '23': {
+          class_type: 'BasicScheduler',
+          inputs: {
+            scheduler: 'beta',
+            steps: ['10', 0],
+            denoise: 1,
+            model: ['1', 0],
+          },
+        },
+        '10': { class_type: 'PrimitiveInt', inputs: { value: 8 } },
+        '11': { class_type: 'PrimitiveFloat', inputs: { value: 3 } },
+      },
+    );
+
+    expect(sampling(prompt)).toMatchObject({ seed: '42', steps: 8, cfg: 3 });
+  });
+});
