@@ -1798,3 +1798,118 @@ describe('parseComfyUI - linked sampling inputs', () => {
     expect(sampling(prompt)).toMatchObject({ seed: '42', steps: 8, cfg: 3 });
   });
 });
+
+describe('parseComfyUI - BasicGuider', () => {
+  /**
+   * SamplerCustomAdvanced with BasicGuider, which takes one `conditioning`
+   * input and has no negative side (Flux and video templates).
+   */
+  function graph(
+    conditioning: unknown,
+    extraNodes: Record<string, unknown>,
+  ): Record<string, unknown> {
+    return {
+      '1': {
+        class_type: 'UNETLoader',
+        inputs: { unet_name: 'model.safetensors' },
+      },
+      '2': { class_type: 'RandomNoise', inputs: { noise_seed: 7 } },
+      '3': {
+        class_type: 'BasicGuider',
+        inputs: { model: ['1', 0], conditioning },
+      },
+      '4': { class_type: 'KSamplerSelect', inputs: { sampler_name: 'euler' } },
+      '5': {
+        class_type: 'BasicScheduler',
+        inputs: { scheduler: 'beta', steps: 8, denoise: 1, model: ['1', 0] },
+      },
+      '6': {
+        class_type: 'SamplerCustomAdvanced',
+        inputs: {
+          noise: ['2', 0],
+          guider: ['3', 0],
+          sampler: ['4', 0],
+          sigmas: ['5', 0],
+          latent_image: ['7', 0],
+        },
+      },
+      '7': {
+        class_type: 'EmptySD3LatentImage',
+        inputs: { width: 1024, height: 1024, batch_size: 1 },
+      },
+      ...extraNodes,
+    };
+  }
+
+  function parse(prompt: Record<string, unknown>) {
+    const result = parseComfyUI(createComfyUIEntries(prompt));
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    return result.value;
+  }
+
+  it('should read the prompt from a video node behind BasicGuider (MiniMax H3)', () => {
+    // MiniMaxH3ImageToVideo encodes its own `prompt` and outputs the
+    // conditioning BasicGuider takes.
+    const value = parse(
+      graph(['10', 0], {
+        '10': {
+          class_type: 'MiniMaxH3ImageToVideo',
+          inputs: {
+            prompt: '[Shot 1] Hatsune Miku turns to the camera and winks.',
+            width: 736,
+            height: 736,
+            clip: ['11', 0],
+          },
+        },
+        '11': {
+          class_type: 'CLIPLoader',
+          inputs: { clip_name: 'qwen3vl.safetensors', type: 'minimax' },
+        },
+      }),
+    );
+
+    expect(value.prompt).toBe(
+      '[Shot 1] Hatsune Miku turns to the camera and winks.',
+    );
+    expect(value.negativePrompt).toBe('');
+  });
+
+  it('should follow the conditioning chain behind BasicGuider (Flux)', () => {
+    const value = parse(
+      graph(['10', 0], {
+        '10': {
+          class_type: 'FluxGuidance',
+          inputs: { guidance: 3.5, conditioning: ['11', 0] },
+        },
+        '11': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: 'a red fox in snow', clip: ['12', 0] },
+        },
+        '12': { class_type: 'DualCLIPLoader', inputs: {} },
+      }),
+    );
+
+    expect(value.prompt).toBe('a red fox in snow');
+  });
+
+  it('should not fill a negative prompt from an unconnected text node', () => {
+    // BasicGuider runs without a negative side, so a stray encoder left in
+    // the graph is not the negative prompt.
+    const value = parse(
+      graph(['10', 0], {
+        '10': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: 'a red fox in snow' },
+        },
+        '11': {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: 'unused leftover text' },
+        },
+      }),
+    );
+
+    expect(value.prompt).toBe('a red fox in snow');
+    expect(value.negativePrompt).toBe('');
+  });
+});
