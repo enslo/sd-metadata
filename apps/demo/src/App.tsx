@@ -119,7 +119,7 @@ export function App() {
         return {
           label:
             info.vendor === 'unknown'
-              ? vendorLabels.unknown
+              ? (info.product ?? vendorLabels.unknown)
               : `${vendorLabels[info.vendor]} ${productLabel(info)}`,
           status: 'vendor',
         };

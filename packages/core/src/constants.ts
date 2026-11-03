@@ -97,8 +97,8 @@ const DEFAULT_PRODUCTS: Readonly<Record<Vendor, string>> = {
  * service. A Google image is therefore reported as Gemini, even though Google
  * also signs other AI edits (e.g. Pixel's Magic Editor), and an image made
  * with OpenAI's gpt-image API as GPT Image. An unknown product value is
- * returned as written, and an unknown vendor's service as `Unknown`. The
- * declared value stays in `info.product`.
+ * returned as written, also for an unknown vendor, which is `Unknown` only
+ * when it names no product. The declared value stays in `info.product`.
  *
  * @example
  * ```typescript
@@ -115,7 +115,6 @@ const DEFAULT_PRODUCTS: Readonly<Record<Vendor, string>> = {
  * @returns Service name to display
  */
 export function productLabel(info: VendorInfo): string {
-  if (info.vendor === 'unknown') return DEFAULT_PRODUCTS.unknown;
   if (info.product === undefined) return DEFAULT_PRODUCTS[info.vendor];
   return PRODUCT_NAMES[info.vendor]?.get(info.product) ?? info.product;
 }

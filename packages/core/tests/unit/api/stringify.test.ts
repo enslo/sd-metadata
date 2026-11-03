@@ -986,3 +986,25 @@ describe('stringify - Unit Tests', () => {
     });
   });
 });
+
+describe('stringify - vendor status', () => {
+  const vendor = (info: Extract<ParseResult, { status: 'vendor' }>['info']) =>
+    stringify({ status: 'vendor', info });
+
+  it('joins the company name and the service name', () => {
+    expect(
+      vendor({ vendor: 'openai', product: 'ChatGPT', source: 'c2pa' }),
+    ).toBe('OpenAI GPT Image');
+    expect(vendor({ vendor: 'google', source: 'c2pa' })).toBe('Google Gemini');
+  });
+
+  it('shows only the declared product for an unknown vendor', () => {
+    expect(vendor({ vendor: 'unknown', product: 'Sora', source: 'c2pa' })).toBe(
+      'Sora',
+    );
+  });
+
+  it('names an unknown vendor without a product as such', () => {
+    expect(vendor({ vendor: 'unknown', source: 'xmp' })).toBe('Unknown vendor');
+  });
+});

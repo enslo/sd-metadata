@@ -55,11 +55,11 @@ describe('productLabel', () => {
     ).toBe('constructor');
   });
 
-  it('reports an unknown vendor as Unknown, whatever its product', () => {
+  it('reports an unknown vendor by its product, or as Unknown without one', () => {
     expect(productLabel({ vendor: 'unknown', source: 'xmp' })).toBe('Unknown');
     expect(
-      productLabel({ vendor: 'unknown', product: 'Something', source: 'c2pa' }),
-    ).toBe('Unknown');
+      productLabel({ vendor: 'unknown', product: 'Sora', source: 'c2pa' }),
+    ).toBe('Sora');
   });
 });
 
