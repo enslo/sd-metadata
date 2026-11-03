@@ -26,7 +26,12 @@ function listSamples(format: string, ext: RegExp): string[] {
 const pngFiles = listSamples('png', /\.png$/);
 const jpgFiles = listSamples('jpg', /\.jpe?g$/);
 const webpFiles = listSamples('webp', /\.webp$/);
-const vendorPngFiles = listSamples('vendor/png', /\.png$/);
+const vendorFiles = ['png', 'jpg', 'webp'].flatMap((format) =>
+  listSamples(`vendor/${format}`, /\.(png|jpe?g|webp)$/).map((file) => ({
+    format,
+    file,
+  })),
+);
 
 describe('IIFE bundle', () => {
   it('should export a parse function', () => {
@@ -64,10 +69,10 @@ describe('IIFE bundle', () => {
     }
   });
 
-  describe('Vendor PNG samples', () => {
-    for (const file of vendorPngFiles) {
+  describe('Vendor samples', () => {
+    for (const { format, file } of vendorFiles) {
       it(`should match source output for ${file}`, () => {
-        const data = load('vendor/png', file);
+        const data = load(`vendor/${format}`, file);
         expect(iifeParse(data)).toBe(srcParse(data));
       });
     }

@@ -2,12 +2,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from '../src/index';
-import { readPng } from '../src/read';
+import { readJpeg, readPng } from '../src/read';
 
 const SAMPLES = join(import.meta.dirname, '../../../samples');
 
-function load(file: string): Uint8Array {
-  return new Uint8Array(readFileSync(join(SAMPLES, 'vendor/png', file)));
+function load(file: string, format = 'png'): Uint8Array {
+  return new Uint8Array(readFileSync(join(SAMPLES, 'vendor', format, file)));
 }
 
 function loadPng(file: string): Uint8Array {
@@ -33,6 +33,33 @@ describe('C2PA Content Credentials detection', () => {
     expect(parse(load('gemini_unknown.png'))).toBe(
       'Google C2PA Core Generator Library',
     );
+  });
+});
+
+describe('C2PA Content Credentials detection - JPEG APP11', () => {
+  it('returns the Google generator name for a Gemini JPEG', () => {
+    expect(parse(load('gemini_3.1pro-latest.jpg', 'jpg'))).toBe(
+      'Google C2PA Core Generator Library',
+    );
+  });
+
+  // grok-imagine2.jpg also writes xAI's "Signature: <base64>" into EXIF
+  // UserComment / ImageDescription; the C2PA generator name is preferred.
+  it('returns the Grok generator name rather than its EXIF signature', () => {
+    expect(parse(load('grok-imagine2.jpg', 'jpg'))).toBe('Grok Imagine');
+  });
+
+  // Muse declares itself only in XMP, which lite does not read.
+  it('returns empty for the XMP-only Muse images', () => {
+    expect(parse(load('muse-free.jpg', 'jpg'))).toBe('');
+    expect(parse(load('muse.webp', 'webp'))).toBe('');
+  });
+
+  it('records no cabx entry for a JPEG without APP11', () => {
+    const jpeg = new Uint8Array(
+      readFileSync(join(SAMPLES, 'jpg', 'sd-webui.jpg')),
+    );
+    expect(readJpeg(jpeg).cabx).toBeUndefined();
   });
 });
 

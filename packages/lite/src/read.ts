@@ -75,7 +75,8 @@ export function readPng(data: Uint8Array): Entries {
 // ============================================================================
 
 /**
- * Extract metadata from JPEG: EXIF UserComment/ImageDescription/Make/Model + COM segment.
+ * Extract metadata from JPEG: EXIF UserComment/ImageDescription/Make/Model,
+ * COM segment, and APP11 (C2PA) as `cabx`.
  */
 export function readJpeg(data: Uint8Array): Entries {
   const entries: Entries = {};
@@ -104,6 +105,12 @@ export function readJpeg(data: Uint8Array): Entries {
         readExif(data.subarray(offset + 10, offset + 2 + segLen)),
       );
     }
+
+    // APP11 (JUMBF): C2PA Content Credentials, captured like the PNG caBX chunk.
+    // The 8 bytes after the length are the "JP" identifier, box instance and
+    // packet number; continuation packets are appended as they come.
+    if (marker === 0xeb)
+      entries.cabx = (entries.cabx ?? '') + str(data, offset + 12, segLen - 10);
 
     // COM segment
     if (marker === 0xfe) {

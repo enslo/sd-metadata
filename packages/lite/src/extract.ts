@@ -268,14 +268,17 @@ export function extract(rawEntries: Entries): string {
 
   // --- Final fallback --------------------------------------------------
   // Return whatever text is available, trying the most likely fields first.
-  // C2PA Content Credentials (ChatGPT / Gemini) carry no generation params, so
-  // their generator name is the last resort.
+  // C2PA Content Credentials (ChatGPT / Gemini / Grok) carry no generation
+  // params, so their generator name is the fallback. It comes before the
+  // EXIF text, which a vendor image only uses for its own markers (Grok
+  // writes a signature there).
   return (
     params ??
-    entries.UserComment ??
-    entries.Comment ??
-    entries.ImageDescription ??
-    readC2paName(entries.cabx)
+    (readC2paName(entries.cabx) ||
+      (entries.UserComment ??
+        entries.Comment ??
+        entries.ImageDescription ??
+        ''))
   );
 }
 
