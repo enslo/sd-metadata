@@ -1,6 +1,6 @@
-import type { ParseResult } from '@enslo/sd-metadata';
 import {
   parse,
+  parseVideo,
   productLabel,
   softwareLabels,
   vendorLabels,
@@ -23,13 +23,14 @@ import { Results } from './components/Results';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ThemeToggle } from './components/ThemeToggle';
 import { $t } from './i18n';
+import { isVideoFile, type LoadedResult } from './lib/media';
 
 declare const __CORE_VERSION__: string;
 
 const GITHUB_URL = 'https://github.com/enslo/sd-metadata';
 
 interface AppState {
-  parseResult: ParseResult | null;
+  loaded: LoadedResult | null;
   filename: string | null;
   previewUrl: string | null;
 }
@@ -40,7 +41,7 @@ interface AppState {
 export function App() {
   const t = useStore($t);
   const [state, setState] = useState<AppState>({
-    parseResult: null,
+    loaded: null,
     filename: null,
     previewUrl: null,
   });
@@ -53,13 +54,27 @@ export function App() {
   const handleFileSelect = useCallback(async (file: File) => {
     try {
       const previewUrl = URL.createObjectURL(file);
+
+      if (isVideoFile(file)) {
+        // The File goes in as it is: parseVideo() reads only the byte
+        // ranges that hold metadata, never the whole video.
+        const parseResult = await parseVideo(file);
+        fileDataRef.current = null;
+        setState({
+          loaded: { media: 'video', parseResult },
+          filename: file.name,
+          previewUrl,
+        });
+        return;
+      }
+
       const buffer = await file.arrayBuffer();
       const data = new Uint8Array(buffer);
       const parseResult = await parse(data);
 
       fileDataRef.current = data;
       setState({
-        parseResult,
+        loaded: { media: 'image', parseResult },
         filename: file.name,
         previewUrl,
       });
@@ -106,16 +121,16 @@ export function App() {
     status: 'success' | 'vendor' | 'empty' | 'unrecognized' | 'invalid';
     stealth?: boolean;
   } | null => {
-    switch (state.parseResult?.status) {
+    const result = state.loaded?.parseResult;
+    switch (result?.status) {
       case 'success':
         return {
-          label:
-            softwareLabels[state.parseResult.metadata.software] ?? 'Unknown',
+          label: softwareLabels[result.metadata.software] ?? 'Unknown',
           status: 'success',
-          stealth: state.parseResult.stealth === true,
+          stealth: 'stealth' in result && result.stealth === true,
         };
       case 'vendor': {
-        const { info } = state.parseResult;
+        const { info } = result;
         return {
           label:
             info.vendor === 'unknown'
@@ -130,7 +145,7 @@ export function App() {
         return {
           label: 'Unrecognized',
           status: 'unrecognized',
-          stealth: state.parseResult.stealth === true,
+          stealth: 'stealth' in result && result.stealth === true,
         };
       case 'invalid':
         return { label: 'Invalid', status: 'invalid' };
@@ -174,14 +189,15 @@ export function App() {
           <DropZone
             onFileSelect={handleFileSelect}
             previewUrl={state.previewUrl}
+            media={state.loaded?.media ?? null}
             filename={state.filename}
             softwareInfo={getSoftwareLabelForDisplay()}
             globalDragOver={globalDragOver}
           />
 
-          {state.parseResult && state.filename && state.previewUrl && (
+          {state.loaded && state.filename && state.previewUrl && (
             <Results
-              parseResult={state.parseResult}
+              loaded={state.loaded}
               fileDataRef={fileDataRef}
               filename={state.filename}
               previewUrl={state.previewUrl}

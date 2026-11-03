@@ -2,6 +2,8 @@ import type {
   MetadataSegment,
   ParseResult,
   PngTextChunk,
+  VideoParseResult,
+  VideoTag,
 } from '@enslo/sd-metadata';
 import { Accordion, Badge, Group } from '@mantine/core';
 import type { I18nMessages } from '../../i18n';
@@ -18,19 +20,46 @@ const SOURCE_LABELS: Record<MetadataSegment['source']['type'], string> = {
   xmpPacket: 'XMP Packet',
 };
 
+/** Where a video tag was written, shown as a badge */
+const VIDEO_SOURCE_LABELS: Record<VideoTag['source'], string> = {
+  mdta: 'MP4 mdta',
+  itunes: 'MP4 ilst',
+  quicktime: 'QuickTime',
+  matroska: 'Matroska',
+};
+
 interface RawTabContentProps {
-  parseResult: Exclude<ParseResult, { status: 'invalid' }>;
+  parseResult: Exclude<ParseResult | VideoParseResult, { status: 'invalid' }>;
   t: I18nMessages;
 }
 
 /**
  * @package
- * Tab content for the raw PNG chunks / EXIF segments view
+ * Tab content for the raw PNG chunks / EXIF segments / video tags view
  */
 export function RawTabContent({ parseResult, t }: RawTabContentProps) {
   if (parseResult.status === 'empty' || parseResult.status === 'vendor') {
     // Vendor results carry no raw text chunks/segments to display.
     return <ErrorMessage message={t.results.errors.noRawData} />;
+  }
+
+  if ('tags' in parseResult.raw) {
+    // A key may repeat, so the position keeps the items apart.
+    const value = (tag: VideoTag, index: number) => `${index}:${tag.key}`;
+    const { tags } = parseResult.raw;
+    return (
+      <Accordion multiple variant="separated" defaultValue={tags.map(value)}>
+        {tags.map((tag, index) => (
+          <RawItem
+            key={value(tag, index)}
+            value={value(tag, index)}
+            label={tag.key}
+            badge={VIDEO_SOURCE_LABELS[tag.source]}
+            text={tag.value}
+          />
+        ))}
+      </Accordion>
+    );
   }
 
   if (parseResult.raw.format === 'png') {
@@ -86,14 +115,14 @@ export function RawTabContent({ parseResult, t }: RawTabContentProps) {
 interface RawItemProps {
   value: string;
   label: string;
-  /** Container the data came from (PNG chunk type), shown as a badge */
+  /** Container the data came from (PNG chunk type, video tag source) */
   badge?: string;
   text: string;
 }
 
 /**
- * One collapsible raw entry: a PNG text chunk, an eXIf segment, or a
- * JPEG/WebP segment
+ * One collapsible raw entry: a PNG text chunk, an eXIf segment, a
+ * JPEG/WebP segment, or a video tag
  */
 function RawItem({ value, label, badge, text }: RawItemProps) {
   const { formatted, isJson } = formatJson(text);

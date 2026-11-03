@@ -3,6 +3,7 @@ import type {
   GenerationMetadata,
   LoraSettings,
   ParseResult,
+  VideoParseResult,
 } from '@enslo/sd-metadata';
 import { Group, Stack, Table, Text } from '@mantine/core';
 import type { I18nMessages } from '../../i18n';
@@ -12,7 +13,7 @@ import { ParsedSection } from './ParsedSection';
 import { VendorSection } from './VendorSection';
 
 interface ParsedTabContentProps {
-  parseResult: Exclude<ParseResult, { status: 'invalid' }>;
+  parseResult: Exclude<ParseResult | VideoParseResult, { status: 'invalid' }>;
   t: I18nMessages;
 }
 

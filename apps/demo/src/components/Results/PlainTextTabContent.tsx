@@ -1,11 +1,11 @@
-import type { ParseResult } from '@enslo/sd-metadata';
+import type { ParseResult, VideoParseResult } from '@enslo/sd-metadata';
 import { stringify } from '@enslo/sd-metadata';
 import type { I18nMessages } from '../../i18n';
 import { ContentPanel } from '../ContentPanel';
 import { ErrorMessage } from './ErrorMessage';
 
 interface PlainTextTabContentProps {
-  parseResult: Exclude<ParseResult, { status: 'invalid' }>;
+  parseResult: Exclude<ParseResult | VideoParseResult, { status: 'invalid' }>;
   t: I18nMessages;
 }
 
