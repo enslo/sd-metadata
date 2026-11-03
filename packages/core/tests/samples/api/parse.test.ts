@@ -77,7 +77,13 @@ describe('parse - Stealth PNGInfo samples', () => {
         const originalRecord = pngChunksToRecord(baseline.raw.chunks);
         const recoveredRecord = pngChunksToRecord(recovered.raw.chunks);
         for (const [keyword, text] of Object.entries(recoveredRecord)) {
-          expect(originalRecord[keyword]).toBe(text);
+          // V3 names the chunk "Generation_time" but the payload key
+          // "Generation time"; that is the only name allowed to differ.
+          const chunkKeyword =
+            keyword === 'Generation time' && !(keyword in originalRecord)
+              ? 'Generation_time'
+              : keyword;
+          expect(originalRecord[chunkKeyword]).toBe(text);
         }
         expect(recoveredRecord.Comment).toBeDefined();
       });

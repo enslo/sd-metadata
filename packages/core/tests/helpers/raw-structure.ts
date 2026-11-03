@@ -97,6 +97,15 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
       'Generation time',
       'Comment',
     ],
+    // V3 spells the generation time key with an underscore
+    [
+      'Title',
+      'Description',
+      'Software',
+      'Source',
+      'Generation_time',
+      'Comment',
+    ],
   ],
 
   // A1111-family: parameters chunk

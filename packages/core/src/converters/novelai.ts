@@ -21,8 +21,12 @@ const NOVELAI_SOFTWARE = 'NovelAI';
  * - Description: short prompt
  * - Software: \"NovelAI\"
  * - Source: version info
- * - Generation time: time
+ * - Generation time: time ("Generation_time" in V3)
  * - Comment: full JSON parameters
+ *
+ * V4 and later prefix the ImageDescription with four NUL bytes; V3 does
+ * not. The "Generation_time" spelling marks V3 output, so the prefix is
+ * left out for it.
  *
  * @param chunks - PNG text chunks
  * @returns Metadata segments for JPEG/WebP
@@ -32,9 +36,10 @@ export function convertNovelaiPngToSegments(
 ): MetadataSegment[] {
   // Build segments array declaratively
   const description = chunks.find((c) => c.keyword === 'Description');
+  const isV3 = chunks.some((c) => c.keyword === 'Generation_time');
   const descriptionSegment: MetadataSegment | undefined = description && {
     source: { type: 'exifImageDescription' },
-    data: `\0\0\0\0${description.text}`,
+    data: isV3 ? description.text : `\0\0\0\0${description.text}`,
   };
 
   const data = buildUserCommentJson(chunks);
@@ -67,6 +72,7 @@ const NOVELAI_KEY_ORDER = [
   'Comment',
   'Description',
   'Generation time',
+  'Generation_time',
   'Software',
   'Source',
   'Title',
@@ -124,8 +130,9 @@ function parseSegments(
     ),
     // Source (optional)
     createTextChunk('Source', stringify(jsonData.Source)),
-    // Generation time (optional)
+    // Generation time (optional, "Generation_time" in V3)
     createTextChunk('Generation time', stringify(jsonData['Generation time'])),
+    createTextChunk('Generation_time', stringify(jsonData.Generation_time)),
     // Comment (optional)
     createTextChunk('Comment', stringify(jsonData.Comment)),
   ].flat();
