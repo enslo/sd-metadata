@@ -44,12 +44,18 @@ const AI_DIGITAL_SOURCE_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Captures the full IPTC DigitalSourceType URI and its trailing concept-id.
+ * Matches a full IPTC DigitalSourceType URI, concept-id included. In CBOR the
+ * match can overrun into the next key; see {@link boundToCborString}.
  * Global: a manifest can carry several DigitalSourceType-shaped tokens (e.g. an
  * assertion label), so callers iterate and prefer an allowlisted concept-id.
  */
 const DIGITAL_SOURCE_TYPE_RE =
-  /https?:\/\/cv\.iptc\.org\/newscodes\/digitalsourcetype\/([A-Za-z]+)/g;
+  /https?:\/\/cv\.iptc\.org\/newscodes\/digitalsourcetype\/[A-Za-z]+/g;
+
+/** Anchored form of {@link DIGITAL_SOURCE_TYPE_RE} for validating one URI. */
+const WHOLE_DIGITAL_SOURCE_TYPE_RE = new RegExp(
+  `^${DIGITAL_SOURCE_TYPE_RE.source}$`,
+);
 
 /**
  * Stable manifest substrings mapped to a coarse vendor.
@@ -89,12 +95,14 @@ export function detectC2pa(
 
   // Prefer a DigitalSourceType whose concept-id is in the AI allowlist; fall
   // back to the first occurrence so the raw value is still surfaced.
-  const dstMatches = [...text.matchAll(DIGITAL_SOURCE_TYPE_RE)];
-  const aiMatch = dstMatches.find((m) =>
-    AI_DIGITAL_SOURCE_TYPES.has(m[1] ?? ''),
+  const dstUris = [...text.matchAll(DIGITAL_SOURCE_TYPE_RE)].map((m) =>
+    boundToCborString(manifest, m.index, m[0]),
   );
-  const digitalSourceType = (aiMatch ?? dstMatches[0])?.[0];
-  const aiGenerated = aiMatch !== undefined;
+  const aiUri = dstUris.find((uri) =>
+    AI_DIGITAL_SOURCE_TYPES.has(uri.slice(uri.lastIndexOf('/') + 1)),
+  );
+  const digitalSourceType = aiUri ?? dstUris[0];
+  const aiGenerated = aiUri !== undefined;
 
   const vendor =
     VENDOR_MARKERS.find(({ marker }) => text.includes(marker))?.vendor ??
@@ -148,6 +156,34 @@ function extractPngCaBX(data: Uint8Array): Uint8Array | null {
   }
 
   return null;
+}
+
+/**
+ * Trim a DigitalSourceType match to the CBOR text string that holds it.
+ *
+ * In CBOR the next map key follows a value with no delimiter, and a short
+ * key's header byte (0x61-0x77) reads as an ASCII letter, so the letter-only
+ * regex can run into the next key (e.g. "...MediarallActionsIncluded"). When
+ * the URI is preceded by a 1- or 2-byte CBOR length header that fits within
+ * the match, that length is authoritative. Otherwise (e.g. XMP text) the
+ * match already ends at a non-letter delimiter and is returned as-is.
+ */
+function boundToCborString(
+  manifest: Uint8Array,
+  index: number,
+  match: string,
+): string {
+  let length: number | undefined;
+  if (manifest[index - 2] === 0x78) {
+    length = manifest[index - 1];
+  } else if (manifest[index - 3] === 0x79) {
+    length = ((manifest[index - 2] ?? 0) << 8) | (manifest[index - 1] ?? 0);
+  }
+  if (length === undefined || length > match.length) return match;
+
+  // A header that would cut into the URI itself is not the URI's own header.
+  const bounded = match.slice(0, length);
+  return WHOLE_DIGITAL_SOURCE_TYPE_RE.test(bounded) ? bounded : match;
 }
 
 /**
