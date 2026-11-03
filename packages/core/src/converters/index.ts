@@ -104,12 +104,12 @@ export function convertMetadata(
     });
   }
 
-  // Content Credentials carry no generation metadata to convert; write() also
+  // Vendor declarations carry no generation metadata to convert; write() also
   // guards this, so reaching here is a defensive backstop.
-  if (parseResult.status === 'c2pa') {
+  if (parseResult.status === 'vendor') {
     return Result.error({
       type: 'invalidParseResult',
-      status: 'c2pa',
+      status: 'vendor',
     });
   }
 

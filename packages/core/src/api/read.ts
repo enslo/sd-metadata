@@ -6,7 +6,7 @@
  */
 
 import { parseMetadata } from '../parsers';
-import { detectC2pa } from '../parsers/c2pa';
+import { detectVendor } from '../parsers/vendor';
 import { readImageDimensions } from '../readers/dimensions';
 import { readJpegMetadata } from '../readers/jpeg';
 import { type PngMetadata, readPngMetadata } from '../readers/png';
@@ -66,11 +66,16 @@ export function read(
     }
   }
 
-  // 2. No generation metadata: surface Content Credentials (C2PA) if present.
-  //    Commercial AI tools (ChatGPT/Gemini) carry only a signed manifest.
-  const c2pa = detectC2pa(data, format);
-  if (c2pa) {
-    return { status: 'c2pa', c2pa };
+  // 2. No generation metadata: surface a vendor declaration if present.
+  //    Commercial AI services (ChatGPT, Gemini, Grok, ...) carry only a
+  //    C2PA manifest, an XMP source type or a signature.
+  const info = detectVendor(
+    data,
+    format,
+    rawResult.status === 'success' ? rawResult.raw : undefined,
+  );
+  if (info) {
+    return { status: 'vendor', info };
   }
 
   // 3. Otherwise distinguish "no metadata" from "metadata in an unknown format".

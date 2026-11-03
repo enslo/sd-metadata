@@ -93,7 +93,7 @@ export async function parse(
 
   // Stealth data exists but is in an unknown format: surface it rather
   // than reporting an empty file. Chunk-based results (unrecognized,
-  // c2pa) stay as they are.
+  // vendor) stay as they are.
   if (chunkResult.status === 'empty') {
     return {
       status: 'unrecognized',

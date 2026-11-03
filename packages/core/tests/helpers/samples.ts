@@ -10,18 +10,56 @@ import path from 'node:path';
 const EXCLUDED_PATTERNS = ['empty', 'gimp'];
 
 /**
- * C2PA (Content Credentials) samples.
+ * Vendor (commercial AI service) samples.
  *
- * These images carry only a signed C2PA manifest (in a PNG `caBX` chunk) and
- * NO generation parameters, so they are not handled by the SD-tool parsers.
- * They live in their own directory tree (samples/c2pa/<format>/), so the
- * generation-metadata sweeps never see them; they are exercised separately by
- * tests/samples/c2pa.test.ts.
+ * These images carry only a vendor's declaration (a C2PA manifest, an XMP
+ * DigitalSourceType or an xAI signature) and NO generation parameters, so
+ * they are not handled by the SD-tool parsers. They live in their own
+ * directory tree (samples/vendor/<format>/), so the generation-metadata
+ * sweeps never see them; they are exercised by tests/samples/vendor.test.ts.
+ * `info` is the exact VendorInfo each one must produce.
  */
-export const C2PA_PNG_SAMPLES = [
-  { filename: 'chatgpt-image2.png', vendor: 'openai' },
-  { filename: 'gemini_3.1pro.png', vendor: 'google' },
-  { filename: 'gemini_unknown.png', vendor: 'google' },
+export const VENDOR_SAMPLES = [
+  {
+    format: 'png',
+    filename: 'chatgpt-image2.png',
+    info: { vendor: 'openai', product: 'gpt-image', source: 'c2pa' },
+  },
+  {
+    format: 'png',
+    filename: 'chatgpt-image2-latest.png',
+    info: { vendor: 'openai', product: 'ChatGPT', source: 'c2pa' },
+  },
+  {
+    format: 'png',
+    filename: 'gemini_3.1pro.png',
+    info: { vendor: 'google', source: 'c2pa' },
+  },
+  {
+    format: 'png',
+    filename: 'gemini_unknown.png',
+    info: { vendor: 'google', source: 'c2pa' },
+  },
+  {
+    format: 'jpg',
+    filename: 'gemini_3.1pro-latest.jpg',
+    info: { vendor: 'google', source: 'c2pa' },
+  },
+  {
+    format: 'jpg',
+    filename: 'grok-imagine2.jpg',
+    info: { vendor: 'xai', product: 'Grok Imagine', source: 'c2pa' },
+  },
+  {
+    format: 'jpg',
+    filename: 'muse-free.jpg',
+    info: { vendor: 'unknown', source: 'xmp' },
+  },
+  {
+    format: 'webp',
+    filename: 'muse.webp',
+    info: { vendor: 'meta', source: 'xmp' },
+  },
 ] as const;
 
 /**
@@ -160,23 +198,23 @@ export function loadSample(
 }
 
 /**
- * Load a C2PA (Content Credentials) sample file as Uint8Array
+ * Load a vendor (commercial AI service) sample file as Uint8Array
  *
- * C2PA fixtures live under samples/c2pa/<format>/, separate from the
+ * Vendor fixtures live under samples/vendor/<format>/, separate from the
  * generation-metadata samples in samples/<format>/, so they are never picked
  * up by the generation sample sweeps.
  *
  * @param format - The image format
- * @param filename - The filename within samples/c2pa/<format>/
+ * @param filename - The filename within samples/vendor/<format>/
  * @returns The file contents as Uint8Array
  */
-export function loadC2paSample(
+export function loadVendorSample(
   format: 'png' | 'jpg' | 'webp',
   filename: string,
 ): Uint8Array {
   const filePath = path.join(
     __dirname,
-    '../../../../samples/c2pa',
+    '../../../../samples/vendor',
     format,
     filename,
   );

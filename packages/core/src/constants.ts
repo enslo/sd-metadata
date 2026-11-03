@@ -1,4 +1,4 @@
-import type { C2paVendor, GenerationSoftware } from './types';
+import type { GenerationSoftware, Vendor, VendorInfo } from './types';
 
 /**
  * Human-readable display labels for each generation software identifier.
@@ -38,22 +38,83 @@ export const softwareLabels: Readonly<Record<GenerationSoftware, string>> =
   });
 
 /**
- * Human-readable display labels for each C2PA Content Credentials vendor.
+ * Human-readable company names for each vendor.
  *
  * @example
  * ```typescript
- * import { c2paVendorLabels } from '@enslo/sd-metadata';
+ * import { vendorLabels } from '@enslo/sd-metadata';
  *
- * const result = read(imageData);
- * if (result.status === 'c2pa') {
- *   console.log(c2paVendorLabels[result.c2pa.vendor]);
- *   // => "OpenAI (ChatGPT)", "Google (Gemini)", ...
+ * const result = await parse(imageData);
+ * if (result.status === 'vendor') {
+ *   console.log(vendorLabels[result.info.vendor]);
+ *   // => "OpenAI", "Google", "xAI", ...
  * }
  * ```
  */
-export const c2paVendorLabels: Readonly<Record<C2paVendor, string>> =
-  Object.freeze({
-    openai: 'OpenAI (ChatGPT)',
-    google: 'Google (Gemini)',
-    unknown: 'AI-generated (Content Credentials)',
-  });
+export const vendorLabels: Readonly<Record<Vendor, string>> = Object.freeze({
+  openai: 'OpenAI',
+  google: 'Google',
+  xai: 'xAI',
+  meta: 'Meta',
+  unknown: 'Unknown vendor',
+});
+
+/** @deprecated Use {@link vendorLabels}. Labels are company names since v4. */
+export const c2paVendorLabels: Readonly<Record<Vendor, string>> = vendorLabels;
+
+/**
+ * Service names for product values vendors are known to declare.
+ *
+ * Keys are matched exactly against {@link VendorInfo.product}. A vendor may
+ * declare its service under several names over time (OpenAI wrote
+ * `gpt-image` before `ChatGPT`), so all of them map to the service's name.
+ */
+const PRODUCT_NAMES: Readonly<
+  Partial<Record<Vendor, ReadonlyMap<string, string>>>
+> = {
+  openai: new Map([
+    ['gpt-image', 'GPT Image'],
+    ['ChatGPT', 'GPT Image'],
+    ['Sora', 'Sora'],
+  ]),
+  xai: new Map([['Grok Imagine', 'Grok Imagine']]),
+};
+
+/** Service name assumed when the declaration names no product. */
+const DEFAULT_PRODUCTS: Readonly<Record<Vendor, string>> = {
+  openai: 'GPT Image',
+  google: 'Gemini',
+  xai: 'Grok Imagine',
+  meta: 'Muse',
+  unknown: vendorLabels.unknown,
+};
+
+/**
+ * Display name of the AI service that made a vendor image.
+ *
+ * Includes inference, for display only: a known product value is mapped to
+ * the service's name, and a missing one falls back to the vendor's main image
+ * service. A Google image is therefore reported as Gemini, even though Google
+ * also signs other AI edits (e.g. Pixel's Magic Editor), and an image made
+ * with OpenAI's gpt-image API as GPT Image. An unknown product value is
+ * returned as written. The declared value stays in `info.product`.
+ *
+ * @example
+ * ```typescript
+ * import { productLabel, vendorLabels } from '@enslo/sd-metadata';
+ *
+ * const result = await parse(imageData);
+ * if (result.status === 'vendor') {
+ *   console.log(`${vendorLabels[result.info.vendor]} ${productLabel(result.info)}`);
+ *   // => "OpenAI GPT Image", "Google Gemini", "xAI Grok Imagine", ...
+ * }
+ * ```
+ *
+ * @param info - Vendor declaration from a `vendor` parse result
+ * @returns Service name to display
+ */
+export function productLabel(info: VendorInfo): string {
+  if (info.vendor === 'unknown') return DEFAULT_PRODUCTS.unknown;
+  if (info.product === undefined) return DEFAULT_PRODUCTS[info.vendor];
+  return PRODUCT_NAMES[info.vendor]?.get(info.product) ?? info.product;
+}
