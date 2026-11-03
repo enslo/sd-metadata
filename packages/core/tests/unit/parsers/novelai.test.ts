@@ -240,6 +240,46 @@ describe('parseNovelAI - Unit Tests', () => {
     });
   });
 
+  describe('model from Source', () => {
+    function parseModel(source: string | undefined) {
+      const result = parseNovelAI({
+        ...createNovelAIEntries(JSON.stringify({ prompt: 'test' })),
+        ...(source !== undefined && { Source: source }),
+      });
+      return result.ok ? result.value.model : null;
+    }
+
+    it('should split the trailing hash from the model name', () => {
+      expect(parseModel('NovelAI Diffusion V5 70AB5786')).toEqual({
+        name: 'NovelAI Diffusion V5',
+        hash: '70AB5786',
+      });
+    });
+
+    it('should split a name V3 writes without "NovelAI"', () => {
+      expect(parseModel('Stable Diffusion XL 7BCCAA2C')).toEqual({
+        name: 'Stable Diffusion XL',
+        hash: '7BCCAA2C',
+      });
+    });
+
+    it('should keep the whole value as the name without a hash', () => {
+      expect(parseModel('NovelAI Diffusion V5')).toEqual({
+        name: 'NovelAI Diffusion V5',
+      });
+      expect(parseModel('NovelAI Diffusion V5 70AB578')).toEqual({
+        name: 'NovelAI Diffusion V5 70AB578',
+      });
+      expect(parseModel('NovelAI Diffusion V5 70AB5786A')).toEqual({
+        name: 'NovelAI Diffusion V5 70AB5786A',
+      });
+    });
+
+    it('should leave the model out without Source', () => {
+      expect(parseModel(undefined)).toBeUndefined();
+    });
+  });
+
   describe('img2img', () => {
     it('should read strength as the main pass denoise', () => {
       const result = parseNovelAI(

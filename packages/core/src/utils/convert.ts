@@ -103,6 +103,7 @@ export function segmentsToRecord(segments: MetadataSegment[]): EntryRecord {
  * NovelAI WebP stores metadata as outer JSON with:
  * - Software: "NovelAI"
  * - Comment: inner JSON string with actual parameters
+ * - Source: model name and hash
  *
  * @param text - JSON text to try to expand
  * @returns Entry record if NovelAI format, null otherwise
@@ -130,6 +131,7 @@ function tryExpandNovelAIWebpFormat(text: string): EntryRecord | null {
   return {
     Software: typeof outer.Software === 'string' ? outer.Software : 'NovelAI',
     Comment: innerParsed.ok ? JSON.stringify(innerParsed.value) : outer.Comment,
+    ...(typeof outer.Source === 'string' && { Source: outer.Source }),
   };
 }
 

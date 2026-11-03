@@ -224,6 +224,8 @@ export function extract(rawEntries: Entries): string {
     if (obj) {
       // Try specific tool detectors (RuinedFooocus, EasyDiffusion,
       // Fooocus, HF Space, NovelAI).
+      // NovelAI keeps the model in Source, outside the Comment JSON.
+      if (entries.Source) obj.Source = entries.Source;
       const result = tryJsonTool(obj, params);
       if (result) return result;
 
@@ -473,6 +475,8 @@ function buildNovelAI(obj: JsonObject): string {
   const v4NegCaption = (obj.v4_negative_prompt as JsonObject)?.caption as
     | JsonObject
     | undefined;
+  // Source is "<model name> <8-digit hex hash>"
+  const src = /^(.+) ([0-9A-F]{8})$/.exec(asText(obj.Source));
   return buildA1111({
     ...extractCommon(obj),
     // Prefer v4 captions, fall back to legacy flat fields. The V5 web
@@ -484,6 +488,8 @@ function buildNovelAI(obj: JsonObject): string {
     n: asText(v4NegCaption?.base_caption) || asText(obj.uc),
     // img2img strength (Img2ImgRequest only)
     dn: asText(obj.strength),
+    md: src?.[1] ?? asText(obj.Source),
+    mh: src?.[2],
   });
 }
 

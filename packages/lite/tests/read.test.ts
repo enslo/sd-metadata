@@ -210,13 +210,18 @@ describe('Easy Diffusion boolean clip_skip', () => {
   });
 });
 
-// NovelAI V5: the web client appends the quoted texts as ", teXt: ...",
-// which both lite and core drop, and an img2img request's strength is the
-// Denoising strength. The cross-test above only checks prompt overlap, so
-// the whole text is compared here.
-describe('NovelAI V5 text block and img2img strength', () => {
+// NovelAI: the V5 web client appends the quoted texts as ", teXt: ...",
+// which both lite and core drop; an img2img request's strength is the
+// Denoising strength; Source holds the model name and hash. The cross-test
+// above only checks prompt overlap and skips a model lite leaves out, so
+// the whole text is compared here. (The -3char samples are left out: core
+// writes character prompts, lite does not.)
+describe('NovelAI text block, img2img strength and model', () => {
   it('should produce the same text as core', () => {
     const files: Array<[string, string]> = [
+      ['png', 'novelai-curated.png'],
+      ['png', 'novelai-full.png'],
+      ['webp', 'novelai-curated.webp'],
       ['png', 'novelai-v5-full.png'],
       ['webp', 'novelai-v5-full.webp'],
       ['png', 'novelai-v5-full-i2i.png'],
@@ -225,6 +230,7 @@ describe('NovelAI V5 text block and img2img strength', () => {
       const data = load(format, file);
       const lite = liteRead(data);
       expect(lite, file).not.toContain('teXt:');
+      expect(lite, file).toContain('Model hash: ');
       expect(lite, file).toBe(stringify(fullRead(data)));
     }
     expect(liteRead(load('png', 'novelai-v5-full-i2i.png'))).toContain(

@@ -189,6 +189,8 @@ function readExif(data: Uint8Array): Entries {
           ) {
             entries.Software = software;
             entries.Comment = comment;
+            // Model name and hash, as in the PNG Source chunk
+            entries.Source = obj.Source as string;
             return;
           }
         } catch {

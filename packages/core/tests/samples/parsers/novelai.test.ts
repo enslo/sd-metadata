@@ -19,7 +19,7 @@ describe('NovelAI Parsers - Samples', () => {
           'blurry, lowres, upscaled, artistic error, scan artifacts, jpeg artifacts, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: 'C02D4F98' },
         sampling: {
           steps: 23,
           cfg: 5,
@@ -49,7 +49,7 @@ describe('NovelAI Parsers - Samples', () => {
           'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
         width: 832,
         height: 1216,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: '4BDE2A90' },
         sampling: {
           steps: 28,
           cfg: 5,
@@ -79,7 +79,7 @@ describe('NovelAI Parsers - Samples', () => {
           'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: '4BDE2A90' },
         sampling: {
           steps: 28,
           cfg: 5,
@@ -124,7 +124,7 @@ describe('NovelAI Parsers - Samples', () => {
           'blurry, lowres, upscaled, artistic error, scan artifacts, jpeg artifacts, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: 'C02D4F98' },
         sampling: {
           steps: 23,
           cfg: 5,
@@ -154,7 +154,7 @@ describe('NovelAI Parsers - Samples', () => {
           'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: '4BDE2A90' },
         sampling: {
           steps: 28,
           cfg: 5,
@@ -202,7 +202,7 @@ describe('NovelAI Parsers - Samples', () => {
           'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V5', hash: '70AB5786' },
         sampling: {
           steps: 14,
           cfg: 7,
@@ -232,7 +232,7 @@ describe('NovelAI Parsers - Samples', () => {
           'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V5', hash: '0ADF9AB7' },
         sampling: {
           steps: 23,
           cfg: 7,
@@ -262,7 +262,7 @@ describe('NovelAI Parsers - Samples', () => {
           'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V5', hash: '70AB5786' },
         sampling: {
           steps: 14,
           cfg: 7,

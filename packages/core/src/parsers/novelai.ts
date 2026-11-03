@@ -1,4 +1,4 @@
-import type { CharacterPrompt } from '../types';
+import type { CharacterPrompt, ModelSettings } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
@@ -81,11 +81,28 @@ function stripAutoText(prompt: string, characterPrompts: string[]): string {
 }
 
 /**
+ * Split NovelAI's Source entry into the model name and hash
+ *
+ * Source is "<model name> <hash>", e.g. "NovelAI Diffusion V5 70AB5786"
+ * or "Stable Diffusion XL 7BCCAA2C" (V3). Without a trailing 8-digit hex
+ * hash the whole value is the name.
+ *
+ * @param source - Source entry
+ * @returns Model settings, or undefined without a Source entry
+ */
+function parseSource(source: string | undefined): ModelSettings | undefined {
+  if (!source) return undefined;
+  const match = /^(.+) ([0-9A-F]{8})$/.exec(source);
+  return match ? { name: match[1], hash: match[2] } : { name: source };
+}
+
+/**
  * Parse NovelAI metadata from entries
  *
  * NovelAI stores metadata with:
  * - Software: "NovelAI"
  * - Comment: JSON containing generation parameters
+ * - Source: model name and hash
  *
  * @param entries - Metadata entries
  * @returns Parsed metadata or error
@@ -144,6 +161,7 @@ export function parseNovelAI(entries: EntryRecord): InternalParseResult {
     negativePrompt,
     width,
     height,
+    model: parseSource(entries.Source),
     sampling: trimObject({
       steps: comment.steps,
       cfg: comment.scale,
