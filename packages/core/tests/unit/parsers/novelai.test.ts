@@ -176,6 +176,130 @@ describe('parseNovelAI - Unit Tests', () => {
     });
   });
 
+  describe('V5 auto text block', () => {
+    function parsePrompt(
+      baseCaption: string,
+      charCaptions: string[] = [],
+    ): string | undefined {
+      const result = parseNovelAI(
+        createNovelAIEntries(
+          JSON.stringify({
+            prompt: baseCaption,
+            v4_prompt: {
+              caption: {
+                base_caption: baseCaption,
+                char_captions: charCaptions.map((char_caption) => ({
+                  char_caption,
+                })),
+              },
+            },
+          }),
+        ),
+      );
+      return result.ok ? result.value.prompt : undefined;
+    }
+
+    it('should drop the block built from quoted texts', () => {
+      expect(
+        parsePrompt(
+          '1girl, sign that says "Hello", 「こんにちは」, no text, teXt: Hello\n\nこんにちは',
+        ),
+      ).toBe('1girl, sign that says "Hello", 「こんにちは」, no text');
+    });
+
+    it('should drop a block whose text comes from a character prompt', () => {
+      expect(parsePrompt('teXt: OPEN', ['girl, holding a sign "OPEN"'])).toBe(
+        '',
+      );
+    });
+
+    it('should keep a block with text that is quoted nowhere', () => {
+      expect(parsePrompt('1girl, "Hello", teXt: Hello\n\nGoodbye')).toBe(
+        '1girl, "Hello", teXt: Hello\n\nGoodbye',
+      );
+    });
+
+    it('should keep an empty block, which the client never writes', () => {
+      expect(parsePrompt('1girl, teXt:')).toBe('1girl, teXt:');
+    });
+
+    it('should keep a Text: section written by the user', () => {
+      expect(parsePrompt('1girl, "Hello", Text: Hello')).toBe(
+        '1girl, "Hello", Text: Hello',
+      );
+    });
+
+    it('should not take emphasis syntax for the block', () => {
+      expect(parsePrompt('1girl, "sign", 1.2::teXt::')).toBe(
+        '1girl, "sign", 1.2::teXt::',
+      );
+    });
+
+    it('should not take teXt: inside a word for the block', () => {
+      expect(parsePrompt('"Hi", conteXt: Hi')).toBe('"Hi", conteXt: Hi');
+    });
+  });
+
+  describe('model from Source', () => {
+    function parseModel(source: string | undefined) {
+      const result = parseNovelAI({
+        ...createNovelAIEntries(JSON.stringify({ prompt: 'test' })),
+        ...(source !== undefined && { Source: source }),
+      });
+      return result.ok ? result.value.model : null;
+    }
+
+    it('should split the trailing hash from the model name', () => {
+      expect(parseModel('NovelAI Diffusion V5 70AB5786')).toEqual({
+        name: 'NovelAI Diffusion V5',
+        hash: '70AB5786',
+      });
+    });
+
+    it('should split a name V3 writes without "NovelAI"', () => {
+      expect(parseModel('Stable Diffusion XL 7BCCAA2C')).toEqual({
+        name: 'Stable Diffusion XL',
+        hash: '7BCCAA2C',
+      });
+    });
+
+    it('should keep the whole value as the name without a hash', () => {
+      expect(parseModel('NovelAI Diffusion V5')).toEqual({
+        name: 'NovelAI Diffusion V5',
+      });
+      expect(parseModel('NovelAI Diffusion V5 70AB578')).toEqual({
+        name: 'NovelAI Diffusion V5 70AB578',
+      });
+      expect(parseModel('NovelAI Diffusion V5 70AB5786A')).toEqual({
+        name: 'NovelAI Diffusion V5 70AB5786A',
+      });
+    });
+
+    it('should leave the model out without Source', () => {
+      expect(parseModel(undefined)).toBeUndefined();
+    });
+  });
+
+  describe('img2img', () => {
+    it('should read strength as the main pass denoise', () => {
+      const result = parseNovelAI(
+        createNovelAIEntries(
+          JSON.stringify({
+            prompt: 'test',
+            request_type: 'Img2ImgRequest',
+            strength: 0.4,
+            noise: 0.1,
+          }),
+        ),
+      );
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.sampling).toEqual({ denoise: 0.4 });
+      }
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle missing optional fields', () => {
       const comment = JSON.stringify({

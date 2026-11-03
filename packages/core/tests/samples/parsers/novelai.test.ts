@@ -19,7 +19,7 @@ describe('NovelAI Parsers - Samples', () => {
           'blurry, lowres, upscaled, artistic error, scan artifacts, jpeg artifacts, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: 'C02D4F98' },
         sampling: {
           steps: 23,
           cfg: 5,
@@ -49,7 +49,7 @@ describe('NovelAI Parsers - Samples', () => {
           'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
         width: 832,
         height: 1216,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: '4BDE2A90' },
         sampling: {
           steps: 28,
           cfg: 5,
@@ -79,7 +79,7 @@ describe('NovelAI Parsers - Samples', () => {
           'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: '4BDE2A90' },
         sampling: {
           steps: 28,
           cfg: 5,
@@ -124,7 +124,7 @@ describe('NovelAI Parsers - Samples', () => {
           'blurry, lowres, upscaled, artistic error, scan artifacts, jpeg artifacts, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: 'C02D4F98' },
         sampling: {
           steps: 23,
           cfg: 5,
@@ -154,7 +154,7 @@ describe('NovelAI Parsers - Samples', () => {
           'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
         width: 1024,
         height: 1024,
-        model: undefined,
+        model: { name: 'NovelAI Diffusion V4.5', hash: '4BDE2A90' },
         sampling: {
           steps: 28,
           cfg: 5,
@@ -180,6 +180,102 @@ describe('NovelAI Parsers - Samples', () => {
         ],
         useCoords: true,
         useOrder: true,
+      });
+    });
+  });
+
+  // The V5 web client appends the quoted texts as ", teXt: のべらい\n\nピッ";
+  // the prompts below are what the user wrote, without that block.
+  describe('V5 samples', () => {
+    it('should parse novelai-v5-full.png without the appended teXt block', () => {
+      const meta = parsePngSample<NovelAIMetadata>(
+        'novelai-v5-full.png',
+        parseNovelAI,
+      );
+
+      expect(meta).toEqual({
+        software: 'novelai',
+        prompt:
+          'fur dataset, ' +
+          '1girl, solo, hatsune miku, holding card of ace of spades, reaching toward viewer to showing the card with "ピッ" sound effect, cute pop arched text "のべらい" on top of background, very aesthetic, masterpiece, no text',
+        negativePrompt:
+          'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
+        width: 1024,
+        height: 1024,
+        model: { name: 'NovelAI Diffusion V5', hash: '70AB5786' },
+        sampling: {
+          steps: 14,
+          cfg: 7,
+          seed: '28529506',
+          sampler: 'k_euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        characterPrompts: undefined,
+        useCoords: undefined,
+        useOrder: undefined,
+      });
+    });
+
+    it('should parse novelai-v5-full.webp without the appended teXt block', () => {
+      const meta = parseConvertedSample<NovelAIMetadata>(
+        'webp',
+        'novelai-v5-full.webp',
+      );
+
+      expect(meta).toEqual({
+        software: 'novelai',
+        prompt:
+          '1girl, solo, hatsune miku, holding card of ace of spades, reaching toward viewer to showing the card with "ピッ" sound effect, cute pop arched text "のべらい" on top of background, very aesthetic, masterpiece, no text',
+        negativePrompt:
+          'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
+        width: 1024,
+        height: 1024,
+        model: { name: 'NovelAI Diffusion V5', hash: '0ADF9AB7' },
+        sampling: {
+          steps: 23,
+          cfg: 7,
+          seed: '1965648257',
+          sampler: 'k_euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        characterPrompts: undefined,
+        useCoords: undefined,
+        useOrder: undefined,
+      });
+    });
+
+    it('should read the img2img strength of novelai-v5-full-i2i.png as denoise', () => {
+      const meta = parsePngSample<NovelAIMetadata>(
+        'novelai-v5-full-i2i.png',
+        parseNovelAI,
+      );
+
+      expect(meta).toEqual({
+        software: 'novelai',
+        prompt:
+          '1girl, solo, hatsune miku, holding card of ace of spades, reaching toward viewer to showing the card with "ピッ" sound effect, cute pop arched text "のべらい" on top of background, very aesthetic, masterpiece, no text',
+        negativePrompt:
+          'nsfw, lowres, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page',
+        width: 1024,
+        height: 1024,
+        model: { name: 'NovelAI Diffusion V5', hash: '70AB5786' },
+        sampling: {
+          steps: 14,
+          cfg: 7,
+          seed: '3069140439',
+          sampler: 'k_euler_ancestral',
+          scheduler: 'karras',
+          denoise: 0.4,
+        },
+        hires: undefined,
+        upscale: undefined,
+        characterPrompts: undefined,
+        useCoords: undefined,
+        useOrder: undefined,
       });
     });
   });
