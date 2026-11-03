@@ -415,14 +415,17 @@ export type Vendor = 'openai' | 'google' | 'xai' | 'meta' | 'unknown';
 /**
  * Where a vendor declaration was read from.
  *
- * - `c2pa`: C2PA Content Credentials manifest (PNG `caBX`, JPEG APP11)
- * - `xmp`: IPTC DigitalSourceType in the XMP packet (JPEG APP1, WebP `XMP `)
- * - `signature`: xAI's `Signature: <base64>` value in EXIF ImageDescription
+ * - `c2pa`: C2PA Content Credentials manifest (PNG `caBX`, JPEG APP11,
+ *   MP4 `uuid` box)
+ * - `xmp`: IPTC DigitalSourceType in the XMP packet (JPEG APP1, WebP `XMP `,
+ *   MP4 `uuid` box)
+ * - `signature`: xAI's `Signature: <base64>` value (EXIF ImageDescription,
+ *   MP4 `©cmt`)
  */
 export type VendorSource = 'c2pa' | 'xmp' | 'signature';
 
 /**
- * A commercial AI service's declaration that it made an image.
+ * A commercial AI service's declaration that it made an image or a video.
  *
  * Unlike {@link GenerationMetadata}, this carries no prompt/sampling/size data:
  * commercial AI services (ChatGPT, Gemini, Grok, ...) embed provenance, not
@@ -445,6 +448,11 @@ export interface VendorInfo {
   product?: string;
   /** Where the declaration was found. */
   source: VendorSource;
+  /**
+   * Whether the declaration came from an image or a video file. Decides
+   * the service {@link productLabel} assumes when no product is declared.
+   */
+  media: 'image' | 'video';
 }
 
 // ============================================================================
@@ -483,6 +491,74 @@ export type ParseResult =
       stealth?: boolean;
     }
   | { status: 'invalid'; message?: string };
+
+// ============================================================================
+// Video
+// ============================================================================
+
+/**
+ * One text metadata entry of a video file.
+ */
+export interface VideoTag {
+  /**
+   * Key as written: an mdta key (`"workflow"`), an iTunes or QuickTime atom
+   * (`"desc"`, `"©too"`, `"©swr"`), or a Matroska TagName (`"PROMPT"`).
+   */
+  key: string;
+  /** Text value */
+  value: string;
+  /**
+   * Where the tag was written: MP4 `keys`/`ilst` (`mdta`), MP4 `ilst` with
+   * an atom type (`itunes`), a QuickTime `udta` text item (`quicktime`), or
+   * a Matroska SimpleTag (`matroska`).
+   */
+  source: 'mdta' | 'itunes' | 'quicktime' | 'matroska';
+}
+
+/**
+ * Raw metadata of a video file.
+ */
+export interface VideoRawMetadata {
+  /**
+   * Container: ISO BMFF by its brand (`mov` for QuickTime `qt`, otherwise
+   * `mp4`), Matroska by its DocType.
+   */
+  format: 'mp4' | 'mov' | 'webm' | 'mkv';
+  /**
+   * Text metadata in file order. Matroska tags are those whose target is
+   * the whole file; binary values (e.g. cover art) are left out.
+   */
+  tags: VideoTag[];
+}
+
+/**
+ * Parse result of {@link parseVideo}, with the same statuses as
+ * {@link ParseResult}.
+ *
+ * - `success`: Generation metadata parsed; metadata and raw tags available
+ * - `vendor`: A commercial AI service declared the video as its own
+ * - `empty`: No metadata beyond what encoders always write
+ * - `unrecognized`: Metadata exists but format is not recognized
+ * - `invalid`: Not a supported video file, or corrupted
+ */
+export type VideoParseResult =
+  | { status: 'success'; metadata: GenerationMetadata; raw: VideoRawMetadata }
+  | { status: 'vendor'; info: VendorInfo }
+  | { status: 'empty' }
+  | { status: 'unrecognized'; raw: VideoRawMetadata }
+  | { status: 'invalid'; message?: string };
+
+/**
+ * Options for {@link parseVideo}
+ */
+export interface VideoReadOptions {
+  /**
+   * When true, dimensions are taken strictly from metadata only.
+   * When false (default), missing dimensions are taken from the video track.
+   * @default false
+   */
+  strict?: boolean;
+}
 
 // ============================================================================
 // API Types

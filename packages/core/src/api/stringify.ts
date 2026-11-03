@@ -15,8 +15,14 @@ import type {
   HiresSettings,
   ParseResult,
   RawMetadata,
+  VideoParseResult,
+  VideoRawMetadata,
 } from '../types';
-import { pngRawToRecord, segmentsToRecord } from '../utils/convert';
+import {
+  pngRawToRecord,
+  segmentsToRecord,
+  videoTagsToRecord,
+} from '../utils/convert';
 import {
   formatCivitaiResources,
   formatLoraHashes,
@@ -129,7 +135,8 @@ function buildSettingsLine(
  * Return the A1111 text of a parse result as the tool wrote it
  *
  * Applies to software whose metadata parseA1111 reads, when the text
- * (`parameters` chunk or Exif UserComment) is not JSON. Only line endings
+ * (`parameters` chunk, Exif UserComment, or a video's description tag) is
+ * not JSON. Only line endings
  * are normalized, so keys the parser does not model (`Version`,
  * `Civitai resources`, Fooocus's `Raw prompt`, …) survive.
  *
@@ -137,14 +144,17 @@ function buildSettingsLine(
  */
 function transcribeA1111(result: {
   metadata: GenerationMetadata;
-  raw: RawMetadata;
+  raw: RawMetadata | VideoRawMetadata;
 }): string | undefined {
   if (!A1111_SOFTWARE.has(result.metadata.software)) return undefined;
 
+  const { raw } = result;
   const entries =
-    result.raw.format === 'png'
-      ? pngRawToRecord(result.raw)
-      : segmentsToRecord(result.raw.segments);
+    raw.format === 'png'
+      ? pngRawToRecord(raw)
+      : 'tags' in raw
+        ? videoTagsToRecord(raw.tags)
+        : segmentsToRecord(raw.segments);
   const text = entries.parameters ?? entries.UserComment;
   if (text === undefined || text.trimStart().startsWith('{')) return undefined;
 
@@ -195,12 +205,14 @@ export function buildEmbedText(metadata: TextMetadata): string {
  * Format raw metadata as plain text
  *
  * Extracts text content from RawMetadata and returns it as a simple string.
- * Multiple entries are separated by double newlines.
+ * Multiple entries are separated by double newlines. Video tags are written
+ * as `key: value`, one per entry, since their keys are the only hint of
+ * what each value is.
  *
- * @param raw - Raw metadata from ParseResult
+ * @param raw - Raw metadata from ParseResult or VideoParseResult
  * @returns Plain text content from the metadata
  */
-export function formatRaw(raw: RawMetadata): string {
+export function formatRaw(raw: RawMetadata | VideoRawMetadata): string {
   switch (raw.format) {
     case 'png':
       return raw.chunks.map((chunk) => chunk.text).join('\n\n');
@@ -208,6 +220,12 @@ export function formatRaw(raw: RawMetadata): string {
     case 'jpeg':
     case 'webp':
       return raw.segments.map((segment) => segment.data).join('\n\n');
+
+    case 'mp4':
+    case 'mov':
+    case 'webm':
+    case 'mkv':
+      return raw.tags.map(({ key, value }) => `${key}: ${value}`).join('\n\n');
   }
 }
 
@@ -215,17 +233,19 @@ export function formatRaw(raw: RawMetadata): string {
  * Convert metadata to a human-readable string
  *
  * Accepts multiple input types:
- * - `ParseResult`: Automatically selects the best representation based on status.
- *   A1111-style text (sd-webui, the Forge family, SD.Next, and the text
- *   schemes of CivitAI and Fooocus) is returned as the tool wrote it, with
- *   line endings normalized; everything else is rebuilt from the metadata.
+ * - `ParseResult` / `VideoParseResult`: Automatically selects the best
+ *   representation based on status. A1111-style text (sd-webui, the Forge
+ *   family, SD.Next, and the text schemes of CivitAI and Fooocus) is
+ *   returned as the tool wrote it, with line endings normalized; everything
+ *   else is rebuilt from the metadata.
  * - `GenerationMetadata`: Formats as A1111 text (parsed metadata from any tool)
  * - `EmbedMetadata`: Formats as A1111 text (user-created custom metadata)
  *
  * When the text is rebuilt, LoRAs become `<lora:name:weight>` tags at the
  * end of the prompt plus a `Lora hashes` entry (see {@link buildEmbedText}).
  *
- * @param input - Parse result, generation metadata, or embed metadata
+ * @param input - Parse result (image or video), generation metadata, or
+ *   embed metadata
  * @returns Human-readable text representation, or empty string if no data
  *
  * @example
@@ -253,7 +273,7 @@ export function formatRaw(raw: RawMetadata): string {
  * ```
  */
 export function stringify(
-  input: ParseResult | EmbedMetadata | GenerationMetadata,
+  input: ParseResult | VideoParseResult | EmbedMetadata | GenerationMetadata,
 ): string {
   if ('status' in input) {
     switch (input.status) {

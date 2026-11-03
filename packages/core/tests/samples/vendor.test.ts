@@ -61,7 +61,12 @@ describe('Vendor detection - real samples', () => {
     const result = await parse(loadVendorSample('jpg', 'grok-imagine2.jpg'));
     expect(result).toEqual({
       status: 'vendor',
-      info: { vendor: 'xai', product: 'Grok Imagine', source: 'c2pa' },
+      info: {
+        vendor: 'xai',
+        product: 'Grok Imagine',
+        source: 'c2pa',
+        media: 'image',
+      },
     });
   });
 

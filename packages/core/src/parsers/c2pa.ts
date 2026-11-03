@@ -13,8 +13,9 @@
  * uncompressed, so a targeted byte scan is sufficient.
  */
 
-import type { Vendor, VendorInfo } from '../types';
+import type { Vendor } from '../types';
 import { type ImageFormat, readChunkType, readUint32BE } from '../utils/binary';
+import type { VendorDeclaration } from './types';
 
 const PNG_SIGNATURE_LENGTH = 8;
 
@@ -88,6 +89,9 @@ const VENDOR_MARKERS: ReadonlyArray<{ marker: string; vendor: Vendor }> = [
   { marker: 'Google LLC', vendor: 'google' },
   { marker: 'Google C2PA', vendor: 'google' },
   { marker: 'Google Media Processing Services', vendor: 'google' },
+  // OpenAI Sora: signer "Truepic Lens CLI in Sora" (generator "Sora"; a bare
+  // "Sora" or "OpenAI" is too short to be vendor-exclusive).
+  { marker: 'Truepic Lens CLI in Sora', vendor: 'openai' },
   // xAI: signer "xAI Grok Imagine", generator "Grok Imagine".
   { marker: 'xAI Grok Imagine', vendor: 'xai' },
   { marker: 'Grok Imagine', vendor: 'xai' },
@@ -119,10 +123,19 @@ interface Manifest {
 export function detectC2paVendor(
   data: Uint8Array,
   format: ImageFormat,
-): VendorInfo | null {
+): VendorDeclaration | null {
   const store = extractStore(data, format);
-  if (!store) return null;
+  return store ? readC2paStore(store) : null;
+}
 
+/**
+ * Read a vendor declaration from a C2PA manifest store (the JUMBF superbox
+ * labelled `c2pa`), wherever the container keeps it.
+ *
+ * @param store - Manifest store bytes
+ * @returns The declaration, or `null` as for {@link detectC2paVendor}
+ */
+export function readC2paStore(store: Uint8Array): VendorDeclaration | null {
   const creator = findCreator(splitManifests(store));
   if (!creator) return null;
 

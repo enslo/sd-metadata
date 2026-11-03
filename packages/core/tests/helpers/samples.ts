@@ -23,42 +23,57 @@ export const VENDOR_SAMPLES = [
   {
     format: 'png',
     filename: 'chatgpt-image2.png',
-    info: { vendor: 'openai', product: 'gpt-image', source: 'c2pa' },
+    info: {
+      vendor: 'openai',
+      product: 'gpt-image',
+      source: 'c2pa',
+      media: 'image',
+    },
   },
   {
     format: 'png',
     filename: 'chatgpt-image2-latest.png',
-    info: { vendor: 'openai', product: 'ChatGPT', source: 'c2pa' },
+    info: {
+      vendor: 'openai',
+      product: 'ChatGPT',
+      source: 'c2pa',
+      media: 'image',
+    },
   },
   {
     format: 'png',
     filename: 'gemini_3.1pro.png',
-    info: { vendor: 'google', source: 'c2pa' },
+    info: { vendor: 'google', source: 'c2pa', media: 'image' },
   },
   {
     format: 'png',
     filename: 'gemini_unknown.png',
-    info: { vendor: 'google', source: 'c2pa' },
+    info: { vendor: 'google', source: 'c2pa', media: 'image' },
   },
   {
     format: 'jpg',
     filename: 'gemini_3.1pro-latest.jpg',
-    info: { vendor: 'google', source: 'c2pa' },
+    info: { vendor: 'google', source: 'c2pa', media: 'image' },
   },
   {
     format: 'jpg',
     filename: 'grok-imagine2.jpg',
-    info: { vendor: 'xai', product: 'Grok Imagine', source: 'c2pa' },
+    info: {
+      vendor: 'xai',
+      product: 'Grok Imagine',
+      source: 'c2pa',
+      media: 'image',
+    },
   },
   {
     format: 'jpg',
     filename: 'muse-free.jpg',
-    info: { vendor: 'unknown', source: 'xmp' },
+    info: { vendor: 'unknown', source: 'xmp', media: 'image' },
   },
   {
     format: 'webp',
     filename: 'muse.webp',
-    info: { vendor: 'meta', source: 'xmp' },
+    info: { vendor: 'meta', source: 'xmp', media: 'image' },
   },
 ] as const;
 
@@ -230,3 +245,18 @@ export function loadVendorSample(
 export const PNG_SAMPLES = listSamples('png');
 export const JPEG_SAMPLES = listSamples('jpg');
 export const WEBP_SAMPLES = listSamples('webp');
+
+/**
+ * Load a video sample file as Uint8Array
+ *
+ * Generation-metadata videos live under samples/<container>/ like images;
+ * vendor videos live under samples/vendor/mp4/.
+ *
+ * @param dir - Directory within samples/ (e.g. 'mp4', 'vendor/mp4')
+ * @param filename - The filename within that directory
+ * @returns The file contents as Uint8Array
+ */
+export function loadVideoSample(dir: string, filename: string): Uint8Array {
+  const filePath = path.join(__dirname, '../../../../samples', dir, filename);
+  return new Uint8Array(fs.readFileSync(filePath));
+}
