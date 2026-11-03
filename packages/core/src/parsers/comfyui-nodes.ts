@@ -733,6 +733,35 @@ function extractCustomSampling(
 }
 
 /**
+ * The model loaders among the given nodes, first of each kind in graph order
+ *
+ * Used to take the model from the main sampler's upstream: a multi-stage
+ * graph (Wan 2.2: a high-noise model, then a low-noise one) has a loader
+ * per stage, and the first in the graph need not be the main sampler's.
+ *
+ * @param nodes - Full node graph
+ * @param ids - Ids to consider (e.g. the main sampler's upstream)
+ */
+export function findModelLoaders(
+  nodes: ComfyNodeGraph,
+  ids: ReadonlySet<string>,
+): { checkpoint?: ComfyNode; unetLoader?: ComfyNode } {
+  const result: { checkpoint?: ComfyNode; unetLoader?: ComfyNode } = {};
+  for (const [id, node] of Object.entries(nodes)) {
+    if (!ids.has(id)) continue;
+    if (!result.checkpoint && CHECKPOINT_TYPES.includes(node.class_type)) {
+      result.checkpoint = node;
+    } else if (
+      !result.unetLoader &&
+      UNET_LOADER_TYPES.includes(node.class_type)
+    ) {
+      result.unetLoader = node;
+    }
+  }
+  return result;
+}
+
+/**
  * Extract model name from pre-classified model loader node
  *
  * Checks CheckpointLoader first, then falls back to UNETLoader.

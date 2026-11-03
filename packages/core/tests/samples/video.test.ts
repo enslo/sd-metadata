@@ -16,14 +16,19 @@ const WAN_NEGATIVE =
 const MMH3_PROMPT =
   'For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] Hatsune Miku turns to the camera, smiles, and winks.\n\noverall_soundscape: N/A\n\nnon_diegetic_music: N/A';
 
-/** ComfyUI Wan 2.2 image-to-video template, saved by core SaveVideo. */
+/**
+ * ComfyUI Wan 2.2 image-to-video template, saved by core SaveVideo. Two
+ * KSamplerAdvanced stages run the high-noise model with its LoRA, then the
+ * low-noise model with its own; the first stage is reported (as Forge Neo
+ * does), so model and LoRA are both high-noise.
+ */
 const comfyWan = (seed: string) => ({
   software: 'comfyui',
   prompt: WAN_PROMPT,
   negativePrompt: WAN_NEGATIVE,
   width: 512,
   height: 512,
-  model: { name: 'wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors' },
+  model: { name: 'wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors' },
   // steps / cfg come through ComfySwitchNode (#301)
   sampling: { seed, sampler: 'euler', scheduler: 'simple', steps: 4, cfg: 1 },
   loras: [
