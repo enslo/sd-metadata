@@ -275,6 +275,11 @@ function buildSettingsList(
     metadata.sampling?.clipSkip
       ? { label: f.clipSkip, value: metadata.sampling.clipSkip }
       : null,
+    // A main-pass strength of 1 (full denoising) is the default; a lowered
+    // one is worth showing, as in stringify()
+    metadata.sampling?.denoise !== undefined && metadata.sampling.denoise !== 1
+      ? { label: f.denoise, value: metadata.sampling.denoise }
+      : null,
     metadata.hires?.upscaler
       ? { label: f.upscaler, value: metadata.hires.upscaler }
       : null,

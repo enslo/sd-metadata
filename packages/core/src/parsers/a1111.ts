@@ -107,6 +107,16 @@ export function parseA1111(
   const [hiresWidth] = parseSize(hiresSize ?? '');
   const scale = hiresScale ?? (hiresWidth > 0 ? hiresWidth / width : undefined);
 
+  // Forge and A1111 write "Denoising strength" from two places: the hires
+  // pass, next to its Hires keys, and img2img's init (Forge's Wan
+  // image-to-video runs as img2img). Without Hires keys it is the strength
+  // of the main pass.
+  const hasHires =
+    hiresScale !== undefined ||
+    upscaler !== undefined ||
+    hiresSteps !== undefined ||
+    hiresSize !== undefined;
+
   const loras = extractLoras(prompt, settingsMap);
 
   return Result.ok({
@@ -123,8 +133,14 @@ export function parseA1111(
       cfg,
       seed,
       clipSkip,
+      denoise: hasHires ? undefined : denoise,
     }),
-    hires: trimObject({ scale, upscaler, steps: hiresSteps, denoise }),
+    hires: trimObject({
+      scale,
+      upscaler,
+      steps: hiresSteps,
+      denoise: hasHires ? denoise : undefined,
+    }),
     ...optionalLoras(loras),
   });
 }

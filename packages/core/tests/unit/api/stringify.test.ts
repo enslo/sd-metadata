@@ -1056,3 +1056,38 @@ describe('formatRaw / stringify - video raw metadata', () => {
     ).toBe('Google Veo');
   });
 });
+
+describe('buildEmbedText - Denoising strength', () => {
+  const base: EmbedMetadata = {
+    prompt: 'a fox',
+    negativePrompt: '',
+    width: 512,
+    height: 512,
+  };
+
+  it('writes a lowered main-pass strength', () => {
+    const text = buildEmbedText({
+      ...base,
+      sampling: { steps: 20, denoise: 0.8 },
+    });
+    expect(text).toContain('Denoising strength: 0.8');
+  });
+
+  it('leaves out a main-pass strength of 1 (full denoising, the default)', () => {
+    const text = buildEmbedText({
+      ...base,
+      sampling: { steps: 20, denoise: 1 },
+    });
+    expect(text).not.toContain('Denoising strength');
+  });
+
+  it('prefers the hires strength when both are present', () => {
+    const text = buildEmbedText({
+      ...base,
+      sampling: { steps: 20, denoise: 0.8 },
+      hires: { scale: 2, denoise: 0.3 },
+    });
+    expect(text).toContain('Denoising strength: 0.3');
+    expect(text).not.toContain('Denoising strength: 0.8');
+  });
+});
