@@ -279,4 +279,68 @@ describe('NovelAI Parsers - Samples', () => {
       });
     });
   });
+
+  // V3 has no v4_prompt; the flat prompt and uc fields are read. Its Source
+  // names the model "Stable Diffusion XL".
+  describe('V3 samples', () => {
+    it('should parse novelai-v3.png', () => {
+      const meta = parsePngSample<NovelAIMetadata>(
+        'novelai-v3.png',
+        parseNovelAI,
+      );
+
+      expect(meta).toEqual({
+        software: 'novelai',
+        prompt:
+          '1girl, solo, hatsune miku, #テスト, best quality, amazing quality, very aesthetic, absurdres',
+        negativePrompt:
+          'nsfw, lowres, jpeg artifacts, worst quality, watermark, blurry, very displeasing',
+        width: 832,
+        height: 1216,
+        model: { name: 'Stable Diffusion XL', hash: '7BCCAA2C' },
+        sampling: {
+          steps: 23,
+          cfg: 5,
+          seed: '2902988400',
+          sampler: 'k_euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        characterPrompts: undefined,
+        useCoords: undefined,
+        useOrder: undefined,
+      });
+    });
+
+    it('should parse novelai-v3.webp', () => {
+      const meta = parseConvertedSample<NovelAIMetadata>(
+        'webp',
+        'novelai-v3.webp',
+      );
+
+      expect(meta).toEqual({
+        software: 'novelai',
+        prompt:
+          '1girl, solo, hatsune miku, #テスト, best quality, amazing quality, very aesthetic, absurdres',
+        negativePrompt:
+          'nsfw, lowres, jpeg artifacts, worst quality, watermark, blurry, very displeasing',
+        width: 832,
+        height: 1216,
+        model: { name: 'Stable Diffusion XL', hash: '7BCCAA2C' },
+        sampling: {
+          steps: 23,
+          cfg: 5,
+          seed: '4207758159',
+          sampler: 'k_euler_ancestral',
+          scheduler: 'karras',
+        },
+        hires: undefined,
+        upscale: undefined,
+        characterPrompts: undefined,
+        useCoords: undefined,
+        useOrder: undefined,
+      });
+    });
+  });
 });

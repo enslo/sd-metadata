@@ -219,6 +219,8 @@ describe('Easy Diffusion boolean clip_skip', () => {
 describe('NovelAI text block, img2img strength and model', () => {
   it('should produce the same text as core', () => {
     const files: Array<[string, string]> = [
+      ['png', 'novelai-v3.png'],
+      ['webp', 'novelai-v3.webp'],
       ['png', 'novelai-curated.png'],
       ['png', 'novelai-full.png'],
       ['webp', 'novelai-curated.webp'],
