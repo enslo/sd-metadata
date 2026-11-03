@@ -24,14 +24,7 @@
 import type { MetadataSegment, PngTextChunk } from '../types';
 import { parseJson } from '../utils/json';
 import { convertA1111PngToSegments } from './a1111';
-
-/** Segment sources an eXIf chunk (a TIFF structure) can hold */
-const EXIF_SOURCES = new Set<MetadataSegment['source']['type']>([
-  'exifUserComment',
-  'exifImageDescription',
-  'exifMake',
-  'exifModel',
-]);
+import { exifSegments } from './utils';
 
 /**
  * Convert CivitAI PNG chunks to JPEG/WebP segments
@@ -98,6 +91,6 @@ export function convertCivitaiSegmentsToPng(segments: MetadataSegment[]): {
 } {
   return {
     chunks: [],
-    exif: segments.filter((s) => EXIF_SOURCES.has(s.source.type)),
+    exif: exifSegments(segments),
   };
 }

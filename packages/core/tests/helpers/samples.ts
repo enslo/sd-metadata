@@ -115,6 +115,18 @@ const RAW_MISMATCH_EXPECTED = [
 ];
 
 /**
+ * PNG chunks a PNG → JPEG/WebP → PNG round trip drops, by tool prefix
+ *
+ * Dezgo PNGs hold the job record twice: JSON in GenInfo (with GenCode beside
+ * it) and YAML in the eXIf UserComment. JPEG/WebP carry only the EXIF, so
+ * GenInfo and GenCode do not come back; the eXIf chunk does, and parsed
+ * metadata still matches (the YAML holds the same record).
+ */
+const DROPPED_PNG_CHUNKS: ReadonlyMap<string, readonly string[]> = new Map([
+  ['dezgo', ['GenInfo', 'GenCode']],
+]);
+
+/**
  * Files written before their tool switched from tEXt to iTXt, by exact name
  *
  * Stability Matrix before v2.16.0 stored non-Latin-1 text in tEXt chunks
@@ -160,6 +172,22 @@ export function isRawMismatchExpected(filename: string): boolean {
   return RAW_MISMATCH_EXPECTED.some(
     (pattern) => baseName === pattern || baseName.startsWith(`${pattern}-`),
   );
+}
+
+/**
+ * PNG chunks a cross-format round trip of this PNG drops by design
+ *
+ * See DROPPED_PNG_CHUNKS; empty for every other file.
+ */
+export function droppedPngChunks(filename: string): readonly string[] {
+  if (path.extname(filename).toLowerCase() !== '.png') return [];
+  const baseName = path.basename(filename, path.extname(filename));
+  for (const [prefix, keywords] of DROPPED_PNG_CHUNKS) {
+    if (baseName === prefix || baseName.startsWith(`${prefix}-`)) {
+      return keywords;
+    }
+  }
+  return [];
 }
 
 /**

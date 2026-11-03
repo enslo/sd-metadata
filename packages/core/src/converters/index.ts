@@ -16,6 +16,7 @@ import {
   convertComfyUIPngToSegments,
   convertComfyUISegmentsToPng,
 } from './comfyui';
+import { convertDezgoPngToSegments, convertDezgoSegmentsToPng } from './dezgo';
 import {
   convertDrawThingsPngToSegments,
   convertDrawThingsSegmentsToPng,
@@ -255,6 +256,11 @@ const convertStabilityMatrix = createFormatConverter(
   convertStabilityMatrixSegmentsToPng,
 );
 
+const convertDezgo = createFormatConverter(
+  convertDezgoPngToSegments,
+  convertDezgoSegmentsToPng,
+);
+
 const convertTensorArt = createFormatConverter(
   convertTensorArtPngToSegments,
   convertTensorArtSegmentsToPng,
@@ -295,4 +301,6 @@ const softwareConverters = {
   'hf-space': convertHfSpace,
   // Draw Things (XMP format)
   'draw-things': convertDrawThings,
+  // Dezgo (YAML in the EXIF UserComment)
+  dezgo: convertDezgo,
 } as const;

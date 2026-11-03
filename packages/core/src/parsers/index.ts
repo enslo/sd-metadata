@@ -3,6 +3,7 @@ import type { EntryRecord } from '../utils/entries';
 import { parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
 import { detectSoftware } from './detect';
+import { parseDezgo } from './dezgo';
 import { parseDrawThings } from './draw-things';
 import { parseEasyDiffusion } from './easydiffusion';
 import { parseFooocus } from './fooocus';
@@ -99,6 +100,9 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
 
     case 'draw-things':
       return parseDrawThings(entries);
+
+    case 'dezgo':
+      return parseDezgo(entries);
 
     default:
       return Result.error({ type: 'unsupportedFormat' });

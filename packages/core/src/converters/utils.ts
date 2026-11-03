@@ -4,6 +4,24 @@
 
 import type { MetadataSegment, PngTextChunk } from '../types';
 
+/** Segment sources an eXIf chunk (a TIFF structure) can hold */
+const EXIF_SOURCES = new Set<MetadataSegment['source']['type']>([
+  'exifUserComment',
+  'exifImageDescription',
+  'exifMake',
+  'exifModel',
+]);
+
+/**
+ * Keep the segments a PNG can carry in an eXIf chunk
+ *
+ * @param segments - Metadata segments from JPEG/WebP
+ * @returns The EXIF-type segments, unchanged
+ */
+export function exifSegments(segments: MetadataSegment[]): MetadataSegment[] {
+  return segments.filter((s) => EXIF_SOURCES.has(s.source.type));
+}
+
 /**
  * Create a tEXt chunk, returns empty array if text is undefined
  *

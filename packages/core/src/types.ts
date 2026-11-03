@@ -118,7 +118,8 @@ export type GenerationSoftware =
   | 'easydiffusion'
   | 'fooocus'
   | 'ruined-fooocus'
-  | 'draw-things';
+  | 'draw-things'
+  | 'dezgo';
 
 // ============================================================================
 // Unified Metadata Types
@@ -282,7 +283,8 @@ export interface StandardMetadata extends BaseMetadata {
     | 'easydiffusion'
     | 'fooocus'
     | 'ruined-fooocus'
-    | 'draw-things';
+    | 'draw-things'
+    | 'dezgo';
 }
 
 /**

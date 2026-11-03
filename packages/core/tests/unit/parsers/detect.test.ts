@@ -275,6 +275,44 @@ describe('detectSoftware - Unit Tests', () => {
     });
   });
 
+  describe('Dezgo detection', () => {
+    it('should detect dezgo from the GenInfo chunk (PNG)', () => {
+      const entries: EntryRecord = {
+        GenInfo: JSON.stringify({
+          JobId: 'job',
+          Function: 'text2image_sdxl',
+          Input: { prompt: 'a cat' },
+        }),
+        GenCode: 'code',
+      };
+
+      expect(detectSoftware(entries)).toBe('dezgo');
+    });
+
+    it('should detect dezgo from the YAML UserComment (JPEG/WebP)', () => {
+      const entries: EntryRecord = {
+        UserComment:
+          '\nJobId: job\nFunction: text2image_sdxl\nInput:\n  prompt: a cat\n',
+      };
+
+      expect(detectSoftware(entries)).toBe('dezgo');
+    });
+
+    it('should not take a GenInfo chunk without a Dezgo job for Dezgo', () => {
+      const entries: EntryRecord = { GenInfo: '{"prompt": "a cat"}' };
+
+      expect(detectSoftware(entries)).not.toBe('dezgo');
+    });
+
+    it('should not take text that only mentions JobId for Dezgo', () => {
+      const entries: EntryRecord = {
+        UserComment: 'JobId: job\nFunction: none',
+      };
+
+      expect(detectSoftware(entries)).not.toBe('dezgo');
+    });
+  });
+
   describe('edge cases', () => {
     it('should return null for empty entries', () => {
       const entries: EntryRecord = {};
