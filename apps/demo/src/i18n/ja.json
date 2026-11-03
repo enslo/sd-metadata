@@ -4,10 +4,10 @@
     "liteVersion": "軽量版はこちら"
   },
   "dropzone": {
-    "placeholder": "PNG、JPEG、WebP画像をここにドロップ",
+    "placeholder": "画像（PNG・JPEG・WebP）または動画（MP4・MOV・WebM・MKV）をドロップ",
     "changeHint": "クリックまたはドロップで変更",
     "unknown": "不明",
-    "uploadLabel": "画像をアップロード",
+    "uploadLabel": "画像または動画をアップロード",
     "preview": "プレビュー",
     "stealthBadge": "Stealth PNGInfo",
     "stealthTooltip": "このメタデータは画像ピクセルに隠されていたものです（Stealth PNGInfo）。ファイル自体に通常のメタデータはありません。"

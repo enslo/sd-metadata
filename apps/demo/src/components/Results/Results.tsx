@@ -1,31 +1,33 @@
-import type { ParseResult } from '@enslo/sd-metadata';
 import { Alert, Paper, Stack, Tabs } from '@mantine/core';
 import { useStore } from '@nanostores/react';
 import { type RefObject, useEffect, useState } from 'react';
 import { $t, type I18nMessages } from '../../i18n';
+import type { LoadedResult } from '../../lib/media';
 import { OutputTab } from '../OutputTab';
 import { ParsedTabContent } from './ParsedTabContent';
 import { PlainTextTabContent } from './PlainTextTabContent';
 import { RawTabContent } from './RawTabContent';
 
 interface ResultsProps {
-  parseResult: ParseResult;
+  loaded: LoadedResult;
   fileDataRef: RefObject<Uint8Array | null>;
   filename: string;
   previewUrl: string;
 }
 
 /**
- * Results section with parsed, plaintext, raw, and output tabs
+ * Results section with parsed, plaintext, raw, and output tabs. Videos get
+ * no output tab: writing metadata into videos is not supported.
  */
 export function Results({
-  parseResult,
+  loaded,
   fileDataRef,
   filename,
   previewUrl,
 }: ResultsProps) {
   const t: I18nMessages = useStore($t);
   const [activeTab, setActiveTab] = useState<string | null>('parsed');
+  const { parseResult } = loaded;
 
   // Reset to parsed tab when parseResult changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on parseResult change
@@ -48,7 +50,9 @@ export function Results({
             <Tabs.Tab value="parsed">{t.results.tabs.parsed}</Tabs.Tab>
             <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
             <Tabs.Tab value="raw">{t.results.tabs.raw}</Tabs.Tab>
-            <Tabs.Tab value="output">{t.results.tabs.output}</Tabs.Tab>
+            {loaded.media === 'image' && (
+              <Tabs.Tab value="output">{t.results.tabs.output}</Tabs.Tab>
+            )}
           </Tabs.List>
 
           <Tabs.Panel value="parsed">
@@ -63,13 +67,15 @@ export function Results({
             <RawTabContent parseResult={parseResult} t={t} key={previewUrl} />
           </Tabs.Panel>
 
-          <Tabs.Panel value="output">
-            <OutputTab
-              parseResult={parseResult}
-              fileDataRef={fileDataRef}
-              filename={filename}
-            />
-          </Tabs.Panel>
+          {loaded.media === 'image' && (
+            <Tabs.Panel value="output">
+              <OutputTab
+                parseResult={loaded.parseResult}
+                fileDataRef={fileDataRef}
+                filename={filename}
+              />
+            </Tabs.Panel>
+          )}
         </Tabs>
       </Stack>
     </Paper>

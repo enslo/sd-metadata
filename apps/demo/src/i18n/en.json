@@ -4,10 +4,10 @@
     "liteVersion": "Looking for a lighter version?"
   },
   "dropzone": {
-    "placeholder": "Drop PNG, JPEG, or WebP image here",
+    "placeholder": "Drop an image (PNG, JPEG, WebP) or a video (MP4, MOV, WebM, MKV) here",
     "changeHint": "Click or drop to change",
     "unknown": "Unknown",
-    "uploadLabel": "Upload image",
+    "uploadLabel": "Upload image or video",
     "preview": "Preview",
     "stealthBadge": "Stealth PNGInfo",
     "stealthTooltip": "This metadata was hidden in the image pixels (Stealth PNGInfo). The file itself carries no regular metadata."

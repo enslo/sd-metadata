@@ -3,10 +3,13 @@ import { Dropzone, IMAGE_MIME_TYPE } from '@mantine/dropzone';
 import { useStore } from '@nanostores/react';
 import { Upload } from 'lucide-react';
 import { $t } from '../../i18n';
+import { VIDEO_MIME_TYPES } from '../../lib/media';
 
 interface DropZoneProps {
   onFileSelect: (file: File) => void;
   previewUrl: string | null;
+  /** Kind of the loaded file, which decides the preview element */
+  media: 'image' | 'video' | null;
   filename: string | null;
   softwareInfo: {
     label: string;
@@ -17,6 +20,12 @@ interface DropZoneProps {
   globalDragOver?: boolean;
 }
 
+/** Images by MIME type, plus the video containers parseVideo() reads */
+const ACCEPT: Record<string, string[]> = {
+  ...Object.fromEntries(IMAGE_MIME_TYPE.map((type) => [type, []])),
+  ...VIDEO_MIME_TYPES,
+};
+
 const STATUS_COLORS: Record<string, string> = {
   success: 'indigo',
   vendor: 'grape',
@@ -26,11 +35,12 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 /**
- * File drop zone with image preview
+ * File drop zone with image or video preview
  */
 export function DropZone({
   onFileSelect,
   previewUrl,
+  media,
   filename,
   softwareInfo,
   globalDragOver,
@@ -48,7 +58,7 @@ export function DropZone({
   return (
     <Dropzone
       onDrop={handleDrop}
-      accept={IMAGE_MIME_TYPE}
+      accept={ACCEPT}
       multiple={false}
       aria-label={t.dropzone.uploadLabel}
       styles={{
@@ -66,15 +76,33 @@ export function DropZone({
     >
       {hasPreview ? (
         <Group wrap="nowrap" gap="lg" align="center">
-          <Image
-            src={previewUrl}
-            alt={t.dropzone.preview}
-            maw={150}
-            mah={150}
-            radius="md"
-            fit="cover"
-            style={{ flexShrink: 0 }}
-          />
+          {media === 'video' ? (
+            <video
+              src={previewUrl}
+              aria-label={t.dropzone.preview}
+              muted
+              loop
+              autoPlay
+              playsInline
+              style={{
+                maxWidth: 150,
+                maxHeight: 150,
+                borderRadius: 'var(--mantine-radius-md)',
+                objectFit: 'cover',
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <Image
+              src={previewUrl}
+              alt={t.dropzone.preview}
+              maw={150}
+              mah={150}
+              radius="md"
+              fit="cover"
+              style={{ flexShrink: 0 }}
+            />
+          )}
           <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
             <Text fw={500} truncate="end" title={filename ?? ''}>
               {filename}
