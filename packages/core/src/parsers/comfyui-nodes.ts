@@ -403,6 +403,32 @@ function resolveConditioningSource(
 }
 
 /**
+ * The positive/negative conditioning inputs feeding a sampler
+ *
+ * BasicGuider (comfy-core, used by Flux and video templates) takes a single
+ * `conditioning` input and runs without a negative side, so it reports
+ * `negativeless`: an empty negative prompt is the answer, not a gap.
+ */
+function conditioningInputs(
+  nodes: ComfyNodeGraph,
+  sampler: ComfyNode,
+): { positive: unknown; negative: unknown; negativeless: boolean } {
+  const source = resolveConditioningSource(nodes, sampler);
+  if (source.class_type === 'BasicGuider') {
+    return {
+      positive: source.inputs.conditioning,
+      negative: undefined,
+      negativeless: true,
+    };
+  }
+  return {
+    positive: source.inputs.positive,
+    negative: source.inputs.negative,
+    negativeless: false,
+  };
+}
+
+/**
  * The first pipe input of a node (`pipe` or `*_pipe`), if any
  */
 function pipeInput(node: ComfyNode): unknown {
@@ -430,11 +456,8 @@ export function extractPromptTexts(
 
   // Resolve the node that holds positive/negative conditioning references.
   // KSampler/KSamplerAdvanced: directly on sampler inputs
-  // SamplerCustomAdvanced: on the CFGGuider node via guider input
-  const { positive, negative } = resolveConditioningSource(
-    nodes,
-    sampler,
-  ).inputs;
+  // SamplerCustomAdvanced: on the guider node (CFGGuider, BasicGuider)
+  const { positive, negative } = conditioningInputs(nodes, sampler);
 
   return {
     promptText: extractTextFromConditioning(nodes, positive, 'positive'),
@@ -450,7 +473,8 @@ export function extractPromptTexts(
  * Which conditioning sides the sampler wires to another node
  *
  * A wired side is authoritative: its text is whatever the wire leads to,
- * possibly nothing readable. Only an unwired side may be filled from the
+ * possibly nothing readable. So is the missing negative side of a guider
+ * that has none (BasicGuider). Only an unwired side may be filled from the
  * flat scan.
  */
 export function wiredConditioning(
@@ -458,13 +482,13 @@ export function wiredConditioning(
   sampler: ComfyNode | undefined,
 ): { positive: boolean; negative: boolean } {
   if (!sampler) return { positive: false, negative: false };
-  const { positive, negative } = resolveConditioningSource(
+  const { positive, negative, negativeless } = conditioningInputs(
     nodes,
     sampler,
-  ).inputs;
+  );
   return {
     positive: isNodeReference(positive),
-    negative: isNodeReference(negative),
+    negative: negativeless || isNodeReference(negative),
   };
 }
 
