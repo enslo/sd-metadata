@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromFloat32 } from '../../../src/utils/float';
+import { fromFloat32, withoutFloatNoise } from '../../../src/utils/float';
 
 describe('fromFloat32', () => {
   it('should restore the shortest decimal of a float32 widened to double', () => {
@@ -29,6 +29,37 @@ describe('fromFloat32', () => {
     expect(fromFloat32(-0.5)).toBe(-0.5);
     expect(fromFloat32(Number.NaN)).toBeNaN();
     expect(fromFloat32(Number.POSITIVE_INFINITY)).toBe(
+      Number.POSITIVE_INFINITY,
+    );
+  });
+});
+
+describe('withoutFloatNoise', () => {
+  it('should drop the rounding error of a short decimal', () => {
+    // ComfyUI's frontend: "strength_model": 1.0000000000000002,
+    // "scale_by": 1.5000000000000002, "denoise": 0.35000000000000003
+    expect(withoutFloatNoise(1.0000000000000002)).toBe(1);
+    expect(withoutFloatNoise(1.5000000000000002)).toBe(1.5);
+    expect(withoutFloatNoise(0.6000000000000001)).toBe(0.6);
+    expect(withoutFloatNoise(0.35000000000000003)).toBe(0.35);
+    expect(withoutFloatNoise(5.000000000000001)).toBe(5);
+    expect(withoutFloatNoise(0.1 + 0.2)).toBe(0.3);
+    expect(withoutFloatNoise(-0.7000000000000001)).toBe(-0.7);
+  });
+
+  it('should keep a value that needs its digits', () => {
+    // Stability Matrix's denoise slider: a genuine 16-digit double
+    expect(withoutFloatNoise(0.2958477508650519)).toBe(0.2958477508650519);
+    expect(withoutFloatNoise(Math.PI)).toBe(Math.PI);
+    expect(withoutFloatNoise(1 / 3)).toBe(1 / 3);
+  });
+
+  it('should leave short, integer and non-finite values unchanged', () => {
+    expect(withoutFloatNoise(0.35)).toBe(0.35);
+    expect(withoutFloatNoise(7)).toBe(7);
+    expect(withoutFloatNoise(0)).toBe(0);
+    expect(withoutFloatNoise(Number.NaN)).toBeNaN();
+    expect(withoutFloatNoise(Number.POSITIVE_INFINITY)).toBe(
       Number.POSITIVE_INFINITY,
     );
   });

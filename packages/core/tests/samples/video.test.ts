@@ -34,7 +34,8 @@ const comfyWan = (seed: string) => ({
   loras: [
     {
       name: 'wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors',
-      weight: 1.0000000000000002,
+      // written as 1.0000000000000002 by ComfyUI's frontend
+      weight: 1,
     },
   ],
 });
