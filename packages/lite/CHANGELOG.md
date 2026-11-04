@@ -5,6 +5,42 @@ All notable changes to `@enslo/sd-metadata-lite` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] - 2026-11-04
+
+### Added
+
+- **C2PA generator names from JPEG** (#304): the Content Credentials claim
+  generator name is read from JPEG APP11 segments as it already was from
+  the PNG `caBX` chunk, so Gemini and Grok Imagine JPEGs return a name
+  (`Google C2PA Core Generator Library`, `Grok Imagine`) instead of nothing
+  or xAI's signature text. A C2PA name now takes precedence over the EXIF
+  text fields.
+- **PNG `eXIf` chunk** (#288): EXIF stored in a PNG `eXIf` chunk (CivitAI
+  downloads) is read like JPEG EXIF, so those PNGs no longer return an empty
+  string.
+- **NovelAI Diffusion V5** (#309): the auto text block the web client
+  appends (`, teXt: …`) is removed from the prompt, img2img strength is
+  written as `Denoising strength`, and `Source` fills `Model` and
+  `Model hash` for every NovelAI version.
+- **Fooocus JSON scheme** (#284): prompts come from `full_prompt` /
+  `full_negative_prompt`, the lists Fooocus writes after expanding its
+  styles. Both Fooocus metadata schemes are now verified with real samples.
+
+### Fixed
+
+- **64-bit seeds were rounded** (#282, #283): seeds are passed through as
+  text, so values beyond `Number.MAX_SAFE_INTEGER` (Fooocus, some ComfyUI
+  graphs) keep every digit.
+- **Easy Diffusion `clip_skip`** (#285): the boolean Easy Diffusion writes
+  (`False` / `True`) is no longer printed as a `Clip skip` value. Easy
+  Diffusion is now verified with real samples.
+
+### Maintenance
+
+- IIFE bundle size: 7,003 → 7,259 bytes (+256 bytes uncompressed; #282,
+  #283, #284, #285, #288, #304, #309)
+- Update development dependencies (#280)
+
 ## [1.5.0] - 2026-08-17
 
 ### Improved
