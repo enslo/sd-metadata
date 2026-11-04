@@ -8,13 +8,21 @@
 
 - [コア型](#コア型)
   - [`ParseResult`](#parseresult)
+  - [`ReadOptions`](#readoptions)
+  - [`RgbaPixels`](#rgbapixels)
+  - [`VideoParseResult`](#videoparseresult)
+  - [`VideoReadOptions`](#videoreadoptions)
   - [`GenerationMetadata`](#generationmetadata)
   - [`GenerationSoftware`](#generationsoftware)
-  - [`C2paMetadata`](#c2pametadata)
-  - [`C2paVendor`](#c2pavendor)
+  - [`VendorInfo`](#vendorinfo)
+  - [`Vendor`](#vendor)
+  - [`VendorSource`](#vendorsource)
   - [`EmbedMetadata`](#embedmetadata)
   - [`RawMetadata`](#rawmetadata)
+  - [`VideoRawMetadata`](#videorawmetadata)
+  - [`VideoTag`](#videotag)
   - [`WriteResult`](#writeresult)
+  - [`WriteWarning`](#writewarning)
 - [メタデータ型](#メタデータ型)
   - [`BaseMetadata`](#basemetadata)
   - [`StandardMetadata`](#standardmetadata)
@@ -25,6 +33,7 @@
   - [`SamplingSettings`](#samplingsettings)
   - [`HiresSettings`](#hiressettings)
   - [`UpscaleSettings`](#upscalesettings)
+  - [`LoraSettings`](#lorasettings)
   - [`CharacterPrompt`](#characterprompt)
 - [ComfyUI型](#comfyui型)
   - [`ComfyNodeGraph`](#comfynodegraph)
@@ -44,13 +53,13 @@
 
 ### `ParseResult`
 
-`read()` 関数が返す結果型。
+`parse()` 関数（および非推奨の `read()`）が返す結果型。
 
 ```typescript
 type ParseResult =
-  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
-  | { status: 'c2pa'; c2pa: C2paMetadata }
-  | { status: 'unrecognized'; raw: RawMetadata }
+  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata; stealth?: boolean }
+  | { status: 'vendor'; info: VendorInfo }
+  | { status: 'unrecognized'; raw: RawMetadata; stealth?: boolean }
   | { status: 'empty' }
   | { status: 'invalid'; message?: string };
 ```
@@ -60,10 +69,12 @@ type ParseResult =
 - **`success`**: メタデータのパースに成功
   - `metadata`: 統一されたメタデータオブジェクト
   - `raw`: ラウンドトリップ変換用の元のフォーマット固有データ
-- **`c2pa`**: 画像が C2PA Content Credentials を持つが、パース可能な生成メタデータがない
-  - `c2pa`: 未検証の Content Credentials を表す `C2paMetadata`。`raw` フィールドは存在しません — 署名済みマニフェストはラウンドトリップ書き込み用に公開されません。
+  - `stealth`: メタデータがピクセルLSB（Stealth PNGInfo）から復元された場合に `true`。`parse()` のみが設定します。復元された `raw` はコンテナ形式によらず常にチャンク形（`format: 'png'`）です。
+- **`vendor`**: 商用AIサービスがこの画像を自身の生成物だと宣言しており、読み取れる生成パラメータがない
+  - `info`: 宣言の内容を表す `VendorInfo`。`raw` フィールドは存在しません — 宣言はラウンドトリップ書き込み用に公開されません。
 - **`unrecognized`**: 画像にメタデータがあるがフォーマットが認識できない
   - `raw`: 元のメタデータが保持される
+  - `stealth`: 生データがピクセルLSB（Stealth PNGInfo）から復元された場合に `true`
 - **`empty`**: 画像にメタデータが見つからない
 - **`invalid`**: 破損または非対応の画像フォーマット
   - `message`: オプションのエラー説明
@@ -71,9 +82,9 @@ type ParseResult =
 **例：**
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 switch (result.status) {
   case 'success':
@@ -81,26 +92,117 @@ switch (result.status) {
     console.log(`Prompt: ${result.metadata.prompt}`);
     break;
 
-  case 'c2pa':
-    // Content Credentials を検出（例：OpenAI ChatGPT、Google Gemini）。
-    // 検出のみ — 署名は検証されません。
-    console.log(`生成元（未検証）: ${result.c2pa.vendor}`);
-    console.log(`Claim generator: ${result.c2pa.claimGenerator ?? 'unknown'}`);
+  case 'vendor':
+    // 商用AIサービスによる宣言（例：OpenAI GPT Image、Google Gemini）。
+    // 検出のみ — 何も検証されません。
+    console.log(`Made by ${vendorLabels[result.info.vendor]} ${productLabel(result.info)}`);
     break;
 
   case 'unrecognized':
     console.log('不明なメタデータフォーマット');
     break;
-  
+
   case 'empty':
     console.log('メタデータなし');
     break;
-  
+
   case 'invalid':
     console.error(`無効な画像: ${result.message}`);
     break;
 }
 ```
+
+---
+
+### `ReadOptions`
+
+`parse()` と `read()` が受け取るオプション。
+
+```typescript
+interface ReadOptions {
+  strict?: boolean;
+  decodePixels?: (data: Uint8Array, format: 'webp') => Promise<RgbaPixels | null>;
+}
+```
+
+**フィールド：**
+
+- **`strict`**（デフォルト: `false`）: `true` の場合、寸法（`width` / `height`）はメタデータからのみ取得します。`false` の場合、メタデータに寸法がなければ画像ヘッダーから取得します。
+- **`decodePixels`**: プラットフォームがデコードできない環境（現在はブラウザ以外での WebP — 例：Node.js で sharp を利用）で、Stealth PNGInfo スキャン用に圧縮画像のピクセルをデコードします。`parse()` は WebP に読み取り可能なメタデータがない場合にのみ遅延呼び出しします。デコードできない場合は `null` を返してください。その場合はプラットフォームのデコーダがフォールバックとして試されます。ピクセルスキャンを行わない `read()` では無視されます。
+
+---
+
+### `RgbaPixels`
+
+`ReadOptions.decodePixels` 経由で Stealth PNGInfo スキャンに供給される、デコード済みRGBAピクセルデータ。
+
+```typescript
+interface RgbaPixels {
+  data: Uint8Array | Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+```
+
+**フィールド：**
+
+- **`data`**: インターリーブされたRGBAバイト列（1ピクセルあたり4バイト、行優先）。canvas の `getImageData` などから得られる `Uint8ClampedArray` もそのまま渡せます。
+- **`width`** / **`height`**: 画像のピクセル寸法。
+
+---
+
+### `VideoParseResult`
+
+`parseVideo()` が返す結果型。`ParseResult` と同じステータスを持ちます。
+
+```typescript
+type VideoParseResult =
+  | { status: 'success'; metadata: GenerationMetadata; raw: VideoRawMetadata }
+  | { status: 'vendor'; info: VendorInfo }
+  | { status: 'empty' }
+  | { status: 'unrecognized'; raw: VideoRawMetadata }
+  | { status: 'invalid'; message?: string };
+```
+
+**ステータス値：**
+
+- **`success`**: 生成メタデータのパースに成功。`raw` はコンテナ形式とファイルのテキストタグを保持
+- **`vendor`**: 商用AIサービスがこの動画を自身の生成物だと宣言している（`info.media` は `'video'`）
+- **`empty`**: エンコーダが常に書き込むもの（ffmpeg のブランドフィールドやバージョン文字列）以外のメタデータがない
+- **`unrecognized`**: メタデータは存在するがフォーマットが認識できない
+- **`invalid`**: 対応していない動画ファイル、または破損している
+
+動画は stealth データを持たないため `stealth` フラグはなく、`VideoParseResult` を `write()` に渡すことはできません。
+
+**例：**
+
+```typescript
+import { parseVideo } from '@enslo/sd-metadata';
+
+const result = await parseVideo(file); // File、Blob、Uint8Array、または ArrayBuffer
+
+if (result.status === 'success') {
+  console.log(result.raw.format);          // 'mp4' | 'mov' | 'webm' | 'mkv'
+  console.log(result.metadata.software);   // 'comfyui', 'forge-neo', ...
+  console.log(result.metadata.prompt);
+}
+```
+
+---
+
+### `VideoReadOptions`
+
+`parseVideo()` が受け取るオプション。
+
+```typescript
+interface VideoReadOptions {
+  strict?: boolean;
+}
+```
+
+**フィールド：**
+
+- **`strict`**（デフォルト: `false`）: `true` の場合、寸法はメタデータからのみ取得します。`false` の場合、メタデータに寸法がなければビデオトラックから取得します。
 
 ---
 
@@ -119,7 +221,7 @@ type GenerationMetadata =
 
 | メタデータ型 | `software` 値 |
 | ------------- | ----------------- |
-| `StandardMetadata` | `'sd-webui'` \| `'sd-next'` \| `'forge'` \| `'forge-classic'` \| `'forge-neo'` \| `'reforge'` \| `'easy-reforge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'draw-things'` |
+| `StandardMetadata` | `'sd-webui'` \| `'sd-next'` \| `'forge'` \| `'forge-classic'` \| `'forge-neo'` \| `'reforge'` \| `'easy-reforge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'draw-things'` \| `'dezgo'` \| `'kusart'` |
 | `NovelAIMetadata` | `'novelai'` |
 | `ComfyUIMetadata` | `'comfyui'` \| `'tensorart'` \| `'stability-matrix'` \| `'swarmui'` |
 
@@ -168,7 +270,9 @@ type GenerationSoftware =
   | 'easydiffusion'
   | 'fooocus'
   | 'ruined-fooocus'
-  | 'draw-things';
+  | 'draw-things'
+  | 'dezgo'
+  | 'kusart';
 ```
 
 **例：**
@@ -184,70 +288,87 @@ function displaySoftware(software: GenerationSoftware): string {
 
 ---
 
-### `C2paMetadata`
+### `VendorInfo`
 
-画像に埋め込まれた C2PA Content Credentials から読み取った内容。
+商用AIサービスによる「この画像／動画は自分が生成した」という宣言。
 
-C2PAマニフェストを持つ画像（現在は **OpenAI ChatGPT** と **Google Gemini**）で、パース可能な生成メタデータがない場合に `read()` が `{ status: 'c2pa', c2pa }` として返します。`GenerationMetadata` とは異なり、**プロンプト・シード・モデル・サイズを一切持ちません**: これらのツールは生成パラメータではなく Content Credentials を埋め込むためです。`C2paMetadata` は `BaseMetadata` を**拡張しません**。
+そうした宣言 — C2PA Content Credentials マニフェスト、XMPパケット内の IPTC DigitalSourceType、または xAI の署名 — を持ち、パース可能な生成メタデータがないファイルに対して、`parse()` と `parseVideo()` が `{ status: 'vendor', info }` として返します。`GenerationMetadata` とは異なり、**プロンプト・シード・モデル・サイズを一切持ちません**: 商用AIサービス（ChatGPT、Gemini、Grok など）は生成パラメータではなく来歴情報を埋め込むためです。`VendorInfo` は `BaseMetadata` を**拡張しません**。
 
 ```typescript
-export interface C2paMetadata {
-  /** マニフェストの claim generator／署名者から特定した粗いベンダー。 */
-  vendor: C2paVendor;
+export interface VendorInfo {
+  /** ファイルを生成したベンダー。宣言された値であり、暗号学的に検証されたものではありません。 */
+  vendor: Vendor;
   /**
-   * マニフェストが学習アルゴリズム由来（AI生成）の IPTC DigitalSourceType を
-   * 宣言している場合に `true`。カメラ／スキャンのソースタイプはフラグされません。
+   * 宣言されたままのベンダーのAIサービス名（例："ChatGPT"、"gpt-image"、
+   * "Grok Imagine"）。宣言にサービス名がない場合は存在しません。
+   * 正規化された表示名には productLabel() を使用してください。
    */
-  aiGenerated: boolean;
-  /** 生の IPTC DigitalSourceType URI。存在する場合はそのまま提供されます。 */
-  digitalSourceType?: string;
-  /** C2PA の `claim_generator_info.name`（存在する場合）。 */
-  claimGenerator?: string;
+  product?: string;
+  /** 宣言が見つかった場所。 */
+  source: VendorSource;
+  /**
+   * 宣言が画像ファイルと動画ファイルのどちらから得られたか。サービス名が
+   * 宣言されていない場合に productLabel() が想定するサービスを決めます。
+   */
+  media: 'image' | 'video';
 }
 ```
 
-> **重要 — 検証ではなく検出のみ。** Content Credentials の存在は真正性の証明にはなりません（文字列は偽造可能）。不在も人間由来の証明にはなりません: Content Credentials はスクリーンショット、SNSへの再アップロード、再エンコードによって日常的に剥奪されます。
->
-> **現時点ではPNGのみ。** マニフェストはPNGの `caBX` チャンクから読み取られます。JPEG/WebP対応は予定されています。
+> **重要 — 検証ではなく検出のみ。** 宣言は書かれたまま読み取られ、署名は検証されません。そのため存在は真正性の証明にはなりません（文字列は偽造可能）。不在も人間由来の証明にはなりません: これらのマーカーはスクリーンショット、SNSへの再アップロード、再エンコードによって日常的に剥奪されます。
 
 **例：**
 
 ```typescript
-import { read, c2paVendorLabels } from '@enslo/sd-metadata';
+import { parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
-if (result.status === 'c2pa') {
-  const { vendor, aiGenerated, claimGenerator } = result.c2pa;
-  console.log('Vendor:', c2paVendorLabels[vendor]);
-  console.log('Declared AI-generated:', aiGenerated);
-  console.log('Claim generator:', claimGenerator ?? 'unknown');
+if (result.status === 'vendor') {
+  const { vendor, product, source } = result.info;
+  console.log('Vendor:', vendorLabels[vendor]);        // "OpenAI", "Google", "xAI", "Meta"
+  console.log('Service:', productLabel(result.info));  // "GPT Image", "Gemini", "Grok Imagine", "Muse"
+  console.log('Declared as:', product ?? '(no product)');
+  console.log('Found in:', source);                    // 'c2pa' | 'xmp' | 'signature'
 }
 ```
 
 ---
 
-### `C2paVendor`
+### `Vendor`
 
-画像の C2PA Content Credentials の粗いベンダー特定。[`C2paMetadata`](#c2pametadata) の `vendor` 判別子として、また `c2paVendorLabels` のキー型として使用します。
+ファイルをAI生成物だと宣言したAIサービスのベンダー。[`VendorInfo`](#vendorinfo) の `vendor` 判別子として、また `vendorLabels` のキー型として使用します。
 
 ```typescript
-export type C2paVendor = 'openai' | 'google' | 'unknown';
+export type Vendor = 'openai' | 'google' | 'xai' | 'meta' | 'unknown';
 ```
 
-設計上、これは粗い特定です: C2PAマニフェストは生成元ベンダー（`'openai'` → ChatGPT、`'google'` → Gemini、`'unknown'` → ベンダーが具体的に認識されないAI生成マニフェスト）を特定しますが、具体的なモデルは特定**しません**。
+設計上、これは粗い特定です: 宣言はベンダーを特定しますが、サービスまで特定できるのは一部の場合だけです（`VendorInfo.product` を参照）。`'unknown'` はベンダーが具体的に認識されないAI宣言です。
 
 **例：**
 
 ```typescript
-import { c2paVendorLabels } from '@enslo/sd-metadata';
-import type { C2paVendor } from '@enslo/sd-metadata';
+import { vendorLabels } from '@enslo/sd-metadata';
+import type { Vendor } from '@enslo/sd-metadata';
 
-function displayVendor(vendor: C2paVendor): string {
-  return c2paVendorLabels[vendor];
-  // => "OpenAI (ChatGPT)", "Google (Gemini)", "AI-generated (Content Credentials)"
+function displayVendor(vendor: Vendor): string {
+  return vendorLabels[vendor];
+  // => "OpenAI", "Google", "xAI", "Meta", "Unknown"
 }
 ```
+
+---
+
+### `VendorSource`
+
+ベンダー宣言の読み取り元。
+
+```typescript
+export type VendorSource = 'c2pa' | 'xmp' | 'signature';
+```
+
+- **`c2pa`**: C2PA Content Credentials マニフェスト（PNG `caBX` チャンク、JPEG APP11、MP4 `uuid` ボックス）
+- **`xmp`**: XMPパケット内の IPTC DigitalSourceType（JPEG APP1、WebP `XMP` チャンク、MP4 `uuid` ボックス）
+- **`signature`**: xAI の `Signature: <base64>` 値（EXIF ImageDescription、MP4 `©cmt` コメント）
 
 ---
 
@@ -273,8 +394,9 @@ const metadata: EmbedMetadata = {
   negativePrompt: 'lowres',
   width: 512,
   height: 768,
-  sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
+  sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: '12345' },
   model: { name: 'model.safetensors' },
+  loras: [{ name: 'detail_tweaker', weight: 0.8 }],
   extras: { Version: 'v1.0' },
 };
 
@@ -289,10 +411,12 @@ const result = embed(imageData, metadata);
 
 ```typescript
 type RawMetadata =
-  | { format: 'png'; chunks: PngTextChunk[] }
+  | { format: 'png'; chunks: PngTextChunk[]; exif?: MetadataSegment[] }
   | { format: 'jpeg'; segments: MetadataSegment[] }
   | { format: 'webp'; segments: MetadataSegment[] };
 ```
+
+PNGの場合、`exif` は `eXIf` チャンクのセグメント（CivitAI からダウンロードした画像はEXIFをここに格納します）を保持し、ファイルにこのチャンクがなければ存在しません。書き戻す際は常に `eXIf` チャンクとして書き込まれ、テキストチャンクには変換されません。
 
 **なぜこれが必要？**
 
@@ -301,24 +425,24 @@ type RawMetadata =
 **ラウンドトリップ変換例：**
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
+import { parse, write } from '@enslo/sd-metadata';
 import { convertImageFormat } from 'some-image-library';
 
 // PNGからメタデータを読み込み
 const pngData = readFileSync('image.png');
-const parseResult = read(pngData);
+const parseResult = await parse(pngData);
 
 if (parseResult.status === 'success') {
   // 画像をJPEGに変換
   const jpegImageData = convertImageFormat(pngData, 'jpeg');
-  
+
   // メタデータをJPEGに書き込み
   const jpegWithMeta = write(jpegImageData, parseResult);
-  
+
   // 後で：PNGに戻す
   const pngImageData = convertImageFormat(jpegWithMeta.value, 'png');
   const pngWithMeta = write(pngImageData, parseResult);
-  
+
   // 元のPNGメタデータ構造が完全に保持される！
 }
 ```
@@ -327,9 +451,46 @@ if (parseResult.status === 'success') {
 
 ---
 
+### `VideoRawMetadata`
+
+`VideoParseResult` に含まれる、動画ファイルの生メタデータ。
+
+```typescript
+export interface VideoRawMetadata {
+  /** コンテナ：ISO BMFF はブランドで判別（QuickTime なら 'mov'、それ以外は 'mp4'）、Matroska は DocType で判別。 */
+  format: 'mp4' | 'mov' | 'webm' | 'mkv';
+  /** ファイル順のテキストメタデータ。Matroska のタグはファイル全体を対象とするもののみ。バイナリ値（カバーアートなど）は含まれません。 */
+  tags: VideoTag[];
+}
+```
+
+---
+
+### `VideoTag`
+
+動画ファイルのテキストメタデータ1件。
+
+```typescript
+export interface VideoTag {
+  /** 書かれたままのキー：mdta キー（"workflow"）、iTunes または QuickTime のアトム（"desc"、"©too"）、または Matroska の TagName（"PROMPT"）。 */
+  key: string;
+  /** テキスト値 */
+  value: string;
+  /** タグが書かれた場所。 */
+  source: 'mdta' | 'itunes' | 'quicktime' | 'matroska';
+}
+```
+
+- **`mdta`**: 逆引きDNS形式または単純なキーを持つ MP4 `keys` / `ilst` エントリ（ComfyUI の `prompt` / `workflow`）
+- **`itunes`**: 4文字のアトムタイプを持つ MP4 `ilst` エントリ（`©cmt`、`desc`、`©too`）
+- **`quicktime`**: QuickTime `udta` テキスト項目
+- **`matroska`**: Matroska `SimpleTag`（`PROMPT`、`DESCRIPTION`、`ENCODER`）
+
+---
+
 ### `WriteResult`
 
-`write()` 関数が返す結果型。
+`write()` と `embed()` 関数が返す結果型。
 
 ```typescript
 export type WriteResult =
@@ -410,6 +571,8 @@ export interface BaseMetadata {
   hires?: HiresSettings;
   /** アップスケール設定（適用されている場合） */
   upscale?: UpscaleSettings;
+  /** 画像に適用されたLoRA（ツールが列挙した順）。1つもなければ存在しません */
+  loras?: LoraSettings[];
 }
 ```
 
@@ -423,6 +586,7 @@ function displayMetadata(meta: BaseMetadata) {
   console.log('Prompt:', meta.prompt);
   console.log('Size:', meta.width, 'x', meta.height);
   console.log('Model:', meta.model?.name);
+  console.log('LoRAs:', meta.loras?.map((lora) => lora.name).join(', ') ?? 'none');
 }
 ```
 
@@ -436,19 +600,21 @@ function displayMetadata(meta: BaseMetadata) {
 export interface StandardMetadata extends BaseMetadata {
   software:
     | 'sd-webui'
+    | 'sd-next'
     | 'forge'
     | 'forge-classic'
     | 'forge-neo'
     | 'reforge'
     | 'easy-reforge'
-    | 'sd-next'
     | 'invokeai'
     | 'civitai'
     | 'hf-space'
     | 'easydiffusion'
     | 'fooocus'
     | 'ruined-fooocus'
-    | 'draw-things';
+    | 'draw-things'
+    | 'dezgo'
+    | 'kusart';
 }
 ```
 
@@ -608,14 +774,19 @@ export interface SamplingSettings {
   steps?: number;
   /** CFG（Classifier Free Guidance）スケール */
   cfg?: number;
-  /** 再現性のためのランダムシード */
-  seed?: number;
+  /** 10進文字列で表したランダムシード */
+  seed?: string;
   /** CLIPスキップレイヤー */
   clipSkip?: number;
-  /** デノイズ強度（ComfyUIのみ）。1.0の場合は提供されない（txt2imgのデフォルト） */
+  /**
+   * メインパスのデノイズ強度：img2img の強度、または通常生成で下げられた強度。
+   * 1 は完全なデノイズを意味します。Hires パスの強度は HiresSettings.denoise です。
+   */
   denoise?: number;
 }
 ```
+
+`seed` が文字列なのは、シードが量ではなく識別子であり、一部のツール（例：Fooocus）が `Number.MAX_SAFE_INTEGER` を超える64ビットのシードを使うためです。テキストのまま保持することで、気づかないうちに丸められるのを防ぎます。
 
 **例：**
 
@@ -624,7 +795,7 @@ if (metadata.sampling) {
   console.log('Sampler:', metadata.sampling.sampler);
   console.log('Steps:', metadata.sampling.steps);
   console.log('CFG Scale:', metadata.sampling.cfg);
-  console.log('Seed:', metadata.sampling.seed);
+  console.log('Seed:', metadata.sampling.seed); // 例："7100816951239959675"
 }
 ```
 
@@ -665,6 +836,38 @@ export interface UpscaleSettings {
 ```
 
 初期生成後に別のアップスケールステップとして適用されます。
+
+---
+
+### `LoraSettings`
+
+生成に適用されたLoRA（または LyCORIS）。`BaseMetadata.loras` がツールの記録順に列挙し、1つもなければ存在しません。
+
+```typescript
+export interface LoraSettings {
+  /** ツールが書いたままの名前：拡張子を除いたファイル名、ファイル名、パス、URN、または表示名 */
+  name: string;
+  /** 拡散モデル（UNet）に適用された強度。単一の重みしか持たないツールではこれが唯一の重み */
+  weight?: number;
+  /** テキストエンコーダ（CLIP）に適用された強度。ツールが別途記録している場合のみ存在 */
+  clipWeight?: number;
+  /** ツールが書いたままのハッシュ（AutoV2、sha256、"blake3:..."）。正規化されません */
+  hash?: string;
+}
+```
+
+全フィールドはツールが書いたまま保持されます: 名前からディレクトリや拡張子を取り除くのはツール自身が記録した範囲までで、ハッシュを1つのアルゴリズムに正規化することもありません。ハッシュの比較はツールの流儀に従ってください（A1111 の `Lora hashes` は10桁の16進 AutoV2、SwarmUI と ComfyUI 系ツールは sha256、InvokeAI は `blake3:` 接頭辞付きの値を書きます）。
+
+**例：**
+
+```typescript
+for (const lora of metadata.loras ?? []) {
+  const weight = lora.clipWeight === undefined
+    ? `${lora.weight ?? 1}`
+    : `${lora.weight ?? 1} (clip ${lora.clipWeight})`;
+  console.log(`${lora.name} @ ${weight}${lora.hash ? ` [${lora.hash}]` : ''}`);
+}
+```
 
 ---
 
@@ -851,7 +1054,7 @@ export interface ITXtChunk {
 
 ### `MetadataSegment`
 
-ソース追跡機能付きのJPEG/WebPメタデータセグメント。
+ソース追跡機能付きのJPEG/WebPメタデータセグメント。PNGの `eXIf` チャンク内のセグメントにも使用されます。
 
 ```typescript
 export interface MetadataSegment {

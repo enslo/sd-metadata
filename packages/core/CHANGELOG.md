@@ -5,6 +5,164 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-11-04
+
+### Breaking Changes
+
+- **`seed` is a string** (#282): `SamplingSettings.seed` now holds the seed
+  as a decimal string instead of a number. Seeds are identifiers, not
+  quantities, and several tools (Fooocus, ComfyUI graphs) use 64-bit seeds
+  beyond `Number.MAX_SAFE_INTEGER`, which a JavaScript number silently
+  rounds. `EmbedMetadata` takes the string form as well (`seed: '12345'`).
+- **`c2pa` status replaced by `vendor`** (#303): `{ status: 'c2pa'; c2pa }`
+  is now `{ status: 'vendor'; info: VendorInfo }`, covering every way a
+  commercial AI service declares an image as its own: C2PA manifests in PNG
+  and JPEG, XMP packets in JPEG and WebP, and xAI's EXIF signature.
+  `VendorInfo` is `{ vendor, product?, source, media }`.
+  - `C2paMetadata`, `C2paVendor` and `c2paVendorLabels` are removed. Use
+    `VendorInfo`, `Vendor` (`'openai' | 'google' | 'xai' | 'meta' |
+    'unknown'`) and `vendorLabels` (company names such as `OpenAI`), plus the
+    new `productLabel()` for the service name (`GPT Image`, `Gemini`,
+    `Grok Imagine`, `Muse`, `Sora`, `Veo`).
+  - `aiGenerated`, `digitalSourceType` and `claimGenerator` are gone: the
+    `vendor` status itself means an AI declaration (or a known vendor's
+    marker) was found.
+  - A C2PA manifest with neither an AI DigitalSourceType nor a known vendor
+    (cameras, ordinary editors) is no longer reported; such images fall
+    through to `empty` / `unrecognized` as before 3.0.0.
+  - JPEG / WebP images whose only metadata is a vendor XMP packet or an xAI
+    signature move from `unrecognized` to `vendor`.
+  - `stringify()` of a vendor result returns `<Vendor> <Service>` (e.g.
+    `OpenAI GPT Image`) instead of the claim generator name.
+- **`Denoising strength` without Hires keys is the main pass** (#308): the
+  A1111 parser puts `Denoising strength` into `hires.denoise` only when a
+  Hires key (`Hires upscale`, `Hires upscaler`, `Hires steps`, `Hires size`)
+  is present; otherwise it is img2img's strength and goes to
+  `sampling.denoise`, which is no longer documented as ComfyUI-only. Forge
+  Neo's Wan videos previously reported `hires: { denoise: 1 }` with no hires
+  pass at all.
+- **New `GenerationSoftware` members** (#311, #312): `'dezgo'` and
+  `'kusart'` added. TypeScript users with an exhaustive `switch` or
+  `Record<GenerationSoftware, ...>` will need to handle the new values.
+
+### Added
+
+- **Stealth PNGInfo recovery via the new `parse()` API** (#269, #270, #271):
+  NovelAI and the stealth-pnginfo family of extensions (A1111/Forge, ComfyUI)
+  hide generation metadata in pixel least-significant bits, where it survives
+  metadata stripping by image hosts. The new async `parse()` behaves like
+  `read()` and additionally recovers this hidden metadata from PNG and
+  lossless WebP files whose metadata was stripped. All four stealth variants
+  are supported (alpha- or RGB-channel embedding, compressed or
+  uncompressed), still with zero dependencies: decompression uses the
+  standard `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern
+  browsers).
+  - In browsers WebP pixels are decoded by the platform (WebCodecs
+    `ImageDecoder`, falling back to `createImageBitmap` + `OffscreenCanvas`);
+    in other runtimes supply the new `ReadOptions.decodePixels` callback
+    (e.g. backed by sharp) or the WebP scan is skipped gracefully.
+  - `success` and `unrecognized` results carry `stealth: true` when the
+    metadata was recovered from pixels, and feed `write()` unchanged, which
+    restores the original tool's native metadata to the stripped image.
+- **Video files: `parseVideo()`** (#305): reads generation metadata from
+  MP4 / MOV and WebM / MKV files through the same parsers as images, with the
+  same result statuses. Verified with ComfyUI (`SaveVideo`, VideoHelperSuite
+  `Video Combine`) and Forge Neo samples. A `Blob` (a browser `File`, Node's
+  `fs.openAsBlob()`) is read in small ranges instead of being loaded whole.
+  Vendor declarations in videos (Google Veo, xAI Grok Imagine, Meta Muse,
+  OpenAI Sora) are reported as `vendor`. New types `VideoParseResult`,
+  `VideoRawMetadata`, `VideoTag` and `VideoReadOptions`; `stringify()`
+  accepts video results. Writing into videos is not supported.
+- **LoRAs** (#293, #294, #295, #296, #299): `BaseMetadata.loras?:
+  LoraSettings[]` lists the LoRAs applied to the image (`name`, `weight?`,
+  `clipWeight?`, `hash?`, all exactly as the tool wrote them), absent when
+  there are none. Read from A1111 `<lora:…>` / `<lyco:…>` tags and
+  `Lora hashes` (sd-webui, Forge family, reForge, SD.Next, Fooocus's a1111
+  scheme, SaveImageWithMetaData, CivitAI resources), from tool JSON
+  (SwarmUI, InvokeAI, Fooocus, RuinedFooocus, Easy Diffusion, Draw Things,
+  TensorArt), and from ComfyUI loader nodes (`LoraLoader`, rgthree,
+  Efficiency, Comfyroll, Inspire and loaders recognized by shape), listing
+  only the loaders the sampler depends on. `stringify()` and `embed()`
+  write them as `<lora:name:weight>` tags.
+- **`stringify()` transcribes A1111 text** (#296): for images parsed by the
+  A1111 parser (sd-webui, Forge family, reForge, SD.Next, CivitAI and
+  Fooocus text schemes) the original text is returned as the tool wrote it,
+  so keys the library does not model (`Version`, `Civitai resources`, ...)
+  survive. Other tools get text rebuilt from the metadata, LoRAs included.
+- **Vendor declarations in JPEG, WebP and video** (#303, #305): C2PA
+  manifests in JPEG APP11 and MP4, IPTC DigitalSourceType in XMP packets
+  (JPEG, WebP, MP4) and xAI's signature (EXIF ImageDescription, MP4 comment)
+  are read in addition to PNG C2PA. New `Vendor`, `VendorSource` and
+  `VendorInfo` types, `vendorLabels` and `productLabel()`.
+- **PNG `eXIf` chunk** (#288): EXIF stored in a PNG `eXIf` chunk (CivitAI
+  downloads) is read like JPEG EXIF and written back as `eXIf`, never as text
+  chunks. `RawMetadata` for PNG gains `exif?: MetadataSegment[]`.
+- **Dezgo** (#311): `software: 'dezgo'`. Reads the job record from the PNG
+  `GenInfo` chunk or `eXIf`, and from the JPEG / WebP UserComment: prompts,
+  size, model, sampler, steps, guidance, seed, img2img strength and up to
+  four LoRA slots. Round-trips across all three formats.
+- **KusArt** (#312): `software: 'kusart'` (formerly KusaPics). Reads the
+  PNG `Copyright` / `extra` iTXt chunks: prompts, size, the model from the
+  task type, and styles as LoRAs. JPEG / WebP are supported through format
+  conversion.
+- **NovelAI Diffusion V5** (#309): the auto text block the web client
+  appends (`, teXt: …`) is removed from `prompt` when the client generated
+  it, img2img `strength` goes to `sampling.denoise`, and `Source` fills
+  `model` (name and hash) for every NovelAI version.
+- **Fooocus and Easy Diffusion verified with real samples** (#284, #285):
+  both tools leave the experimental tier. Fooocus: both metadata schemes
+  (`fooocus` JSON and `a1111` text), the PNG round-trip keeps
+  `fooocus_scheme`. Easy Diffusion: clip skip, LoRAs and the latent
+  upscaler are read.
+- **ComfyUI graphs outside the known node tables** (#298, #299): samplers
+  (e.g. `ImpactKSamplerBasicPipe`), empty-latent nodes and LoRA loaders are
+  recognized by their inputs when their `class_type` is unknown, and prompts
+  are followed through pipes (`ToBasicPipe`, `detailer_pipe`, ...).
+
+### Deprecated
+
+- **`read()`** (#269): superseded by `parse()`, which is identical apart
+  from being async and adding the stealth fallback. `read()` remains
+  available and unchanged for callers that need a synchronous, chunk-only
+  read, but new code should use `parse()`.
+
+### Fixed
+
+- **ComfyUI: same text as positive and negative prompt** (#297): prompts
+  follow the sampler's conditioning wiring: `ImpactWildcardProcessor`'s
+  expanded text is read, a negative wired to the positive encoder yields an
+  empty negative, and all-in-one encoders (`TextEncodeQwenImage21`) give
+  each side its own text instead of the flat-scan fallback filling both.
+- **ComfyUI: linked sampling inputs leaked as links** (#301): `steps`,
+  `cfg`, sampler and scheduler wired through primitive or switch nodes are
+  resolved to their values instead of surfacing `["id", 0]` typed as a
+  number.
+- **ComfyUI: float rounding noise** (#307): widget values saved by the
+  frontend such as `1.0000000000000002` are read as `1`; genuine
+  high-precision values are left alone.
+- **NovelAI V3 through format conversion** (#310): `Generation_time` is
+  carried in both directions and the V3 WebP ImageDescription gets no
+  `\0\0\0\0` prefix, so PNG → JPEG / WebP → PNG keeps the V3 layout.
+- **Stability Matrix 2.16 chunks** (#286): `parameters`, `parameters-json`
+  and `smproj` are written back as iTXt when they hold non-Latin-1 text,
+  as Stability Matrix 2.16 writes them, so round-trips of current output
+  are byte-exact.
+- **C2PA DigitalSourceType read past its value** (#300): a URI followed by a
+  short CBOR key was read with the key glued on, so some manifests (e.g.
+  Sora's) were not recognized as AI declarations.
+
+### Demo Site
+
+- **Videos** (#306): drop an MP4 / MOV / WebM / MKV file to see
+  `parseVideo()` results with the same tabs as images.
+- **Stealth recovery, LoRAs and vendor declarations** (#271, #296, #303):
+  recovered metadata is flagged, LoRAs are listed with their weights and
+  hashes, and vendor images show the vendor and service.
+
+### Maintenance
+
+- Update development dependencies; the workspace now uses pnpm 12 (#280)
+
 ## [3.3.0] - 2026-08-19
 
 ### Changed

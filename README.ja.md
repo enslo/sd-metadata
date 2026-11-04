@@ -1,61 +1,76 @@
 # sd-metadata
 
 [![CI](https://github.com/enslo/sd-metadata/actions/workflows/ci.yml/badge.svg)](https://github.com/enslo/sd-metadata/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata)
+[![npm downloads](https://img.shields.io/npm/dm/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata)
 [![license](https://img.shields.io/npm/l/@enslo/sd-metadata.svg)](https://github.com/enslo/sd-metadata/blob/main/LICENSE)
 
 🌐 **[English version](./README.md)**
 
+🔗 **[ライブデモ](https://sd-metadata.pages.dev/)**
+
 AI生成画像に埋め込まれたメタデータを読み書きするためのTypeScriptライブラリです。
-PNG、JPEG、WebPフォーマットに対応し、18以上の生成ツールをサポートしています。
+PNG、JPEG、WebPフォーマットに対応し、20以上の生成ツールをサポートしています。
 ゼロ依存、Node.jsとブラウザの両方で動作します。
 
-## パッケージ
+## 特徴
 
-| パッケージ | 概要 | npm | |
-| ---------- | ---- | --- | - |
-| [@enslo/sd-metadata](./packages/core/) | 読み取り、書き込み、埋め込み、文字列化の全APIを備えたフル機能ライブラリ | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata) | [![demo](https://img.shields.io/badge/demo-blueviolet?logo=cloudflare&logoColor=white)](https://sd-metadata.pages.dev/) |
-| [@enslo/sd-metadata-lite](./packages/lite/) | ブックマークレットやユーザースクリプト向けの軽量読み取り専用パーサー | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata-lite.svg)](https://www.npmjs.com/package/@enslo/sd-metadata-lite) | [![demo](https://img.shields.io/badge/demo-blueviolet?logo=cloudflare&logoColor=white)](https://sd-metadata-lite.pages.dev/) |
+- **マルチフォーマット対応**: PNG (tEXt / iTXt / eXIf)、JPEG (COM / Exif)、WebP (Exif)、さらに MP4 / MOV、WebM / MKV 動画（読み取りのみ）
+- **シンプルAPI**: `parse()`、`write()`、`embed()`、`stringify()` — 4つの関数で全ユースケースをカバー
+- **TypeScriptネイティブ**: TypeScriptで書かれており、型定義を完全同梱
+- **ゼロ依存**: Node.jsとブラウザで外部依存なしで動作
+- **フォーマット変換**: PNG、JPEG、WebP間でメタデータをシームレスに変換
+- **メタデータ保持**: フォーマット変換時に元のメタデータ構造を保持（例：PNG → JPEG → PNG で全データを維持）
+- **Stealth PNGInfo の復元**: 通常のメタデータが削除されていても、ピクセルに隠されたメタデータを読み取り
+- **AI生成元の検出**: 商用サービス（OpenAI、Google、xAI）の画像・動画を C2PA / XMP の宣言から識別 — 検出のみ、署名検証なし
 
-### どちらのパッケージを使うべき？
-
-| 機能 | `sd-metadata` | `sd-metadata-lite` |
-| ---- | :-----------: | :----------------: |
-| メタデータ読み取り | ✅ | ✅（A1111形式テキストのみ） |
-| 画像へのメタデータ書き戻し | ✅ | - |
-| カスタム（ユーザー作成）メタデータの埋め込み | ✅ | - |
-| フォーマット変換（PNG/JPEG/WebP） | ✅ | - |
-| ツール検知 | ✅ | - |
-| 構造化メタデータオブジェクト | ✅ | - |
-| IIFEビルド（ユーザースクリプト `@require`） | ✅ | ✅ |
-| バンドルサイズ（IIFE、minified） | 約51 KB | 約7 KB |
-| Node.js + ブラウザ | ✅ | ✅ |
-
-- **フルライブラリ**（`@enslo/sd-metadata`）
-  - 書き込み、フォーマット変換、完全なAPIを提供
-  - [ドキュメント](./packages/core/README.ja.md)
-- **軽量版**（`@enslo/sd-metadata-lite`）
-  - バンドルサイズを重視するブックマークレット・ユーザースクリプト向けの読み取り専用パーサー
-  - [ドキュメント](./packages/lite/README.ja.md)
-
-## クイックスタート
+## インストール
 
 ```bash
 npm install @enslo/sd-metadata
 ```
 
-```typescript
-import { read } from '@enslo/sd-metadata';
+## クイックスタート
 
-const result = read(imageBytes); // Uint8Array | ArrayBuffer
+```typescript
+import { parse } from '@enslo/sd-metadata';
+
+// `imageBytes` は Uint8Array または ArrayBuffer（fs、fetch、ファイル入力などから取得）
+const result = await parse(imageBytes);
 if (result.status === 'success') {
   console.log(result.metadata.software); // 'novelai', 'comfyui', ...
   console.log(result.metadata.prompt);
 }
 ```
 
-読み取りはこれだけです。書き込み・埋め込み・フォーマット変換については[フルライブラリのドキュメント](./packages/core/README.ja.md)を、約 7 KBの読み取り専用ビルドについては[lite版のドキュメント](./packages/lite/README.ja.md)を参照してください。
+読み取りはこれだけです。書き込み・埋め込み・フォーマット変換もそれぞれ数行で書けます。詳しくは[ドキュメント](#ドキュメント)を参照してください。
+
+## 対応ツール
+
+Stable Diffusion WebUI (A1111)、Forge、reForge、ComfyUI、NovelAI、SD.Next、InvokeAI、SwarmUI、Fooocus、Civitai、TensorArt、Stability Matrix、Draw Things など。
+
+フォーマットごとの対応状況を含む全リストは[ツールサポート表](./packages/core/README.ja.md#ツールサポート)を参照してください。
+
+## ドキュメント
+
+詳細なドキュメントはパッケージのREADMEにあります。
+
+- [使い方](./packages/core/README.ja.md#使い方) — Node.js、ブラウザ、ユーザースクリプトでの利用方法
+- [応用例](./packages/core/README.ja.md#応用例) — 書き込み、埋め込み、フォーマット変換、各結果ステータスの扱い
+- [APIリファレンス](./packages/core/README.ja.md#apiリファレンス)
+- [型リファレンス](./packages/core/docs/types.ja.md)
+- [変更履歴](./packages/core/CHANGELOG.md)
+
+## Lite版
+
+`@enslo/sd-metadata-lite` は、バンドルサイズが最優先となるブックマークレット・ユーザースクリプト向けの読み取り専用パッケージです。
+約 7 KB の IIFE で同じメタデータを A1111 形式のテキストとして取り出します。書き込み、フォーマット変換、構造化オブジェクトは提供しません。
+
+このトレードオフがユースケースに合う場合は[lite版のドキュメント](./packages/lite/README.ja.md)を参照してください。
 
 ## 開発
+
+このリポジトリは pnpm ワークスペースです: `packages/core`（ライブラリ本体）、`packages/lite`（lite版）、`apps/`（デモサイト）。
 
 ```bash
 # 依存関係をインストール

@@ -57,9 +57,9 @@ Certain files are only modified in specific PR types.
 - `packages/*/README.md` / `packages/*/README.ja.md` (including CDN version)
 - `packages/*/docs/**`
 
-Root `README.md` / `README.ja.md` are workspace overviews and may be
-updated in release PRs when the comparison table or package descriptions
-need to reflect a new release.
+Root `README.md` / `README.ja.md` are the repository front page for the core
+package and may be updated in release PRs when the feature list or tool
+coverage needs to reflect a new release.
 
 Rationale: package-level files are visible to users on npmjs.com.
 Changes must correspond to a published version on npm; updating them

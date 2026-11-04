@@ -89,8 +89,8 @@ to bring them up to date:
 
 **Root (if needed):**
 
-- `README.md` / `README.ja.md`: Update the comparison table or package
-  descriptions if a release introduces user-visible feature changes
+- `README.md` / `README.ja.md`: Update the feature list, the tool names, or
+  the lite paragraph if a release changes what they describe
 
 ### 4. Commit and Create PR
 
