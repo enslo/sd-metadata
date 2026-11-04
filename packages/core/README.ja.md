@@ -186,9 +186,7 @@ if (result.status === 'success') {
 
 ## Stealth PNGInfo の復元
 
-NovelAI（標準機能）と [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) 系の拡張機能（A1111/Forge、[ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)）は、生成メタデータのコピーをピクセルの最下位ビットに隠しています。通常のメタデータと違い、このコピーは画像ホストにメタデータチャンクを剥がされても生き残ります。
-
-`parse()` はこれを自動で復元します。読み取り可能なメタデータがない画像に対してのみ、フォールバックとしてピクセルをスキャンします。復元された結果には `stealth: true` が付きます：
+NovelAI（標準機能）と [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) 系の拡張機能（A1111/Forge、[ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)）は、生成メタデータのコピーをピクセルの最下位ビットに隠しています。このコピーは画像ホストにメタデータチャンクを剥がされても生き残ります。`parse()` はこれを自動で復元します。読み取り可能なメタデータがない画像に対してのみフォールバックとしてピクセルをスキャンし、復元された結果には `stealth: true` が付きます：
 
 ```typescript
 import { parse } from '@enslo/sd-metadata';
@@ -200,49 +198,10 @@ if (result.status === 'success') {
 }
 ```
 
-4つの変種すべて — アルファ/RGBチャンネル埋め込み × 圧縮/非圧縮 — に対応し、NovelAI の JSON ペイロードも拡張機能のプレーンテキスト（infotext）ペイロードも扱えます。
-
-### WebP 画像
-
-NovelAI はロスレス WebP 書き出しにも stealth データを埋め込みます。PNG のピクセルはライブラリ自身がデコードしますが、WebP のデコードはランタイム依存です：
-
-- **ブラウザ**: 自動 — `parse()` がプラットフォームのデコーダ（WebCodecs `ImageDecoder`、フォールバックとして `createImageBitmap` + `OffscreenCanvas`）を使います。設定不要です。
-- **Node.js / Bun / Deno**: `decodePixels` オプションでピクセルを供給してください（例：[sharp](https://www.npmjs.com/package/sharp) を利用）。指定がない場合、WebP の stealth スキャンは静かにスキップされます。
-
-```typescript
-import { parse } from '@enslo/sd-metadata';
-import sharp from 'sharp';
-
-const result = await parse(webpData, {
-  decodePixels: async (data) => {
-    const { data: pixels, info } = await sharp(data)
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    return { data: new Uint8Array(pixels), width: info.width, height: info.height };
-  },
-});
-```
-
-### 剥がされたメタデータのレスキュー
-
-復元した結果はそのまま `write()` に渡せます。剥がされたファイルに元ツールのネイティブメタデータが復元されます — 専用APIは不要です：
-
-```typescript
-import { parse, write } from '@enslo/sd-metadata';
-
-const rescued = await parse(strippedImage);
-if (rescued.status === 'success') {
-  const restored = write(strippedImage, rescued);
-  if (restored.ok) {
-    // restored.value は再び通常のメタデータを持ち、
-    // どのツールからも読み取れます — ピクセル内の stealth データはそのまま残ります。
-  }
-}
-```
-
-> [!NOTE]
-> stealth スキャンには `DecompressionStream` が必要です（Node.js 18+、Bun 1.4+、Deno、全モダンブラウザ）。対応していないランタイムでは、`parse()` はチャンクベースの読み取りに静かにフォールバックします。stealth データの書き込みは意図的にスコープ外です。
+- **4つの変種すべて** — アルファ/RGBチャンネル埋め込み × 圧縮/非圧縮 — に対応し、NovelAI の JSON ペイロードも拡張機能のプレーンテキスト（infotext）ペイロードも扱えます。
+- **WebP**: NovelAI はロスレス WebP 書き出しにも stealth データを埋め込みます。ブラウザではピクセルが自動でデコードされます。Node.js / Bun / Deno では `decodePixels` オプションでデコーダ（例：sharp）を渡してください。指定がない場合、WebP のスキャンはスキップされます。[応用例](#応用例)の「サーバーでの stealth 復元（WebP）」を参照してください。
+- **レスキュー**: 復元した結果はそのまま `write()` に渡せ、剥がされたファイルに元ツールのネイティブメタデータが復元されます。[応用例](#応用例)の「剥がされたメタデータのレスキュー」を参照してください。
+- スキャンには `DecompressionStream` が必要です（Node.js 18+、Bun 1.4+、Deno、全モダンブラウザ）。対応していないランタイムでは `parse()` はチャンクベースの読み取りにフォールバックします。stealth データの書き込みは意図的にスコープ外です。
 
 ## 動画ファイル
 
@@ -420,6 +379,48 @@ if (result.status === 'success') {
 </details>
 
 <details>
+<summary>サーバーでの stealth 復元（WebP）</summary>
+
+PNG のピクセルはライブラリ自身がデコードしますが、WebP のデコードはランタイム依存です。ブラウザではプラットフォームのデコーダ（WebCodecs `ImageDecoder`、フォールバックとして `createImageBitmap` + `OffscreenCanvas`）が設定なしで使われます。Node.js / Bun / Deno では `decodePixels` でピクセルを供給してください（例：[sharp](https://www.npmjs.com/package/sharp) を利用）。指定がない場合、WebP の stealth スキャンは静かにスキップされます：
+
+```typescript
+import { parse } from '@enslo/sd-metadata';
+import sharp from 'sharp';
+
+const result = await parse(webpData, {
+  decodePixels: async (data) => {
+    const { data: pixels, info } = await sharp(data)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    return { data: new Uint8Array(pixels), width: info.width, height: info.height };
+  },
+});
+```
+
+</details>
+
+<details>
+<summary>剥がされたメタデータのレスキュー</summary>
+
+stealth 復元した結果はそのまま `write()` に渡せます。剥がされたファイルに元ツールのネイティブメタデータが復元されます — 専用APIは不要です：
+
+```typescript
+import { parse, write } from '@enslo/sd-metadata';
+
+const rescued = await parse(strippedImage);
+if (rescued.status === 'success') {
+  const restored = write(strippedImage, rescued);
+  if (restored.ok) {
+    // restored.value は再び通常のメタデータを持ち、
+    // どのツールからも読み取れます — ピクセル内の stealth データはそのまま残ります。
+  }
+}
+```
+
+</details>
+
+<details>
 <summary>メタデータの削除</summary>
 
 画像から全てのメタデータを削除：
@@ -501,7 +502,7 @@ if (result.status === 'success') {
 - `input` - 画像ファイルデータ（PNG、JPEG、またはWebP）
 - `options` - オプションの読み込み設定
   - `strict?: boolean`（デフォルト: `false`）— `true` の場合、寸法（`width` / `height`）はメタデータからのみ取得します。`false` の場合、メタデータに寸法がなければ画像ヘッダーから取得します。
-  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — プラットフォームがデコードできない環境（サーバー）で、stealth スキャン用に WebP ピクセルをデコードします。WebP に読み取り可能なメタデータがない場合にのみ遅延呼び出しされます。[WebP 画像](#webp-画像)を参照。
+  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — プラットフォームがデコードできない環境（サーバー）で、stealth スキャン用に WebP ピクセルをデコードします。WebP に読み取り可能なメタデータがない場合にのみ遅延呼び出しされます。[応用例](#応用例)の「サーバーでの stealth 復元（WebP）」を参照。
 
 **戻り値:**
 
@@ -549,7 +550,7 @@ if (result.status === 'success') {
 - `metadata` - `parse()` から得られた `ParseResult`
   - `status: 'success'` または `'empty'` - 直接書き込み可能
   - `status: 'unrecognized'` - 同じフォーマット：そのまま書き込み、異なるフォーマット：warning付きでメタデータ削除
-  - stealth 復元された結果もそのまま渡せます — 書き込むと元ツールのネイティブメタデータが復元されます（[剥がされたメタデータのレスキュー](#剥がされたメタデータのレスキュー)を参照）
+  - stealth 復元された結果もそのまま渡せます — 書き込むと元ツールのネイティブメタデータが復元されます（[応用例](#応用例)の「剥がされたメタデータのレスキュー」を参照）
 
 **戻り値:**
 

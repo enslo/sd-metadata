@@ -186,9 +186,7 @@ if (result.status === 'success') {
 
 ## Stealth PNGInfo Recovery
 
-NovelAI (by default) and the [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) family of extensions (A1111/Forge, [ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)) hide a copy of the generation metadata in the least-significant bits of the pixels themselves. Unlike regular metadata, this copy survives when image hosts strip metadata chunks.
-
-`parse()` recovers it automatically: when an image carries no readable metadata, it scans the pixels as a fallback. Recovered results carry `stealth: true`:
+NovelAI (by default) and the [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) family of extensions (A1111/Forge, [ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)) hide a copy of the generation metadata in the least-significant bits of the pixels, where it survives when image hosts strip the metadata chunks. `parse()` recovers it automatically: when an image carries no readable metadata, it scans the pixels as a fallback, and the recovered result carries `stealth: true`:
 
 ```typescript
 import { parse } from '@enslo/sd-metadata';
@@ -200,49 +198,10 @@ if (result.status === 'success') {
 }
 ```
 
-All four variants are supported — alpha- or RGB-channel embedding, compressed or uncompressed — for both NovelAI's JSON payloads and the extensions' plain-infotext payloads.
-
-### WebP images
-
-NovelAI embeds stealth data in its lossless WebP exports too. PNG pixels are decoded by the library itself, but WebP decoding depends on the runtime:
-
-- **Browsers**: automatic — `parse()` uses the platform decoder (WebCodecs `ImageDecoder`, falling back to `createImageBitmap` + `OffscreenCanvas`). No configuration needed.
-- **Node.js / Bun / Deno**: supply pixels via the `decodePixels` option, e.g. backed by [sharp](https://www.npmjs.com/package/sharp). Without it the WebP stealth scan is skipped gracefully.
-
-```typescript
-import { parse } from '@enslo/sd-metadata';
-import sharp from 'sharp';
-
-const result = await parse(webpData, {
-  decodePixels: async (data) => {
-    const { data: pixels, info } = await sharp(data)
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    return { data: new Uint8Array(pixels), width: info.width, height: info.height };
-  },
-});
-```
-
-### Rescuing stripped metadata
-
-A recovered result feeds `write()` directly, restoring the original tool's native metadata to the stripped file — no separate API needed:
-
-```typescript
-import { parse, write } from '@enslo/sd-metadata';
-
-const rescued = await parse(strippedImage);
-if (rescued.status === 'success') {
-  const restored = write(strippedImage, rescued);
-  if (restored.ok) {
-    // restored.value now carries regular metadata again,
-    // readable by any tool — stealth data stays untouched in the pixels.
-  }
-}
-```
-
-> [!NOTE]
-> The stealth scan needs `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern browsers). On runtimes without it, `parse()` degrades gracefully to chunk-based reading. Writing stealth data is intentionally out of scope.
+- **All four variants** are read — alpha- or RGB-channel embedding, compressed or uncompressed — for both NovelAI's JSON payloads and the extensions' plain-infotext payloads.
+- **WebP**: NovelAI embeds stealth data in its lossless WebP exports too. Browsers decode the pixels automatically; in Node.js, Bun or Deno pass a decoder through the `decodePixels` option (e.g. backed by sharp), otherwise the WebP scan is skipped. See "Stealth recovery on servers" under [Advanced Examples](#advanced-examples).
+- **Rescue**: a recovered result feeds `write()` unchanged, restoring the original tool's native metadata to the stripped file. See "Rescuing stripped metadata" under [Advanced Examples](#advanced-examples).
+- The scan needs `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern browsers); without it `parse()` degrades to chunk-based reading. Writing stealth data is intentionally out of scope.
 
 ## Video Files
 
@@ -420,6 +379,48 @@ The list comes from `<lora:…>` tags and `Lora hashes` in A1111-style text, fro
 </details>
 
 <details>
+<summary>Stealth recovery on servers (WebP)</summary>
+
+PNG pixels are decoded by the library itself, but WebP decoding depends on the runtime. Browsers use the platform decoder (WebCodecs `ImageDecoder`, falling back to `createImageBitmap` + `OffscreenCanvas`) with no configuration. In Node.js, Bun or Deno supply the pixels via `decodePixels`, e.g. backed by [sharp](https://www.npmjs.com/package/sharp); without it the WebP stealth scan is skipped gracefully:
+
+```typescript
+import { parse } from '@enslo/sd-metadata';
+import sharp from 'sharp';
+
+const result = await parse(webpData, {
+  decodePixels: async (data) => {
+    const { data: pixels, info } = await sharp(data)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    return { data: new Uint8Array(pixels), width: info.width, height: info.height };
+  },
+});
+```
+
+</details>
+
+<details>
+<summary>Rescuing stripped metadata</summary>
+
+A stealth-recovered result feeds `write()` directly, restoring the original tool's native metadata to the stripped file — no separate API needed:
+
+```typescript
+import { parse, write } from '@enslo/sd-metadata';
+
+const rescued = await parse(strippedImage);
+if (rescued.status === 'success') {
+  const restored = write(strippedImage, rescued);
+  if (restored.ok) {
+    // restored.value now carries regular metadata again,
+    // readable by any tool — stealth data stays untouched in the pixels.
+  }
+}
+```
+
+</details>
+
+<details>
 <summary>Removing Metadata</summary>
 
 To strip all metadata from an image:
@@ -501,7 +502,7 @@ Reads and parses metadata from an image file. When an image carries no readable 
 - `input` - Image file data (PNG, JPEG, or WebP)
 - `options` - Optional read options
   - `strict?: boolean` (default: `false`) — When `true`, dimensions (`width` / `height`) are taken strictly from metadata only. When `false`, missing dimensions are extracted from image headers.
-  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — Decodes WebP pixels for the stealth scan where the platform cannot (servers). Called lazily, only when a WebP carries no readable metadata. See [WebP images](#webp-images).
+  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — Decodes WebP pixels for the stealth scan where the platform cannot (servers). Called lazily, only when a WebP carries no readable metadata. See "Stealth recovery on servers" under [Advanced Examples](#advanced-examples).
 
 **Returns:**
 
@@ -549,7 +550,7 @@ Writes metadata to an image file.
 - `metadata` - `ParseResult` from `parse()`
   - `status: 'success'` or `'empty'` - Can write directly
   - `status: 'unrecognized'` - Same format: writes as-is; Cross-format: drops metadata with warning
-  - Stealth-recovered results work as-is — writing restores the original tool's native metadata (see [Rescuing stripped metadata](#rescuing-stripped-metadata))
+  - Stealth-recovered results work as-is — writing restores the original tool's native metadata (see "Rescuing stripped metadata" under [Advanced Examples](#advanced-examples))
 
 **Returns:**
 
