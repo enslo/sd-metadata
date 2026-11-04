@@ -34,6 +34,10 @@ import {
   convertInvokeAISegmentsToPng,
 } from './invokeai';
 import {
+  convertKusArtPngToSegments,
+  convertKusArtSegmentsToPng,
+} from './kusart';
+import {
   convertNovelaiPngToSegments,
   convertNovelaiSegmentsToPng,
 } from './novelai';
@@ -261,6 +265,11 @@ const convertDezgo = createFormatConverter(
   convertDezgoSegmentsToPng,
 );
 
+const convertKusArt = createFormatConverter(
+  convertKusArtPngToSegments,
+  convertKusArtSegmentsToPng,
+);
+
 const convertTensorArt = createFormatConverter(
   convertTensorArtPngToSegments,
   convertTensorArtSegmentsToPng,
@@ -303,4 +312,6 @@ const softwareConverters = {
   'draw-things': convertDrawThings,
   // Dezgo (YAML in the EXIF UserComment)
   dezgo: convertDezgo,
+  // KusArt (both chunks packed into the EXIF UserComment)
+  kusart: convertKusArt,
 } as const;

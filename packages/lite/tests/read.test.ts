@@ -36,6 +36,16 @@ const XMP_ONLY = new Set(['draw-things-lora']);
 // cost +329 bytes), so lite returns the record text as it is
 const DEZGO_YAML = new Set(['dezgo', 'dezgo-lora', 'dezgo-long']);
 
+// KusArt samples: the prompts sit in an `extra` JSON chunk, which lite does
+// not read (KusArt is out of lite's scope, reading it cost +60 bytes), so
+// lite returns '' while full parses the chunk
+const KUSART_EXTRA = new Set([
+  'kusart-xl',
+  'kusart-easy-3styles',
+  'kusart-anima',
+  'kusart-krea2',
+]);
+
 // Samples with non-generation metadata — just check both produce non-empty
 const FALLBACK = new Set(['gimp', 'gimp-en']);
 
@@ -84,6 +94,14 @@ function runSampleTest(format: string, file: string): void {
   if (XMP_ONLY.has(base)) {
     expect(lite, `lite read XMP for ${file}`).toBe('');
     expect(full.length, `full empty for ${file}`).toBeGreaterThan(0);
+    return;
+  }
+
+  if (KUSART_EXTRA.has(base)) {
+    expect(lite, `lite read KusArt extra for ${file}`).toBe('');
+    expect(full, `full missed KusArt model for ${file}`).toMatch(
+      /, Model: Kusa-/,
+    );
     return;
   }
 
