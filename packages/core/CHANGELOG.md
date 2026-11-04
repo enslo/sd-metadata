@@ -47,23 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New Features
 
-- **Stealth PNGInfo recovery via the new `parse()` API** (#269, #270, #271):
-  NovelAI and the stealth-pnginfo family of extensions (A1111/Forge, ComfyUI)
-  hide generation metadata in pixel least-significant bits, where it survives
-  metadata stripping by image hosts. The new async `parse()` behaves like
-  `read()` and additionally recovers this hidden metadata from PNG and
-  lossless WebP files whose metadata was stripped. All four stealth variants
-  are supported (alpha- or RGB-channel embedding, compressed or
-  uncompressed), still with zero dependencies: decompression uses the
-  standard `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern
-  browsers).
-  - In browsers WebP pixels are decoded by the platform (WebCodecs
-    `ImageDecoder`, falling back to `createImageBitmap` + `OffscreenCanvas`);
-    in other runtimes supply the new `ReadOptions.decodePixels` callback
-    (e.g. backed by sharp) or the WebP scan is skipped gracefully.
-  - `success` and `unrecognized` results carry `stealth: true` when the
-    metadata was recovered from pixels, and feed `write()` unchanged, which
-    restores the original tool's native metadata to the stripped image.
+- **`parse()` is the primary API** (#269): the new async `parse()` replaces
+  `read()` as the entry point for reading image metadata. It takes the same
+  input and options and returns the same `ParseResult`; being async lets it
+  read beyond the metadata chunks (see Stealth PNGInfo recovery below).
+  `read()` stays available but is deprecated.
 - **LoRAs** (#293, #294, #295, #296, #299): `BaseMetadata.loras?:
   LoraSettings[]` lists the LoRAs applied to the image (`name`, `weight?`,
   `clipWeight?`, `hash?`, all exactly as the tool wrote them), absent when
@@ -84,6 +72,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   OpenAI Sora) are reported as `vendor`. New types `VideoParseResult`,
   `VideoRawMetadata`, `VideoTag` and `VideoReadOptions`; `stringify()`
   accepts video results. Writing into videos is not supported.
+- **Stealth PNGInfo recovery** (#269, #270, #271): NovelAI and the
+  stealth-pnginfo family of extensions (A1111/Forge, ComfyUI) hide generation
+  metadata in pixel least-significant bits, where it survives metadata
+  stripping by image hosts. `parse()` recovers it from PNG and lossless WebP
+  files that carry no readable metadata. All four stealth variants are
+  supported (alpha- or RGB-channel embedding, compressed or uncompressed),
+  still with zero dependencies: decompression uses the standard
+  `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern browsers).
+  - In browsers WebP pixels are decoded by the platform (WebCodecs
+    `ImageDecoder`, falling back to `createImageBitmap` + `OffscreenCanvas`);
+    in other runtimes supply the new `ReadOptions.decodePixels` callback
+    (e.g. backed by sharp) or the WebP scan is skipped gracefully.
+  - `success` and `unrecognized` results carry `stealth: true` when the
+    metadata was recovered from pixels, and feed `write()` unchanged, which
+    restores the original tool's native metadata to the stripped image.
 - **AI provenance beyond PNG C2PA** (#303, #305): commercial AI services get
   the `vendor` status whatever container their declaration sits in: C2PA
   manifests in JPEG APP11 and MP4, IPTC DigitalSourceType in XMP packets
@@ -128,10 +131,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
-- **`read()`** (#269): superseded by `parse()`, which is identical apart
-  from being async and adding the stealth fallback. `read()` remains
-  available and unchanged for callers that need a synchronous, chunk-only
-  read, but new code should use `parse()`.
+- **`read()`** (#269): superseded by `parse()`. It remains available and
+  unchanged for callers that need a synchronous read, but new code should
+  use `parse()`.
 
 ### Fixed
 
