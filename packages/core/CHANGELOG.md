@@ -75,6 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   OpenAI Sora) are reported as `vendor`. New types `VideoParseResult`,
   `VideoRawMetadata`, `VideoTag` and `VideoReadOptions`; `stringify()`
   accepts video results. Writing into videos is not supported.
+
+### Added
+
 - **Stealth PNGInfo recovery** (#269, #270, #271): NovelAI and the
   stealth-pnginfo family of extensions (A1111/Forge, ComfyUI) hide generation
   metadata in pixel least-significant bits, where it survives metadata
@@ -90,18 +93,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `success` and `unrecognized` results carry `stealth: true` when the
     metadata was recovered from pixels, and feed `write()` unchanged, which
     restores the original tool's native metadata to the stripped image.
-- **AI provenance beyond PNG C2PA** (#303, #305): commercial AI services get
-  the `vendor` status whatever container their declaration sits in: C2PA
-  manifests in JPEG APP11 and MP4, IPTC DigitalSourceType in XMP packets
-  (JPEG, WebP, MP4) and xAI's signature (EXIF ImageDescription, MP4 comment),
-  in addition to PNG C2PA. Four vendors are recognized (OpenAI, Google, xAI,
-  Meta), with `vendorLabels` for the company and the new `productLabel()`
-  for the service (GPT Image, Gemini, Grok Imagine, Muse; Sora and Veo for
-  videos). New `Vendor`, `VendorSource` and `VendorInfo` types; see
-  Breaking Changes for what replaced the `c2pa` status.
-
-### Added
-
 - **`originLabel()`** (#313): the display name of whatever made a file, in
   one call: the software of a `success` result (`NovelAI`, `ComfyUI`), or
   the vendor and its service of a `vendor` result (`xAI Grok Imagine`); an
@@ -116,13 +107,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   appends (`, teXt: …`) is removed from `prompt` when the client generated
   it, img2img `strength` goes to `sampling.denoise`, and `Source` fills
   `model` (name and hash) for every NovelAI version.
-- **ComfyUI graphs outside the known node tables** (#298, #299): samplers
-  (e.g. `ImpactKSamplerBasicPipe`), empty-latent nodes and LoRA loaders are
-  recognized by their inputs when their `class_type` is unknown, and prompts
-  are followed through pipes (`ToBasicPipe`, `detailer_pipe`, ...).
-- **PNG `eXIf` chunk** (#288): EXIF stored in a PNG `eXIf` chunk (CivitAI
-  downloads) is read like JPEG EXIF and written back as `eXIf`, never as text
-  chunks. `RawMetadata` for PNG gains `exif?: MetadataSegment[]`.
+- **AI provenance beyond PNG C2PA** (#303, #305): commercial AI services get
+  the `vendor` status whatever container their declaration sits in: C2PA
+  manifests in JPEG APP11 and MP4, IPTC DigitalSourceType in XMP packets
+  (JPEG, WebP, MP4) and xAI's signature (EXIF ImageDescription, MP4 comment),
+  in addition to PNG C2PA. Four vendors are recognized (OpenAI, Google, xAI,
+  Meta), with `vendorLabels` for the company and the new `productLabel()`
+  for the service (GPT Image, Gemini, Grok Imagine, Muse; Sora and Veo for
+  videos). New `Vendor`, `VendorSource` and `VendorInfo` types; see
+  Breaking Changes for what replaced the `c2pa` status.
+
 - **Fooocus and Easy Diffusion verified with real samples** (#284, #285):
   both tools leave the experimental tier. Fooocus: both metadata schemes
   (`fooocus` JSON and `a1111` text), the PNG round-trip keeps
@@ -150,6 +144,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expanded text is read, a negative wired to the positive encoder yields an
   empty negative, and all-in-one encoders (`TextEncodeQwenImage21`) give
   each side its own text instead of the flat-scan fallback filling both.
+- **CivitAI PNG downloads read as `empty`** (#288): CivitAI stores the EXIF
+  of its PNG downloads in a PNG `eXIf` chunk, which was not read. It is now
+  read like JPEG EXIF and written back as `eXIf`, never as text chunks;
+  `RawMetadata` for PNG gains `exif?: MetadataSegment[]`.
+- **ComfyUI: graphs outside the known node tables** (#298, #299): samplers
+  (e.g. `ImpactKSamplerBasicPipe`), empty-latent nodes and LoRA loaders
+  whose `class_type` is unknown were missed, and prompts behind pipes
+  (`ToBasicPipe`, `detailer_pipe`, ...) came back empty. They are now
+  recognized by their inputs, and prompts are followed through the pipes.
 - **ComfyUI: float rounding noise** (#307): widget values saved by the
   frontend such as `1.0000000000000002` are read as `1`; genuine
   high-precision values are left alone.
