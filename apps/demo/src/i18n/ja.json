@@ -17,7 +17,8 @@
       "parsed": "メタデータ",
       "plaintext": "簡易表示",
       "raw": "生データ",
-      "output": "出力"
+      "output": "出力",
+      "copy": "コピー"
     },
     "errors": {
       "invalid": "無効な画像ファイルです",
@@ -90,7 +91,6 @@
     "metadataFormatOriginal": "オリジナル",
     "metadataFormatA1111": "A1111",
     "outputFormat": "出力形式",
-    "formatAnotherImage": "別の画像",
     "selectImage": "画像を選択",
     "saveButton": "保存",
     "processing": "処理中...",
@@ -102,5 +102,9 @@
     "remove": "削除",
     "preview": "プレビュー",
     "previewEmpty": "プレビューを表示するには、少なくともプロンプトを入力してください"
+  },
+  "copyTab": {
+    "description": "読み込んだ画像のメタデータを、別の画像に書き込みます。書き込み先の画像はピクセルも形式もそのままで、メタデータだけが置き換わります。",
+    "targetImage": "書き込み先の画像"
   }
 }

@@ -1,0 +1,1 @@
+export { CopyToImageTab } from './CopyToImageTab';

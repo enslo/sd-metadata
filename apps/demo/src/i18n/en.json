@@ -17,7 +17,8 @@
       "parsed": "Metadata",
       "plaintext": "Plain Text",
       "raw": "Raw Data",
-      "output": "Output"
+      "output": "Output",
+      "copy": "Copy"
     },
     "errors": {
       "invalid": "Invalid image file",
@@ -90,7 +91,6 @@
     "metadataFormatOriginal": "Original",
     "metadataFormatA1111": "A1111",
     "outputFormat": "Output format",
-    "formatAnotherImage": "Another image",
     "selectImage": "Select image",
     "saveButton": "Save",
     "processing": "Processing...",
@@ -102,5 +102,9 @@
     "remove": "Remove",
     "preview": "Preview",
     "previewEmpty": "Fill in at least a prompt to see a preview"
+  },
+  "copyTab": {
+    "description": "Write the metadata of the loaded image into another image. The target keeps its pixels and format; only its metadata is replaced.",
+    "targetImage": "Target image"
   }
 }

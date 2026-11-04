@@ -3,6 +3,7 @@ import { useStore } from '@nanostores/react';
 import { type RefObject, useEffect, useState } from 'react';
 import { $t, type I18nMessages } from '../../i18n';
 import type { LoadedResult } from '../../lib/media';
+import { CopyToImageTab } from '../CopyToImageTab';
 import { OutputTab } from '../OutputTab';
 import { ParsedTabContent } from './ParsedTabContent';
 import { PlainTextTabContent } from './PlainTextTabContent';
@@ -16,8 +17,8 @@ interface ResultsProps {
 }
 
 /**
- * Results section with parsed, plaintext, raw, and output tabs. Videos get
- * no output tab: writing metadata into videos is not supported.
+ * Results section with parsed, plaintext, raw, output and copy tabs. Videos get
+ * no output or copy tab: writing metadata into videos is not supported.
  */
 export function Results({
   loaded,
@@ -51,7 +52,10 @@ export function Results({
             <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
             <Tabs.Tab value="raw">{t.results.tabs.raw}</Tabs.Tab>
             {loaded.media === 'image' && (
-              <Tabs.Tab value="output">{t.results.tabs.output}</Tabs.Tab>
+              <>
+                <Tabs.Tab value="output">{t.results.tabs.output}</Tabs.Tab>
+                <Tabs.Tab value="copy">{t.results.tabs.copy}</Tabs.Tab>
+              </>
             )}
           </Tabs.List>
 
@@ -74,6 +78,11 @@ export function Results({
                 fileDataRef={fileDataRef}
                 filename={filename}
               />
+            </Tabs.Panel>
+          )}
+          {loaded.media === 'image' && (
+            <Tabs.Panel value="copy">
+              <CopyToImageTab parseResult={loaded.parseResult} />
             </Tabs.Panel>
           )}
         </Tabs>
