@@ -1,10 +1,4 @@
-import {
-  parse,
-  parseVideo,
-  productLabel,
-  softwareLabels,
-  vendorLabels,
-} from '@enslo/sd-metadata';
+import { originLabel, parse, parseVideo } from '@enslo/sd-metadata';
 import {
   Anchor,
   Container,
@@ -125,20 +119,12 @@ export function App() {
     switch (result?.status) {
       case 'success':
         return {
-          label: softwareLabels[result.metadata.software] ?? 'Unknown',
+          label: originLabel(result),
           status: 'success',
           stealth: 'stealth' in result && result.stealth === true,
         };
-      case 'vendor': {
-        const { info } = result;
-        return {
-          label:
-            info.vendor === 'unknown'
-              ? productLabel(info)
-              : `${vendorLabels[info.vendor]} ${productLabel(info)}`,
-          status: 'vendor',
-        };
-      }
+      case 'vendor':
+        return { label: originLabel(result), status: 'vendor' };
       case 'empty':
         return { label: 'Empty', status: 'empty' };
       case 'unrecognized':

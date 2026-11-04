@@ -21,6 +21,7 @@ export {
 export { write } from './api/write';
 // Export constants
 export {
+  originLabel,
   productLabel,
   softwareLabels,
   vendorLabels,
