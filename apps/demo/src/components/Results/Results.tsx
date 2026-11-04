@@ -3,6 +3,7 @@ import { useStore } from '@nanostores/react';
 import { type RefObject, useEffect, useState } from 'react';
 import { $t, type I18nMessages } from '../../i18n';
 import type { LoadedResult } from '../../lib/media';
+import { canKeepMetadata } from '../../lib/output';
 import { CopyToImageTab } from '../CopyToImageTab';
 import { OutputTab } from '../OutputTab';
 import { ParsedTabContent } from './ParsedTabContent';
@@ -29,6 +30,9 @@ export function Results({
   const t: I18nMessages = useStore($t);
   const [activeTab, setActiveTab] = useState<string | null>('parsed');
   const { parseResult } = loaded;
+  // Copy writes the loaded metadata as it is, so it needs metadata to write
+  const canCopy =
+    loaded.media === 'image' && canKeepMetadata(loaded.parseResult);
 
   // Reset to parsed tab when parseResult changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on parseResult change
@@ -54,7 +58,9 @@ export function Results({
             {loaded.media === 'image' && (
               <>
                 <Tabs.Tab value="output">{t.results.tabs.output}</Tabs.Tab>
-                <Tabs.Tab value="copy">{t.results.tabs.copy}</Tabs.Tab>
+                {canCopy && (
+                  <Tabs.Tab value="copy">{t.results.tabs.copy}</Tabs.Tab>
+                )}
               </>
             )}
           </Tabs.List>
@@ -80,7 +86,7 @@ export function Results({
               />
             </Tabs.Panel>
           )}
-          {loaded.media === 'image' && (
+          {canCopy && (
             <Tabs.Panel value="copy">
               <CopyToImageTab parseResult={loaded.parseResult} />
             </Tabs.Panel>

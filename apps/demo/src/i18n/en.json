@@ -104,7 +104,7 @@
     "previewEmpty": "Fill in at least a prompt to see a preview"
   },
   "copyTab": {
-    "description": "Write the metadata of the loaded image into another image. The target keeps its pixels and format; only its metadata is replaced.",
+    "description": "Write the metadata of the loaded image, as it is, into another image. The target keeps its pixels and format; only its metadata is replaced. To edit the metadata, load the copy and use the Output tab.",
     "targetImage": "Target image"
   }
 }

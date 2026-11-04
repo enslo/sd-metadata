@@ -1,5 +1,5 @@
 /**
- * Shared metadata output logic for the Output and Copy to Image tabs
+ * Metadata writing logic of the Output tab (keep / strip / edit / A1111)
  */
 
 import type { EmbedMetadata, ParseResult } from '@enslo/sd-metadata';
