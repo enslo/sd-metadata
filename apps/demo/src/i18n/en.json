@@ -105,6 +105,7 @@
   },
   "copyTab": {
     "description": "Write the metadata of the loaded image, as it is, into another image. The target keeps its pixels and format; only its metadata is replaced.",
-    "targetImage": "Target image"
+    "targetImage": "Target image",
+    "changeHint": "Click to change"
   }
 }

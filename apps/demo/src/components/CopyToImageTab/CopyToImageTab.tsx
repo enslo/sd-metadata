@@ -1,11 +1,13 @@
 import type { ParseResult } from '@enslo/sd-metadata';
 import { write } from '@enslo/sd-metadata';
 import {
+  Badge,
   Button,
   FileButton,
   Group,
   Image,
   Input,
+  Paper,
   Stack,
   Text,
 } from '@mantine/core';
@@ -28,7 +30,11 @@ interface CopyToImageTabProps {
 /**
  * Copy tab: write the loaded image's metadata, as it is, into another
  * uploaded image. The target keeps its pixels and format; only its
- * metadata is replaced. Editing happens in the Output tab, on the copy.
+ * metadata is replaced.
+ *
+ * The target is picked with a click, not a drop zone: the page already
+ * takes drops anywhere to replace the loaded image, and a second drop
+ * target would compete with that.
  */
 export function CopyToImageTab({ parseResult }: CopyToImageTabProps) {
   const t = useStore($t);
@@ -44,7 +50,7 @@ export function CopyToImageTab({ parseResult }: CopyToImageTabProps) {
     setError(null);
   }, [parseResult]);
 
-  // Thumbnail preview for the target image
+  // Preview for the target image
   useEffect(() => {
     if (!targetFile) {
       setTargetPreviewUrl(null);
@@ -84,70 +90,82 @@ export function CopyToImageTab({ parseResult }: CopyToImageTabProps) {
         {t.copyTab.description}
       </Text>
 
-      {/* Target image + save */}
-      <Group gap="md" align="flex-end">
-        <Input.Wrapper label={t.copyTab.targetImage}>
-          <FileButton
-            onChange={(file) => {
-              setTargetFile(file);
-              setError(null);
-            }}
-            accept="image/png,image/jpeg,image/webp"
-          >
-            {(props) => (
-              <Button
-                {...props}
-                variant="default"
-                leftSection={
-                  targetPreviewUrl ? (
-                    <Image
-                      src={targetPreviewUrl}
-                      alt=""
-                      h={24}
-                      w={24}
-                      fit="cover"
-                      radius="xs"
-                    />
-                  ) : (
-                    <ImageUp size={16} />
-                  )
-                }
-                style={{ display: 'flex', maxWidth: '100%', minWidth: 0 }}
-                styles={{ label: { minWidth: 0 } }}
-              >
-                {/* The label keeps Mantine's default flex centering;
-                    the inner span owns the ellipsis so descenders are
-                    never clipped by the label's line box */}
-                <span
-                  style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    minWidth: 0,
-                    lineHeight: 'normal',
-                  }}
-                >
-                  {targetFile ? targetFile.name : t.outputTab.selectImage}
-                </span>
-              </Button>
-            )}
-          </FileButton>
-        </Input.Wrapper>
-        {targetFile && (
-          <Text size="sm" c="dimmed" pb={8}>
-            {getFormatLabel(detectFormat(targetFile.name))}
-          </Text>
-        )}
-        <Button
-          color="green"
-          onClick={handleSave}
-          loading={processing}
-          disabled={!targetFile}
-          style={{ flex: 1 }}
+      {/* Target image: a click-to-pick card laid out like the main preview */}
+      <Input.Wrapper label={t.copyTab.targetImage}>
+        <FileButton
+          onChange={(file) => {
+            setTargetFile(file);
+            setError(null);
+          }}
+          accept="image/png,image/jpeg,image/webp"
         >
-          {processing ? t.outputTab.processing : t.outputTab.saveButton}
-        </Button>
-      </Group>
+          {(props) => (
+            <Paper
+              {...props}
+              component="button"
+              type="button"
+              withBorder
+              p="md"
+              radius="md"
+              bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))"
+              style={{
+                display: 'block',
+                width: '100%',
+                cursor: 'pointer',
+                textAlign: 'left',
+                color: 'inherit',
+                font: 'inherit',
+              }}
+            >
+              {targetFile && targetPreviewUrl ? (
+                <Group wrap="nowrap" gap="lg" align="center">
+                  <Image
+                    src={targetPreviewUrl}
+                    alt={targetFile.name}
+                    maw={150}
+                    mah={150}
+                    radius="md"
+                    fit="cover"
+                    style={{ flexShrink: 0 }}
+                  />
+                  <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                    <Text fw={500} truncate="end" title={targetFile.name}>
+                      {targetFile.name}
+                    </Text>
+                    <Group justify="space-between" align="center">
+                      <Badge
+                        variant="light"
+                        size="lg"
+                        style={{ textTransform: 'none' }}
+                      >
+                        {getFormatLabel(detectFormat(targetFile.name))}
+                      </Badge>
+                      <Text size="xs" c="dimmed">
+                        {t.copyTab.changeHint}
+                      </Text>
+                    </Group>
+                  </Stack>
+                </Group>
+              ) : (
+                <Stack align="center" gap="md" py="xl">
+                  <ImageUp size={48} />
+                  <Text c="dimmed">{t.outputTab.selectImage}</Text>
+                </Stack>
+              )}
+            </Paper>
+          )}
+        </FileButton>
+      </Input.Wrapper>
+
+      <Button
+        color="green"
+        fullWidth
+        onClick={handleSave}
+        loading={processing}
+        disabled={!targetFile}
+      >
+        {processing ? t.outputTab.processing : t.outputTab.saveButton}
+      </Button>
 
       {error && (
         <Text c="red" size="sm">
