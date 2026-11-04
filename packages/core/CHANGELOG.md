@@ -64,15 +64,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `success` and `unrecognized` results carry `stealth: true` when the
     metadata was recovered from pixels, and feed `write()` unchanged, which
     restores the original tool's native metadata to the stripped image.
-- **Video files: `parseVideo()`** (#305): reads generation metadata from
-  MP4 / MOV and WebM / MKV files through the same parsers as images, with the
-  same result statuses. Verified with ComfyUI (`SaveVideo`, VideoHelperSuite
-  `Video Combine`) and Forge Neo samples. A `Blob` (a browser `File`, Node's
-  `fs.openAsBlob()`) is read in small ranges instead of being loaded whole.
-  Vendor declarations in videos (Google Veo, xAI Grok Imagine, Meta Muse,
-  OpenAI Sora) are reported as `vendor`. New types `VideoParseResult`,
-  `VideoRawMetadata`, `VideoTag` and `VideoReadOptions`; `stringify()`
-  accepts video results. Writing into videos is not supported.
 - **LoRAs** (#293, #294, #295, #296, #299): `BaseMetadata.loras?:
   LoraSettings[]` lists the LoRAs applied to the image (`name`, `weight?`,
   `clipWeight?`, `hash?`, all exactly as the tool wrote them), absent when
@@ -84,6 +75,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Efficiency, Comfyroll, Inspire and loaders recognized by shape), listing
   only the loaders the sampler depends on. `stringify()` and `embed()`
   write them as `<lora:name:weight>` tags.
+- **Video files: `parseVideo()`** (#305): reads generation metadata from
+  MP4 / MOV and WebM / MKV files through the same parsers as images, with the
+  same result statuses. Verified with ComfyUI (`SaveVideo`, VideoHelperSuite
+  `Video Combine`) and Forge Neo samples. A `Blob` (a browser `File`, Node's
+  `fs.openAsBlob()`) is read in small ranges instead of being loaded whole.
+  Vendor declarations in videos (Google Veo, xAI Grok Imagine, Meta Muse,
+  OpenAI Sora) are reported as `vendor`. New types `VideoParseResult`,
+  `VideoRawMetadata`, `VideoTag` and `VideoReadOptions`; `stringify()`
+  accepts video results. Writing into videos is not supported.
 - **AI provenance beyond PNG C2PA** (#303, #305): commercial AI services get
   the `vendor` status whatever container their declaration sits in: C2PA
   manifests in JPEG APP11 and MP4, IPTC DigitalSourceType in XMP packets
@@ -101,9 +101,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Fooocus text schemes) the original text is returned as the tool wrote it,
   so keys the library does not model (`Version`, `Civitai resources`, ...)
   survive. Other tools get text rebuilt from the metadata, LoRAs included.
+- **NovelAI Diffusion V5** (#309): the auto text block the web client
+  appends (`, teXt: …`) is removed from `prompt` when the client generated
+  it, img2img `strength` goes to `sampling.denoise`, and `Source` fills
+  `model` (name and hash) for every NovelAI version.
+- **ComfyUI graphs outside the known node tables** (#298, #299): samplers
+  (e.g. `ImpactKSamplerBasicPipe`), empty-latent nodes and LoRA loaders are
+  recognized by their inputs when their `class_type` is unknown, and prompts
+  are followed through pipes (`ToBasicPipe`, `detailer_pipe`, ...).
 - **PNG `eXIf` chunk** (#288): EXIF stored in a PNG `eXIf` chunk (CivitAI
   downloads) is read like JPEG EXIF and written back as `eXIf`, never as text
   chunks. `RawMetadata` for PNG gains `exif?: MetadataSegment[]`.
+- **Fooocus and Easy Diffusion verified with real samples** (#284, #285):
+  both tools leave the experimental tier. Fooocus: both metadata schemes
+  (`fooocus` JSON and `a1111` text), the PNG round-trip keeps
+  `fooocus_scheme`. Easy Diffusion: clip skip, LoRAs and the latent
+  upscaler are read.
 - **Dezgo** (#311): `software: 'dezgo'`. Reads the job record from the PNG
   `GenInfo` chunk or `eXIf`, and from the JPEG / WebP UserComment: prompts,
   size, model, sampler, steps, guidance, seed, img2img strength and up to
@@ -112,19 +125,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PNG `Copyright` / `extra` iTXt chunks: prompts, size, the model from the
   task type, and styles as LoRAs. JPEG / WebP are supported through format
   conversion.
-- **NovelAI Diffusion V5** (#309): the auto text block the web client
-  appends (`, teXt: …`) is removed from `prompt` when the client generated
-  it, img2img `strength` goes to `sampling.denoise`, and `Source` fills
-  `model` (name and hash) for every NovelAI version.
-- **Fooocus and Easy Diffusion verified with real samples** (#284, #285):
-  both tools leave the experimental tier. Fooocus: both metadata schemes
-  (`fooocus` JSON and `a1111` text), the PNG round-trip keeps
-  `fooocus_scheme`. Easy Diffusion: clip skip, LoRAs and the latent
-  upscaler are read.
-- **ComfyUI graphs outside the known node tables** (#298, #299): samplers
-  (e.g. `ImpactKSamplerBasicPipe`), empty-latent nodes and LoRA loaders are
-  recognized by their inputs when their `class_type` is unknown, and prompts
-  are followed through pipes (`ToBasicPipe`, `detailer_pipe`, ...).
 
 ### Deprecated
 
@@ -140,16 +140,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expanded text is read, a negative wired to the positive encoder yields an
   empty negative, and all-in-one encoders (`TextEncodeQwenImage21`) give
   each side its own text instead of the flat-scan fallback filling both.
-- **ComfyUI: linked sampling inputs leaked as links** (#301): `steps`,
-  `cfg`, sampler and scheduler wired through primitive or switch nodes are
-  resolved to their values instead of surfacing `["id", 0]` typed as a
-  number.
 - **ComfyUI: float rounding noise** (#307): widget values saved by the
   frontend such as `1.0000000000000002` are read as `1`; genuine
   high-precision values are left alone.
 - **NovelAI V3 through format conversion** (#310): `Generation_time` is
   carried in both directions and the V3 WebP ImageDescription gets no
   `\0\0\0\0` prefix, so PNG → JPEG / WebP → PNG keeps the V3 layout.
+- **ComfyUI: linked sampling inputs leaked as links** (#301): `steps`,
+  `cfg`, sampler and scheduler wired through primitive or switch nodes are
+  resolved to their values instead of surfacing `["id", 0]` typed as a
+  number.
 - **Stability Matrix 2.16 chunks** (#286): `parameters`, `parameters-json`
   and `smproj` are written back as iTXt when they hold non-Latin-1 text,
   as Stability Matrix 2.16 writes them, so round-trips of current output
