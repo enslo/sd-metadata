@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.0.0] - 2026-11-04
 
+### New Features
+
+- **`parse()` is the primary API** (#269): the new async `parse()` replaces
+  `read()` as the entry point for reading image metadata. It takes the same
+  input and options and returns the same `ParseResult`; being async lets it
+  read beyond the metadata chunks (see Stealth PNGInfo recovery below).
+  `read()` stays available but is deprecated.
+- **LoRAs** (#293, #294, #295, #296, #299): `BaseMetadata.loras?:
+  LoraSettings[]` lists the LoRAs applied to the image (`name`, `weight?`,
+  `clipWeight?`, `hash?`, all exactly as the tool wrote them), absent when
+  there are none. Read from A1111 `<lora:…>` / `<lyco:…>` tags and
+  `Lora hashes` (sd-webui, Forge family, reForge, SD.Next, Fooocus's a1111
+  scheme, SaveImageWithMetaData, CivitAI resources), from tool JSON
+  (SwarmUI, InvokeAI, Fooocus, RuinedFooocus, Easy Diffusion, Draw Things,
+  TensorArt), and from ComfyUI loader nodes (`LoraLoader`, rgthree,
+  Efficiency, Comfyroll, Inspire and loaders recognized by shape), listing
+  only the loaders the sampler depends on. `stringify()` and `embed()`
+  write them as `<lora:name:weight>` tags.
+- **Video files: `parseVideo()`** (#305): reads generation metadata from
+  MP4 / MOV and WebM / MKV files through the same parsers as images, with the
+  same result statuses. Verified with ComfyUI (`SaveVideo`, VideoHelperSuite
+  `Video Combine`) and Forge Neo samples. A `Blob` (a browser `File`, Node's
+  `fs.openAsBlob()`) is read in small ranges instead of being loaded whole.
+  Vendor declarations in videos (Google Veo, xAI Grok Imagine, Meta Muse,
+  OpenAI Sora) are reported as `vendor`. New types `VideoParseResult`,
+  `VideoRawMetadata`, `VideoTag` and `VideoReadOptions`; `stringify()`
+  accepts video results. Writing into videos is not supported.
+
 ### Breaking Changes
 
 - **`seed` is a string** (#282): `SamplingSettings.seed` now holds the seed
@@ -47,34 +75,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Deprecated aliases removed** (#317): `writeAsWebUI`, `formatAsWebUI` and
   `formatRaw`, deprecated since 2.x, are no longer exported. Use `embed()`
   and `stringify()`. `read()` stays available (see Deprecated).
-
-### New Features
-
-- **`parse()` is the primary API** (#269): the new async `parse()` replaces
-  `read()` as the entry point for reading image metadata. It takes the same
-  input and options and returns the same `ParseResult`; being async lets it
-  read beyond the metadata chunks (see Stealth PNGInfo recovery below).
-  `read()` stays available but is deprecated.
-- **LoRAs** (#293, #294, #295, #296, #299): `BaseMetadata.loras?:
-  LoraSettings[]` lists the LoRAs applied to the image (`name`, `weight?`,
-  `clipWeight?`, `hash?`, all exactly as the tool wrote them), absent when
-  there are none. Read from A1111 `<lora:…>` / `<lyco:…>` tags and
-  `Lora hashes` (sd-webui, Forge family, reForge, SD.Next, Fooocus's a1111
-  scheme, SaveImageWithMetaData, CivitAI resources), from tool JSON
-  (SwarmUI, InvokeAI, Fooocus, RuinedFooocus, Easy Diffusion, Draw Things,
-  TensorArt), and from ComfyUI loader nodes (`LoraLoader`, rgthree,
-  Efficiency, Comfyroll, Inspire and loaders recognized by shape), listing
-  only the loaders the sampler depends on. `stringify()` and `embed()`
-  write them as `<lora:name:weight>` tags.
-- **Video files: `parseVideo()`** (#305): reads generation metadata from
-  MP4 / MOV and WebM / MKV files through the same parsers as images, with the
-  same result statuses. Verified with ComfyUI (`SaveVideo`, VideoHelperSuite
-  `Video Combine`) and Forge Neo samples. A `Blob` (a browser `File`, Node's
-  `fs.openAsBlob()`) is read in small ranges instead of being loaded whole.
-  Vendor declarations in videos (Google Veo, xAI Grok Imagine, Meta Muse,
-  OpenAI Sora) are reported as `vendor`. New types `VideoParseResult`,
-  `VideoRawMetadata`, `VideoTag` and `VideoReadOptions`; `stringify()`
-  accepts video results. Writing into videos is not supported.
 
 ### Added
 
