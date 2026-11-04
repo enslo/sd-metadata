@@ -44,6 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New `GenerationSoftware` members** (#311, #312): `'dezgo'` and
   `'kusart'` added. TypeScript users with an exhaustive `switch` or
   `Record<GenerationSoftware, ...>` will need to handle the new values.
+- **Deprecated aliases removed** (#317): `writeAsWebUI`, `formatAsWebUI` and
+  `formatRaw`, deprecated since 2.x, are no longer exported. Use `embed()`
+  and `stringify()`. `read()` stays available (see Deprecated).
 
 ### New Features
 
