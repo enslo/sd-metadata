@@ -9,6 +9,7 @@ import { parseEasyDiffusion } from './easydiffusion';
 import { parseFooocus } from './fooocus';
 import { parseHfSpace } from './hf-space';
 import { parseInvokeAI } from './invokeai';
+import { parseKusArt } from './kusart';
 import { parseNovelAI } from './novelai';
 import { parseRuinedFooocus } from './ruined-fooocus';
 import { parseStabilityMatrix } from './stability-matrix';
@@ -103,6 +104,9 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
 
     case 'dezgo':
       return parseDezgo(entries);
+
+    case 'kusart':
+      return parseKusArt(entries);
 
     default:
       return Result.error({ type: 'unsupportedFormat' });

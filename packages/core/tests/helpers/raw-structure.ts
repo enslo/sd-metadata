@@ -76,6 +76,9 @@ const EXPECTED_TO_JPEG_WEBP: Record<GenerationSoftware, SegmentPattern[]> = {
 
   // Dezgo: the YAML job record in UserComment
   dezgo: [['exifUserComment']],
+
+  // KusArt: Copyright and extra packed into one UserComment JSON
+  kusart: [['exifUserComment']],
 };
 
 /**
@@ -160,6 +163,9 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
   // Dezgo: GenInfo + GenCode + eXIf as written by Dezgo, or only the eXIf
   // chunk when converted from JPEG/WebP (GenInfo has no JPEG/WebP slot)
   dezgo: [['GenInfo', 'GenCode', 'eXIf'], ['eXIf']],
+
+  // KusArt: Copyright + extra iTXt chunks
+  kusart: [['Copyright', 'extra']],
 };
 
 /**

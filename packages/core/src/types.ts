@@ -119,7 +119,8 @@ export type GenerationSoftware =
   | 'fooocus'
   | 'ruined-fooocus'
   | 'draw-things'
-  | 'dezgo';
+  | 'dezgo'
+  | 'kusart';
 
 // ============================================================================
 // Unified Metadata Types
@@ -284,7 +285,8 @@ export interface StandardMetadata extends BaseMetadata {
     | 'fooocus'
     | 'ruined-fooocus'
     | 'draw-things'
-    | 'dezgo';
+    | 'dezgo'
+    | 'kusart';
 }
 
 /**
