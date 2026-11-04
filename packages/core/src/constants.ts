@@ -1,4 +1,11 @@
-import type { GenerationSoftware, Vendor, VendorInfo } from './types';
+import type {
+  GenerationMetadata,
+  GenerationSoftware,
+  ParseResult,
+  Vendor,
+  VendorInfo,
+  VideoParseResult,
+} from './types';
 
 /**
  * Human-readable display labels for each generation software identifier.
@@ -131,4 +138,49 @@ export function productLabel(info: VendorInfo): string {
     return DEFAULT_PRODUCTS[info.media][info.vendor];
   }
   return PRODUCT_NAMES[info.vendor]?.get(info.product) ?? info.product;
+}
+
+/**
+ * Display name of whatever made an image or a video.
+ *
+ * A `success` result is named by its generation software (`"NovelAI"`,
+ * `"ComfyUI"`); a `vendor` result by the vendor and its service
+ * (`"OpenAI GPT Image"`, `"xAI Grok Imagine"`), or by the service alone when
+ * the vendor is unknown. Any other result gives an empty string. The
+ * metadata or the vendor declaration can also be passed on its own.
+ *
+ * @example
+ * ```typescript
+ * import { originLabel, parse } from '@enslo/sd-metadata';
+ *
+ * const result = await parse(imageData);
+ * console.log(originLabel(result));
+ * // => "NovelAI", "xAI Grok Imagine", ... or "" when there is nothing to name
+ * ```
+ *
+ * @param input - A parse result, its metadata, or a vendor declaration
+ * @returns Name to display, or an empty string when there is nothing to name
+ */
+export function originLabel(
+  input: ParseResult | VideoParseResult | GenerationMetadata | VendorInfo,
+): string {
+  if ('status' in input) {
+    switch (input.status) {
+      case 'success':
+        return softwareLabels[input.metadata.software];
+      case 'vendor':
+        return originLabel(input.info);
+      case 'empty':
+      case 'unrecognized':
+      case 'invalid':
+        return '';
+    }
+  }
+  if ('software' in input) {
+    return softwareLabels[input.software];
+  }
+  // Without a known vendor, the product (or "Unknown") stands alone.
+  return input.vendor === 'unknown'
+    ? productLabel(input)
+    : `${vendorLabels[input.vendor]} ${productLabel(input)}`;
 }
