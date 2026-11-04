@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { GenerationMetadata, ParseResult } from '../../../src';
-import { read, write, writeAsWebUI } from '../../../src';
+import { embed, read, write } from '../../../src';
 
 /**
  * Create a minimal valid PNG image for testing
@@ -157,7 +157,7 @@ describe('ImageInput type support', () => {
     });
   });
 
-  describe('writeAsWebUI()', () => {
+  describe('embed()', () => {
     it('should accept ArrayBuffer as target image', () => {
       const pngData = createMinimalPng();
       const arrayBuffer = toArrayBuffer(pngData);
@@ -170,7 +170,7 @@ describe('ImageInput type support', () => {
         height: 512,
       };
 
-      const result = writeAsWebUI(arrayBuffer, metadata);
+      const result = embed(arrayBuffer, metadata);
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -189,7 +189,7 @@ describe('ImageInput type support', () => {
         height: 512,
       };
 
-      const result = writeAsWebUI(invalidData, metadata);
+      const result = embed(invalidData, metadata);
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
@@ -218,7 +218,7 @@ describe('ImageInput type support', () => {
         },
       };
 
-      const writeResult = writeAsWebUI(arrayBuffer, metadata);
+      const writeResult = embed(arrayBuffer, metadata);
       expect(writeResult.ok).toBe(true);
 
       if (writeResult.ok) {

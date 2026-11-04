@@ -4,7 +4,12 @@
  * Provides functions to convert metadata between different image formats.
  */
 
-import type { ParseResult, RawMetadata } from '../types';
+import type {
+  MetadataSegment,
+  ParseResult,
+  PngTextChunk,
+  RawMetadata,
+} from '../types';
 import { Result } from '../types';
 
 import { convertA1111PngToSegments, convertA1111SegmentsToPng } from './a1111';
@@ -147,15 +152,13 @@ type ConverterFn = (
 ) => ConversionResult;
 
 // Type for PNG↔segment conversion functions
-type PngToSegmentsFn = (
-  chunks: import('../types').PngTextChunk[],
-) => import('../types').MetadataSegment[];
+type PngToSegmentsFn = (chunks: PngTextChunk[]) => MetadataSegment[];
 type PngRaw = Extract<RawMetadata, { format: 'png' }>;
 // A converter answers with text chunks, or with text chunks plus the
 // segments of an eXIf chunk
 type SegmentsToPngFn = (
-  segments: import('../types').MetadataSegment[],
-) => import('../types').PngTextChunk[] | Omit<PngRaw, 'format'>;
+  segments: MetadataSegment[],
+) => PngTextChunk[] | Omit<PngRaw, 'format'>;
 
 /**
  * Factory function to create format converters

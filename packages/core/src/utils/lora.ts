@@ -1,4 +1,5 @@
 import type { LoraSettings } from '../types';
+import { parseNumberText, toNumber } from './number';
 import { trimObject } from './object';
 
 /**
@@ -53,8 +54,8 @@ export function parseLoraTags(prompt: string): LoraSettings[] {
     loras.push(
       lora({
         name,
-        weight: parseWeight(unet ?? te),
-        clipWeight: separate ? parseWeight(te) : undefined,
+        weight: parseNumberText(unet ?? te),
+        clipWeight: separate ? parseNumberText(te) : undefined,
       }),
     );
   }
@@ -126,31 +127,6 @@ export function lora(fields: {
 }): LoraSettings {
   // name is always present, so trimObject never yields undefined here
   return trimObject(fields) as LoraSettings;
-}
-
-/**
- * Parse a weight written as text; blank or non-numeric text yields undefined
- */
-function parseWeight(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined;
-  const trimmed = value.trim();
-  if (trimmed === '') return undefined;
-  const num = Number(trimmed);
-  return Number.isFinite(num) ? num : undefined;
-}
-
-/**
- * Read a weight written as a number or as text
- *
- * JSON tools write numbers; SwarmUI, RuinedFooocus and Easy Diffusion PNG
- * chunks write text. Anything else, blank text or a non-finite value yields
- * undefined.
- */
-export function toWeight(value: unknown): number | undefined {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : undefined;
-  }
-  return typeof value === 'string' ? parseWeight(value) : undefined;
 }
 
 /**
@@ -298,3 +274,6 @@ export function formatCivitaiResources(
 function toMatchKey(name: string): string {
   return toHashesName(toLoraStem(name));
 }
+
+/** A LoRA weight written as a number or as text; see {@link toNumber}. */
+export { toNumber as toWeight };

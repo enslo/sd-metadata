@@ -6,6 +6,7 @@ import { parseJson } from '../utils/json';
 import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
+import { parseSize } from '../utils/size';
 import type { InternalParseResult } from './types';
 
 /**
@@ -65,16 +66,6 @@ export function parseDrawThings(entries: EntryRecord): InternalParseResult {
   }
 
   return buildMetadata(parsed.value, entries.parameters);
-}
-
-/**
- * Parse image dimensions from "WxH" size string
- */
-function parseSize(size: unknown): { width: number; height: number } {
-  if (typeof size !== 'string') return { width: 0, height: 0 };
-  const match = size.match(/^(\d+)x(\d+)$/);
-  if (!match) return { width: 0, height: 0 };
-  return { width: Number(match[1]), height: Number(match[2]) };
 }
 
 /**
