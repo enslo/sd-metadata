@@ -3,6 +3,8 @@ import { useStore } from '@nanostores/react';
 import { type RefObject, useEffect, useState } from 'react';
 import { $t, type I18nMessages } from '../../i18n';
 import type { LoadedResult } from '../../lib/media';
+import { canKeepMetadata } from '../../lib/output';
+import { CopyToImageTab } from '../CopyToImageTab';
 import { OutputTab } from '../OutputTab';
 import { ParsedTabContent } from './ParsedTabContent';
 import { PlainTextTabContent } from './PlainTextTabContent';
@@ -16,8 +18,8 @@ interface ResultsProps {
 }
 
 /**
- * Results section with parsed, plaintext, raw, and output tabs. Videos get
- * no output tab: writing metadata into videos is not supported.
+ * Results section with parsed, plaintext, raw, output and copy tabs. Videos get
+ * no output or copy tab: writing metadata into videos is not supported.
  */
 export function Results({
   loaded,
@@ -28,6 +30,9 @@ export function Results({
   const t: I18nMessages = useStore($t);
   const [activeTab, setActiveTab] = useState<string | null>('parsed');
   const { parseResult } = loaded;
+  // Copy writes the loaded metadata as it is, so it needs metadata to write
+  const canCopy =
+    loaded.media === 'image' && canKeepMetadata(loaded.parseResult);
 
   // Reset to parsed tab when parseResult changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on parseResult change
@@ -51,7 +56,12 @@ export function Results({
             <Tabs.Tab value="plaintext">{t.results.tabs.plaintext}</Tabs.Tab>
             <Tabs.Tab value="raw">{t.results.tabs.raw}</Tabs.Tab>
             {loaded.media === 'image' && (
-              <Tabs.Tab value="output">{t.results.tabs.output}</Tabs.Tab>
+              <>
+                <Tabs.Tab value="output">{t.results.tabs.output}</Tabs.Tab>
+                {canCopy && (
+                  <Tabs.Tab value="copy">{t.results.tabs.copy}</Tabs.Tab>
+                )}
+              </>
             )}
           </Tabs.List>
 
@@ -74,6 +84,11 @@ export function Results({
                 fileDataRef={fileDataRef}
                 filename={filename}
               />
+            </Tabs.Panel>
+          )}
+          {canCopy && (
+            <Tabs.Panel value="copy">
+              <CopyToImageTab parseResult={loaded.parseResult} />
             </Tabs.Panel>
           )}
         </Tabs>
