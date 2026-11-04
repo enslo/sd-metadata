@@ -10,13 +10,28 @@
 AI生成画像のメタデータを読み取る軽量パーサーです。
 バンドルサイズが重要なブックマークレットやユーザースクリプト向けに設計されています。
 
-- **超軽量**: **7,003 bytes** のminified IIFEビルド
+- **超軽量**: **7,259 bytes** のminified IIFEビルド
 - **読み取り専用**: メタデータを抽出し、A1111形式のテキストで返却
 - **ゼロ依存**: Node.jsとブラウザの両方で動作
 - **18以上のツール対応**: 主要なAI画像生成ツールをサポート
 
 > [!TIP]
 > 書き込み、フォーマット変換、構造化メタデータが必要な場合は[フルライブラリ](../core/README.ja.md)をご利用ください。
+
+## フルライブラリとの比較
+
+| 機能 | `@enslo/sd-metadata` | `@enslo/sd-metadata-lite` |
+| ---- | :------------------: | :-----------------------: |
+| メタデータ読み取り | ✅ | ✅（A1111形式テキストのみ） |
+| 画像へのメタデータ書き戻し | ✅ | - |
+| カスタム（ユーザー作成）メタデータの埋め込み | ✅ | - |
+| フォーマット変換（PNG/JPEG/WebP） | ✅ | - |
+| ツール検知 | ✅ | - |
+| 構造化メタデータオブジェクト | ✅ | - |
+| IIFEビルド（ユーザースクリプト `@require`） | ✅ | ✅ |
+| Node.js + ブラウザ | ✅ | ✅ |
+
+バンドルサイズを最小に抑えたく、A1111形式のテキストだけで足りるなら lite を、それ以外は[フルライブラリ](../core/README.ja.md)をご利用ください。
 
 ## インストール
 
@@ -51,7 +66,7 @@ if (text) {
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.5.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.6.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -70,7 +85,7 @@ if (text) {
 
 多くのサイトではCSPにより外部スクリプトの読み込みがブロックされます。代わりに、IIFEバンドルをインラインで貼り付けてください：
 
-1. `dist/index.global.js` の内容をコピー（または[npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.5.0/dist/index.global.js)からダウンロード）
+1. `dist/index.global.js` の内容をコピー（または[npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.6.0/dist/index.global.js)からダウンロード）
 2. コードをインラインでブックマークレットに組み込みます：
 
 ```javascript
@@ -92,7 +107,7 @@ IIFEは `var sdml` に代入するため、インラインコードの直後か�
 **戻り値:**
 
 - メタデータが見つかった場合はA1111形式のテキスト
-- 生成パラメータを持たないPNGでは、C2PA Content Credentialsの生成元名（例: `OpenAI Media Service API`、`Google C2PA Core Generator Library`）があればそれを返却
+- 生成パラメータを持たないPNG・JPEGでは、C2PA Content Credentialsの生成元名（例: `OpenAI Media Service API`、`Google C2PA Core Generator Library`、`Grok Imagine`）があればそれを返却
 - メタデータが見つからない、またはフォーマットが認識できない場合は空文字列（`""`）
 
 ### 出力フォーマット
@@ -120,22 +135,23 @@ PNG、JPEG、WebPのメタデータを読み取り可能：
 - [InvokeAI](https://github.com/invoke-ai/InvokeAI)
 - [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI)
 - [Stability Matrix](https://github.com/LykosAI/StabilityMatrix)
-- [Civitai](https://civitai.com/)（JPEGのみ検証済み、PNG/WebPは実験的 *）
+- [Civitai](https://civitai.com/)（WebPは実験的 *）
 - [TensorArt](https://tensor.art/)
 - [HuggingFace Space](https://huggingface.co/spaces)
 - [Ruined Fooocus](https://github.com/runew0lf/RuinedFooocus)
-- [Fooocus](https://github.com/lllyasviel/Fooocus) *
-- [Easy Diffusion](https://github.com/easydiffusion/easydiffusion) *
+- [Fooocus](https://github.com/lllyasviel/Fooocus)
+- [Easy Diffusion](https://github.com/easydiffusion/easydiffusion)
 
 > [!NOTE]
 > \* リファレンスコードの解析に基づく実装であり、実際のサンプルファイルでは未検証です。
 
 ### Content Credentials (C2PA)
 
-[C2PA](https://c2pa.org/) Content Credentialsで署名された商用ツールのPNGは、生成パラメータの代わりに生成元名で判別します：
+[C2PA](https://c2pa.org/) Content Credentialsで署名された商用ツールのPNGとJPEGは、生成パラメータの代わりに生成元名で判別します：
 
 - OpenAI ChatGPT
 - Google Gemini
+- xAI Grok Imagine
 
 これらの画像では `parse()` が生成元名（例: `OpenAI Media Service API`）を返します。判別はベストエフォートです。Content Credentialsは再保存や再アップロードで簡単に失われ、また存在する場合も署名検証は行いません。
 

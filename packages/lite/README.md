@@ -10,13 +10,28 @@
 A lightweight, read-only metadata parser for AI-generated images.
 Designed for bookmarklets and userscripts where bundle size matters.
 
-- **Tiny**: **7,003 bytes** minified IIFE build
+- **Tiny**: **7,259 bytes** minified IIFE build
 - **Read-only**: Extracts metadata and returns A1111-format text
 - **Zero dependencies**: Works in Node.js and browsers
 - **18+ tools**: Supports all major AI image generation tools
 
 > [!TIP]
 > Need write support, format conversion, or structured metadata? Use the [full library](../core/README.md) instead.
+
+## Compared with the Full Library
+
+| Feature | `@enslo/sd-metadata` | `@enslo/sd-metadata-lite` |
+| ------- | :------------------: | :-----------------------: |
+| Read metadata | ✅ | ✅ (A1111-format text only) |
+| Write metadata back to an image | ✅ | - |
+| Embed custom (user-authored) metadata | ✅ | - |
+| Format conversion (PNG/JPEG/WebP) | ✅ | - |
+| Tool detection | ✅ | - |
+| Structured metadata object | ✅ | - |
+| IIFE build (userscript `@require`) | ✅ | ✅ |
+| Node.js + Browser | ✅ | ✅ |
+
+Pick lite when the bundle has to stay tiny and A1111-format text is all you need; pick the [full library](../core/README.md) for everything else.
 
 ## Installation
 
@@ -51,7 +66,7 @@ Load the IIFE build via `@require`:
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.5.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.6.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -70,7 +85,7 @@ if (text) {
 
 Most sites block external script loading via CSP. Instead, paste the IIFE bundle inline:
 
-1. Copy the contents of `dist/index.global.js` (or download from [npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.5.0/dist/index.global.js))
+1. Copy the contents of `dist/index.global.js` (or download from [npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.6.0/dist/index.global.js))
 2. Build your bookmarklet with the code inlined:
 
 ```javascript
@@ -92,7 +107,7 @@ Parses metadata from an image and returns A1111-format text.
 **Returns:**
 
 - A1111-format metadata string if metadata is found
-- For PNGs with no generation parameters, the C2PA Content Credentials generator name (e.g. `OpenAI Media Service API`, `Google C2PA Core Generator Library`) when present
+- For PNG and JPEG files with no generation parameters, the C2PA Content Credentials generator name (e.g. `OpenAI Media Service API`, `Google C2PA Core Generator Library`, `Grok Imagine`) when present
 - Empty string (`""`) if no metadata is found or the format is unrecognized
 
 ### Output Format
@@ -120,22 +135,23 @@ Reads PNG, JPEG, and WebP metadata from:
 - [InvokeAI](https://github.com/invoke-ai/InvokeAI)
 - [SwarmUI](https://github.com/mcmonkeyprojects/SwarmUI)
 - [Stability Matrix](https://github.com/LykosAI/StabilityMatrix)
-- [Civitai](https://civitai.com/) (JPEG only verified; PNG/WebP are experimental *)
+- [Civitai](https://civitai.com/) (WebP is experimental *)
 - [TensorArt](https://tensor.art/)
 - [HuggingFace Space](https://huggingface.co/spaces)
 - [Ruined Fooocus](https://github.com/runew0lf/RuinedFooocus)
-- [Fooocus](https://github.com/lllyasviel/Fooocus) *
-- [Easy Diffusion](https://github.com/easydiffusion/easydiffusion) *
+- [Fooocus](https://github.com/lllyasviel/Fooocus)
+- [Easy Diffusion](https://github.com/easydiffusion/easydiffusion)
 
 > [!NOTE]
 > \* Implemented based on reference code analysis, not verified with actual sample files.
 
 ### Content Credentials (C2PA)
 
-PNGs from commercial tools that sign their output with [C2PA](https://c2pa.org/) Content Credentials are detected by their generator name instead of generation parameters:
+PNG and JPEG files from commercial tools that sign their output with [C2PA](https://c2pa.org/) Content Credentials are detected by their generator name instead of generation parameters:
 
 - OpenAI ChatGPT
 - Google Gemini
+- xAI Grok Imagine
 
 For these images `parse()` returns the generator name (e.g. `OpenAI Media Service API`). Detection is best-effort: the credentials are easily stripped by re-saving or re-uploading, and a present manifest is not cryptographically verified.
 
