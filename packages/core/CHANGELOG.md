@@ -172,6 +172,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Videos** (#306): drop an MP4 / MOV / WebM / MKV file to see
   `parseVideo()` results with the same tabs as images.
+- **Copy tab** (#318): writing the loaded metadata into another uploaded
+  image moves out of the Output tab into its own tab: pick the target on a
+  preview card, save. The Output tab is left with metadata handling, output
+  format and save.
 - **Stealth recovery, LoRAs and vendor declarations** (#271, #296, #303):
   recovered metadata is flagged, LoRAs are listed with their weights and
   hashes, and vendor images show the vendor and service.
