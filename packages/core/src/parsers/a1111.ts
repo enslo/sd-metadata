@@ -11,6 +11,7 @@ import {
 } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
+import { parseSize } from '../utils/size';
 import type { InternalParseResult } from './types';
 
 /** Software whose metadata is A1111-style text (civitai and fooocus: their text schemes) */
@@ -82,7 +83,7 @@ export function parseA1111(
 
   // Extract dimensions (optional, defaults to "0x0" like SD Prompt Reader)
   const size = settingsMap.get('Size') ?? '0x0';
-  const [width, height] = parseSize(size);
+  const { width, height } = parseSize(size);
 
   // Extract model settings
   const modelName = settingsMap.get('Model');
@@ -104,7 +105,7 @@ export function parseA1111(
   const hiresSteps = parseNumber(settingsMap.get('Hires steps'));
   const denoise = parseNumber(settingsMap.get('Denoising strength'));
   const hiresSize = settingsMap.get('Hires size');
-  const [hiresWidth] = parseSize(hiresSize ?? '');
+  const { width: hiresWidth } = parseSize(hiresSize);
   const scale = hiresScale ?? (hiresWidth > 0 ? hiresWidth / width : undefined);
 
   // Forge and A1111 write "Denoising strength" from two places: the hires
@@ -432,18 +433,6 @@ function unquote(raw: string): string {
   } catch {
     return raw;
   }
-}
-
-/**
- * Parse "WxH" size string
- */
-function parseSize(size: string): [number, number] {
-  const match = size.match(/(\d+)x(\d+)/);
-  if (!match) return [0, 0];
-  return [
-    Number.parseInt(match[1] ?? '0', 10),
-    Number.parseInt(match[2] ?? '0', 10),
-  ];
 }
 
 /**

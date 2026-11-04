@@ -2,22 +2,14 @@
  * sd-metadata - Read and write AI-generated image metadata
  */
 
-// Deprecated functions (use embed/stringify instead)
-/** @deprecated Use {@link embed} instead */
-export { embed, embed as writeAsWebUI } from './api/embed';
+export { embed } from './api/embed';
 // Export core API functions
 export { parse } from './api/parse';
 export { parseVideo } from './api/parse-video';
 /** @deprecated Use {@link parse} instead */
 export { read } from './api/read';
 // Export utility functions
-/** @deprecated Use {@link stringify} instead */
-/** @deprecated Use {@link stringify} instead */
-export {
-  buildEmbedText as formatAsWebUI,
-  formatRaw,
-  stringify,
-} from './api/stringify';
+export { stringify } from './api/stringify';
 export { write } from './api/write';
 // Export constants
 export {

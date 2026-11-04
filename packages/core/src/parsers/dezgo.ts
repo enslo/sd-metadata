@@ -3,6 +3,7 @@ import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { lora, optionalLoras, toWeight } from '../utils/lora';
+import { toNumber } from '../utils/number';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
 import { parseYamlMapping } from '../utils/yaml';
@@ -109,9 +110,4 @@ function toText(value: unknown): string | undefined {
   if (typeof value === 'string') return value;
   if (typeof value === 'number') return String(value);
   return undefined;
-}
-
-/** Number of a JSON or YAML scalar; non-numeric text yields undefined */
-function toNumber(value: unknown): number | undefined {
-  return toWeight(value);
 }
