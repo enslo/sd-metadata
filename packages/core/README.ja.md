@@ -109,6 +109,81 @@ Node.js、ブラウザ、ユーザースクリプトでの利用方法は[使い
 - **NovelAI WebP**: Descriptionフィールドの破損したUTF-8を自動修正します。WebP → PNG → WebP のラウンドトリップは有効で読み取り可能なメタデータを生成しますが、軽微なテキスト修正が含まれます。
 - **SwarmUI PNG→JPEG/WebP**: ネイティブのSwarmUI JPEG/WebPファイルにはノード情報が含まれません。PNGから変換する際、このライブラリは完全なメタデータ保持のためにComfyUIワークフローを `Make` フィールドに保存します（拡張対応）。
 
+## 使い方
+
+> [!NOTE]
+> 例は全てESM構文を使用しています。CommonJSユーザーは `import` を `require` に
+> 置き換えてください：`const { parse } = require('@enslo/sd-metadata');`
+
+### Node.jsでの使用
+
+```typescript
+import { parse, stringify } from '@enslo/sd-metadata';
+import { readFileSync } from 'fs';
+
+const imageData = readFileSync('image.png');
+const result = await parse(imageData);
+
+if (result.status === 'success') {
+  console.log('Tool:', result.metadata.software);       // 'novelai', 'comfyui', etc.
+  console.log('Prompt:', result.metadata.prompt);
+  console.log('Model:', result.metadata.model?.name);
+  console.log('Size:', result.metadata.width, 'x', result.metadata.height);
+}
+
+// 読みやすいテキストにフォーマット（任意のstatusで動作）
+const text = stringify(result);
+if (text) {
+  console.log(text);
+}
+```
+
+### ブラウザでの使用
+
+```typescript
+import { parse, softwareLabels } from '@enslo/sd-metadata';
+
+// ファイル入力を処理
+const fileInput = document.querySelector('input[type="file"]');
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await parse(arrayBuffer);
+
+  if (result.status === 'success') {
+    document.getElementById('tool').textContent = softwareLabels[result.metadata.software];
+    document.getElementById('prompt').textContent = result.metadata.prompt;
+    document.getElementById('model').textContent = result.metadata.model?.name || 'N/A';
+  }
+});
+```
+
+### ユーザースクリプトでの使用
+
+ユーザースクリプト（Tampermonkey、Violentmonkeyなど）では、IIFEビルドを `@require` で読み込みます：
+
+```javascript
+// ==UserScript==
+// @name        My Script
+// @namespace   https://example.com
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.0.0/dist/index.global.js
+// ==/UserScript==
+
+const response = await fetch(imageUrl);
+const arrayBuffer = await response.arrayBuffer();
+const result = await sdMetadata.parse(arrayBuffer);
+
+if (result.status === 'success') {
+  console.log('Tool:', result.metadata.software);
+  console.log('Prompt:', result.metadata.prompt);
+}
+```
+
+> [!TIP]
+> 安定性のため、`@require` では常に特定のバージョンを指定してください。
+
 ## Stealth PNGInfo の復元
 
 NovelAI（標準機能）と [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) 系の拡張機能（A1111/Forge、[ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)）は、生成メタデータのコピーをピクセルの最下位ビットに隠しています。通常のメタデータと違い、このコピーは画像ホストにメタデータチャンクを剥がされても生き残ります。
@@ -190,82 +265,7 @@ console.log(stringify(result)); // 画像と同じ A1111 形式のテキスト
 
 商用サービスの動画（Google Veo、xAI Grok Imagine、Meta Muse、OpenAI Sora）は `vendor` ステータスで報告されます — [応用例](#応用例)の「AI生成元の検出」を参照してください。動画へのメタデータ書き込みには対応していません。
 
-## 使い方
-
-> [!NOTE]
-> 例は全てESM構文を使用しています。CommonJSユーザーは `import` を `require` に
-> 置き換えてください：`const { parse } = require('@enslo/sd-metadata');`
-
-### Node.jsでの使用
-
-```typescript
-import { parse, stringify } from '@enslo/sd-metadata';
-import { readFileSync } from 'fs';
-
-const imageData = readFileSync('image.png');
-const result = await parse(imageData);
-
-if (result.status === 'success') {
-  console.log('Tool:', result.metadata.software);       // 'novelai', 'comfyui', etc.
-  console.log('Prompt:', result.metadata.prompt);
-  console.log('Model:', result.metadata.model?.name);
-  console.log('Size:', result.metadata.width, 'x', result.metadata.height);
-}
-
-// 読みやすいテキストにフォーマット（任意のstatusで動作）
-const text = stringify(result);
-if (text) {
-  console.log(text);
-}
-```
-
-### ブラウザでの使用
-
-```typescript
-import { parse, softwareLabels } from '@enslo/sd-metadata';
-
-// ファイル入力を処理
-const fileInput = document.querySelector('input[type="file"]');
-fileInput.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const arrayBuffer = await file.arrayBuffer();
-  const result = await parse(arrayBuffer);
-
-  if (result.status === 'success') {
-    document.getElementById('tool').textContent = softwareLabels[result.metadata.software];
-    document.getElementById('prompt').textContent = result.metadata.prompt;
-    document.getElementById('model').textContent = result.metadata.model?.name || 'N/A';
-  }
-});
-```
-
-### ユーザースクリプトでの使用
-
-ユーザースクリプト（Tampermonkey、Violentmonkeyなど）では、IIFEビルドを `@require` で読み込みます：
-
-```javascript
-// ==UserScript==
-// @name        My Script
-// @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.0.0/dist/index.global.js
-// ==/UserScript==
-
-const response = await fetch(imageUrl);
-const arrayBuffer = await response.arrayBuffer();
-const result = await sdMetadata.parse(arrayBuffer);
-
-if (result.status === 'success') {
-  console.log('Tool:', result.metadata.software);
-  console.log('Prompt:', result.metadata.prompt);
-}
-```
-
-> [!TIP]
-> 安定性のため、`@require` では常に特定のバージョンを指定してください。
-
-### 応用例
+## 応用例
 
 <details>
 <summary>フォーマット変換</summary>

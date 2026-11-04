@@ -109,6 +109,81 @@ Some tools have specific behaviors when converting between formats:
 - **NovelAI WebP**: Automatically corrects corrupted UTF-8 in the Description field. WebP → PNG → WebP round-trip produces valid, readable metadata but with minor text corrections.
 - **SwarmUI PNG→JPEG/WebP**: Native SwarmUI JPEG/WebP files do not include node information. When converting from PNG, this library preserves the ComfyUI workflow in the `Make` field for complete metadata retention (extended support).
 
+## Usage
+
+> [!NOTE]
+> All examples use ESM syntax. CommonJS users can replace `import` with
+> `require`: `const { parse } = require('@enslo/sd-metadata');`
+
+### Node.js Usage
+
+```typescript
+import { parse, stringify } from '@enslo/sd-metadata';
+import { readFileSync } from 'fs';
+
+const imageData = readFileSync('image.png');
+const result = await parse(imageData);
+
+if (result.status === 'success') {
+  console.log('Tool:', result.metadata.software);       // 'novelai', 'comfyui', etc.
+  console.log('Prompt:', result.metadata.prompt);
+  console.log('Model:', result.metadata.model?.name);
+  console.log('Size:', result.metadata.width, 'x', result.metadata.height);
+}
+
+// Format as human-readable text (works with any status)
+const text = stringify(result);
+if (text) {
+  console.log(text);
+}
+```
+
+### Browser Usage
+
+```typescript
+import { parse, softwareLabels } from '@enslo/sd-metadata';
+
+// Handle file input
+const fileInput = document.querySelector('input[type="file"]');
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await parse(arrayBuffer);
+
+  if (result.status === 'success') {
+    document.getElementById('tool').textContent = softwareLabels[result.metadata.software];
+    document.getElementById('prompt').textContent = result.metadata.prompt;
+    document.getElementById('model').textContent = result.metadata.model?.name || 'N/A';
+  }
+});
+```
+
+### Userscript Usage
+
+For userscripts (Tampermonkey, Violentmonkey, etc.), load the IIFE build via `@require`:
+
+```javascript
+// ==UserScript==
+// @name        My Script
+// @namespace   https://example.com
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.0.0/dist/index.global.js
+// ==/UserScript==
+
+const response = await fetch(imageUrl);
+const arrayBuffer = await response.arrayBuffer();
+const result = await sdMetadata.parse(arrayBuffer);
+
+if (result.status === 'success') {
+  console.log('Tool:', result.metadata.software);
+  console.log('Prompt:', result.metadata.prompt);
+}
+```
+
+> [!TIP]
+> Always pin to a specific version in `@require` for stability.
+
 ## Stealth PNGInfo Recovery
 
 NovelAI (by default) and the [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) family of extensions (A1111/Forge, [ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)) hide a copy of the generation metadata in the least-significant bits of the pixels themselves. Unlike regular metadata, this copy survives when image hosts strip metadata chunks.
@@ -190,82 +265,7 @@ console.log(stringify(result)); // A1111-format text, as for images
 
 Videos from commercial services (Google Veo, xAI Grok Imagine, Meta Muse, OpenAI Sora) are reported with the `vendor` status — see "AI Provenance Detection" under [Advanced Examples](#advanced-examples). Writing metadata into videos is not supported.
 
-## Usage
-
-> [!NOTE]
-> All examples use ESM syntax. CommonJS users can replace `import` with
-> `require`: `const { parse } = require('@enslo/sd-metadata');`
-
-### Node.js Usage
-
-```typescript
-import { parse, stringify } from '@enslo/sd-metadata';
-import { readFileSync } from 'fs';
-
-const imageData = readFileSync('image.png');
-const result = await parse(imageData);
-
-if (result.status === 'success') {
-  console.log('Tool:', result.metadata.software);       // 'novelai', 'comfyui', etc.
-  console.log('Prompt:', result.metadata.prompt);
-  console.log('Model:', result.metadata.model?.name);
-  console.log('Size:', result.metadata.width, 'x', result.metadata.height);
-}
-
-// Format as human-readable text (works with any status)
-const text = stringify(result);
-if (text) {
-  console.log(text);
-}
-```
-
-### Browser Usage
-
-```typescript
-import { parse, softwareLabels } from '@enslo/sd-metadata';
-
-// Handle file input
-const fileInput = document.querySelector('input[type="file"]');
-fileInput.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const arrayBuffer = await file.arrayBuffer();
-  const result = await parse(arrayBuffer);
-
-  if (result.status === 'success') {
-    document.getElementById('tool').textContent = softwareLabels[result.metadata.software];
-    document.getElementById('prompt').textContent = result.metadata.prompt;
-    document.getElementById('model').textContent = result.metadata.model?.name || 'N/A';
-  }
-});
-```
-
-### Userscript Usage
-
-For userscripts (Tampermonkey, Violentmonkey, etc.), load the IIFE build via `@require`:
-
-```javascript
-// ==UserScript==
-// @name        My Script
-// @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.0.0/dist/index.global.js
-// ==/UserScript==
-
-const response = await fetch(imageUrl);
-const arrayBuffer = await response.arrayBuffer();
-const result = await sdMetadata.parse(arrayBuffer);
-
-if (result.status === 'success') {
-  console.log('Tool:', result.metadata.software);
-  console.log('Prompt:', result.metadata.prompt);
-}
-```
-
-> [!TIP]
-> Always pin to a specific version in `@require` for stability.
-
-### Advanced Examples
+## Advanced Examples
 
 <details>
 <summary>Format Conversion</summary>
