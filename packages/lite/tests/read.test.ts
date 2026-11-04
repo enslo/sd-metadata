@@ -31,6 +31,11 @@ const EMPTY = new Set(['empty']);
 // return '' while full parses the packet
 const XMP_ONLY = new Set(['draw-things-lora']);
 
+// Dezgo samples: the job record is YAML (PNG eXIf, JPEG/WebP UserComment),
+// which lite does not parse (Dezgo is out of lite's scope, a YAML reader
+// cost +329 bytes), so lite returns the record text as it is
+const DEZGO_YAML = new Set(['dezgo', 'dezgo-lora', 'dezgo-long']);
+
 // Samples with non-generation metadata — just check both produce non-empty
 const FALLBACK = new Set(['gimp', 'gimp-en']);
 
@@ -79,6 +84,14 @@ function runSampleTest(format: string, file: string): void {
   if (XMP_ONLY.has(base)) {
     expect(lite, `lite read XMP for ${file}`).toBe('');
     expect(full.length, `full empty for ${file}`).toBeGreaterThan(0);
+    return;
+  }
+
+  if (DEZGO_YAML.has(base)) {
+    expect(lite, `lite parsed Dezgo YAML for ${file}`).toMatch(
+      /^\nJobId: .*\nFunction: .*\nInput:\n/,
+    );
+    expect(full, `full kept YAML for ${file}`).not.toContain('JobId');
     return;
   }
 

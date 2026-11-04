@@ -154,4 +154,44 @@ describe('expectRawEqual', () => {
       ).toThrow();
     });
   });
+
+  describe('droppedChunks', () => {
+    const dropped = { droppedChunks: ['GenInfo', 'GenCode'] };
+    type PngRaw = Extract<RawMetadata, { format: 'png' }>;
+    const exif = (data: string): PngRaw => ({
+      format: 'png',
+      chunks: [],
+      exif: [{ source: { type: 'exifUserComment' }, data }],
+    });
+    const original: PngRaw = {
+      ...exif('yaml'),
+      chunks: [text('GenInfo', '{}'), text('GenCode', 'code')],
+    };
+
+    it('should tolerate the listed chunks going missing', () => {
+      expect(() =>
+        expectRawEqual(exif('yaml'), original, dropped),
+      ).not.toThrow();
+    });
+
+    it('should fail when a listed chunk comes back', () => {
+      const restored: PngRaw = {
+        ...exif('yaml'),
+        chunks: [text('GenInfo', '{}')],
+      };
+      expect(() => expectRawEqual(restored, original, dropped)).toThrow();
+    });
+
+    it('should still compare the eXIf segments', () => {
+      expect(() =>
+        expectRawEqual(exif('changed'), original, dropped),
+      ).toThrow();
+    });
+
+    it('should still compare chunks that are not listed', () => {
+      expect(() =>
+        expectRawEqual(png(), png(text('parameters', 'x')), dropped),
+      ).toThrow();
+    });
+  });
 });

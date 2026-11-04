@@ -11,6 +11,7 @@ const M_INVOKEAI = 'invokeai_metadata';
 const M_TENSORART = 'generation_data';
 const M_STABILITY_MATRIX = 'smproj';
 const M_CIVITAI_EXTRA = 'extraMetadata';
+const M_DEZGO = 'GenInfo';
 
 // Content patterns
 const M_SWARMUI = 'sui_image_params';
@@ -26,6 +27,13 @@ const M_EASYDIFFUSION = 'use_stable_diffusion_model';
 const M_HF_MODEL = '"Model"';
 const M_HF_RESOLUTION = '"resolution"';
 const M_FOOOCUS_BASE = '"base_model"';
+
+/**
+ * Dezgo job record: JobId, Function and Input keys, as the JSON of a PNG
+ * GenInfo chunk or the YAML of an EXIF UserComment
+ */
+const DEZGO_JSON_JOB = /"JobId"[\s\S]*"Function"[\s\S]*"Input"/;
+const DEZGO_YAML_JOB = /^JobId: .*\r?\nFunction: .*\r?\nInput:\r?$/m;
 
 /**
  * Detect generation software from metadata entries
@@ -96,6 +104,11 @@ function detectUniqueKeywords(
     return 'novelai';
   }
 
+  // Dezgo: GenInfo chunk holding its job record (PNG)
+  if (DEZGO_JSON_JOB.test(entryRecord[M_DEZGO] ?? '')) {
+    return 'dezgo';
+  }
+
   // Draw Things: Uses "CreatorTool" entry with "Draw Things" value (from XMP)
   if (entryRecord.CreatorTool?.startsWith('Draw Things')) {
     return 'draw-things';
@@ -129,6 +142,11 @@ function detectUniqueKeywords(
   // ========================================
   // JPEG/WebP UserComment/Comment JSON
   // ========================================
+
+  // Dezgo: the same job record as YAML (JPEG/WebP)
+  if (DEZGO_YAML_JOB.test(entryRecord.UserComment ?? '')) {
+    return 'dezgo';
+  }
 
   // Check UserComment (Exif) first, then Comment (JPEG COM)
   const comment = entryRecord.UserComment ?? entryRecord.Comment;

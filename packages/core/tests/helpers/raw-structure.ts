@@ -73,6 +73,9 @@ const EXPECTED_TO_JPEG_WEBP: Record<GenerationSoftware, SegmentPattern[]> = {
 
   // Draw Things: XMP packet (preserved as-is)
   'draw-things': [['xmpPacket']],
+
+  // Dezgo: the YAML job record in UserComment
+  dezgo: [['exifUserComment']],
 };
 
 /**
@@ -153,6 +156,10 @@ const EXPECTED_TO_PNG: Partial<Record<GenerationSoftware, ChunkPattern[]>> = {
 
   // Draw Things: XMP iTXt chunk
   'draw-things': [['XML:com.adobe.xmp']],
+
+  // Dezgo: GenInfo + GenCode + eXIf as written by Dezgo, or only the eXIf
+  // chunk when converted from JPEG/WebP (GenInfo has no JPEG/WebP slot)
+  dezgo: [['GenInfo', 'GenCode', 'eXIf'], ['eXIf']],
 };
 
 /**

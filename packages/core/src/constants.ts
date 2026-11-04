@@ -35,6 +35,7 @@ export const softwareLabels: Readonly<Record<GenerationSoftware, string>> =
     fooocus: 'Fooocus',
     'ruined-fooocus': 'Ruined Fooocus',
     'draw-things': 'Draw Things',
+    dezgo: 'Dezgo',
   });
 
 /**

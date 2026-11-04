@@ -17,6 +17,14 @@ export interface RawEqualOptions {
    * of Latin-1 text still fails.
    */
   allowItxtUpgrade?: boolean;
+  /**
+   * Keywords of PNG chunks that a cross-format round trip drops by design
+   *
+   * They are removed from the expected chunks before the comparison and
+   * must be absent from the actual ones; every other chunk and the eXIf
+   * segments are still compared.
+   */
+  droppedChunks?: readonly string[];
 }
 
 /**
@@ -66,12 +74,17 @@ export function expectRawEqual(
   expect(actual.format).toBe(expected.format);
 
   if (actual.format === 'png' && expected.format === 'png') {
+    const dropped = new Set(options.droppedChunks);
+    const expectedChunks = expected.chunks.filter(
+      (chunk) => !dropped.has(chunk.keyword),
+    );
+
     // Compare PNG chunks with JSON-aware text comparison
-    expect(actual.chunks.length).toBe(expected.chunks.length);
+    expect(actual.chunks.length).toBe(expectedChunks.length);
 
     for (let i = 0; i < actual.chunks.length; i++) {
       const actualChunk = actual.chunks[i];
-      const expectedChunk = expected.chunks[i];
+      const expectedChunk = expectedChunks[i];
       expect(actualChunk).toBeDefined();
       expect(expectedChunk).toBeDefined();
       if (!actualChunk || !expectedChunk) continue;

@@ -7,6 +7,7 @@ import {
 } from '../helpers/minimal-images';
 import { expectNovelAIRawEqual, expectRawEqual } from '../helpers/raw-equal';
 import {
+  droppedPngChunks,
   isItxtUpgradeExpected,
   isRawMismatchExpected,
   JPEG_SAMPLES,
@@ -54,6 +55,7 @@ describe('Round-trip preservation', () => {
         if (!isRawMismatchExpected(filename)) {
           expectRawEqual(finalRead.raw, originalMetadata.raw, {
             allowItxtUpgrade: isItxtUpgradeExpected(filename),
+            droppedChunks: droppedPngChunks(filename),
           });
         }
       });
@@ -93,6 +95,7 @@ describe('Round-trip preservation', () => {
         if (!isRawMismatchExpected(filename)) {
           expectRawEqual(finalRead.raw, originalMetadata.raw, {
             allowItxtUpgrade: isItxtUpgradeExpected(filename),
+            droppedChunks: droppedPngChunks(filename),
           });
         }
       });
