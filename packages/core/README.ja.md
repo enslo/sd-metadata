@@ -609,6 +609,18 @@ SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋
 - パース結果のログ出力やデバッグ
 - `EmbedMetadata` の事前プレビュー（埋め込み前の確認用）
 
+### `originLabel(input: ParseResult | VideoParseResult | GenerationMetadata | VendorInfo): string`
+
+ファイルを生成したものの表示名を、1回の呼び出しで返します。`success` の結果ならソフトウェア名（`softwareLabels` と同じ）、`vendor` の結果ならベンダーとそのサービス名（`vendorLabels` と `productLabel()` を連結したもの。ベンダーが不明な場合はサービス名のみ）です。その他のステータスでは空文字列を返します。メタデータやベンダー宣言を単体で渡すこともできます。
+
+```typescript
+import { originLabel, parse } from '@enslo/sd-metadata';
+
+const result = await parse(imageData);
+console.log(originLabel(result));
+// => "NovelAI", "ComfyUI", "OpenAI GPT Image", "xAI Grok Imagine", ... 表示するものがなければ ""
+```
+
 ### `softwareLabels: Record<GenerationSoftware, string>`
 
 `GenerationSoftware` の識別子から表示用の名前への読み取り専用マッピング。
@@ -649,18 +661,6 @@ if (result.status === 'vendor') {
   console.log(`${vendorLabels[result.info.vendor]} ${productLabel(result.info)}`);
   // => "OpenAI GPT Image", "Google Gemini", "xAI Grok Imagine", "Meta Muse"
 }
-```
-
-### `originLabel(input: ParseResult | VideoParseResult | GenerationMetadata | VendorInfo): string`
-
-ファイルを生成したものの表示名を、1回の呼び出しで返します。`success` の結果ならソフトウェア名（`softwareLabels` と同じ）、`vendor` の結果ならベンダーとそのサービス名（`vendorLabels` と `productLabel()` を連結したもの。ベンダーが不明な場合はサービス名のみ）です。その他のステータスでは空文字列を返します。メタデータやベンダー宣言を単体で渡すこともできます。
-
-```typescript
-import { originLabel, parse } from '@enslo/sd-metadata';
-
-const result = await parse(imageData);
-console.log(originLabel(result));
-// => "NovelAI", "ComfyUI", "OpenAI GPT Image", "xAI Grok Imagine", ... 表示するものがなければ ""
 ```
 
 ## 型リファレンス

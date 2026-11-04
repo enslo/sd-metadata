@@ -609,6 +609,18 @@ Converts metadata to a human-readable string.
 - Logging or debugging parsed metadata
 - Previewing `EmbedMetadata` before embedding
 
+### `originLabel(input: ParseResult | VideoParseResult | GenerationMetadata | VendorInfo): string`
+
+Display name of whatever made a file, in one call: the software of a `success` result (as in `softwareLabels`), or the vendor and its service of a `vendor` result (as in `vendorLabels` and `productLabel()`, the service alone when the vendor is unknown). Any other status gives an empty string. The metadata or the vendor declaration can also be passed on its own.
+
+```typescript
+import { originLabel, parse } from '@enslo/sd-metadata';
+
+const result = await parse(imageData);
+console.log(originLabel(result));
+// => "NovelAI", "ComfyUI", "OpenAI GPT Image", "xAI Grok Imagine", ... or "" when there is nothing to name
+```
+
 ### `softwareLabels: Record<GenerationSoftware, string>`
 
 A read-only mapping from `GenerationSoftware` identifiers to their human-readable display names.
@@ -649,18 +661,6 @@ if (result.status === 'vendor') {
   console.log(`${vendorLabels[result.info.vendor]} ${productLabel(result.info)}`);
   // => "OpenAI GPT Image", "Google Gemini", "xAI Grok Imagine", "Meta Muse"
 }
-```
-
-### `originLabel(input: ParseResult | VideoParseResult | GenerationMetadata | VendorInfo): string`
-
-Display name of whatever made a file, in one call: the software of a `success` result (as in `softwareLabels`), or the vendor and its service of a `vendor` result (as in `vendorLabels` and `productLabel()`, the service alone when the vendor is unknown). Any other status gives an empty string. The metadata or the vendor declaration can also be passed on its own.
-
-```typescript
-import { originLabel, parse } from '@enslo/sd-metadata';
-
-const result = await parse(imageData);
-console.log(originLabel(result));
-// => "NovelAI", "ComfyUI", "OpenAI GPT Image", "xAI Grok Imagine", ... or "" when there is nothing to name
 ```
 
 ## Type Reference
