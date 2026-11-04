@@ -99,6 +99,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`originLabel()`** (#313): the display name of whatever made a file, in
+  one call: the software of a `success` result (`NovelAI`, `ComfyUI`), or
+  the vendor and its service of a `vendor` result (`xAI Grok Imagine`); an
+  empty string for the other statuses. Takes a `ParseResult`, a
+  `VideoParseResult`, a `GenerationMetadata` or a `VendorInfo`.
 - **`stringify()` transcribes A1111 text** (#296): for images parsed by the
   A1111 parser (sd-webui, Forge family, reForge, SD.Next, CivitAI and
   Fooocus text schemes) the original text is returned as the tool wrote it,

@@ -301,7 +301,7 @@ if (parseResult.status === 'success') {
 <summary>Handling Different Result Types</summary>
 
 ```typescript
-import { parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
+import { originLabel, parse } from '@enslo/sd-metadata';
 
 const result = await parse(imageData);
 
@@ -314,7 +314,7 @@ switch (result.status) {
 
   case 'vendor':
     // A commercial AI service declared the image as its own — see "AI Provenance Detection" below
-    console.log(`Made by ${vendorLabels[result.info.vendor]} ${productLabel(result.info)} (unverified)`);
+    console.log(`Made by ${originLabel(result)} (unverified)`); // e.g. "xAI Grok Imagine"
     break;
 
   case 'unrecognized':
@@ -370,7 +370,7 @@ if (result.ok) {
 Commercial AI services embed a declaration that they made the image — a signed C2PA "Content Credentials" manifest, an IPTC DigitalSourceType in an XMP packet, or a vendor's own signature — instead of generation parameters. `parse()` and `parseVideo()` return `{ status: 'vendor', info }` for these files:
 
 ```typescript
-import { parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
+import { originLabel, parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
 
 const result = await parse(imageData);
 
@@ -379,6 +379,7 @@ if (result.status === 'vendor') {
   console.log('Service:', productLabel(result.info));       // "GPT Image", "Gemini", "Grok Imagine", "Muse"
   console.log('Declared in:', result.info.source);          // 'c2pa' | 'xmp' | 'signature'
   console.log('As written:', result.info.product);          // e.g. "ChatGPT", or undefined
+  console.log(originLabel(result));                         // "xAI Grok Imagine" — the two joined
 }
 ```
 
@@ -647,6 +648,18 @@ if (result.status === 'vendor') {
   console.log(`${vendorLabels[result.info.vendor]} ${productLabel(result.info)}`);
   // => "OpenAI GPT Image", "Google Gemini", "xAI Grok Imagine", "Meta Muse"
 }
+```
+
+### `originLabel(input: ParseResult | VideoParseResult | GenerationMetadata | VendorInfo): string`
+
+Display name of whatever made a file, in one call: the software of a `success` result (as in `softwareLabels`), or the vendor and its service of a `vendor` result (as in `vendorLabels` and `productLabel()`, the service alone when the vendor is unknown). Any other status gives an empty string. The metadata or the vendor declaration can also be passed on its own.
+
+```typescript
+import { originLabel, parse } from '@enslo/sd-metadata';
+
+const result = await parse(imageData);
+console.log(originLabel(result));
+// => "NovelAI", "ComfyUI", "OpenAI GPT Image", "xAI Grok Imagine", ... or "" when there is nothing to name
 ```
 
 ## Type Reference

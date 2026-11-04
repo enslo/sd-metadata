@@ -301,7 +301,7 @@ if (parseResult.status === 'success') {
 <summary>読み込み結果のタイプごとの処理</summary>
 
 ```typescript
-import { parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
+import { originLabel, parse } from '@enslo/sd-metadata';
 
 const result = await parse(imageData);
 
@@ -314,7 +314,7 @@ switch (result.status) {
 
   case 'vendor':
     // 商用AIサービスが自社製と宣言した画像 — 下記「AI生成元の検出」を参照
-    console.log(`Made by ${vendorLabels[result.info.vendor]} ${productLabel(result.info)} (unverified)`);
+    console.log(`Made by ${originLabel(result)} (unverified)`); // 例："xAI Grok Imagine"
     break;
 
   case 'unrecognized':
@@ -370,7 +370,7 @@ if (result.ok) {
 商用AIサービスは、生成パラメータの代わりに「この画像は自社が作った」という宣言 — 署名付きの C2PA "Content Credentials" マニフェスト、XMP パケット内の IPTC DigitalSourceType、またはベンダー独自の署名 — を埋め込みます。これらのファイルに対して `parse()` と `parseVideo()` は `{ status: 'vendor', info }` を返します：
 
 ```typescript
-import { parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
+import { originLabel, parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
 
 const result = await parse(imageData);
 
@@ -379,6 +379,7 @@ if (result.status === 'vendor') {
   console.log('Service:', productLabel(result.info));       // "GPT Image", "Gemini", "Grok Imagine", "Muse"
   console.log('Declared in:', result.info.source);          // 'c2pa' | 'xmp' | 'signature'
   console.log('As written:', result.info.product);          // 例："ChatGPT"、または undefined
+  console.log(originLabel(result));                         // "xAI Grok Imagine" — 上の2つを連結したもの
 }
 ```
 
@@ -647,6 +648,18 @@ if (result.status === 'vendor') {
   console.log(`${vendorLabels[result.info.vendor]} ${productLabel(result.info)}`);
   // => "OpenAI GPT Image", "Google Gemini", "xAI Grok Imagine", "Meta Muse"
 }
+```
+
+### `originLabel(input: ParseResult | VideoParseResult | GenerationMetadata | VendorInfo): string`
+
+ファイルを生成したものの表示名を、1回の呼び出しで返します。`success` の結果ならソフトウェア名（`softwareLabels` と同じ）、`vendor` の結果ならベンダーとそのサービス名（`vendorLabels` と `productLabel()` を連結したもの。ベンダーが不明な場合はサービス名のみ）です。その他のステータスでは空文字列を返します。メタデータやベンダー宣言を単体で渡すこともできます。
+
+```typescript
+import { originLabel, parse } from '@enslo/sd-metadata';
+
+const result = await parse(imageData);
+console.log(originLabel(result));
+// => "NovelAI", "ComfyUI", "OpenAI GPT Image", "xAI Grok Imagine", ... 表示するものがなければ ""
 ```
 
 ## 型リファレンス
