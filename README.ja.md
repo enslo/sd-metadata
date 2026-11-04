@@ -53,7 +53,7 @@ Stable Diffusion WebUI (A1111)、Forge、reForge、ComfyUI、NovelAI、SD.Next�
 
 ## ドキュメント
 
-詳細なドキュメントはパッケージのREADMEにあります。
+詳細なドキュメントは[パッケージのREADME](./packages/core/README.ja.md)にあります。
 
 - [使い方](./packages/core/README.ja.md#使い方) — Node.js、ブラウザ、ユーザースクリプトでの利用方法
 - [応用例](./packages/core/README.ja.md#応用例) — 書き込み、埋め込み、フォーマット変換、各結果ステータスの扱い

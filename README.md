@@ -53,7 +53,7 @@ See the [tool support matrix](./packages/core/README.md#tool-support) for the fu
 
 ## Documentation
 
-The full documentation lives in the package README:
+The full documentation lives in the [package README](./packages/core/README.md):
 
 - [Usage](./packages/core/README.md#usage) — Node.js, browser, and userscript entry points
 - [Advanced Examples](./packages/core/README.md#advanced-examples) — write, embed, format conversion, and handling every result status
