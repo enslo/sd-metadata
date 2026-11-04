@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `'kusart'` added. TypeScript users with an exhaustive `switch` or
   `Record<GenerationSoftware, ...>` will need to handle the new values.
 
-### Added
+### New Features
 
 - **Stealth PNGInfo recovery via the new `parse()` API** (#269, #270, #271):
   NovelAI and the stealth-pnginfo family of extensions (A1111/Forge, ComfyUI)
@@ -84,16 +84,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Efficiency, Comfyroll, Inspire and loaders recognized by shape), listing
   only the loaders the sampler depends on. `stringify()` and `embed()`
   write them as `<lora:name:weight>` tags.
+- **AI provenance beyond PNG C2PA** (#303, #305): commercial AI services get
+  the `vendor` status whatever container their declaration sits in: C2PA
+  manifests in JPEG APP11 and MP4, IPTC DigitalSourceType in XMP packets
+  (JPEG, WebP, MP4) and xAI's signature (EXIF ImageDescription, MP4 comment),
+  in addition to PNG C2PA. Four vendors are recognized (OpenAI, Google, xAI,
+  Meta), with `vendorLabels` for the company and the new `productLabel()`
+  for the service (GPT Image, Gemini, Grok Imagine, Muse; Sora and Veo for
+  videos). New `Vendor`, `VendorSource` and `VendorInfo` types; see
+  Breaking Changes for what replaced the `c2pa` status.
+
+### Added
+
 - **`stringify()` transcribes A1111 text** (#296): for images parsed by the
   A1111 parser (sd-webui, Forge family, reForge, SD.Next, CivitAI and
   Fooocus text schemes) the original text is returned as the tool wrote it,
   so keys the library does not model (`Version`, `Civitai resources`, ...)
   survive. Other tools get text rebuilt from the metadata, LoRAs included.
-- **Vendor declarations in JPEG, WebP and video** (#303, #305): C2PA
-  manifests in JPEG APP11 and MP4, IPTC DigitalSourceType in XMP packets
-  (JPEG, WebP, MP4) and xAI's signature (EXIF ImageDescription, MP4 comment)
-  are read in addition to PNG C2PA. New `Vendor`, `VendorSource` and
-  `VendorInfo` types, `vendorLabels` and `productLabel()`.
 - **PNG `eXIf` chunk** (#288): EXIF stored in a PNG `eXIf` chunk (CivitAI
   downloads) is read like JPEG EXIF and written back as `eXIf`, never as text
   chunks. `RawMetadata` for PNG gains `exif?: MetadataSegment[]`.

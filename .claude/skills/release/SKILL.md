@@ -145,6 +145,13 @@ Applies to both packages (`packages/*/CHANGELOG.md`).
 
 Format: [Keep a Changelog](https://keepachangelog.com/)
 
+Sections, in this order, omitting empty ones: Breaking Changes,
+New Features, Added, Deprecated, Fixed, Demo Site, Maintenance.
+`New Features` holds the headline capabilities a release is remembered
+for (a new API, a new media type, a new metadata field); `Added` holds
+every other addition (a new tool, a new chunk, samples that verify a
+parser, heuristics). Keep the two apart so the big items stand out.
+
 Write for **library users**, not contributors:
 
 - **Include**: features, bug fixes, breaking changes, deprecations
