@@ -89,8 +89,8 @@ to bring them up to date:
 
 **Root (if needed):**
 
-- `README.md` / `README.ja.md`: Update the comparison table or package
-  descriptions if a release introduces user-visible feature changes
+- `README.md` / `README.ja.md`: Update the feature list, the tool names, or
+  the lite paragraph if a release changes what they describe
 
 ### 4. Commit and Create PR
 
@@ -144,6 +144,13 @@ git branch -D chore/release-<pkg>-vX.Y.Z
 Applies to both packages (`packages/*/CHANGELOG.md`).
 
 Format: [Keep a Changelog](https://keepachangelog.com/)
+
+Sections, in this order, omitting empty ones: New Features,
+Breaking Changes, Added, Deprecated, Fixed, Demo Site, Maintenance.
+`New Features` holds the headline capabilities a release is remembered
+for (a new API, a new media type, a new metadata field); `Added` holds
+every other addition (a new tool, a new chunk, samples that verify a
+parser, heuristics). Keep the two apart so the big items stand out.
 
 Write for **library users**, not contributors:
 

@@ -1,61 +1,76 @@
 # sd-metadata
 
 [![CI](https://github.com/enslo/sd-metadata/actions/workflows/ci.yml/badge.svg)](https://github.com/enslo/sd-metadata/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata)
+[![npm downloads](https://img.shields.io/npm/dm/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata)
 [![license](https://img.shields.io/npm/l/@enslo/sd-metadata.svg)](https://github.com/enslo/sd-metadata/blob/main/LICENSE)
 
 🌐 **[日本語版はこちら](./README.ja.md)**
 
+🔗 **[Live Demo](https://sd-metadata.pages.dev/)**
+
 A TypeScript library to read and write metadata embedded in AI-generated images.
-Supports PNG, JPEG, and WebP formats across 18+ generation tools.
+Supports PNG, JPEG, and WebP formats across 20+ generation tools.
 Zero dependencies, works in Node.js and browsers.
 
-## Packages
+## Features
 
-| Package | Description | npm | |
-| ------- | ----------- | --- | - |
-| [@enslo/sd-metadata](./packages/core/) | Full-featured library with read, write, embed, and stringify APIs | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata.svg)](https://www.npmjs.com/package/@enslo/sd-metadata) | [![demo](https://img.shields.io/badge/demo-blueviolet?logo=cloudflare&logoColor=white)](https://sd-metadata.pages.dev/) |
-| [@enslo/sd-metadata-lite](./packages/lite/) | Lightweight read-only parser for bookmarklets and userscripts | [![npm](https://img.shields.io/npm/v/@enslo/sd-metadata-lite.svg)](https://www.npmjs.com/package/@enslo/sd-metadata-lite) | [![demo](https://img.shields.io/badge/demo-blueviolet?logo=cloudflare&logoColor=white)](https://sd-metadata-lite.pages.dev/) |
+- **Multi-format support**: PNG (tEXt / iTXt / eXIf), JPEG (COM / Exif), WebP (Exif), plus MP4 / MOV and WebM / MKV videos (read-only)
+- **Simple API**: `parse()`, `write()`, `embed()`, `stringify()` — four functions cover all use cases
+- **TypeScript native**: Written in TypeScript with full type definitions included
+- **Zero dependencies**: Works in Node.js and browsers without any external dependencies
+- **Format conversion**: Seamlessly convert metadata between PNG, JPEG, and WebP
+- **Metadata preservation**: Keeps the original metadata structure when converting formats (e.g., PNG → JPEG → PNG retains all original data)
+- **Stealth PNGInfo recovery**: Reads metadata hidden in pixel data when the regular metadata has been stripped
+- **AI provenance detection**: Identifies images and videos from commercial services (OpenAI, Google, xAI) by their C2PA / XMP declarations — detection only, no signature verification
 
-### Which package should I use?
-
-| Feature | `sd-metadata` | `sd-metadata-lite` |
-| ------- | :-----------: | :----------------: |
-| Read metadata | ✅ | ✅ (A1111-format text only) |
-| Write metadata back to an image | ✅ | - |
-| Embed custom (user-authored) metadata | ✅ | - |
-| Format conversion (PNG/JPEG/WebP) | ✅ | - |
-| Tool detection | ✅ | - |
-| Structured metadata object | ✅ | - |
-| IIFE build (userscript `@require`) | ✅ | ✅ |
-| Bundle size (IIFE, minified) | ~51 KB | ~7 KB |
-| Node.js + Browser | ✅ | ✅ |
-
-- **Full library** (`@enslo/sd-metadata`)
-  - Write support, format conversion, and the complete API
-  - [Documentation](./packages/core/README.md)
-- **Lite** (`@enslo/sd-metadata-lite`)
-  - Read-only parser for bookmarklets and userscripts where bundle size matters
-  - [Documentation](./packages/lite/README.md)
-
-## Quick start
+## Installation
 
 ```bash
 npm install @enslo/sd-metadata
 ```
 
-```typescript
-import { read } from '@enslo/sd-metadata';
+## Quick Start
 
-const result = read(imageBytes); // Uint8Array | ArrayBuffer
+```typescript
+import { parse } from '@enslo/sd-metadata';
+
+// `imageBytes` is a Uint8Array or ArrayBuffer (from fs, fetch, a file input, ...)
+const result = await parse(imageBytes);
 if (result.status === 'success') {
   console.log(result.metadata.software); // 'novelai', 'comfyui', ...
   console.log(result.metadata.prompt);
 }
 ```
 
-That's it for reading. See the [full library docs](./packages/core/README.md) for write / embed / format conversion, or the [lite docs](./packages/lite/README.md) for the ~7 KB read-only build.
+That's it for reading. Writing, embedding, and format conversion take a few lines each — see the [documentation](#documentation).
+
+## Supported Tools
+
+Stable Diffusion WebUI (A1111), Forge, reForge, ComfyUI, NovelAI, SD.Next, InvokeAI, SwarmUI, Fooocus, Civitai, TensorArt, Stability Matrix, Draw Things, and more.
+
+See the [tool support matrix](./packages/core/README.md#tool-support) for the full list with per-format status.
+
+## Documentation
+
+The full documentation lives in the package README:
+
+- [Usage](./packages/core/README.md#usage) — Node.js, browser, and userscript entry points
+- [Advanced Examples](./packages/core/README.md#advanced-examples) — write, embed, format conversion, and handling every result status
+- [API Reference](./packages/core/README.md#api-reference)
+- [Type Reference](./packages/core/docs/types.md)
+- [Changelog](./packages/core/CHANGELOG.md)
+
+## Lite Build
+
+`@enslo/sd-metadata-lite` is a read-only companion for bookmarklets and userscripts, where every kilobyte counts.
+It extracts the same metadata as A1111-format text in a ~7 KB IIFE — no write support, format conversion, or structured output.
+
+See the [lite documentation](./packages/lite/README.md) if that trade-off fits your use case.
 
 ## Development
+
+This repository is a pnpm workspace: `packages/core` (the library), `packages/lite` (the lite build), and `apps/` (demo sites).
 
 ```bash
 # Install dependencies

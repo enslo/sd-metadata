@@ -8,13 +8,21 @@ Complete type reference for `@enslo/sd-metadata`.
 
 - [Core Types](#core-types)
   - [`ParseResult`](#parseresult)
+  - [`ReadOptions`](#readoptions)
+  - [`RgbaPixels`](#rgbapixels)
+  - [`VideoParseResult`](#videoparseresult)
+  - [`VideoReadOptions`](#videoreadoptions)
   - [`GenerationMetadata`](#generationmetadata)
   - [`GenerationSoftware`](#generationsoftware)
-  - [`C2paMetadata`](#c2pametadata)
-  - [`C2paVendor`](#c2pavendor)
+  - [`VendorInfo`](#vendorinfo)
+  - [`Vendor`](#vendor)
+  - [`VendorSource`](#vendorsource)
   - [`EmbedMetadata`](#embedmetadata)
   - [`RawMetadata`](#rawmetadata)
+  - [`VideoRawMetadata`](#videorawmetadata)
+  - [`VideoTag`](#videotag)
   - [`WriteResult`](#writeresult)
+  - [`WriteWarning`](#writewarning)
 - [Metadata Types](#metadata-types)
   - [`BaseMetadata`](#basemetadata)
   - [`StandardMetadata`](#standardmetadata)
@@ -25,6 +33,7 @@ Complete type reference for `@enslo/sd-metadata`.
   - [`SamplingSettings`](#samplingsettings)
   - [`HiresSettings`](#hiressettings)
   - [`UpscaleSettings`](#upscalesettings)
+  - [`LoraSettings`](#lorasettings)
   - [`CharacterPrompt`](#characterprompt)
 - [ComfyUI Types](#comfyui-types)
   - [`ComfyNodeGraph`](#comfynodegraph)
@@ -44,13 +53,13 @@ Complete type reference for `@enslo/sd-metadata`.
 
 ### `ParseResult`
 
-The result type returned by the `read()` function.
+The result type returned by the `parse()` function (and the deprecated `read()`).
 
 ```typescript
 type ParseResult =
-  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata }
-  | { status: 'c2pa'; c2pa: C2paMetadata }
-  | { status: 'unrecognized'; raw: RawMetadata }
+  | { status: 'success'; metadata: GenerationMetadata; raw: RawMetadata; stealth?: boolean }
+  | { status: 'vendor'; info: VendorInfo }
+  | { status: 'unrecognized'; raw: RawMetadata; stealth?: boolean }
   | { status: 'empty' }
   | { status: 'invalid'; message?: string };
 ```
@@ -60,10 +69,12 @@ type ParseResult =
 - **`success`**: Metadata was successfully parsed
   - `metadata`: Unified metadata object
   - `raw`: Original format-specific data for round-trip conversion
-- **`c2pa`**: Image carries C2PA Content Credentials (AI provenance) but no parseable generation metadata
-  - `c2pa`: `C2paMetadata` describing the declared (unverified) provenance. There is no `raw` field — the signed manifest is not exposed for round-trip writing.
+  - `stealth`: `true` when the metadata was recovered from pixel LSBs (Stealth PNGInfo). Only set by `parse()`; the recovered `raw` is always chunk-shaped (`format: 'png'`) regardless of the container format.
+- **`vendor`**: A commercial AI service declared the image as its own, and there are no generation parameters to read
+  - `info`: `VendorInfo` describing the declaration. There is no `raw` field — the declaration is not exposed for round-trip writing.
 - **`unrecognized`**: Image has metadata but format is not recognized
   - `raw`: Original metadata is preserved
+  - `stealth`: `true` when the raw data was recovered from pixel LSBs (Stealth PNGInfo)
 - **`empty`**: No metadata found in the image
 - **`invalid`**: Corrupted or unsupported image format
   - `message`: Optional error description
@@ -71,9 +82,9 @@ type ParseResult =
 **Example:**
 
 ```typescript
-import { read } from '@enslo/sd-metadata';
+import { parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
 switch (result.status) {
   case 'success':
@@ -81,26 +92,117 @@ switch (result.status) {
     console.log(`Prompt: ${result.metadata.prompt}`);
     break;
 
-  case 'c2pa':
-    // Content Credentials detected (e.g. OpenAI ChatGPT, Google Gemini).
-    // Detection only — the signature is NOT verified.
-    console.log(`Provenance vendor: ${result.c2pa.vendor} (unverified)`);
-    console.log(`Claim generator: ${result.c2pa.claimGenerator ?? 'unknown'}`);
+  case 'vendor':
+    // Declared by a commercial AI service (e.g. OpenAI GPT Image, Google Gemini).
+    // Detection only — nothing is verified.
+    console.log(`Made by ${vendorLabels[result.info.vendor]} ${productLabel(result.info)}`);
     break;
 
   case 'unrecognized':
     console.log('Unknown metadata format');
     break;
-  
+
   case 'empty':
     console.log('No metadata');
     break;
-  
+
   case 'invalid':
     console.error(`Invalid image: ${result.message}`);
     break;
 }
 ```
+
+---
+
+### `ReadOptions`
+
+Options accepted by `parse()` and `read()`.
+
+```typescript
+interface ReadOptions {
+  strict?: boolean;
+  decodePixels?: (data: Uint8Array, format: 'webp') => Promise<RgbaPixels | null>;
+}
+```
+
+**Fields:**
+
+- **`strict`** (default: `false`): When `true`, dimensions (`width` / `height`) are taken strictly from metadata only. When `false`, missing dimensions are extracted from image headers.
+- **`decodePixels`**: Decodes compressed image pixels for the Stealth PNGInfo scan when the platform cannot (currently WebP outside browsers — e.g. backed by sharp in Node.js). `parse()` calls it lazily, only when a WebP carries no readable metadata. Return `null` when decoding is unavailable; the platform decoder is then tried as a fallback. Ignored by `read()`, which never scans pixels.
+
+---
+
+### `RgbaPixels`
+
+Decoded RGBA pixel data supplied to the Stealth PNGInfo scan via `ReadOptions.decodePixels`.
+
+```typescript
+interface RgbaPixels {
+  data: Uint8Array | Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+```
+
+**Fields:**
+
+- **`data`**: Interleaved RGBA bytes, four per pixel, row-major. A `Uint8ClampedArray` (e.g. from canvas `getImageData`) is accepted as-is.
+- **`width`** / **`height`**: Image dimensions in pixels.
+
+---
+
+### `VideoParseResult`
+
+The result type returned by `parseVideo()`, with the same statuses as `ParseResult`.
+
+```typescript
+type VideoParseResult =
+  | { status: 'success'; metadata: GenerationMetadata; raw: VideoRawMetadata }
+  | { status: 'vendor'; info: VendorInfo }
+  | { status: 'empty' }
+  | { status: 'unrecognized'; raw: VideoRawMetadata }
+  | { status: 'invalid'; message?: string };
+```
+
+**Status Values:**
+
+- **`success`**: Generation metadata parsed; `raw` holds the container format and the file's text tags
+- **`vendor`**: A commercial AI service declared the video as its own (`info.media` is `'video'`)
+- **`empty`**: No metadata beyond what encoders always write (ffmpeg's brand fields and version strings)
+- **`unrecognized`**: Metadata exists but format is not recognized
+- **`invalid`**: Not a supported video file, or corrupted
+
+Videos carry no stealth data, so there is no `stealth` flag, and a `VideoParseResult` cannot be passed to `write()`.
+
+**Example:**
+
+```typescript
+import { parseVideo } from '@enslo/sd-metadata';
+
+const result = await parseVideo(file); // a File, Blob, Uint8Array or ArrayBuffer
+
+if (result.status === 'success') {
+  console.log(result.raw.format);          // 'mp4' | 'mov' | 'webm' | 'mkv'
+  console.log(result.metadata.software);   // 'comfyui', 'forge-neo', ...
+  console.log(result.metadata.prompt);
+}
+```
+
+---
+
+### `VideoReadOptions`
+
+Options accepted by `parseVideo()`.
+
+```typescript
+interface VideoReadOptions {
+  strict?: boolean;
+}
+```
+
+**Fields:**
+
+- **`strict`** (default: `false`): When `true`, dimensions are taken strictly from metadata only. When `false`, missing dimensions are taken from the video track.
 
 ---
 
@@ -119,7 +221,7 @@ type GenerationMetadata =
 
 | Metadata Type | `software` values |
 | ------------- | ----------------- |
-| `StandardMetadata` | `'sd-webui'` \| `'sd-next'` \| `'forge'` \| `'forge-classic'` \| `'forge-neo'` \| `'reforge'` \| `'easy-reforge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'draw-things'` |
+| `StandardMetadata` | `'sd-webui'` \| `'sd-next'` \| `'forge'` \| `'forge-classic'` \| `'forge-neo'` \| `'reforge'` \| `'easy-reforge'` \| `'invokeai'` \| `'civitai'` \| `'hf-space'` \| `'easydiffusion'` \| `'fooocus'` \| `'ruined-fooocus'` \| `'draw-things'` \| `'dezgo'` \| `'kusart'` |
 | `NovelAIMetadata` | `'novelai'` |
 | `ComfyUIMetadata` | `'comfyui'` \| `'tensorart'` \| `'stability-matrix'` \| `'swarmui'` |
 
@@ -168,7 +270,9 @@ type GenerationSoftware =
   | 'easydiffusion'
   | 'fooocus'
   | 'ruined-fooocus'
-  | 'draw-things';
+  | 'draw-things'
+  | 'dezgo'
+  | 'kusart';
 ```
 
 **Example:**
@@ -184,70 +288,87 @@ function displaySoftware(software: GenerationSoftware): string {
 
 ---
 
-### `C2paMetadata`
+### `VendorInfo`
 
-Content Credentials (C2PA) read from an image's signed provenance manifest.
+A commercial AI service's declaration that it made an image or a video.
 
-This is returned by `read()` as `{ status: 'c2pa', c2pa }` for images that carry a C2PA manifest — currently **OpenAI ChatGPT** and **Google Gemini** — but no parseable generation metadata. Unlike `GenerationMetadata`, it carries **no prompt, seed, model, or size**: these tools embed provenance, not generation parameters. `C2paMetadata` does **not** extend `BaseMetadata`.
+This is returned by `parse()` and `parseVideo()` as `{ status: 'vendor', info }` for files that carry such a declaration — a C2PA Content Credentials manifest, an IPTC DigitalSourceType in an XMP packet, or xAI's signature — but no parseable generation metadata. Unlike `GenerationMetadata`, it carries **no prompt, seed, model, or size**: commercial AI services (ChatGPT, Gemini, Grok, ...) embed provenance, not generation parameters. `VendorInfo` does **not** extend `BaseMetadata`.
 
 ```typescript
-export interface C2paMetadata {
-  /** Coarse vendor attribution from the manifest's claim generator / signer. */
-  vendor: C2paVendor;
+export interface VendorInfo {
+  /** Vendor that made the file. Declared, not cryptographically verified. */
+  vendor: Vendor;
   /**
-   * `true` when the manifest declares a trained-algorithmic (AI-generated)
-   * IPTC DigitalSourceType. Camera/scan source types are not flagged.
+   * The vendor's AI service as declared, verbatim (e.g. "ChatGPT", "gpt-image",
+   * "Grok Imagine"). Absent when the declaration names none.
+   * Use productLabel() for a normalized display name.
    */
-  aiGenerated: boolean;
-  /** Raw IPTC DigitalSourceType URI, surfaced verbatim when present. */
-  digitalSourceType?: string;
-  /** C2PA `claim_generator_info.name`, when present. */
-  claimGenerator?: string;
+  product?: string;
+  /** Where the declaration was found. */
+  source: VendorSource;
+  /**
+   * Whether the declaration came from an image or a video file. Decides the
+   * service productLabel() assumes when no product is declared.
+   */
+  media: 'image' | 'video';
 }
 ```
 
-> **Important — detection only, not verification.** Presence of Content Credentials is not proof of authenticity (the strings are forgeable). Absence is not proof of human origin either: Content Credentials are routinely stripped by screenshots, social-media re-uploads, and re-encoding.
->
-> **PNG only today.** The manifest is read from the PNG `caBX` chunk; JPEG/WebP support is planned.
+> **Important — detection only, not verification.** The declaration is read as written; no signature is verified, so presence is not proof of authenticity (the strings are forgeable). Absence is not proof of human origin either: these markers are routinely stripped by screenshots, social-media re-uploads, and re-encoding.
 
 **Example:**
 
 ```typescript
-import { read, c2paVendorLabels } from '@enslo/sd-metadata';
+import { parse, productLabel, vendorLabels } from '@enslo/sd-metadata';
 
-const result = read(imageData);
+const result = await parse(imageData);
 
-if (result.status === 'c2pa') {
-  const { vendor, aiGenerated, claimGenerator } = result.c2pa;
-  console.log('Vendor:', c2paVendorLabels[vendor]);
-  console.log('Declared AI-generated:', aiGenerated);
-  console.log('Claim generator:', claimGenerator ?? 'unknown');
+if (result.status === 'vendor') {
+  const { vendor, product, source } = result.info;
+  console.log('Vendor:', vendorLabels[vendor]);        // "OpenAI", "Google", "xAI", "Meta"
+  console.log('Service:', productLabel(result.info));  // "GPT Image", "Gemini", "Grok Imagine", "Muse"
+  console.log('Declared as:', product ?? '(no product)');
+  console.log('Found in:', source);                    // 'c2pa' | 'xmp' | 'signature'
 }
 ```
 
 ---
 
-### `C2paVendor`
+### `Vendor`
 
-Coarse vendor attribution for an image's C2PA Content Credentials. Used as the `vendor` discriminator on [`C2paMetadata`](#c2pametadata) and as the key type for `c2paVendorLabels`.
+Vendor whose AI service declared a file as AI-generated. Used as the `vendor` discriminator on [`VendorInfo`](#vendorinfo) and as the key type for `vendorLabels`.
 
 ```typescript
-export type C2paVendor = 'openai' | 'google' | 'unknown';
+export type Vendor = 'openai' | 'google' | 'xai' | 'meta' | 'unknown';
 ```
 
-By design this is coarse: a C2PA manifest identifies the producing vendor (`'openai'` → ChatGPT, `'google'` → Gemini, `'unknown'` → an AI-generated manifest whose vendor is not specifically recognized) but **not** the specific model.
+By design this is coarse: the declaration identifies the vendor, and only sometimes the service (see `VendorInfo.product`). `'unknown'` is an AI declaration whose vendor is not specifically recognized.
 
 **Example:**
 
 ```typescript
-import { c2paVendorLabels } from '@enslo/sd-metadata';
-import type { C2paVendor } from '@enslo/sd-metadata';
+import { vendorLabels } from '@enslo/sd-metadata';
+import type { Vendor } from '@enslo/sd-metadata';
 
-function displayVendor(vendor: C2paVendor): string {
-  return c2paVendorLabels[vendor];
-  // => "OpenAI (ChatGPT)", "Google (Gemini)", "AI-generated (Content Credentials)"
+function displayVendor(vendor: Vendor): string {
+  return vendorLabels[vendor];
+  // => "OpenAI", "Google", "xAI", "Meta", "Unknown"
 }
 ```
+
+---
+
+### `VendorSource`
+
+Where a vendor declaration was read from.
+
+```typescript
+export type VendorSource = 'c2pa' | 'xmp' | 'signature';
+```
+
+- **`c2pa`**: C2PA Content Credentials manifest (PNG `caBX` chunk, JPEG APP11, MP4 `uuid` box)
+- **`xmp`**: IPTC DigitalSourceType in an XMP packet (JPEG APP1, WebP `XMP` chunk, MP4 `uuid` box)
+- **`signature`**: xAI's `Signature: <base64>` value (EXIF ImageDescription, MP4 `©cmt` comment)
 
 ---
 
@@ -273,8 +394,9 @@ const metadata: EmbedMetadata = {
   negativePrompt: 'lowres',
   width: 512,
   height: 768,
-  sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: 12345 },
+  sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: '12345' },
   model: { name: 'model.safetensors' },
+  loras: [{ name: 'detail_tweaker', weight: 0.8 }],
   extras: { Version: 'v1.0' },
 };
 
@@ -289,10 +411,12 @@ Preserves the original metadata structure for lossless round-trip conversion.
 
 ```typescript
 type RawMetadata =
-  | { format: 'png'; chunks: PngTextChunk[] }
+  | { format: 'png'; chunks: PngTextChunk[]; exif?: MetadataSegment[] }
   | { format: 'jpeg'; segments: MetadataSegment[] }
   | { format: 'webp'; segments: MetadataSegment[] };
 ```
+
+For PNG, `exif` holds the segments of an `eXIf` chunk (CivitAI downloads store their EXIF there) and is absent when the file has none. It is written back as an `eXIf` chunk, never as text chunks.
 
 **Why is this needed?**
 
@@ -301,24 +425,24 @@ When you read metadata from an image and convert it to a different format (e.g.,
 **Round-trip conversion example:**
 
 ```typescript
-import { read, write } from '@enslo/sd-metadata';
+import { parse, write } from '@enslo/sd-metadata';
 import { convertImageFormat } from 'some-image-library';
 
 // Read metadata from PNG
 const pngData = readFileSync('image.png');
-const parseResult = read(pngData);
+const parseResult = await parse(pngData);
 
 if (parseResult.status === 'success') {
   // Convert image to JPEG
   const jpegImageData = convertImageFormat(pngData, 'jpeg');
-  
+
   // Write metadata to JPEG
   const jpegWithMeta = write(jpegImageData, parseResult);
-  
+
   // Later: convert back to PNG
   const pngImageData = convertImageFormat(jpegWithMeta.value, 'png');
   const pngWithMeta = write(pngImageData, parseResult);
-  
+
   // Original PNG metadata structure is fully preserved!
 }
 ```
@@ -327,9 +451,46 @@ Without `raw`, metadata would be converted to a generic format and lose format-s
 
 ---
 
+### `VideoRawMetadata`
+
+Raw metadata of a video file, as returned in a `VideoParseResult`.
+
+```typescript
+export interface VideoRawMetadata {
+  /** Container: ISO BMFF by its brand ('mov' for QuickTime, otherwise 'mp4'), Matroska by its DocType. */
+  format: 'mp4' | 'mov' | 'webm' | 'mkv';
+  /** Text metadata in file order. Matroska tags are those whose target is the whole file; binary values (e.g. cover art) are left out. */
+  tags: VideoTag[];
+}
+```
+
+---
+
+### `VideoTag`
+
+One text metadata entry of a video file.
+
+```typescript
+export interface VideoTag {
+  /** Key as written: an mdta key ("workflow"), an iTunes or QuickTime atom ("desc", "©too"), or a Matroska TagName ("PROMPT"). */
+  key: string;
+  /** Text value */
+  value: string;
+  /** Where the tag was written. */
+  source: 'mdta' | 'itunes' | 'quicktime' | 'matroska';
+}
+```
+
+- **`mdta`**: MP4 `keys` / `ilst` entry with a reverse-DNS or plain key (ComfyUI's `prompt` / `workflow`)
+- **`itunes`**: MP4 `ilst` entry with a four-character atom type (`©cmt`, `desc`, `©too`)
+- **`quicktime`**: QuickTime `udta` text item
+- **`matroska`**: Matroska `SimpleTag` (`PROMPT`, `DESCRIPTION`, `ENCODER`)
+
+---
+
 ### `WriteResult`
 
-Result type returned by the `write()` function.
+Result type returned by the `write()` and `embed()` functions.
 
 ```typescript
 export type WriteResult =
@@ -410,6 +571,8 @@ export interface BaseMetadata {
   hires?: HiresSettings;
   /** Upscale settings (if applied) */
   upscale?: UpscaleSettings;
+  /** LoRAs that affected the image, in the order the tool lists them; absent when none */
+  loras?: LoraSettings[];
 }
 ```
 
@@ -423,6 +586,7 @@ function displayMetadata(meta: BaseMetadata) {
   console.log('Prompt:', meta.prompt);
   console.log('Size:', meta.width, 'x', meta.height);
   console.log('Model:', meta.model?.name);
+  console.log('LoRAs:', meta.loras?.map((lora) => lora.name).join(', ') ?? 'none');
 }
 ```
 
@@ -436,19 +600,21 @@ Standard parameters format used by most SD tools.
 export interface StandardMetadata extends BaseMetadata {
   software:
     | 'sd-webui'
+    | 'sd-next'
     | 'forge'
     | 'forge-classic'
     | 'forge-neo'
     | 'reforge'
     | 'easy-reforge'
-    | 'sd-next'
     | 'invokeai'
     | 'civitai'
     | 'hf-space'
     | 'easydiffusion'
     | 'fooocus'
     | 'ruined-fooocus'
-    | 'draw-things';
+    | 'draw-things'
+    | 'dezgo'
+    | 'kusart';
 }
 ```
 
@@ -608,14 +774,20 @@ export interface SamplingSettings {
   steps?: number;
   /** CFG (Classifier Free Guidance) scale */
   cfg?: number;
-  /** Random seed for reproducibility */
-  seed?: number;
+  /** Random seed as a decimal string */
+  seed?: string;
   /** CLIP skip layers */
   clipSkip?: number;
-  /** Denoising strength (ComfyUI only). Omitted when 1.0 (txt2img default) */
+  /**
+   * Denoising strength of the main pass: img2img's strength, or a lowered
+   * strength in a plain generation. 1 means full denoising. A hires pass's
+   * strength is HiresSettings.denoise.
+   */
   denoise?: number;
 }
 ```
+
+`seed` is a string because seeds are identifiers rather than quantities, and some tools (e.g. Fooocus) use 64-bit seeds beyond `Number.MAX_SAFE_INTEGER`; keeping the text avoids silent rounding.
 
 **Example:**
 
@@ -624,7 +796,7 @@ if (metadata.sampling) {
   console.log('Sampler:', metadata.sampling.sampler);
   console.log('Steps:', metadata.sampling.steps);
   console.log('CFG Scale:', metadata.sampling.cfg);
-  console.log('Seed:', metadata.sampling.seed);
+  console.log('Seed:', metadata.sampling.seed); // e.g. "7100816951239959675"
 }
 ```
 
@@ -665,6 +837,38 @@ export interface UpscaleSettings {
 ```
 
 Applied after initial generation as a separate upscaling step.
+
+---
+
+### `LoraSettings`
+
+A LoRA (or LyCORIS) applied to the generation. `BaseMetadata.loras` lists them in the order the tool recorded them, and is absent when there are none.
+
+```typescript
+export interface LoraSettings {
+  /** Name exactly as the tool wrote it: file stem, file name, path, URN or display name */
+  name: string;
+  /** Strength applied to the diffusion model (UNet); the only weight for single-value tools */
+  weight?: number;
+  /** Strength applied to the text encoder (CLIP), present only when the tool records it separately */
+  clipWeight?: number;
+  /** Hash exactly as the tool wrote it (AutoV2, sha256, "blake3:..."); never normalized */
+  hash?: string;
+}
+```
+
+Every field is kept as the tool wrote it: names are not stripped of directories or extensions beyond what the tool itself recorded, and hashes are not normalized to one algorithm. Compare hashes by the tool's convention (A1111's `Lora hashes` are 10-hex AutoV2; SwarmUI and ComfyUI tools write sha256; InvokeAI writes `blake3:`-prefixed values).
+
+**Example:**
+
+```typescript
+for (const lora of metadata.loras ?? []) {
+  const weight = lora.clipWeight === undefined
+    ? `${lora.weight ?? 1}`
+    : `${lora.weight ?? 1} (clip ${lora.clipWeight})`;
+  console.log(`${lora.name} @ ${weight}${lora.hash ? ` [${lora.hash}]` : ''}`);
+}
+```
 
 ---
 
@@ -851,7 +1055,7 @@ export interface ITXtChunk {
 
 ### `MetadataSegment`
 
-JPEG/WebP metadata segment with source tracking.
+JPEG/WebP metadata segment with source tracking. Also used for the segments of a PNG `eXIf` chunk.
 
 ```typescript
 export interface MetadataSegment {
