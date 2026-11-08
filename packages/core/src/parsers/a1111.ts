@@ -271,18 +271,15 @@ function splitSections(text: string): {
 } {
   // Find "Negative prompt:" marker
   const negativeIndex = text.indexOf('Negative prompt:');
+  const settingsStart = findSettingsStart(text);
 
-  // Find the settings line (starts after the last newline before "Steps:")
-  const stepsIndex = text.indexOf('Steps:');
-
-  if (negativeIndex === -1 && stepsIndex === -1) {
+  if (negativeIndex === -1 && settingsStart === -1) {
     // No negative prompt, no settings - just prompt
     return { prompt: text.trim(), negativePrompt: '', settings: '' };
   }
 
   if (negativeIndex === -1) {
     // No negative prompt
-    const settingsStart = text.lastIndexOf('\n', stepsIndex);
     return {
       prompt: text.slice(0, settingsStart).trim(),
       negativePrompt: '',
@@ -290,7 +287,7 @@ function splitSections(text: string): {
     };
   }
 
-  if (stepsIndex === -1) {
+  if (settingsStart === -1) {
     // No settings (unusual)
     return {
       prompt: text.slice(0, negativeIndex).trim(),
@@ -299,14 +296,28 @@ function splitSections(text: string): {
     };
   }
 
-  // Both exist: find where negative prompt ends and settings begin
-  const settingsStart = text.lastIndexOf('\n', stepsIndex);
-
+  // Both exist: the negative prompt ends where the settings begin
   return {
     prompt: text.slice(0, negativeIndex).trim(),
     negativePrompt: text.slice(negativeIndex + 16, settingsStart).trim(),
     settings: text.slice(settingsStart).trim(),
   };
+}
+
+/**
+ * Offset of the settings line, or -1 when the text has none
+ *
+ * A1111 writes the settings as the last line, so that line is the settings
+ * when it holds "Steps:" (a prompt may mention "Steps:" as well). Otherwise
+ * the first line holding "Steps:" is taken. A text that is nothing but a
+ * settings line, as A1111 writes when both prompts are empty, starts at 0.
+ */
+function findSettingsStart(text: string): number {
+  const lastLineStart = text.lastIndexOf('\n') + 1;
+  if (text.includes('Steps:', lastLineStart)) return lastLineStart;
+  const stepsIndex = text.indexOf('Steps:');
+  if (stepsIndex === -1) return -1;
+  return text.lastIndexOf('\n', stepsIndex) + 1;
 }
 
 /**
