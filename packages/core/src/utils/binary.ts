@@ -231,6 +231,21 @@ export function writeUint32LE(
 }
 
 /**
+ * Write 3-byte little-endian unsigned integer.
+ * No DataView equivalent (setUint24 does not exist).
+ * Used for WebP VP8X width/height fields.
+ */
+export function writeUint24LE(
+  data: Uint8Array,
+  offset: number,
+  value: number,
+): void {
+  data[offset] = value & 0xff;
+  data[offset + 1] = (value >> 8) & 0xff;
+  data[offset + 2] = (value >> 16) & 0xff;
+}
+
+/**
  * Write 4-byte unsigned integer with configurable endianness
  */
 export function writeUint32(

@@ -7,9 +7,16 @@ import { buildExifTiffData } from './exif';
 // Internal types (co-located with writer)
 type JpegWriteError =
   | { type: 'invalidSignature' }
-  | { type: 'corruptedStructure'; message: string };
+  | { type: 'corruptedStructure'; message: string }
+  | { type: 'segmentTooLarge'; message: string };
 
 type JpegWriteResult = Result<Uint8Array, JpegWriteError>;
+
+/**
+ * Largest value of a marker segment's length field, which is 16 bits and
+ * counts itself but not the marker
+ */
+const MAX_SEGMENT_LENGTH = 0xffff;
 
 /** APP1 marker */
 const APP1_MARKER = 0xe1;
@@ -67,8 +74,14 @@ export function writeJpegMetadata(
   const { beforeSos, scanData } = collectResult.value;
 
   // Build new APP1 Exif segment
-  const app1Segment =
-    exifSegments.length > 0 ? buildApp1Segment(exifSegments) : null;
+  const app1Result =
+    exifSegments.length > 0
+      ? buildApp1Segment(exifSegments)
+      : Result.ok<Uint8Array | null, JpegWriteError>(null);
+  if (!app1Result.ok) {
+    return app1Result;
+  }
+  const app1Segment = app1Result.value;
 
   // Build new APP1 XMP segment (only first XMP packet)
   const firstXmp = xmpSegments[0];
@@ -230,16 +243,29 @@ function collectNonMetadataSegments(
 
 /**
  * Build APP1 Exif segment from metadata segments
+ *
+ * @returns The segment, null when there is nothing to write, or an error
+ *   when the Exif data does not fit the 16-bit segment length
  */
-function buildApp1Segment(segments: MetadataSegment[]): Uint8Array {
+function buildApp1Segment(
+  segments: MetadataSegment[],
+): Result<Uint8Array | null, JpegWriteError> {
   const tiffData = buildExifTiffData(segments);
 
   if (tiffData.length === 0) {
-    return new Uint8Array(0);
+    return Result.ok(null);
   }
 
   // APP1 segment: marker (2) + length (2) + Exif header (6) + TIFF data
   const segmentLength = 2 + EXIF_HEADER.length + tiffData.length;
+  if (segmentLength > MAX_SEGMENT_LENGTH) {
+    // Writing the length modulo 65536 would put the next marker inside
+    // the Exif data, a JPEG no reader can follow
+    return Result.error({
+      type: 'segmentTooLarge',
+      message: `Exif data of ${tiffData.length} bytes does not fit the ${MAX_SEGMENT_LENGTH}-byte APP1 segment`,
+    });
+  }
   const segment = new Uint8Array(2 + segmentLength);
 
   segment[0] = 0xff;
@@ -248,7 +274,7 @@ function buildApp1Segment(segments: MetadataSegment[]): Uint8Array {
   segment.set(EXIF_HEADER, 4);
   segment.set(tiffData, 4 + EXIF_HEADER.length);
 
-  return segment;
+  return Result.ok(segment);
 }
 
 /**
