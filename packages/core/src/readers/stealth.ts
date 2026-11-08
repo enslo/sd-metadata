@@ -29,6 +29,21 @@ import { gunzip, inflate } from '../utils/compression';
 const PNG_SIGNATURE_LENGTH = 8;
 const MAGIC_LENGTH = 15;
 
+/**
+ * Largest pixel buffer the scan decodes: 8192 × 8192 RGBA. The scan reads
+ * a few hundred bits, but the whole image has to be inflated and
+ * unfiltered first; past this size that work is not worth a long shot at
+ * hidden metadata, and a crafted header could claim gigabytes.
+ */
+const MAX_PIXEL_BYTES = 256 * 1024 * 1024;
+
+/**
+ * Largest stealth payload after gunzip. Payloads are generation metadata
+ * as text, far below this; a compressed payload that inflates past it is
+ * not one.
+ */
+const MAX_PAYLOAD_BYTES = 16 * 1024 * 1024;
+
 const ALPHA_MAGICS = ['stealth_pnginfo', 'stealth_pngcomp'];
 const RGB_MAGICS = ['stealth_rgbinfo', 'stealth_rgbcomp'];
 
@@ -161,14 +176,23 @@ async function decodePixels(data: Uint8Array): Promise<PixelData | null> {
     return null;
   }
 
+  // Filtered scanlines: one filter byte and then the pixels of each row.
+  // A header past the size cap is not decoded, and the IDAT stream is not
+  // inflated past the scanlines it declares, so a crafted file cannot
+  // claim memory far beyond its pixel count.
+  const channels = colorType === 6 ? 4 : 3;
+  const rawLength = height * (width * channels + 1);
+  if (rawLength > MAX_PIXEL_BYTES) {
+    return null;
+  }
+
   let raw: Uint8Array;
   try {
-    raw = await inflate(concatBytes(idatParts));
+    raw = await inflate(concatBytes(idatParts), rawLength);
   } catch {
     return null;
   }
 
-  const channels = colorType === 6 ? 4 : 3;
   const pixels = unfilter(raw, width, height, channels);
   if (!pixels) {
     return null;
@@ -353,7 +377,9 @@ async function extractStealthText(
   }
 
   try {
-    const bytes = magic.endsWith('comp') ? await gunzip(payload) : payload;
+    const bytes = magic.endsWith('comp')
+      ? await gunzip(payload, MAX_PAYLOAD_BYTES)
+      : payload;
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
     // Corrupted gzip stream or invalid UTF-8 — treat as no stealth data.

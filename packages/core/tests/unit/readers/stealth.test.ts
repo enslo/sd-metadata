@@ -1,3 +1,4 @@
+import { deflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import {
   readStealthChunks,
@@ -206,5 +207,83 @@ describe('scanStealthPixels', () => {
     const data = new Uint8Array(64 * 64 * 4).fill(255);
 
     expect(await scanStealthPixels({ data, width: 64, height: 64 })).toBeNull();
+  });
+});
+
+describe('readStealthChunks - decompression limits', () => {
+  /** RGBA PNG around the given filtered scanlines, whatever their length */
+  function pngFrom(
+    width: number,
+    height: number,
+    scanlines: Uint8Array,
+  ): Uint8Array {
+    const chunk = (type: string, data: Uint8Array) => {
+      const out = new Uint8Array(12 + data.length);
+      new DataView(out.buffer).setUint32(0, data.length);
+      out.set(new TextEncoder().encode(type), 4);
+      out.set(data, 8);
+      return out; // CRC left zero: the reader does not verify it
+    };
+    const ihdr = new Uint8Array(13);
+    const view = new DataView(ihdr.buffer);
+    view.setUint32(0, width);
+    view.setUint32(4, height);
+    ihdr[8] = 8;
+    ihdr[9] = 6;
+    const parts = [
+      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk('IHDR', ihdr),
+      chunk('IDAT', new Uint8Array(deflateSync(scanlines))),
+      chunk('IEND', new Uint8Array(0)),
+    ];
+    const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let offset = 0;
+    for (const part of parts) {
+      out.set(part, offset);
+      offset += part.length;
+    }
+    return out;
+  }
+
+  it('does not inflate IDAT past the scanlines the header declares', async () => {
+    // A 32×20 RGBA image with stealth data whose IDAT stream goes on for
+    // another mebibyte: the scan must not buffer what the image cannot hold
+    const { data, width, height } = createStealthRgbaPixels({
+      payload: 'hidden text',
+      compress: false,
+      width: 32,
+      height: 20,
+    });
+    const stride = width * 4;
+    const scanlines = new Uint8Array(height * (stride + 1) + 1024 * 1024);
+    for (let y = 0; y < height; y++) {
+      scanlines.set(
+        data.subarray(y * stride, (y + 1) * stride),
+        y * (stride + 1) + 1,
+      );
+    }
+
+    expect(
+      await readStealthChunks(pngFrom(width, height, scanlines)),
+    ).toBeNull();
+  });
+
+  it('skips an image whose header claims more pixels than the scan decodes', async () => {
+    // 20,000 × 20,000 RGBA would be 1.6 GB of pixels; the IDAT is tiny
+    const png = pngFrom(20_000, 20_000, new Uint8Array(16));
+
+    expect(await readStealthChunks(png)).toBeNull();
+  });
+
+  it('returns null when a compressed payload inflates past the payload limit', async () => {
+    // 20 MiB of one letter gzip to a few KiB; no generation metadata is that large
+    const png = createStealthPng({
+      payload: 'x'.repeat(20 * 1024 * 1024),
+      compress: true,
+      width: 512,
+      height: 512,
+    });
+
+    expect(await readStealthChunks(png)).toBeNull();
   });
 });
