@@ -236,3 +236,60 @@ describe('ImageInput type support', () => {
     });
   });
 });
+
+/** One PNG chunk: declared length + type + data + a zero CRC (not verified) */
+function pngChunk(
+  type: string,
+  data: Uint8Array,
+  declared = data.length,
+): Uint8Array {
+  const out = new Uint8Array(12 + data.length);
+  new DataView(out.buffer).setUint32(0, declared);
+  out.set(new TextEncoder().encode(type), 4);
+  out.set(data, 8);
+  return out;
+}
+
+/** PNG signature followed by the given bytes */
+function pngOf(...chunks: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(8 + chunks.reduce((n, c) => n + c.length, 0));
+  out.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  let offset = 8;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
+describe('read() on a PNG that breaks off', () => {
+  it('returns the metadata written before the break', () => {
+    // A download that stopped inside the image data keeps its text chunks
+    const png = pngOf(
+      pngChunk(
+        'tEXt',
+        new TextEncoder().encode(
+          'parameters\0test prompt\nSteps: 20, Size: 512x768',
+        ),
+      ),
+      pngChunk('IDAT', new Uint8Array(10), 100),
+    );
+
+    const result = read(png);
+
+    expect(result.status).toBe('success');
+    if (result.status === 'success') {
+      expect(result.metadata.prompt).toBe('test prompt');
+      expect(result.metadata.width).toBe(512);
+    }
+  });
+
+  it('reports a file that breaks off before any chunk as invalid', () => {
+    const result = read(pngOf(new Uint8Array([0, 0])));
+
+    expect(result.status).toBe('invalid');
+    if (result.status === 'invalid') {
+      expect(result.message).toContain('chunk length');
+    }
+  });
+});

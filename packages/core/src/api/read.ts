@@ -137,17 +137,22 @@ function readRawMetadata(data: Uint8Array, format: ImageFormat): RawReadResult {
         : readWebpMetadata(data);
 
   if (!result.ok) {
-    const message =
-      result.error.type === 'invalidSignature'
-        ? `Invalid ${format.toUpperCase()} signature`
-        : result.error.message;
-    return { status: 'invalid', message };
+    return {
+      status: 'invalid',
+      message: `Invalid ${format.toUpperCase()} signature`,
+    };
   }
 
   // PNG yields text chunks plus optional eXIf segments, JPEG/WebP segments
   if (format === 'png') {
-    const { chunks, exif } = result.value as PngMetadata;
-    if (chunks.length === 0 && !exif) return { status: 'empty' };
+    const { chunks, exif, truncated } = result.value as PngMetadata;
+    if (chunks.length === 0 && !exif) {
+      // A file that broke off before any metadata could be read is
+      // damaged; a whole file without text chunks simply has none
+      return truncated
+        ? { status: 'invalid', message: truncated }
+        : { status: 'empty' };
+    }
     return {
       status: 'success',
       raw: exif ? { format: 'png', chunks, exif } : { format: 'png', chunks },

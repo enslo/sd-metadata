@@ -9,9 +9,7 @@ import { isPng, readChunkType, readUint32BE } from '../utils/binary';
 import { parseExifMetadataSegments } from './exif';
 
 // Internal types (co-located with reader)
-type PngReadError =
-  | { type: 'invalidSignature' }
-  | { type: 'corruptedChunk'; message: string };
+type PngReadError = { type: 'invalidSignature' };
 
 /**
  * Metadata chunks of a PNG
@@ -22,6 +20,12 @@ type PngReadError =
 export interface PngMetadata {
   chunks: PngTextChunk[];
   exif?: MetadataSegment[];
+  /**
+   * Why the chunk sequence ended early, when it did: a download cut off,
+   * or a chunk whose declared length runs past the file. The chunks read
+   * before that point are returned all the same, as PIL reads such files.
+   */
+  truncated?: string;
 }
 
 type PngMetadataResult = Result<PngMetadata, PngReadError>;
@@ -51,35 +55,33 @@ function extractMetadataChunks(
 ): Result<PngMetadata, PngReadError> {
   const chunks: PngTextChunk[] = [];
   const exif: MetadataSegment[] = [];
+  let truncated: string | undefined;
   let offset = PNG_SIGNATURE_LENGTH;
 
+  // The walk stops where the file breaks off and keeps what came before:
+  // text chunks sit ahead of the image data, so a download that stopped
+  // partway still yields its metadata
   while (offset < data.length) {
     // Read chunk length (4 bytes, big-endian)
     if (offset + 4 > data.length) {
-      return Result.error({
-        type: 'corruptedChunk',
-        message: 'Unexpected end of file while reading chunk length',
-      });
+      truncated = 'Unexpected end of file while reading chunk length';
+      break;
     }
     const length = readUint32BE(data, offset);
     offset += 4;
 
     // Read chunk type (4 bytes)
     if (offset + 4 > data.length) {
-      return Result.error({
-        type: 'corruptedChunk',
-        message: 'Unexpected end of file while reading chunk type',
-      });
+      truncated = 'Unexpected end of file while reading chunk type';
+      break;
     }
     const chunkType = readChunkType(data, offset);
     offset += 4;
 
     // Read chunk data
     if (offset + length > data.length) {
-      return Result.error({
-        type: 'corruptedChunk',
-        message: `Unexpected end of file while reading chunk data (${chunkType})`,
-      });
+      truncated = `Unexpected end of file while reading chunk data (${chunkType})`;
+      break;
     }
     const chunkData = data.slice(offset, offset + length);
     offset += length;
@@ -109,7 +111,10 @@ function extractMetadataChunks(
     }
   }
 
-  return Result.ok(exif.length > 0 ? { chunks, exif } : { chunks });
+  const metadata: PngMetadata = { chunks };
+  if (exif.length > 0) metadata.exif = exif;
+  if (truncated) metadata.truncated = truncated;
+  return Result.ok(metadata);
 }
 
 /**
