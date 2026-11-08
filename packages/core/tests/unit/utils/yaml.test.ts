@@ -124,3 +124,12 @@ describe('parseYamlMapping - Unit Tests', () => {
     });
   });
 });
+
+describe('parseYamlMapping - malformed escapes', () => {
+  it('should keep a code point escape it cannot decode as written', () => {
+    // Not hex digits, past U+10FFFF, and cut short at the end of the text
+    expect(scalar('key: "a\\xZZb"')).toBe('a\\xZZb');
+    expect(scalar('key: "a\\U7FFFFFFFb"')).toBe('a\\U7FFFFFFFb');
+    expect(scalar('key: "a\\x4"')).toBe('a\\x4');
+  });
+});

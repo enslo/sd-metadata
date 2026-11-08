@@ -238,7 +238,12 @@ export function extractComfyLoras(
   return Object.entries(nodes).flatMap(([id, node]) => {
     if (reachable !== undefined && !reachable.has(id)) return [];
     if (!isRecord(node?.inputs)) return [];
-    const reader = READERS[node.class_type] ?? readByShape;
+    // Own rules only: a class_type such as "constructor" must not pick up
+    // a property of Object.prototype
+    const reader =
+      (Object.hasOwn(READERS, node.class_type)
+        ? READERS[node.class_type]
+        : undefined) ?? readByShape;
     return reader(node.inputs);
   });
 }

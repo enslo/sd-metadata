@@ -250,6 +250,21 @@ const HEX_ESCAPES: ReadonlyMap<string, number> = new Map([
   ['U', 8],
 ]);
 
+/** Hex digits of a code point escape (`\xHH`, `\uHHHH`, `\UHHHHHHHH`) */
+const HEX_DIGITS = /^[0-9a-fA-F]+$/;
+
+/**
+ * Code point written by an escape's hex digits
+ *
+ * @returns undefined when the digits are not all hex, fewer than the
+ *   escape takes (cut off at the end of the text) or past U+10FFFF
+ */
+function decodeCodePoint(hex: string, digits: number): number | undefined {
+  if (hex.length !== digits || !HEX_DIGITS.test(hex)) return undefined;
+  const codePoint = Number.parseInt(hex, 16);
+  return codePoint <= 0x10ffff ? codePoint : undefined;
+}
+
 /**
  * Resolve the backslash escapes of a double-quoted scalar
  */
@@ -265,7 +280,14 @@ function unescapeDoubleQuoted(text: string): string {
     const digits = HEX_ESCAPES.get(code);
     if (digits !== undefined) {
       const hex = text.slice(i + 2, i + 2 + digits);
-      result += String.fromCodePoint(Number.parseInt(hex, 16));
+      const codePoint = decodeCodePoint(hex, digits);
+      if (codePoint === undefined) {
+        // Malformed escape: keep it as written, the backslash now and the
+        // characters after it on the following iterations
+        result += char;
+        continue;
+      }
+      result += String.fromCodePoint(codePoint);
       i += 1 + digits;
     } else {
       result += ESCAPES.get(code) ?? code;
