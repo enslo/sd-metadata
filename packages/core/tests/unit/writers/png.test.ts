@@ -397,3 +397,40 @@ describe('writePngMetadata - eXIf chunk', () => {
     }
   });
 });
+
+describe('writePngMetadata - tEXt encoding', () => {
+  const latin1Bytes = [0x63, 0x61, 0x66, 0xe9]; // "café" in Latin-1
+  const utf8Bytes = [0x63, 0x61, 0x66, 0xc3, 0xa9]; // "café" in UTF-8
+
+  function containsBytes(haystack: Uint8Array, needle: number[]): boolean {
+    return haystack.some((_, i) =>
+      needle.every((b, j) => haystack[i + j] === b),
+    );
+  }
+
+  it('writes a tEXt chunk marked latin1 in Latin-1, as the specification and PIL read it', () => {
+    const result = writePngMetadata(createMinimalPng(), [
+      { type: 'tEXt', keyword: 'parameters', text: 'café', encoding: 'latin1' },
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(containsBytes(result.value, latin1Bytes)).toBe(true);
+      expect(containsBytes(result.value, utf8Bytes)).toBe(false);
+      // Our reader falls back to Latin-1 when the bytes are not UTF-8
+      const back = readPngMetadata(result.value);
+      expect(back.ok && back.value.chunks[0]?.text).toBe('café');
+    }
+  });
+
+  it('writes a tEXt chunk without an encoding in UTF-8, as read-back chunks always were', () => {
+    const result = writePngMetadata(createMinimalPng(), [
+      { type: 'tEXt', keyword: 'parameters', text: 'café' },
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(containsBytes(result.value, utf8Bytes)).toBe(true);
+    }
+  });
+});

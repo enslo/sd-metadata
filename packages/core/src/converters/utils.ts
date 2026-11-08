@@ -2,7 +2,7 @@
  * Shared utilities for metadata converters
  */
 
-import type { MetadataSegment, PngTextChunk } from '../types';
+import type { MetadataSegment, PngTextChunk, TExtChunk } from '../types';
 
 /** Segment sources an eXIf chunk (a TIFF structure) can hold */
 const EXIF_SOURCES = new Set<MetadataSegment['source']['type']>([
@@ -27,13 +27,17 @@ export function exifSegments(segments: MetadataSegment[]): MetadataSegment[] {
  *
  * @param keyword - Chunk keyword
  * @param text - Chunk text, if undefined returns empty array
+ * @param encoding - How the writer encodes the text; see {@link TExtChunk}
  * @returns Array with one chunk or empty array
  */
 export const createTextChunk = (
   keyword: string,
   text: string | undefined,
+  encoding?: TExtChunk['encoding'],
 ): PngTextChunk[] =>
-  text !== undefined ? [{ type: 'tEXt', keyword, text }] : [];
+  text !== undefined
+    ? [{ type: 'tEXt', keyword, text, ...(encoding && { encoding }) }]
+    : [];
 
 /**
  * Create an iTXt chunk, returns empty array if text is undefined

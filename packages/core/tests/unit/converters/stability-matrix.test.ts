@@ -43,7 +43,12 @@ describe('Stability Matrix converter', () => {
   describe('PNG → segments', () => {
     it('should merge all chunks into one UserComment JSON object', () => {
       const chunks: PngTextChunk[] = [
-        { type: 'tEXt', keyword: 'prompt', text: GRAPH_TEXT },
+        {
+          type: 'tEXt',
+          keyword: 'prompt',
+          text: GRAPH_TEXT,
+          encoding: 'latin1',
+        },
         itxt('parameters', PARAMETERS_TEXT),
         itxt('parameters-json', JSON.stringify(PARAMETERS_JSON)),
         itxt('smproj', JSON.stringify(SMPROJ)),
@@ -75,7 +80,12 @@ describe('Stability Matrix converter', () => {
 
       expect(chunks).toEqual([
         // The ComfyUI graph keeps its escaped ASCII form in a tEXt chunk
-        { type: 'tEXt', keyword: 'prompt', text: GRAPH_TEXT },
+        {
+          type: 'tEXt',
+          keyword: 'prompt',
+          text: GRAPH_TEXT,
+          encoding: 'latin1',
+        },
         itxt('parameters', PARAMETERS_TEXT),
         itxt('parameters-json', JSON.stringify(PARAMETERS_JSON)),
         itxt('smproj', JSON.stringify(SMPROJ)),
@@ -94,18 +104,29 @@ describe('Stability Matrix converter', () => {
       );
 
       expect(chunks).toEqual([
-        { type: 'tEXt', keyword: 'parameters', text: ascii },
+        {
+          type: 'tEXt',
+          keyword: 'parameters',
+          text: ascii,
+          encoding: 'latin1',
+        },
         {
           type: 'tEXt',
           keyword: 'parameters-json',
           text: '{"PositivePrompt":"a cat"}',
+          encoding: 'latin1',
         },
       ]);
     });
 
     it('should round-trip the >= 2.16.0 chunk layout unchanged', () => {
       const original: PngTextChunk[] = [
-        { type: 'tEXt', keyword: 'prompt', text: GRAPH_TEXT },
+        {
+          type: 'tEXt',
+          keyword: 'prompt',
+          text: GRAPH_TEXT,
+          encoding: 'latin1',
+        },
         itxt('parameters', PARAMETERS_TEXT),
         itxt('parameters-json', JSON.stringify(PARAMETERS_JSON)),
         itxt('smproj', JSON.stringify(SMPROJ)),

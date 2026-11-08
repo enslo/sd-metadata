@@ -29,6 +29,14 @@ export interface TExtChunk {
   keyword: string;
   /** Text content */
   text: string;
+  /**
+   * How `write()` encodes the text. `latin1` is what the PNG specification
+   * prescribes and what PIL-based tools (A1111, ComfyUI) read; the
+   * converters set it on the chunks they build. A chunk read from a file
+   * carries no encoding and is written back as UTF-8, which keeps the
+   * bytes of tools that write UTF-8 into tEXt (TensorArt) unchanged.
+   */
+  encoding?: 'latin1' | 'utf8';
 }
 
 /**
