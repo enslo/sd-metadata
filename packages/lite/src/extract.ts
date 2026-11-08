@@ -109,9 +109,12 @@ function channelKnownKeys(
     if (src[key]) {
       const result: Entries = {
         ...entries,
-        // PNG tEXt chunks can have trailing null bytes — strip them.
+        // PNG tEXt chunks can have trailing null bytes — strip them. The
+        // lookbehind starts the match at the first NUL of the run only, so a
+        // byte after the run does not make the regex retry from every NUL.
         [PARAMS]:
-          entries[PARAMS] ?? stringifyValue(src[key]).replace(/\0+$/, ''),
+          entries[PARAMS] ??
+          stringifyValue(src[key]).replace(/(?<!\0)\0+$/, ''),
       };
       // TensorArt stores ComfyUI workflow JSON in a separate "prompt" key.
       // Preserve it so extract() can merge ComfyUI nodes with TensorArt metadata.
@@ -202,10 +205,12 @@ export function extract(rawEntries: Entries): string {
   // --- SwarmUI ---------------------------------------------------------
   // SwarmUI wraps its metadata in a "sui_image_params" key.
   if (params?.includes('sui_image_params')) {
-    const obj = parseJson(params)!;
-    return buildA1111(
-      extractCommon((obj.sui_image_params ?? obj) as JsonObject),
-    );
+    // A1111 text may mention the key too; such text is returned below
+    const obj = parseJson(params);
+    if (obj)
+      return buildA1111(
+        extractCommon((obj.sui_image_params ?? obj) as JsonObject),
+      );
   }
 
   // --- Plain text (A1111 / Forge / reForge) ----------------------------
@@ -214,13 +219,7 @@ export function extract(rawEntries: Entries): string {
 
   // --- JSON parameters -------------------------------------------------
   if (params) {
-    // First parse: Civitai's extraMetadata can be double-encoded
-    // (JSON string containing another JSON string), so we check if
-    // the parsed result is itself a string and parse again.
-    const raw = parseJson(params) as unknown;
-    const obj = (
-      typeof raw === 'string' ? parseJson(raw) : raw
-    ) as JsonObject | null;
+    const obj = parseJson(params);
     if (obj) {
       // Try specific tool detectors (RuinedFooocus, EasyDiffusion,
       // Fooocus, HF Space, NovelAI).
@@ -343,7 +342,12 @@ function tryJsonTool(obj: JsonObject, text: string): string | null {
   // Fooocus: identified by having both "Model" (capital M) and "resolution"
   // keys. Resolution format: "1024x1024". Also has optional upscaler data.
   if (text.includes('"Model"') && text.includes('"resolution"')) {
-    const [w, h] = parseDimensions(asText(obj.resolution), /(\d+)\s*x\s*(\d+)/);
+    // The lookbehind starts a match at the first digit of a run only, so a
+    // long run of digits without an "x" is tried once, not from every digit
+    const [w, h] = parseDimensions(
+      asText(obj.resolution),
+      /(?<!\d)(\d+)\s*x\s*(\d+)/,
+    );
     return buildA1111({ ...extractCommon(obj), w, h });
   }
 
@@ -515,9 +519,12 @@ function flatScan(json: string): GenerationParams {
   // Collected during the scan, applied only when no text node yielded a
   // prompt literal.
   let up = '';
-  // Pre-clean: strip trailing null bytes (PNG chunks) and replace NaN
-  // literals that some ComfyUI versions emit (invalid JSON).
-  const nodes = parseJson(json.replace(/\0+$/, '').replace(/\bNaN\b/g, 'null'));
+  // Pre-clean: strip trailing null bytes (PNG chunks; the lookbehind keeps
+  // the trim linear, see channelKnownKeys) and replace NaN literals that
+  // some ComfyUI versions emit (invalid JSON).
+  const nodes = parseJson(
+    json.replace(/(?<!\0)\0+$/, '').replace(/\bNaN\b/g, 'null'),
+  );
   if (!nodes) return result;
 
   for (const key in nodes) {
