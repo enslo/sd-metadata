@@ -1,0 +1,10 @@
+# Security headers served by Cloudflare Pages.
+#
+# The demo loads only its own bundles, shows the dropped image through a
+# blob: URL and never calls out, so everything else is denied. Inline
+# styles stay allowed: React and Mantine set style attributes on elements.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
