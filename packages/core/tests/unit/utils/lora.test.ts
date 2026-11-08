@@ -312,3 +312,21 @@ describe('formatCivitaiResources', () => {
     expect(formatCivitaiResources([])).toBeUndefined();
   });
 });
+
+describe('parseLoraTags - tag scanning', () => {
+  it('reads a name containing "<" and skips malformed tags the way A1111 does', () => {
+    expect(
+      parseLoraTags(
+        '<lora:a<b:0.5> <lo-ra:x:1> <<lora:y:0.3> <lora:> <lora::1>',
+      ),
+    ).toEqual([
+      { name: 'a<b', weight: 0.5 },
+      { name: 'y', weight: 0.3 },
+    ]);
+  });
+
+  it('stops scanning in linear time when no ">" follows', () => {
+    // `<(\w+):([^>]+)>` rescanned to the end of the text from every "<"
+    expect(parseLoraTags('<a:'.repeat(100_000))).toEqual([]);
+  });
+});

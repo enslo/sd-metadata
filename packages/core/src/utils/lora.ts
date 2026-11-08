@@ -2,16 +2,65 @@ import type { LoraSettings } from '../types';
 import { parseNumberText, toNumber } from './number';
 import { trimObject } from './object';
 
-/**
- * Extra-network tag as A1111 matches it: `<type:args>`
- *
- * Same regular expression as AUTOMATIC1111's `extra_networks.py`; the args
- * are split on `:` afterwards, so a name may contain commas but not colons.
- */
-const TAG_PATTERN = /<(\w+):([^>]+)>/g;
-
 /** Tag types read as LoRA; LyCORIS shares the syntax */
 const LORA_TAG_TYPES = new Set(['lora', 'lyco']);
+
+/**
+ * Extra-network tags of a prompt as A1111 matches them: `<type:args>`
+ *
+ * The same tags as AUTOMATIC1111's `re_extra_net = <(\w+):([^>]+)>` in
+ * `extra_networks.py`: a word, a colon, then at least one character up to
+ * the next `>`. The args are split on `:` afterwards, so a name may contain
+ * commas but not colons. The scan is linear where the regular expression
+ * was quadratic: a `<` with no `>` after it ends the scan, since no later
+ * tag could close either, and the next `>` and `:` are looked up once.
+ *
+ * @returns Pairs of tag type and args text, in order of appearance
+ */
+function extraNetworkTags(prompt: string): Array<[type: string, args: string]> {
+  const tags: Array<[string, string]> = [];
+  let close = -1;
+  let colon = -1;
+  let from = 0;
+  for (
+    let open = prompt.indexOf('<');
+    open >= 0;
+    open = prompt.indexOf('<', from)
+  ) {
+    if (close <= open) {
+      close = prompt.indexOf('>', open + 1);
+      if (close < 0) break;
+    }
+    if (colon <= open) {
+      colon = prompt.indexOf(':', open + 1);
+      if (colon < 0) break;
+    }
+    // The type runs from after "<" to the colon in word characters, and at
+    // least one character must sit between the colon and ">"
+    let end = open + 1;
+    while (end < colon && isWordChar(prompt.charCodeAt(end))) end++;
+    if (end === colon && colon > open + 1 && colon < close - 1) {
+      tags.push([
+        prompt.slice(open + 1, colon),
+        prompt.slice(colon + 1, close),
+      ]);
+      from = close + 1;
+    } else {
+      from = open + 1;
+    }
+  }
+  return tags;
+}
+
+/** The `\w` of the tag pattern: ASCII letters, digits and underscore */
+function isWordChar(code: number): boolean {
+  return (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a) ||
+    code === 0x5f
+  );
+}
 
 /**
  * Parse the LoRA tags of a prompt
@@ -32,10 +81,10 @@ const LORA_TAG_TYPES = new Set(['lora', 'lyco']);
 export function parseLoraTags(prompt: string): LoraSettings[] {
   const loras: LoraSettings[] = [];
 
-  for (const match of prompt.matchAll(TAG_PATTERN)) {
-    if (!LORA_TAG_TYPES.has((match[1] ?? '').toLowerCase())) continue;
+  for (const [type, argsText] of extraNetworkTags(prompt)) {
+    if (!LORA_TAG_TYPES.has(type.toLowerCase())) continue;
 
-    const [rawName = '', ...args] = (match[2] ?? '').split(':');
+    const [rawName = '', ...args] = argsText.split(':');
     const name = rawName.trim();
     if (name === '') continue;
 

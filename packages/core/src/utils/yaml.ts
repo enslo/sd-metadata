@@ -8,6 +8,8 @@
  * comments are outside its scope.
  */
 
+import { trimTrailingBlanks } from './text';
+
 /** Mapping of scalar values (as text) and nested mappings */
 export interface YamlMapping {
   [key: string]: string | YamlMapping;
@@ -146,7 +148,7 @@ function foldFlowLines(lines: string[], doubleQuoted: boolean): string {
   lines.forEach((raw, index) => {
     let line = raw;
     if (index > 0) line = line.replace(/^[ \t]+/, '');
-    if (index < lines.length - 1) line = line.replace(/[ \t]+$/, '');
+    if (index < lines.length - 1) line = trimTrailingBlanks(line);
 
     if (line === '' && index > 0 && index < lines.length - 1) {
       emptyLines++;

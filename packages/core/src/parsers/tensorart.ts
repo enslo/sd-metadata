@@ -4,6 +4,7 @@ import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
+import { trimTrailingNul } from '../utils/text';
 import { extractComfyUIMetadata } from './comfyui';
 import { toNodeGraph } from './comfyui-nodes';
 import type { InternalParseResult } from './types';
@@ -94,7 +95,7 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
   }
 
   // Parse JSON (TensorArt appends NUL characters)
-  const cleanedText = dataText.replace(/\0+$/, '');
+  const cleanedText = trimTrailingNul(dataText);
   const parsed = parseJson<TensorArtGenerationData>(cleanedText);
   if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({

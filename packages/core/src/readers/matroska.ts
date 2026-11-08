@@ -11,6 +11,7 @@
  */
 
 import type { VideoTag } from '../types';
+import { trimTrailingNul } from '../utils/text';
 import type { ByteSource } from './byte-source';
 import { MAX_BODY_READ, type VideoContainer } from './video-container';
 
@@ -205,7 +206,7 @@ function readTags(body: Uint8Array): VideoTag[] {
 /** String value of the first child with the given ID. */
 function readString(body: Uint8Array, id: number): string | undefined {
   for (const element of elementsIn(body, 0, body.length)) {
-    if (element.id === id) return readUtf8(body, element).replace(/\0+$/, '');
+    if (element.id === id) return trimTrailingNul(readUtf8(body, element));
   }
   return undefined;
 }
