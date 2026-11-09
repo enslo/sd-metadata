@@ -10,7 +10,7 @@
 A lightweight, read-only metadata parser for AI-generated images.
 Designed for bookmarklets and userscripts where bundle size matters.
 
-- **Tiny**: **7,259 bytes** minified IIFE build
+- **Tiny**: **7,257 bytes** minified IIFE build
 - **Read-only**: Extracts metadata and returns A1111-format text
 - **Zero dependencies**: Works in Node.js and browsers
 - **18+ tools**: Supports all major AI image generation tools
@@ -66,7 +66,7 @@ Load the IIFE build via `@require`:
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.6.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.6.1/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -85,7 +85,7 @@ if (text) {
 
 Most sites block external script loading via CSP. Instead, paste the IIFE bundle inline:
 
-1. Copy the contents of `dist/index.global.js` (or download from [npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.6.0/dist/index.global.js))
+1. Copy the contents of `dist/index.global.js` (or download from [npm](https://cdn.jsdelivr.net/npm/@enslo/sd-metadata-lite@1.6.1/dist/index.global.js))
 2. Build your bookmarklet with the code inlined:
 
 ```javascript

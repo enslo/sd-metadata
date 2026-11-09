@@ -5,6 +5,26 @@ All notable changes to `@enslo/sd-metadata-lite` will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.6.1] - 2026-11-09
+
+Steady on Unexpected Text
+
+### Fixed
+
+- **No throw or stall on odd text** (#326): non-JSON `parameters`, long NUL
+  runs and unusual Fooocus size strings are handled.
+- **Seed note** (#337): 1.6.0 overstated it. String seeds keep every digit;
+  JSON-number seeds are rounded past 2^53 by `JSON.parse`. No behaviour change.
+
+### Demo Site
+
+- Security headers (#331); read errors shown (#336).
+
+### Maintenance
+
+- IIFE bundle size: 7,259 → 7,257 bytes (#326)
+- Update development dependencies (#320)
+
 ## [1.6.0] - 2026-11-04
 
 ### Added
