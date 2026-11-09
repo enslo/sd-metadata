@@ -128,7 +128,7 @@ describe('readPngMetadata - Unit Tests', () => {
       }
     });
 
-    it('should return error for truncated chunk length', () => {
+    it('should stop at a truncated chunk length and return what was read', () => {
       // PNG signature + partial chunk (only 2 bytes of length instead of 4)
       const data = new Uint8Array([
         0x89,
@@ -144,13 +144,14 @@ describe('readPngMetadata - Unit Tests', () => {
       ]);
       const result = readPngMetadata(data);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe('corruptedChunk');
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.chunks).toEqual([]);
+        expect(result.value.truncated).toContain('chunk length');
       }
     });
 
-    it('should return error for truncated chunk type', () => {
+    it('should stop at a truncated chunk type and return what was read', () => {
       // PNG signature + length + partial type (only 2 bytes instead of 4)
       const data = new Uint8Array([
         0x89,
@@ -170,13 +171,14 @@ describe('readPngMetadata - Unit Tests', () => {
       ]);
       const result = readPngMetadata(data);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe('corruptedChunk');
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.chunks).toEqual([]);
+        expect(result.value.truncated).toContain('chunk type');
       }
     });
 
-    it('should return error for truncated chunk data', () => {
+    it('should stop at truncated chunk data and return what was read', () => {
       // PNG signature + valid header but data is shorter than declared length
       const data = new Uint8Array([
         0x89,
@@ -201,9 +203,10 @@ describe('readPngMetadata - Unit Tests', () => {
       ]);
       const result = readPngMetadata(data);
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe('corruptedChunk');
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.chunks).toEqual([]);
+        expect(result.value.truncated).toContain('chunk data (tEXt)');
       }
     });
   });
@@ -561,6 +564,32 @@ describe('readPngMetadata - eXIf chunk', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.exif).toBeUndefined();
+    }
+  });
+});
+
+describe('readPngMetadata - truncated files', () => {
+  it('returns the text chunks read before the file breaks off', () => {
+    // A tEXt chunk, then an IDAT that declares 100 bytes but is cut short:
+    // a download that stopped partway, which PIL and the lite reader read
+    const cut = new Uint8Array(12 + 10);
+    new DataView(cut.buffer).setUint32(0, 100);
+    cut.set([0x49, 0x44, 0x41, 0x54], 4); // "IDAT"
+    const data = createPngWithChunks(
+      createTextChunk('parameters', 'test prompt\nSteps: 20'),
+      cut,
+    );
+
+    const result = readPngMetadata(data);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.chunks).toEqual([
+        { type: 'tEXt', keyword: 'parameters', text: 'test prompt\nSteps: 20' },
+      ]);
+      expect(result.value.truncated).toBe(
+        'Unexpected end of file while reading chunk data (IDAT)',
+      );
     }
   });
 });
