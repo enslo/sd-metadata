@@ -135,8 +135,8 @@ export function ParsedTabContent({ parseResult, t }: ParsedTabContentProps) {
             layout="fixed"
           >
             <Table.Tbody>
-              {settings.map(({ label, value }) => (
-                <Table.Tr key={label}>
+              {settings.map(({ key, label, value }) => (
+                <Table.Tr key={key}>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
                       {label}
@@ -242,63 +242,50 @@ function LoraTable({ loras, f }: LoraTableProps) {
   );
 }
 
-type Setting =
-  | { label: string; value: string }
-  | { label: string; value: number };
+/**
+ * One row of the settings table. `key` names the field, since two rows
+ * can share a label (the hires and upscale sections both have an
+ * upscaler).
+ */
+interface Setting {
+  key: string;
+  label: string;
+  value: string | number;
+}
 
 function buildSettingsList(
   metadata: GenerationMetadata,
   f: I18nMessages['fields'],
 ): Setting[] {
-  return [
-    metadata.model?.name
-      ? { label: f.model, value: metadata.model.name }
-      : null,
-    metadata.model?.hash
-      ? { label: f.modelHash, value: metadata.model.hash }
-      : null,
-    metadata.sampling?.sampler
-      ? { label: f.sampler, value: metadata.sampling.sampler }
-      : null,
-    metadata.sampling?.scheduler
-      ? { label: f.scheduler, value: metadata.sampling.scheduler }
-      : null,
-    metadata.sampling?.steps
-      ? { label: f.steps, value: metadata.sampling.steps }
-      : null,
-    metadata.sampling?.cfg
-      ? { label: f.cfg, value: metadata.sampling.cfg }
-      : null,
-    metadata.sampling?.seed
-      ? { label: f.seed, value: metadata.sampling.seed }
-      : null,
-    metadata.sampling?.clipSkip
-      ? { label: f.clipSkip, value: metadata.sampling.clipSkip }
-      : null,
+  const { model, sampling, hires, upscale } = metadata;
+  const rows: [string, string, string | number | undefined][] = [
+    ['model.name', f.model, model?.name],
+    ['model.hash', f.modelHash, model?.hash],
+    ['sampling.sampler', f.sampler, sampling?.sampler],
+    ['sampling.scheduler', f.scheduler, sampling?.scheduler],
+    ['sampling.steps', f.steps, sampling?.steps],
+    ['sampling.cfg', f.cfg, sampling?.cfg],
+    ['sampling.seed', f.seed, sampling?.seed],
+    ['sampling.clipSkip', f.clipSkip, sampling?.clipSkip],
     // A main-pass strength of 1 (full denoising) is the default; a lowered
     // one is worth showing, as in stringify()
-    metadata.sampling?.denoise !== undefined && metadata.sampling.denoise !== 1
-      ? { label: f.denoise, value: metadata.sampling.denoise }
-      : null,
-    metadata.hires?.upscaler
-      ? { label: f.upscaler, value: metadata.hires.upscaler }
-      : null,
-    metadata.hires?.scale
-      ? { label: f.hiresScale, value: metadata.hires.scale }
-      : null,
-    metadata.hires?.steps
-      ? { label: f.hiresSteps, value: metadata.hires.steps }
-      : null,
-    metadata.hires?.denoise
-      ? { label: f.hiresDenoise, value: metadata.hires.denoise }
-      : null,
-    metadata.upscale?.upscaler
-      ? { label: f.upscaler, value: metadata.upscale.upscaler }
-      : null,
-    metadata.upscale?.scale
-      ? { label: f.upscaleFactor, value: metadata.upscale.scale }
-      : null,
-    { label: f.width, value: metadata.width },
-    { label: f.height, value: metadata.height },
-  ].filter((s): s is Setting => s !== null);
+    [
+      'sampling.denoise',
+      f.denoise,
+      sampling?.denoise !== 1 ? sampling?.denoise : undefined,
+    ],
+    ['hires.upscaler', f.upscaler, hires?.upscaler],
+    ['hires.scale', f.hiresScale, hires?.scale],
+    ['hires.steps', f.hiresSteps, hires?.steps],
+    ['hires.denoise', f.hiresDenoise, hires?.denoise],
+    ['upscale.upscaler', f.upscaler, upscale?.upscaler],
+    ['upscale.scale', f.upscaleFactor, upscale?.scale],
+  ];
+  return [
+    ...rows.flatMap(([key, label, value]) =>
+      value ? [{ key, label, value }] : [],
+    ),
+    { key: 'width', label: f.width, value: metadata.width },
+    { key: 'height', label: f.height, value: metadata.height },
+  ];
 }

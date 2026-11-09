@@ -10,7 +10,8 @@
     "uploadLabel": "画像または動画をアップロード",
     "preview": "プレビュー",
     "stealthBadge": "Stealth PNGInfo",
-    "stealthTooltip": "このメタデータは画像ピクセルに隠されていたものです（Stealth PNGInfo）。ファイル自体に通常のメタデータはありません。"
+    "stealthTooltip": "このメタデータは画像ピクセルに隠されていたものです（Stealth PNGInfo）。ファイル自体に通常のメタデータはありません。",
+    "loading": "ファイルを読み込んでいます..."
   },
   "results": {
     "tabs": {
@@ -101,7 +102,10 @@
     "value": "値",
     "remove": "削除",
     "preview": "プレビュー",
-    "previewEmpty": "プレビューを表示するには、少なくともプロンプトを入力してください"
+    "previewEmpty": "プレビューを表示するには、少なくともプロンプトを入力してください",
+    "metadataDropped": "このメタデータはこの形式に書き込めないため、メタデータ無しで保存しました。",
+    "segmentTooLarge": "メタデータの一部が JPEG のセグメントに収まらず、書き込みませんでした。",
+    "formatFallback": "このブラウザは {format} を書き出せないため、{actual} で保存しました。"
   },
   "copyTab": {
     "description": "読み込んだ画像のメタデータを、そのまま別の画像に書き込みます。書き込み先の画像はピクセルも形式もそのままで、メタデータだけが置き換わります。",

@@ -16,6 +16,7 @@ import {
   convertImageFormat,
   downloadBlob,
   generateFilename,
+  getFormatLabel,
   getMimeType,
   type OutputFormat,
 } from '../../lib/image';
@@ -23,6 +24,7 @@ import {
   applyMetadata,
   canKeepMetadata,
   defaultMode,
+  describeWarning,
   isMetadataFormat,
   type MetadataFormat,
   type MetadataMode,
@@ -69,6 +71,10 @@ export function OutputTab({
   const [target, setTarget] = useState<OutputFormat>('png');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // What the last save had to leave out or change, shown under the button
+  const [notices, setNotices] = useState<string[]>([]);
+  // Bumped with each loaded image so the extras editor starts afresh
+  const [editorGeneration, setEditorGeneration] = useState(0);
 
   // Metadata that can be re-embedded as-is (vendor declarations are read-only)
   const canKeep = canKeepMetadata(parseResult);
@@ -79,27 +85,41 @@ export function OutputTab({
     setMetadataFormat('original');
     setMetadata(toEmbedMetadata(parseResult));
     setExtras({});
+    setEditorGeneration((generation) => generation + 1);
     setError(null);
+    setNotices([]);
   }, [parseResult]);
 
   const handleSave = useCallback(async () => {
     setProcessing(true);
     setError(null);
+    setNotices([]);
     try {
       const fileData = fileDataRef.current;
       if (!fileData) {
         throw new Error('File data is not available');
       }
       // Convert the loaded image via canvas, then write the metadata
-      const baseData = await convertImageFormat(fileData, target);
-      const { data, suffix } = applyMetadata(baseData, parseResult, {
-        mode,
-        metadataFormat,
-        metadata,
-        extras,
+      const converted = await convertImageFormat(fileData, target);
+      const { data, suffix, warning } = applyMetadata(
+        converted.data,
+        parseResult,
+        { mode, metadataFormat, metadata, extras },
+      );
+      const notes: string[] = [];
+      if (converted.format !== target) {
+        notes.push(
+          t.outputTab.formatFallback
+            .replace('{format}', getFormatLabel(target))
+            .replace('{actual}', getFormatLabel(converted.format)),
+        );
+      }
+      if (warning) notes.push(describeWarning(warning, t.outputTab));
+      setNotices(notes);
+      const blob = new Blob([data.slice()], {
+        type: getMimeType(converted.format),
       });
-      const blob = new Blob([data.slice()], { type: getMimeType(target) });
-      downloadBlob(blob, generateFilename(filename, target, suffix));
+      downloadBlob(blob, generateFilename(filename, converted.format, suffix));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -114,6 +134,7 @@ export function OutputTab({
     metadataFormat,
     parseResult,
     filename,
+    t,
   ]);
 
   const modeData = [
@@ -176,7 +197,11 @@ export function OutputTab({
       {mode === 'edit' && (
         <>
           <MetadataForm metadata={metadata} onChange={setMetadata} />
-          <ExtrasEditor extras={extras} onChange={setExtras} />
+          <ExtrasEditor
+            key={editorGeneration}
+            extras={extras}
+            onChange={setExtras}
+          />
           <MetadataPreview metadata={metadata} extras={extras} />
         </>
       )}
@@ -209,6 +234,11 @@ export function OutputTab({
           {error}
         </Text>
       )}
+      {notices.map((notice) => (
+        <Text key={notice} c="yellow" size="sm">
+          {notice}
+        </Text>
+      ))}
     </Stack>
   );
 }

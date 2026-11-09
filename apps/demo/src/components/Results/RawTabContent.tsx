@@ -6,6 +6,7 @@ import type {
   VideoTag,
 } from '@enslo/sd-metadata';
 import { Accordion, Badge, Group } from '@mantine/core';
+import { useMemo } from 'react';
 import type { I18nMessages } from '../../i18n';
 import { formatJson } from '../../utils';
 import { ContentPanel } from '../ContentPanel';
@@ -65,28 +66,29 @@ export function RawTabContent({ parseResult, t }: RawTabContentProps) {
   if (parseResult.raw.format === 'png') {
     // CivitAI PNGs keep their EXIF in an eXIf chunk; list those segments
     // after the text chunks, tagged with the chunk type like the others.
+    // A keyword may repeat (the PNG specification allows it), so the
+    // position keeps the items apart.
     const { chunks, exif = [] } = parseResult.raw;
-    const exifValue = (segment: MetadataSegment) =>
-      `eXIf:${segment.source.type}`;
-    const defaultValues = [
-      ...chunks.map((c) => c.keyword),
-      ...exif.map(exifValue),
-    ];
+    const chunkValue = (chunk: PngTextChunk, index: number) =>
+      `${index}:${chunk.keyword}`;
+    const exifValue = (segment: MetadataSegment, index: number) =>
+      `eXIf:${index}:${segment.source.type}`;
+    const defaultValues = [...chunks.map(chunkValue), ...exif.map(exifValue)];
     return (
       <Accordion multiple variant="separated" defaultValue={defaultValues}>
-        {chunks.map((chunk: PngTextChunk) => (
+        {chunks.map((chunk, index) => (
           <RawItem
-            key={chunk.keyword}
-            value={chunk.keyword}
+            key={chunkValue(chunk, index)}
+            value={chunkValue(chunk, index)}
             label={chunk.keyword}
             badge={chunk.type}
             text={chunk.text}
           />
         ))}
-        {exif.map((segment) => (
+        {exif.map((segment, index) => (
           <RawItem
-            key={exifValue(segment)}
-            value={exifValue(segment)}
+            key={exifValue(segment, index)}
+            value={exifValue(segment, index)}
             label={SOURCE_LABELS[segment.source.type]}
             badge="eXIf"
             text={segment.data}
@@ -96,14 +98,20 @@ export function RawTabContent({ parseResult, t }: RawTabContentProps) {
     );
   }
 
+  // Several segments can share a source (two COM segments, say)
   const { segments } = parseResult.raw;
-  const defaultValues = segments.map((s) => s.source.type);
+  const segmentValue = (segment: MetadataSegment, index: number) =>
+    `${index}:${segment.source.type}`;
   return (
-    <Accordion multiple variant="separated" defaultValue={defaultValues}>
-      {segments.map((segment: MetadataSegment) => (
+    <Accordion
+      multiple
+      variant="separated"
+      defaultValue={segments.map(segmentValue)}
+    >
+      {segments.map((segment, index) => (
         <RawItem
-          key={segment.source.type}
-          value={segment.source.type}
+          key={segmentValue(segment, index)}
+          value={segmentValue(segment, index)}
           label={SOURCE_LABELS[segment.source.type]}
           text={segment.data}
         />
@@ -125,7 +133,9 @@ interface RawItemProps {
  * JPEG/WebP segment, or a video tag
  */
 function RawItem({ value, label, badge, text }: RawItemProps) {
-  const { formatted, isJson } = formatJson(text);
+  // Pretty-printing a multi-megabyte workflow takes tens of milliseconds,
+  // and every panel re-renders on each drag, tab or theme change
+  const { formatted, isJson } = useMemo(() => formatJson(text), [text]);
   return (
     <Accordion.Item value={value}>
       <Accordion.Control>

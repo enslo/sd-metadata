@@ -10,7 +10,8 @@
     "uploadLabel": "Upload image or video",
     "preview": "Preview",
     "stealthBadge": "Stealth PNGInfo",
-    "stealthTooltip": "This metadata was hidden in the image pixels (Stealth PNGInfo). The file itself carries no regular metadata."
+    "stealthTooltip": "This metadata was hidden in the image pixels (Stealth PNGInfo). The file itself carries no regular metadata.",
+    "loading": "Reading the file..."
   },
   "results": {
     "tabs": {
@@ -101,7 +102,10 @@
     "value": "Value",
     "remove": "Remove",
     "preview": "Preview",
-    "previewEmpty": "Fill in at least a prompt to see a preview"
+    "previewEmpty": "Fill in at least a prompt to see a preview",
+    "metadataDropped": "The metadata cannot be carried into this format, so the file was saved without it.",
+    "segmentTooLarge": "Part of the metadata did not fit a JPEG segment and was left out.",
+    "formatFallback": "This browser cannot encode {format}; the image was saved as {actual}."
   },
   "copyTab": {
     "description": "Write the metadata of the loaded image, as it is, into another image. The target keeps its pixels and format; only its metadata is replaced.",

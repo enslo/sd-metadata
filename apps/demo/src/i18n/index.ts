@@ -45,14 +45,35 @@ export function getBrowserLocale(): Locale {
 }
 
 /**
+ * The stored locale choice, or null when there is none or storage is
+ * unavailable (blocked cookies, a sandboxed frame, some private modes
+ * throw on touching localStorage)
+ */
+function readStoredLocale(): Locale | null {
+  try {
+    const stored = localStorage.getItem('locale');
+    return stored === 'en' || stored === 'ja' ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Store the locale choice; without storage it lasts for this page only
+ */
+function storeLocale(locale: Locale): void {
+  try {
+    localStorage.setItem('locale', locale);
+  } catch {
+    // Storage is unavailable; see readStoredLocale
+  }
+}
+
+/**
  * Initialize locale from localStorage or browser
  */
 export function initLocale(): void {
-  const stored = localStorage.getItem('locale') as Locale | null;
-  const initialLocale =
-    stored && (stored === 'en' || stored === 'ja')
-      ? stored
-      : getBrowserLocale();
+  const initialLocale = readStoredLocale() ?? getBrowserLocale();
 
   $locale.set(initialLocale);
   document.documentElement.lang = initialLocale;
@@ -62,7 +83,7 @@ export function initLocale(): void {
  * Save the locale to localStorage and update store
  */
 export function setLocale(newLocale: Locale): void {
-  localStorage.setItem('locale', newLocale);
+  storeLocale(newLocale);
   $locale.set(newLocale);
   document.documentElement.lang = newLocale;
 }

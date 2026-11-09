@@ -24,6 +24,11 @@ interface ExtraEntry {
   value: string;
 }
 
+// Row ids only have to be unique within the page; crypto.randomUUID()
+// needs a secure context, which a LAN dev server over http is not
+let nextEntryId = 0;
+const newEntryId = (): string => String(nextEntryId++);
+
 /**
  * @package
  * Dynamic key-value pair editor for embed() extras parameter
@@ -34,7 +39,7 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
   // Internal entries for rendering (preserves order and empty rows)
   const [entries, setEntries] = useState<ExtraEntry[]>(() =>
     Object.entries(extras).map(([key, value]) => ({
-      id: crypto.randomUUID(),
+      id: newEntryId(),
       key,
       value: String(value),
     })),
@@ -53,10 +58,7 @@ export function ExtrasEditor({ extras, onChange }: ExtrasEditorProps) {
   };
 
   const handleAdd = () => {
-    const updated = [
-      ...entries,
-      { id: crypto.randomUUID(), key: '', value: '' },
-    ];
+    const updated = [...entries, { id: newEntryId(), key: '', value: '' }];
     setEntries(updated);
   };
 
