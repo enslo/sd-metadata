@@ -81,6 +81,10 @@ const NOVELAI_KEY_ORDER = [
 /**
  * Convert JPEG/WebP segments to NovelAI PNG chunks
  *
+ * The UserComment JSON holds every chunk; the ImageDescription only
+ * supplies a cleaner copy of the Description, so a file without it still
+ * converts. Without a UserComment there is nothing to convert.
+ *
  * @param segments - Metadata segments from JPEG/WebP
  * @returns PNG text chunks
  */
@@ -100,7 +104,7 @@ function parseSegments(
   userCommentSeg: MetadataSegment | undefined,
   descriptionSeg: MetadataSegment | undefined,
 ): PngTextChunk[] {
-  if (!userCommentSeg || !descriptionSeg) {
+  if (!userCommentSeg) {
     return [];
   }
 

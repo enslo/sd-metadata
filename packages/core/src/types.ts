@@ -618,11 +618,20 @@ export interface ReadOptions {
 
 /**
  * Warning types for write operations
+ *
+ * The image was written, but without some or all of the metadata:
+ * - `unrecognizedCrossFormat`: unrecognized metadata cannot be converted
+ *   to another image format, so none was written
+ * - `conversionEmpty`: the detected tool's converter found nothing the
+ *   target format can hold (e.g. a NovelAI JPEG without its UserComment),
+ *   so none was written
+ * - `segmentTooLarge`: a JPEG COM or XMP segment was left out because its
+ *   text does not fit the 16-bit segment length; `message` names it
  */
-export type WriteWarning = {
-  type: 'metadataDropped';
-  reason: 'unrecognizedCrossFormat';
-};
+export type WriteWarning =
+  | { type: 'metadataDropped'; reason: 'unrecognizedCrossFormat' }
+  | { type: 'metadataDropped'; reason: 'conversionEmpty' }
+  | { type: 'metadataDropped'; reason: 'segmentTooLarge'; message: string };
 
 /**
  * Error types for write operations

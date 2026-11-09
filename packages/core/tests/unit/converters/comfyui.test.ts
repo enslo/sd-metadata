@@ -130,3 +130,56 @@ describe('ComfyUI converter', () => {
     });
   });
 });
+
+describe('ComfyUI converter - unlabelled tags next to a UserComment', () => {
+  const SAVEIMAGE_PLUS: MetadataSegment = {
+    source: { type: 'exifUserComment' },
+    data: JSON.stringify({
+      prompt: JSON.parse(PROMPT),
+      workflow: JSON.parse(WORKFLOW),
+    }),
+  };
+  // Values of the JSON envelope come back stringified, without spaces
+  const compact = (json: string): string => JSON.stringify(JSON.parse(json));
+
+  it('should take the workflow from the UserComment JSON, not from a camera Make tag', () => {
+    const segments: MetadataSegment[] = [
+      { source: { type: 'exifMake' }, data: 'Canon' },
+      SAVEIMAGE_PLUS,
+    ];
+
+    const chunks = convertComfyUISegmentsToPng(segments);
+
+    expect(chunks.map((c) => [c.keyword, c.text])).toEqual([
+      ['prompt', compact(PROMPT)],
+      ['workflow', compact(WORKFLOW)],
+    ]);
+  });
+
+  it('should still let a labelled tag win over the UserComment JSON', () => {
+    const labelledPrompt = '{"2": {"class_type": "KSampler", "inputs": {}}}';
+    const segments: MetadataSegment[] = [
+      { source: { type: 'exifModel', prefix: 'prompt' }, data: labelledPrompt },
+      SAVEIMAGE_PLUS,
+    ];
+
+    const chunks = convertComfyUISegmentsToPng(segments);
+
+    expect(chunks.map((c) => [c.keyword, c.text])).toEqual([
+      ['prompt', labelledPrompt],
+    ]);
+  });
+
+  it('should fall back to unlabelled tags when the UserComment is not a JSON object', () => {
+    const segments: MetadataSegment[] = [
+      { source: { type: 'exifUserComment' }, data: 'not json' },
+      { source: { type: 'exifMake' }, data: PROMPT },
+    ];
+
+    const chunks = convertComfyUISegmentsToPng(segments);
+
+    expect(chunks.map((c) => [c.keyword, c.text])).toEqual([
+      ['prompt', PROMPT],
+    ]);
+  });
+});

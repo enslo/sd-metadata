@@ -14,7 +14,10 @@ import {
 import { buildExifTiffData } from './exif';
 
 // Internal types (co-located with writer)
-type PngWriteError = { type: 'invalidSignature' } | { type: 'noIhdrChunk' };
+type PngWriteError =
+  | { type: 'invalidSignature' }
+  | { type: 'noIhdrChunk' }
+  | { type: 'corruptedStructure'; message: string };
 
 type PngWriteResult = Result<Uint8Array, PngWriteError>;
 
@@ -27,6 +30,10 @@ const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
  * Replaces all existing tEXt, iTXt and eXIf chunks with the provided
  * metadata. The eXIf chunk (if any) and then the text chunks are inserted
  * immediately after the IHDR chunk (PNG spec recommended).
+ *
+ * A file that breaks off inside a chunk (a download that stopped partway)
+ * is refused: writing it would drop that chunk, the image data included,
+ * and return a PNG that looks whole.
  *
  * @param data - Original PNG file data as Uint8Array
  * @param chunks - Text chunks to embed
@@ -44,14 +51,12 @@ export function writePngMetadata(
     return Result.error({ type: 'invalidSignature' });
   }
 
-  // Find IHDR chunk end position
-  const ihdrEnd = findIhdrChunkEnd(data);
-  if (ihdrEnd === -1) {
-    return Result.error({ type: 'noIhdrChunk' });
-  }
-
   // Collect the chunks we do not manage from the original data
-  const originalChunks = collectOtherChunks(data);
+  const collected = collectOtherChunks(data);
+  if (!collected.ok) {
+    return collected;
+  }
+  const originalChunks = collected.value;
 
   // Serialize the eXIf chunk (only EXIF-type segments can live there)
   const tiff = exif && exif.length > 0 ? buildExifTiffData(exif) : null;
@@ -101,35 +106,15 @@ export function writePngMetadata(
 }
 
 /**
- * Find the end position of IHDR chunk (including CRC)
- * @returns End offset or -1 if not found
- */
-function findIhdrChunkEnd(data: Uint8Array): number {
-  const offset = PNG_SIGNATURE.length;
-
-  if (offset + 8 > data.length) {
-    return -1;
-  }
-
-  const length = readUint32BE(data, offset);
-  const chunkType = readChunkType(data, offset + 4);
-
-  if (chunkType !== 'IHDR') {
-    return -1;
-  }
-
-  // Return end position: length(4) + type(4) + data(length) + crc(4)
-  return offset + 4 + 4 + length + 4;
-}
-
-/**
  * Collect chunks from PNG, separating IHDR from the chunks we do not manage
  * (everything except tEXt, iTXt and eXIf)
+ *
+ * The first chunk must be IHDR and every chunk must lie within the file; a
+ * missing IEND is tolerated, as the chunks before it are whole.
  */
-function collectOtherChunks(data: Uint8Array): {
-  ihdr: Uint8Array;
-  others: Uint8Array[];
-} {
+function collectOtherChunks(
+  data: Uint8Array,
+): Result<{ ihdr: Uint8Array; others: Uint8Array[] }, PngWriteError> {
   const others: Uint8Array[] = [];
   let offset = PNG_SIGNATURE.length;
   let ihdr: Uint8Array = new Uint8Array(0);
@@ -137,24 +122,31 @@ function collectOtherChunks(data: Uint8Array): {
   while (offset < data.length) {
     const chunkStart = offset;
 
-    // Read chunk length
-    if (offset + 4 > data.length) break;
+    // Read chunk length and type
+    if (offset + 8 > data.length) {
+      return Result.error({
+        type: 'corruptedStructure',
+        message: 'Unexpected end of file while reading chunk header',
+      });
+    }
     const length = readUint32BE(data, offset);
-    offset += 4;
+    const chunkType = readChunkType(data, offset + 4);
+    offset += 8;
 
-    // Read chunk type
-    if (offset + 4 > data.length) break;
-    const chunkType = readChunkType(data, offset);
-    offset += 4;
+    if (chunkStart === PNG_SIGNATURE.length && chunkType !== 'IHDR') {
+      return Result.error({ type: 'noIhdrChunk' });
+    }
 
     // Validate chunk data + CRC fits within buffer
-    if (offset + length + 4 > data.length) break;
+    if (offset + length + 4 > data.length) {
+      return Result.error({
+        type: 'corruptedStructure',
+        message: `Unexpected end of file while reading chunk data (${chunkType})`,
+      });
+    }
 
-    // Skip chunk data
-    offset += length;
-
-    // Skip CRC
-    offset += 4;
+    // Skip chunk data and CRC
+    offset += length + 4;
 
     const chunkEnd = offset;
     const chunkData = data.slice(chunkStart, chunkEnd);
@@ -174,7 +166,11 @@ function collectOtherChunks(data: Uint8Array): {
     }
   }
 
-  return { ihdr, others };
+  if (ihdr.length === 0) {
+    return Result.error({ type: 'noIhdrChunk' });
+  }
+
+  return Result.ok({ ihdr, others });
 }
 
 /**

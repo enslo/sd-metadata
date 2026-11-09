@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { read, write } from '../../src/index';
-import type { ParseResult } from '../../src/types';
+import type { MetadataSegment, ParseResult } from '../../src/types';
 import {
   createMinimalJpeg,
   createMinimalPng,
@@ -412,5 +412,115 @@ describe('API Integration Tests', () => {
         }
       });
     });
+  });
+});
+
+describe('write() - dropped metadata', () => {
+  /** The sample, read, with its raw segments replaced */
+  function withSegments(
+    format: 'jpg' | 'webp',
+    filename: string,
+    edit: (segments: MetadataSegment[]) => MetadataSegment[],
+  ): { source: ParseResult; edited: ParseResult } {
+    const source = read(loadSample(format, filename));
+    if (source.status !== 'success' || source.raw.format === 'png') {
+      throw new Error(`${filename} did not read as a JPEG/WebP success`);
+    }
+    const raw = { ...source.raw, segments: edit(source.raw.segments) };
+    return { source, edited: { ...source, raw } };
+  }
+
+  it('converts a NovelAI WebP that lacks its ImageDescription to PNG without losing it', () => {
+    const { source, edited } = withSegments(
+      'webp',
+      'novelai-v5-full.webp',
+      (segments) =>
+        segments.filter((s) => s.source.type !== 'exifImageDescription'),
+    );
+
+    const result = write(createMinimalPng(), edited);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warning).toBeUndefined();
+    const reread = read(result.value);
+    expect(reread.status).toBe('success');
+    if (reread.status !== 'success' || source.status !== 'success') return;
+    expect(reread.metadata.software).toBe('novelai');
+    expect(reread.metadata.prompt).toBe(source.metadata.prompt);
+  });
+
+  it('warns when the conversion leaves nothing to write', () => {
+    const { edited } = withSegments(
+      'webp',
+      'novelai-v5-full.webp',
+      (segments) =>
+        segments.filter((s) => s.source.type === 'exifImageDescription'),
+    );
+
+    const result = write(createMinimalPng(), edited);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warning).toEqual({
+      type: 'metadataDropped',
+      reason: 'conversionEmpty',
+    });
+    expect(read(result.value).status).toBe('empty');
+  });
+
+  it('keeps the ComfyUI workflow of a JPEG that also carries a camera Make tag', () => {
+    const { edited } = withSegments(
+      'jpg',
+      'comfyui-saveimage-plus.jpg',
+      (segments) => [
+        ...segments,
+        { source: { type: 'exifMake' }, data: 'Canon' },
+      ],
+    );
+
+    const result = write(createMinimalPng(), edited);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warning).toBeUndefined();
+    const reread = read(result.value);
+    expect(reread.status).toBe('success');
+    if (reread.status !== 'success' || reread.raw.format !== 'png') return;
+    const keywords = reread.raw.chunks.map((c) => c.keyword).sort();
+    expect(keywords).toEqual(['prompt', 'workflow']);
+    expect(
+      reread.raw.chunks.find((c) => c.keyword === 'prompt')?.text,
+    ).not.toBe('Canon');
+  });
+
+  it('warns when a JPEG segment is left out for not fitting its 16-bit length', () => {
+    const oversized: ParseResult = {
+      status: 'unrecognized',
+      raw: {
+        format: 'jpeg',
+        segments: [
+          { source: { type: 'jpegCom' }, data: 'x'.repeat(70_000) },
+          { source: { type: 'exifUserComment' }, data: 'kept' },
+        ],
+      },
+    };
+
+    const result = write(createMinimalJpeg(), oversized);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warning).toMatchObject({
+      type: 'metadataDropped',
+      reason: 'segmentTooLarge',
+    });
+    expect(
+      result.warning?.reason === 'segmentTooLarge' && result.warning.message,
+    ).toContain('jpegCom');
+    const reread = read(result.value);
+    expect(reread.status).toBe('unrecognized');
+    if (reread.status !== 'unrecognized' || reread.raw.format !== 'jpeg')
+      return;
+    expect(reread.raw.segments.map((s) => s.data)).toEqual(['kept']);
   });
 });

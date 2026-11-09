@@ -97,10 +97,14 @@ function writeForFormat(format: ImageFormat, data: Uint8Array, text: string) {
         data,
         createEncodedChunk('parameters', text, 'dynamic'),
       );
-    case 'jpeg':
-      return writeJpegMetadata(data, [
+    case 'jpeg': {
+      // UserComment goes to Exif, which is never dropped, so nothing is lost
+      const result = writeJpegMetadata(data, [
         { source: { type: 'exifUserComment' as const }, data: text },
       ]);
+      if (!result.ok) return result;
+      return Result.ok<Uint8Array, never>(result.value.data);
+    }
     case 'webp':
       return writeWebpMetadata(data, [
         { source: { type: 'exifUserComment' as const }, data: text },

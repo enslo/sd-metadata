@@ -102,3 +102,45 @@ describe('NovelAI converter', () => {
     }
   });
 });
+
+describe('NovelAI converter - missing segments', () => {
+  it('should restore the chunks from the UserComment alone when ImageDescription is missing', () => {
+    const [, userComment] = novelaiSegments('Generation time');
+    const segments = [userComment].filter((s) => s !== undefined);
+
+    const chunks = convertNovelaiSegmentsToPng(segments);
+
+    expect(chunks.map((c) => c.keyword)).toEqual([
+      'Title',
+      'Description',
+      'Software',
+      'Source',
+      'Generation time',
+      'Comment',
+    ]);
+    expect(chunks.find((c) => c.keyword === 'Description')?.text).toBe('1girl');
+  });
+
+  it('should strip the NUL prefix from a Description taken from the UserComment JSON', () => {
+    const segments: MetadataSegment[] = [
+      {
+        source: { type: 'exifUserComment' },
+        data: JSON.stringify({
+          Comment: '{"prompt": "1girl"}',
+          Description: '\x00\x00\x00\x001girl',
+        }),
+      },
+    ];
+
+    const chunks = convertNovelaiSegmentsToPng(segments);
+
+    expect(chunks.find((c) => c.keyword === 'Description')?.text).toBe('1girl');
+  });
+
+  it('should produce no chunks without a UserComment', () => {
+    const [description] = novelaiSegments('Generation time');
+    const segments = [description].filter((s) => s !== undefined);
+
+    expect(convertNovelaiSegmentsToPng(segments)).toEqual([]);
+  });
+});

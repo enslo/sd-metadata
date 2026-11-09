@@ -10,7 +10,19 @@ type JpegWriteError =
   | { type: 'corruptedStructure'; message: string }
   | { type: 'segmentTooLarge'; message: string };
 
-type JpegWriteResult = Result<Uint8Array, JpegWriteError>;
+/**
+ * A written JPEG and the segments that were left out of it
+ */
+export interface JpegWriteOutput {
+  data: Uint8Array;
+  /**
+   * COM and XMP segments whose text does not fit one marker segment, left
+   * out so the rest of the file stays readable
+   */
+  dropped: MetadataSegment[];
+}
+
+type JpegWriteResult = Result<JpegWriteOutput, JpegWriteError>;
 
 /**
  * Largest value of a marker segment's length field, which is 16 bits and
@@ -40,6 +52,10 @@ const EXIF_HEADER = new Uint8Array([0x45, 0x78, 0x69, 0x66, 0x00, 0x00]);
  * Each segment is written to its original location based on source type:
  * - jpegCom -> COM segment (before SOS)
  * - exifUserComment/exifImageDescription/exifMake/exifModel -> APP1 Exif segment (after SOI)
+ *
+ * A COM or XMP segment longer than a marker segment holds is left out and
+ * listed in `dropped`; Exif data that does not fit is an error, since it
+ * cannot be split either and is usually the only metadata there is.
  *
  * @param data - Original JPEG file data as Uint8Array
  * @param segments - Metadata segments to embed
@@ -83,14 +99,25 @@ export function writeJpegMetadata(
   }
   const app1Segment = app1Result.value;
 
+  const dropped: MetadataSegment[] = [];
+
   // Build new APP1 XMP segment (only first XMP packet)
   const firstXmp = xmpSegments[0];
   const xmpApp1Segment = firstXmp ? buildXmpApp1Segment(firstXmp.data) : null;
+  if (firstXmp && !xmpApp1Segment) {
+    dropped.push(firstXmp);
+  }
 
   // Build new COM segments
-  const comSegmentData = comSegments
-    .map((s) => buildComSegment(s.data))
-    .filter((s): s is Uint8Array => s !== null);
+  const comSegmentData: Uint8Array[] = [];
+  for (const segment of comSegments) {
+    const com = buildComSegment(segment.data);
+    if (com) {
+      comSegmentData.push(com);
+    } else {
+      dropped.push(segment);
+    }
+  }
 
   // Calculate total size
   let totalSize = 2; // SOI
@@ -143,7 +170,7 @@ export function writeJpegMetadata(
   // Write scan data (SOS to EOI)
   output.set(scanData, offset);
 
-  return Result.ok(output);
+  return Result.ok({ data: output, dropped });
 }
 
 /**
@@ -279,14 +306,15 @@ function buildApp1Segment(
 
 /**
  * Build APP1 XMP segment from XMP text
+ *
+ * @returns The segment, or null when the text does not fit one
  */
 function buildXmpApp1Segment(xmpText: string): Uint8Array | null {
   const textBytes = new TextEncoder().encode(xmpText);
   // APP1 segment: marker (2) + length (2) + XMP prefix + XMP data
   const segmentLength = 2 + XMP_APP1_PREFIX.length + textBytes.length;
 
-  // JPEG segment length is uint16 (max 65535)
-  if (segmentLength > 0xffff) {
+  if (segmentLength > MAX_SEGMENT_LENGTH) {
     return null;
   }
 
@@ -303,13 +331,14 @@ function buildXmpApp1Segment(xmpText: string): Uint8Array | null {
 
 /**
  * Build COM segment from text
+ *
+ * @returns The segment, or null when the text does not fit one
  */
 function buildComSegment(text: string): Uint8Array | null {
   const textBytes = new TextEncoder().encode(text);
   const segmentLength = 2 + textBytes.length; // length field includes itself
 
-  // JPEG segment length is uint16 (max 65535)
-  if (segmentLength > 0xffff) {
+  if (segmentLength > MAX_SEGMENT_LENGTH) {
     return null;
   }
 

@@ -6,7 +6,12 @@
  */
 
 import { convertMetadata } from '../converters';
-import type { ParseResult, WriteResult } from '../types';
+import type {
+  ParseResult,
+  RawMetadata,
+  WriteResult,
+  WriteWarning,
+} from '../types';
 
 import type { ImageFormat } from '../utils/binary';
 import { detectFormat, toUint8Array } from '../utils/binary';
@@ -18,8 +23,10 @@ import { writeWebpMetadata } from '../writers/webp';
  * Write metadata to an image
  *
  * Automatically detects the target image format and converts the metadata
- * if necessary. For unrecognized metadata with cross-format conversion,
- * metadata is dropped and a warning is returned.
+ * if necessary. When some or all of the metadata cannot be written, the
+ * image is still returned, with a {@link WriteWarning} saying what was
+ * dropped and why: unrecognized metadata converted across formats, a
+ * conversion that produced nothing, or a JPEG segment that does not fit.
  *
  * @param input - Target image file data (Uint8Array or ArrayBuffer)
  * @param metadata - ParseResult from `read()`
@@ -37,14 +44,7 @@ export function write(
 
   // Handle empty metadata: strip all metadata
   if (metadata.status === 'empty') {
-    const result = HELPERS[targetFormat].writeEmpty(data, []);
-    if (!result.ok) {
-      return {
-        ok: false,
-        error: { type: 'writeFailed', message: result.error.type },
-      };
-    }
-    return { ok: true, value: result.value };
+    return writeRaw(data, targetFormat, emptyRaw(targetFormat));
   }
 
   // Handle invalid metadata
@@ -78,18 +78,10 @@ export function write(
     }
 
     // Cross-format: drop metadata and return with warning
-    const result = HELPERS[targetFormat].writeEmpty(data, []);
-    if (!result.ok) {
-      return {
-        ok: false,
-        error: { type: 'writeFailed', message: result.error.type },
-      };
-    }
-    return {
-      ok: true,
-      value: result.value,
-      warning: { type: 'metadataDropped', reason: 'unrecognizedCrossFormat' },
-    };
+    return withWarning(writeRaw(data, targetFormat, emptyRaw(targetFormat)), {
+      type: 'metadataDropped',
+      reason: 'unrecognizedCrossFormat',
+    });
   }
 
   // Handle success metadata: convert if needed
@@ -105,7 +97,39 @@ export function write(
     };
   }
 
-  return writeRaw(data, targetFormat, conversionResult.value);
+  // A converter that found nothing to carry over (a NovelAI JPEG without
+  // its UserComment, say) yields an image without metadata: say so
+  const converted = conversionResult.value;
+  const result = writeRaw(data, targetFormat, converted);
+  return isEmptyRaw(converted)
+    ? withWarning(result, {
+        type: 'metadataDropped',
+        reason: 'conversionEmpty',
+      })
+    : result;
+}
+
+/**
+ * Raw metadata with nothing in it, for stripping an image
+ */
+function emptyRaw(format: ImageFormat): RawMetadata {
+  return format === 'png' ? { format, chunks: [] } : { format, segments: [] };
+}
+
+/**
+ * Whether raw metadata holds nothing a writer would put in the image
+ */
+function isEmptyRaw(raw: RawMetadata): boolean {
+  return raw.format === 'png'
+    ? raw.chunks.length === 0 && (raw.exif ?? []).length === 0
+    : raw.segments.length === 0;
+}
+
+/**
+ * Attach a warning to a successful write that has none yet
+ */
+function withWarning(result: WriteResult, warning: WriteWarning): WriteResult {
+  return result.ok && !result.warning ? { ...result, warning } : result;
 }
 
 /**
@@ -114,7 +138,7 @@ export function write(
 function writeRaw(
   data: Uint8Array,
   targetFormat: ImageFormat,
-  raw: import('../types').RawMetadata,
+  raw: RawMetadata,
 ): WriteResult {
   if (targetFormat === 'png' && raw.format === 'png') {
     const result = writePngMetadata(data, raw.chunks, raw.exif);
@@ -135,7 +159,20 @@ function writeRaw(
         error: { type: 'writeFailed', message: result.error.type },
       };
     }
-    return { ok: true, value: result.value };
+    const { data: value, dropped } = result.value;
+    if (dropped.length === 0) {
+      return { ok: true, value };
+    }
+    const names = dropped.map((s) => s.source.type).join(', ');
+    return {
+      ok: true,
+      value,
+      warning: {
+        type: 'metadataDropped',
+        reason: 'segmentTooLarge',
+        message: `Segments longer than a JPEG marker segment holds (65,533 bytes) were left out: ${names}`,
+      },
+    };
   }
 
   if (targetFormat === 'webp' && raw.format === 'webp') {
@@ -157,20 +194,3 @@ function writeRaw(
     },
   };
 }
-
-// ============================================================================
-// Format Helpers
-// ============================================================================
-
-/** Format-specific helper functions */
-const HELPERS = {
-  png: {
-    writeEmpty: writePngMetadata,
-  },
-  jpeg: {
-    writeEmpty: writeJpegMetadata,
-  },
-  webp: {
-    writeEmpty: writeWebpMetadata,
-  },
-} as const satisfies Record<ImageFormat, unknown>;
