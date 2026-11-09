@@ -537,13 +537,17 @@ if (!result.ok) {
 書き込み操作の警告型。
 
 ```typescript
-export type WriteWarning = {
-  type: 'metadataDropped';
-  reason: 'unrecognizedCrossFormat';
-};
+export type WriteWarning =
+  | { type: 'metadataDropped'; reason: 'unrecognizedCrossFormat' }
+  | { type: 'metadataDropped'; reason: 'conversionEmpty' }
+  | { type: 'metadataDropped'; reason: 'segmentTooLarge'; message: string };
 ```
 
-書き込み操作中にメタデータが意図的に削除された場合に返される（例：未対応メタデータのクロスフォーマット変換）。
+画像は書き込まれたが、メタデータの一部または全部を書き込めなかった場合に返されます：
+
+- `unrecognizedCrossFormat`: 未対応のメタデータは別の画像フォーマットへ変換できないため、何も書き込まれなかった
+- `conversionEmpty`: 検出したツールの変換器が、書き込み先フォーマットに収まるものを見つけられなかった（例：UserComment の無い NovelAI の JPEG）ため、何も書き込まれなかった
+- `segmentTooLarge`: JPEG の COM または XMP セグメントのテキストが 16 ビットのセグメント長（65,535 バイト）に収まらず省かれた。`message` に省いたセグメント名が入る。収まらない Exif データはエラー（`writeFailed`）になる
 
 ---
 
@@ -1014,7 +1018,7 @@ export type PngTextChunk = TExtChunk | ITXtChunk;
 
 ### `TExtChunk`
 
-PNG tEXtチャンク（Latin-1エンコード）。
+PNG tEXtチャンク（仕様上は Latin-1）。
 
 ```typescript
 export interface TExtChunk {
@@ -1023,8 +1027,17 @@ export interface TExtChunk {
   keyword: string;
   /** テキスト内容 */
   text: string;
+  /**
+   * ライターが `text` を符号化する方式。'latin1' は仕様どおりで PIL が読む形、
+   * 'utf8' は tEXt に UTF-8 を書き込むツール（TensorArt）向け。
+   * 変換器が作るチャンクはこれを持つ。ファイルから読んだチャンクや
+   * 指定なしのチャンクは UTF-8 で書き込まれる。
+   */
+  encoding?: 'latin1' | 'utf8';
 }
 ```
+
+読み取り時は、テキストが正しい UTF-8 なら UTF-8 として、そうでなければ Latin-1 としてデコードするため、どちらのツールのチャンクもツールの意図どおりに読めます。
 
 ---
 

@@ -168,7 +168,7 @@ For userscripts (Tampermonkey, Violentmonkey, etc.), load the IIFE build via `@r
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.0.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.1.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -186,7 +186,7 @@ if (result.status === 'success') {
 
 ## Stealth PNGInfo Recovery
 
-NovelAI (by default) and the [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) family of extensions (A1111/Forge, [ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)) hide a copy of the generation metadata in the least-significant bits of the pixels, where it survives when image hosts strip the metadata chunks. `parse()` recovers it automatically: when an image carries no readable metadata, it scans the pixels as a fallback, and the recovered result carries `stealth: true`:
+NovelAI (by default) and the [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) family of extensions (A1111/Forge, [ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)) hide a copy of the generation metadata in the least-significant bits of the pixels, where it survives when image hosts strip the metadata chunks. `parse()` recovers it automatically: when an image carries no readable metadata, it scans the pixels as a fallback, and the recovered result carries `stealth: true`. An image that declares its vendor (a ChatGPT or Gemini PNG with a C2PA manifest) is not scanned, as those services write no stealth data:
 
 ```typescript
 import { parse } from '@enslo/sd-metadata';
@@ -201,6 +201,7 @@ if (result.status === 'success') {
 - **All four variants** are read — alpha- or RGB-channel embedding, compressed or uncompressed — for both NovelAI's JSON payloads and the extensions' plain-infotext payloads.
 - **WebP**: NovelAI embeds stealth data in its lossless WebP exports too. Browsers decode the pixels automatically; in Node.js, Bun or Deno pass a decoder through the `decodePixels` option (e.g. backed by sharp), otherwise the WebP scan is skipped. See "Stealth recovery on servers" under [Advanced Examples](#advanced-examples).
 - **Rescue**: a recovered result feeds `write()` unchanged, restoring the original tool's native metadata to the stripped file. See "Rescuing stripped metadata" under [Advanced Examples](#advanced-examples).
+- **Servers**: the scan inflates and unfilters the whole image (about 50 ms for a 1-megapixel PNG, 200 ms for 4 megapixels, on Node.js 24). Decompression is capped at what the header declares, 256 MiB of pixels and 16 MiB of payload, so a crafted file cannot claim gigabytes, but on untrusted uploads limit the file size and dimensions before calling `parse()`, or use `read()` where recovery is not wanted.
 - The scan needs `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern browsers); without it `parse()` degrades to chunk-based reading. Writing stealth data is intentionally out of scope.
 
 ## Video Files
@@ -495,7 +496,7 @@ if (result.status === 'success') {
 
 ### `parse(input: Uint8Array | ArrayBuffer, options?: ReadOptions): Promise<ParseResult>`
 
-Reads and parses metadata from an image file. When an image carries no readable metadata, additionally scans the pixels for Stealth PNGInfo (see [Stealth PNGInfo Recovery](#stealth-pnginfo-recovery)); the scan only runs in that case, so images with regular metadata pay no extra cost.
+Reads and parses metadata from an image file. When an image carries no readable metadata, additionally scans the pixels for Stealth PNGInfo (see [Stealth PNGInfo Recovery](#stealth-pnginfo-recovery)); the scan only runs in that case, and not for images with a vendor declaration, so images with regular metadata pay no extra cost.
 
 **Parameters:**
 
@@ -542,7 +543,7 @@ Identical to `parse()` except that it is synchronous and never scans pixels.
 
 ### `write(input: Uint8Array | ArrayBuffer, metadata: ParseResult): WriteResult`
 
-Writes metadata to an image file.
+Writes metadata to an image file. The target's existing metadata is replaced, not merged: its text chunks, EXIF and XMP are rebuilt from `metadata`, so camera EXIF such as Orientation, DateTime or Make / Model is not carried over.
 
 **Parameters:**
 
@@ -555,7 +556,7 @@ Writes metadata to an image file.
 **Returns:**
 
 - `{ ok: true, value: Uint8Array, warning?: WriteWarning }` - Successfully written
-  - `warning` is set when metadata was intentionally dropped (e.g., unrecognized cross-format)
+  - `warning` is set when some or all of the metadata was left out: `reason` is `'unrecognizedCrossFormat'` (unrecognized metadata into another format), `'conversionEmpty'` (the tool's converter found nothing the target format can hold) or `'segmentTooLarge'` (a JPEG COM / XMP segment over 65,535 bytes was skipped; `message` names it)
 - `{ ok: false, error: { type, message? } }` - Failed. `type` is one of:
   - `'unsupportedFormat'`: Target image is not PNG, JPEG, or WebP
   - `'conversionFailed'`: Metadata conversion failed (e.g., incompatible format)
@@ -563,7 +564,7 @@ Writes metadata to an image file.
 
 ### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata | GenerationMetadata): WriteResult`
 
-Embeds custom metadata into an image in SD WebUI (A1111) format.
+Embeds custom metadata into an image in SD WebUI (A1111) format. As with `write()`, the target's existing metadata (text chunks, EXIF, XMP) is replaced.
 
 **Parameters:**
 
