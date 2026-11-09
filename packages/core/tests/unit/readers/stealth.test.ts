@@ -287,3 +287,25 @@ describe('readStealthChunks - decompression limits', () => {
     expect(await readStealthChunks(png)).toBeNull();
   });
 });
+
+describe('readStealthChunks - scanline filters', () => {
+  const payload = 'masterpiece, 1girl\nSteps: 20, Seed: 42';
+
+  for (const filter of [1, 2, 3, 4] as const) {
+    it(`reads a payload through filter type ${filter} scanlines`, async () => {
+      const png = createStealthPng({ payload, compress: false, filter });
+
+      const chunks = await readStealthChunks(png);
+
+      expect(chunks?.map((c) => c.text)).toEqual([payload]);
+    });
+  }
+
+  it('reads an rgb-channel payload through Paeth-filtered RGB scanlines', async () => {
+    const png = createStealthPng({ payload, mode: 'rgb', filter: 4 });
+
+    const chunks = await readStealthChunks(png);
+
+    expect(chunks?.map((c) => c.text)).toEqual([payload]);
+  });
+});

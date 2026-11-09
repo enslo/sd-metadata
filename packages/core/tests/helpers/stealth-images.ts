@@ -28,6 +28,8 @@ export interface StealthPngOptions {
   height?: number;
   /** PNG color type: 6 = RGBA, 2 = RGB (default: 6 for alpha, 2 for rgb) */
   colorType?: 2 | 6;
+  /** PNG filter type applied to every scanline (default: 0, none) */
+  filter?: 0 | 1 | 2 | 3 | 4;
 }
 
 /**
@@ -38,7 +40,14 @@ export function createStealthPng(options: StealthPngOptions): Uint8Array {
     options.colorType ?? ((options.mode ?? 'alpha') === 'alpha' ? 6 : 2);
   const channels = colorType === 6 ? 4 : 3;
   const { width, height, pixels } = buildStealthPixels(options, channels);
-  return buildPng(width, height, colorType, channels, pixels);
+  return buildPng(
+    width,
+    height,
+    colorType,
+    channels,
+    pixels,
+    options.filter ?? 0,
+  );
 }
 
 /**
@@ -176,7 +185,7 @@ export function stripTextChunks(png: Uint8Array): Uint8Array {
 // ============================================================================
 
 /**
- * Encode raw pixels as a minimal PNG (filter type 0 on every scanline)
+ * Encode raw pixels as a minimal PNG with the given filter on every scanline
  */
 function buildPng(
   width: number,
@@ -184,16 +193,9 @@ function buildPng(
   colorType: number,
   channels: number,
   pixels: Uint8Array,
+  filter: number,
 ): Uint8Array {
-  const stride = width * channels;
-  const raw = new Uint8Array(height * (stride + 1));
-  for (let y = 0; y < height; y++) {
-    raw[y * (stride + 1)] = 0;
-    raw.set(
-      pixels.subarray(y * stride, (y + 1) * stride),
-      y * (stride + 1) + 1,
-    );
-  }
+  const raw = filterScanlines(pixels, width, height, channels, filter);
 
   const ihdr = new Uint8Array(13);
   const ihdrView = new DataView(ihdr.buffer);
@@ -221,6 +223,62 @@ function buildPng(
     pos += chunk.length;
   }
   return out;
+}
+
+/**
+ * Apply one PNG filter type to every scanline, the reference way: each
+ * byte minus its predictor from the unfiltered neighbours (PNG 9.2)
+ */
+function filterScanlines(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  channels: number,
+  filter: number,
+): Uint8Array {
+  const stride = width * channels;
+  const raw = new Uint8Array(height * (stride + 1));
+  for (let y = 0; y < height; y++) {
+    raw[y * (stride + 1)] = filter;
+    for (let i = 0; i < stride; i++) {
+      const value = pixels[y * stride + i] ?? 0;
+      const left = i >= channels ? (pixels[y * stride + i - channels] ?? 0) : 0;
+      const up = y > 0 ? (pixels[(y - 1) * stride + i] ?? 0) : 0;
+      const upLeft =
+        y > 0 && i >= channels
+          ? (pixels[(y - 1) * stride + i - channels] ?? 0)
+          : 0;
+      let predictor = 0;
+      switch (filter) {
+        case 1:
+          predictor = left;
+          break;
+        case 2:
+          predictor = up;
+          break;
+        case 3:
+          predictor = (left + up) >> 1;
+          break;
+        case 4:
+          predictor = paethPredictor(left, up, upLeft);
+          break;
+      }
+      raw[y * (stride + 1) + 1 + i] = (value - predictor) & 0xff;
+    }
+  }
+  return raw;
+}
+
+/**
+ * The Paeth predictor (PNG filter type 4)
+ */
+function paethPredictor(left: number, up: number, upLeft: number): number {
+  const p = left + up - upLeft;
+  const pa = Math.abs(p - left);
+  const pb = Math.abs(p - up);
+  const pc = Math.abs(p - upLeft);
+  if (pa <= pb && pa <= pc) return left;
+  return pb <= pc ? up : upLeft;
 }
 
 /**
