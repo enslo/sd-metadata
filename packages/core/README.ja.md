@@ -168,7 +168,7 @@ fileInput.addEventListener('change', async (e) => {
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.0.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.1.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -186,7 +186,7 @@ if (result.status === 'success') {
 
 ## Stealth PNGInfo の復元
 
-NovelAI（標準機能）と [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) 系の拡張機能（A1111/Forge、[ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)）は、生成メタデータのコピーをピクセルの最下位ビットに隠しています。このコピーは画像ホストにメタデータチャンクを剥がされても生き残ります。`parse()` はこれを自動で復元します。読み取り可能なメタデータがない画像に対してのみフォールバックとしてピクセルをスキャンし、復元された結果には `stealth: true` が付きます：
+NovelAI（標準機能）と [stealth-pnginfo](https://github.com/ashen-sensored/sd_webui_stealth_pnginfo) 系の拡張機能（A1111/Forge、[ComfyUI](https://github.com/catboxanon/comfyui_stealth_pnginfo)）は、生成メタデータのコピーをピクセルの最下位ビットに隠しています。このコピーは画像ホストにメタデータチャンクを剥がされても生き残ります。`parse()` はこれを自動で復元します。読み取り可能なメタデータがない画像に対してのみフォールバックとしてピクセルをスキャンし、復元された結果には `stealth: true` が付きます。提供元を宣言している画像（C2PA マニフェスト付きの ChatGPT / Gemini の PNG）はスキャンしません。これらのサービスは stealth データを書かないためです：
 
 ```typescript
 import { parse } from '@enslo/sd-metadata';
@@ -201,6 +201,7 @@ if (result.status === 'success') {
 - **4つの変種すべて** — アルファ/RGBチャンネル埋め込み × 圧縮/非圧縮 — に対応し、NovelAI の JSON ペイロードも拡張機能のプレーンテキスト（infotext）ペイロードも扱えます。
 - **WebP**: NovelAI はロスレス WebP 書き出しにも stealth データを埋め込みます。ブラウザではピクセルが自動でデコードされます。Node.js / Bun / Deno では `decodePixels` オプションでデコーダ（例：sharp）を渡してください。指定がない場合、WebP のスキャンはスキップされます。[応用例](#応用例)の「サーバーでの stealth 復元（WebP）」を参照してください。
 - **レスキュー**: 復元した結果はそのまま `write()` に渡せ、剥がされたファイルに元ツールのネイティブメタデータが復元されます。[応用例](#応用例)の「剥がされたメタデータのレスキュー」を参照してください。
+- **サーバー**: スキャンは画像全体を展開・unfilter します（Node.js 24 で 1 メガピクセルの PNG に約 50 ms、4 メガピクセルに約 200 ms）。展開はヘッダーが宣言するサイズ、ピクセル 256 MiB、ペイロード 16 MiB で打ち切られるので細工ファイルがギガバイト単位を要求することはありませんが、信頼できないアップロードではファイルサイズと寸法を事前に制限してから `parse()` を呼ぶか、復元が不要なら `read()` を使ってください。
 - スキャンには `DecompressionStream` が必要です（Node.js 18+、Bun 1.4+、Deno、全モダンブラウザ）。対応していないランタイムでは `parse()` はチャンクベースの読み取りにフォールバックします。stealth データの書き込みは意図的にスコープ外です。
 
 ## 動画ファイル
@@ -495,7 +496,7 @@ if (result.status === 'success') {
 
 ### `parse(input: Uint8Array | ArrayBuffer, options?: ReadOptions): Promise<ParseResult>`
 
-画像ファイルからメタデータを読み込み、パースします。読み取り可能なメタデータがない画像に対しては、追加でピクセルの Stealth PNGInfo をスキャンします（[Stealth PNGInfo の復元](#stealth-pnginfo-の復元)を参照）。スキャンはその場合にのみ実行されるため、通常のメタデータを持つ画像に追加コストはありません。
+画像ファイルからメタデータを読み込み、パースします。読み取り可能なメタデータがない画像に対しては、追加でピクセルの Stealth PNGInfo をスキャンします（[Stealth PNGInfo の復元](#stealth-pnginfo-の復元)を参照）。スキャンはその場合にのみ実行され、提供元を宣言している画像にも実行されないため、通常のメタデータを持つ画像に追加コストはありません。
 
 **パラメータ:**
 
@@ -542,7 +543,7 @@ if (result.status === 'success') {
 
 ### `write(input: Uint8Array | ArrayBuffer, metadata: ParseResult): WriteResult`
 
-画像ファイルにメタデータを書き込みます。
+画像ファイルにメタデータを書き込みます。書き込み先の既存メタデータはマージされず置き換わります。テキストチャンク・EXIF・XMP は `metadata` から作り直されるため、Orientation・DateTime・Make / Model のようなカメラ由来の EXIF は引き継がれません。
 
 **パラメータ:**
 
@@ -555,7 +556,7 @@ if (result.status === 'success') {
 **戻り値:**
 
 - `{ ok: true, value: Uint8Array, warning?: WriteWarning }` - 書き込み成功
-  - `warning` はメタデータが意図的に削除された場合に設定される（例：未対応のクロスフォーマット変換）
+  - `warning` はメタデータの一部または全部を書き込めなかった場合に設定される。`reason` は `'unrecognizedCrossFormat'`（未対応メタデータの別フォーマットへの書き込み）、`'conversionEmpty'`（ツールの変換器が書き込み先フォーマットに収まるものを見つけられなかった）、`'segmentTooLarge'`（65,535 バイト超の JPEG COM / XMP セグメントを省いた。`message` にセグメント名）のいずれか
 - `{ ok: false, error: { type, message? } }` - 失敗。`type` は以下のいずれか：
   - `'unsupportedFormat'`: 対象画像がPNG、JPEG、WebP以外の場合
   - `'conversionFailed'`: メタデータ変換に失敗（例：互換性のないフォーマット）
@@ -563,7 +564,7 @@ if (result.status === 'success') {
 
 ### `embed(input: Uint8Array | ArrayBuffer, metadata: EmbedMetadata | GenerationMetadata): WriteResult`
 
-SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋め込みます。
+SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋め込みます。`write()` と同じく、書き込み先の既存メタデータ（テキストチャンク・EXIF・XMP）は置き換わります。
 
 **パラメータ:**
 

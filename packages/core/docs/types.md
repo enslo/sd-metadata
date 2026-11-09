@@ -537,13 +537,17 @@ if (!result.ok) {
 Warning type for write operations.
 
 ```typescript
-export type WriteWarning = {
-  type: 'metadataDropped';
-  reason: 'unrecognizedCrossFormat';
-};
+export type WriteWarning =
+  | { type: 'metadataDropped'; reason: 'unrecognizedCrossFormat' }
+  | { type: 'metadataDropped'; reason: 'conversionEmpty' }
+  | { type: 'metadataDropped'; reason: 'segmentTooLarge'; message: string };
 ```
 
-Returned when metadata was intentionally dropped during a write operation (e.g., unrecognized metadata with cross-format conversion).
+Returned when the image was written but some or all of the metadata was left out:
+
+- `unrecognizedCrossFormat`: unrecognized metadata cannot be converted to another image format, so none was written
+- `conversionEmpty`: the detected tool's converter found nothing the target format can hold (e.g. a NovelAI JPEG without its UserComment), so none was written
+- `segmentTooLarge`: a JPEG COM or XMP segment was skipped because its text does not fit the 16-bit segment length (65,535 bytes); `message` names the skipped segments. Exif data that does not fit is an error (`writeFailed`) instead.
 
 ---
 
@@ -1015,7 +1019,7 @@ export type PngTextChunk = TExtChunk | ITXtChunk;
 
 ### `TExtChunk`
 
-PNG tEXt chunk (Latin-1 encoded).
+PNG tEXt chunk (Latin-1 per the specification).
 
 ```typescript
 export interface TExtChunk {
@@ -1024,8 +1028,17 @@ export interface TExtChunk {
   keyword: string;
   /** Text content */
   text: string;
+  /**
+   * How the writer encodes `text`: 'latin1' as the specification says and
+   * PIL reads, 'utf8' for tools that write UTF-8 into tEXt (TensorArt).
+   * Chunks built by the converters carry it; a chunk read from a file or
+   * supplied without it is written as UTF-8.
+   */
+  encoding?: 'latin1' | 'utf8';
 }
 ```
+
+When reading, the text is decoded as UTF-8 when it is valid UTF-8 and as Latin-1 otherwise, so chunks from both kinds of tools come back as the tool meant them.
 
 ---
 

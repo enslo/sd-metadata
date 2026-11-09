@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2026-11-09
+
+Safer Parsing, Compatible Writing
+
+### Added
+
+- **`write()` warns about dropped metadata** (#332): `WriteWarning.reason`
+  adds `'conversionEmpty'` (nothing the target format can hold) and
+  `'segmentTooLarge'` (a JPEG COM / XMP segment skipped, named in `message`).
+- **`TExtChunk.encoding`** (#329): optional `'latin1' | 'utf8'`, set on the
+  chunks the converters build.
+
+### Potentially Breaking Changes
+
+- **New `WriteWarning.reason` values** (#332): TypeScript users with an
+  exhaustive `switch` on `reason` need to handle the two new values.
+
+### Fixed
+
+- **`parse()` and `read()` never throw** (#322): malformed metadata is
+  reported as `unrecognized` instead of escaping as an exception.
+- **Crafted files** (#325, #327, #330, #337): text scans are linear, the
+  stealth scan's decompression is capped, YAML nesting and Matroska integers
+  are bounded.
+- **Writes other tools can read** (#324, #329): an oversized JPEG Exif
+  segment is refused instead of corrupting the file, WebP gets the VP8X
+  header libwebp needs, and tEXt chunks are written in Latin-1 as PIL reads
+  them.
+- **UTF-16 UserComment** (#333): text starting with 一 or an ideographic
+  space is no longer decoded byte-swapped.
+- **Settings values with commas** (#333): quoted as A1111 does, so
+  `Model: "a, b"` survives a round-trip.
+- **Settings line without a newline before it** (#323) is read.
+- **Cut-off PNGs** (#328, #332): the chunks before the break are read;
+  `write()` refuses the file instead of dropping image data.
+- **Conversions that lost metadata** (#332): a NovelAI JPEG / WebP without
+  its ImageDescription, a ComfyUI one with a camera `Make` tag.
+- **ComfyUI graphs** (#334): wired `scale_by`, `model_name` and `seed`,
+  `ImageScaleBy` factor, `parameters` + `workflow` PNGs, and no A1111
+  fallback on a cut-off JSON graph.
+- **Performance** (#335, #337): no stealth scan for vendor images, faster
+  PNG unfilter, fragmented MP4 Blobs read through a window.
+
+### Demo Site
+
+- Security headers (#331); drops handled once, loading state, write warnings
+  shown (#336).
+
 ## [4.0.0] - 2026-11-04
 
 ### New Features

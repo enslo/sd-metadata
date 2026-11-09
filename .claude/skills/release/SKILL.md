@@ -145,6 +145,11 @@ Applies to both packages (`packages/*/CHANGELOG.md`).
 
 Format: [Keep a Changelog](https://keepachangelog.com/)
 
+**Tagline**: the first line under the version heading is a one-line
+catchphrase for the release as a whole (e.g. `Safer Parsing, Compatible
+Writing`), in plain text — not emphasis, which markdownlint rejects as a
+heading (MD036). The GitHub Release notes start with it.
+
 Sections, in this order, omitting empty ones: New Features,
 Breaking Changes, Added, Deprecated, Fixed, Demo Site, Maintenance.
 `New Features` holds the headline capabilities a release is remembered
@@ -152,7 +157,10 @@ for (a new API, a new media type, a new metadata field); `Added` holds
 every other addition (a new tool, a new chunk, samples that verify a
 parser, heuristics). Keep the two apart so the big items stand out.
 
-Write for **library users**, not contributors:
+Write for **library users**, not contributors, and keep it short: one to
+three lines per item, the user-visible effect only, related fixes grouped
+under one item. The PR numbers are links; the mechanism and the evidence
+live there, not here. Show the drafted entry to the user before committing.
 
 - **Include**: features, bug fixes, breaking changes, deprecations
 - **Include**: security-relevant dependency updates (with advisory ID)
@@ -165,6 +173,8 @@ Example:
 
 ```markdown
 ## [X.Y.Z] - YYYY-MM-DD
+
+Tagline For This Release
 
 ### Added
 - **Feature name** (#PR): User-facing description
