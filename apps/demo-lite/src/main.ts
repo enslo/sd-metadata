@@ -23,33 +23,34 @@ let currentObjectUrl: string | null = null;
 // --- File handling ---
 
 function handleFile(file: File): void {
-  const arrayBuffer = file.arrayBuffer();
+  file
+    .arrayBuffer()
+    .then((buf) => {
+      const text = parse(new Uint8Array(buf));
 
-  arrayBuffer.then((buf) => {
-    const text = parse(new Uint8Array(buf));
+      // Revoke previous object URL
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+      }
 
-    // Revoke previous object URL
-    if (currentObjectUrl) {
-      URL.revokeObjectURL(currentObjectUrl);
-    }
+      // Show preview in drop zone
+      currentObjectUrl = URL.createObjectURL(file);
+      previewThumb.src = currentObjectUrl;
+      previewFilename.textContent = file.name;
+      previewFilename.title = file.name;
+      dropzoneInitial.hidden = true;
+      dropzonePreview.hidden = false;
 
-    // Show preview in drop zone
-    currentObjectUrl = URL.createObjectURL(file);
-    previewThumb.src = currentObjectUrl;
-    previewFilename.textContent = file.name;
-    previewFilename.title = file.name;
-    dropzoneInitial.hidden = true;
-    dropzonePreview.hidden = false;
-
-    // Show parse result
-    if (text) {
-      resultText.textContent = text;
+      // Show parse result
+      resultText.textContent = text || 'No metadata found.';
       resultSection.hidden = false;
-    } else {
-      resultText.textContent = 'No metadata found.';
+    })
+    .catch((e: unknown) => {
+      // A file the browser could not read, or one the parser choked on:
+      // say so instead of leaving the page as it was
+      resultText.textContent = `Failed to read the file: ${e instanceof Error ? e.message : String(e)}`;
       resultSection.hidden = false;
-    }
-  });
+    });
 }
 
 function clearState(): void {
@@ -58,7 +59,8 @@ function clearState(): void {
     currentObjectUrl = null;
   }
 
-  previewThumb.src = '';
+  // An empty src resolves to the page itself, which the browser would fetch
+  previewThumb.removeAttribute('src');
   previewFilename.textContent = '';
   dropzoneInitial.hidden = false;
   dropzonePreview.hidden = true;

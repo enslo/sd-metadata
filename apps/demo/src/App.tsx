@@ -43,37 +43,45 @@ export function App() {
   // through React's reconciliation (React 19.2 dev mode otherwise serializes
   // them on every commit for performance timeline logging).
   const fileDataRef = useRef<Uint8Array | null>(null);
+  // The blob URL of the shown preview, revoked when the next one replaces it
+  const previewUrlRef = useRef<string | null>(null);
+  // Counts the files handed in; a result whose count is no longer the
+  // latest arrived after a later drop and is thrown away
+  const generationRef = useRef(0);
+  const dropzoneRef = useRef<HTMLDivElement>(null);
   const [globalDragOver, setGlobalDragOver] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleFileSelect = useCallback(async (file: File) => {
+    const generation = ++generationRef.current;
+    const previewUrl = URL.createObjectURL(file);
+    setLoading(true);
     try {
-      const previewUrl = URL.createObjectURL(file);
-
+      let loaded: LoadedResult;
+      let data: Uint8Array | null = null;
       if (isVideoFile(file)) {
         // The File goes in as it is: parseVideo() reads only the byte
         // ranges that hold metadata, never the whole video.
-        const parseResult = await parseVideo(file);
-        fileDataRef.current = null;
-        setState({
-          loaded: { media: 'video', parseResult },
-          filename: file.name,
-          previewUrl,
-        });
-        return;
+        loaded = { media: 'video', parseResult: await parseVideo(file) };
+      } else {
+        data = new Uint8Array(await file.arrayBuffer());
+        loaded = { media: 'image', parseResult: await parse(data) };
       }
 
-      const buffer = await file.arrayBuffer();
-      const data = new Uint8Array(buffer);
-      const parseResult = await parse(data);
-
+      if (generation !== generationRef.current) {
+        // A later file was dropped while this one was being read
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = previewUrl;
       fileDataRef.current = data;
-      setState({
-        loaded: { media: 'image', parseResult },
-        filename: file.name,
-        previewUrl,
-      });
+      setState({ loaded, filename: file.name, previewUrl });
     } catch (e) {
+      URL.revokeObjectURL(previewUrl);
       console.error('Failed to load file:', e);
+    } finally {
+      if (generation === generationRef.current) setLoading(false);
     }
   }, []);
 
@@ -93,6 +101,9 @@ export function App() {
     const handleDrop = (e: DragEvent) => {
       e.preventDefault();
       setGlobalDragOver(false);
+      // A drop on the Dropzone is handled by its own onDrop; the native
+      // event still bubbles here and would read the file a second time
+      if (dropzoneRef.current?.contains(e.target as Node)) return;
       const file = e.dataTransfer?.files[0];
       if (file) {
         void handleFileSelect(file);
@@ -172,14 +183,17 @@ export function App() {
         </Stack>
 
         <Stack component="main" gap="md">
-          <DropZone
-            onFileSelect={handleFileSelect}
-            previewUrl={state.previewUrl}
-            media={state.loaded?.media ?? null}
-            filename={state.filename}
-            softwareInfo={getSoftwareLabelForDisplay()}
-            globalDragOver={globalDragOver}
-          />
+          <div ref={dropzoneRef}>
+            <DropZone
+              onFileSelect={handleFileSelect}
+              previewUrl={state.previewUrl}
+              media={state.loaded?.media ?? null}
+              filename={state.filename}
+              softwareInfo={getSoftwareLabelForDisplay()}
+              globalDragOver={globalDragOver}
+              loading={loading}
+            />
+          </div>
 
           {state.loaded && state.filename && state.previewUrl && (
             <Results

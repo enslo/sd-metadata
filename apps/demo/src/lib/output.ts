@@ -2,8 +2,13 @@
  * Metadata writing logic of the Output tab (keep / strip / edit / A1111)
  */
 
-import type { EmbedMetadata, ParseResult } from '@enslo/sd-metadata';
+import type {
+  EmbedMetadata,
+  ParseResult,
+  WriteWarning,
+} from '@enslo/sd-metadata';
 import { embed, write } from '@enslo/sd-metadata';
+import type { I18nMessages } from '../i18n';
 
 export type MetadataMode = 'keep' | 'strip' | 'edit';
 export type MetadataFormat = 'original' | 'a1111';
@@ -55,17 +60,27 @@ export interface OutputPlan {
   extras: Record<string, string | number>;
 }
 
+/** What a write produced: the bytes, a filename suffix, and any warning */
+export interface WrittenImage {
+  data: Uint8Array;
+  /** Describes what was written; empty when the metadata was kept as it is */
+  suffix: string;
+  /** Set when write() left some or all of the metadata out */
+  warning?: WriteWarning;
+}
+
 /**
  * Write the planned metadata into an image
  *
- * @returns The new image bytes and a filename suffix describing what was
- *   written (empty when the loaded metadata was kept as it is)
+ * When the loaded metadata cannot be carried into the target format,
+ * write() returns the image without it and a warning; the suffix then
+ * says so, as it does for an explicit strip.
  */
 export function applyMetadata(
   baseData: Uint8Array,
   parseResult: ParseResult,
   plan: OutputPlan,
-): { data: Uint8Array; suffix: string } {
+): WrittenImage {
   if (plan.mode === 'strip') {
     const result = write(baseData, { status: 'empty' });
     if (!result.ok) throw new Error(result.error.type);
@@ -83,5 +98,17 @@ export function applyMetadata(
   }
   const result = write(baseData, parseResult);
   if (!result.ok) throw new Error(result.error.type);
-  return { data: result.value, suffix: '' };
+  const { warning } = result;
+  const lostAll = warning && warning.reason !== 'segmentTooLarge';
+  return { data: result.value, suffix: lostAll ? '_noinfo' : '', warning };
+}
+
+/** The notice to show the user for a write warning */
+export function describeWarning(
+  warning: WriteWarning,
+  t: I18nMessages['outputTab'],
+): string {
+  return warning.reason === 'segmentTooLarge'
+    ? t.segmentTooLarge
+    : t.metadataDropped;
 }

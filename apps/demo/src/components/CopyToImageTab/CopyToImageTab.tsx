@@ -21,7 +21,9 @@ import {
   generateFilename,
   getFormatLabel,
   getMimeType,
+  sniffFormat,
 } from '../../lib/image';
+import { describeWarning } from '../../lib/output';
 
 interface CopyToImageTabProps {
   parseResult: ParseResult;
@@ -42,12 +44,15 @@ export function CopyToImageTab({ parseResult }: CopyToImageTabProps) {
   const [targetPreviewUrl, setTargetPreviewUrl] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // What the last save had to leave out, shown under the button
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Re-initialize when a new image is loaded
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on parseResult change
   useEffect(() => {
     setTargetFile(null);
     setError(null);
+    setNotice(null);
   }, [parseResult]);
 
   // Preview for the target image
@@ -65,11 +70,16 @@ export function CopyToImageTab({ parseResult }: CopyToImageTabProps) {
     if (!targetFile) return;
     setProcessing(true);
     setError(null);
+    setNotice(null);
     try {
-      const format = detectFormat(targetFile.name);
       const baseData = new Uint8Array(await targetFile.arrayBuffer());
+      // write() goes by the bytes, so the file is named by them too
+      const format = sniffFormat(baseData) ?? detectFormat(targetFile.name);
       const result = write(baseData, parseResult);
       if (!result.ok) throw new Error(result.error.type);
+      if (result.warning) {
+        setNotice(describeWarning(result.warning, t.outputTab));
+      }
       const blob = new Blob([result.value.slice()], {
         type: getMimeType(format),
       });
@@ -82,7 +92,7 @@ export function CopyToImageTab({ parseResult }: CopyToImageTabProps) {
     } finally {
       setProcessing(false);
     }
-  }, [targetFile, parseResult]);
+  }, [targetFile, parseResult, t]);
 
   return (
     <Stack gap="md">
@@ -170,6 +180,11 @@ export function CopyToImageTab({ parseResult }: CopyToImageTabProps) {
       {error && (
         <Text c="red" size="sm">
           {error}
+        </Text>
+      )}
+      {notice && (
+        <Text c="yellow" size="sm">
+          {notice}
         </Text>
       )}
     </Stack>

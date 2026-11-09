@@ -41,6 +41,40 @@ export function getMimeType(format: OutputFormat): string {
 }
 
 /**
+ * The output format a MIME type names, if any
+ */
+export function formatOfMimeType(mimeType: string): OutputFormat | null {
+  if (mimeType === 'image/png') return 'png';
+  if (mimeType === 'image/jpeg') return 'jpeg';
+  if (mimeType === 'image/webp') return 'webp';
+  return null;
+}
+
+/**
+ * The format of image bytes, from their signature
+ *
+ * A file's name can disagree with its contents (a PNG saved as .jpg), and
+ * write() goes by the bytes, so the saved file is named by them too.
+ */
+export function sniffFormat(data: Uint8Array): OutputFormat | null {
+  if (data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e) return 'png';
+  if (data[0] === 0xff && data[1] === 0xd8) return 'jpeg';
+  if (
+    data[0] === 0x52 && // R
+    data[1] === 0x49 && // I
+    data[2] === 0x46 && // F
+    data[3] === 0x46 && // F
+    data[8] === 0x57 && // W
+    data[9] === 0x45 && // E
+    data[10] === 0x42 && // B
+    data[11] === 0x50 // P
+  ) {
+    return 'webp';
+  }
+  return null;
+}
+
+/**
  * Get file extension for format
  */
 export function getExtension(format: OutputFormat): string {
@@ -119,7 +153,10 @@ export function downloadBlob(blob: Blob, filename: string): void {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Safari and older Firefox start the download after click() returns, so
+  // a URL revoked right away gives them nothing to fetch (FileSaver.js
+  // waits 40 seconds for the same reason)
+  setTimeout(() => URL.revokeObjectURL(url), 40_000);
 }
 
 /**
@@ -136,17 +173,24 @@ export function generateFilename(
 
 /**
  * Convert image data to a different format via canvas
+ *
+ * A browser that cannot encode the target format (WebP in some) answers
+ * with PNG instead, so the format actually produced is returned with the
+ * bytes and the caller names the file by it.
  */
 export async function convertImageFormat(
   data: Uint8Array,
   targetFormat: OutputFormat,
-): Promise<Uint8Array> {
+): Promise<{ data: Uint8Array; format: OutputFormat }> {
   const blob = new Blob([data.slice()]);
   const url = URL.createObjectURL(blob);
   try {
     const canvas = await loadImageToCanvas(url);
     const convertedBlob = await canvasToBlob(canvas, targetFormat);
-    return await blobToUint8Array(convertedBlob);
+    return {
+      data: await blobToUint8Array(convertedBlob),
+      format: formatOfMimeType(convertedBlob.type) ?? 'png',
+    };
   } finally {
     URL.revokeObjectURL(url);
   }
