@@ -475,3 +475,56 @@ describe('embed - Integration Tests', () => {
     });
   });
 });
+
+describe('embed - UTF-16 byte order', () => {
+  it('round-trips a prompt starting with 一 through a JPEG', () => {
+    const metadata: StandardMetadata = {
+      software: 'sd-webui',
+      prompt: '一人の少女, masterpiece',
+      negativePrompt: '低解像度',
+      width: 512,
+      height: 512,
+      sampling: { steps: 20, sampler: 'Euler a', cfg: 7, seed: '42' },
+    };
+
+    const written = embed(createMinimalJpeg(), metadata);
+    expect(written.ok).toBe(true);
+    if (!written.ok) return;
+
+    const result = read(written.value);
+    expect(result.status).toBe('success');
+    if (result.status !== 'success') return;
+    expect(result.metadata.prompt).toBe('一人の少女, masterpiece');
+    expect(result.metadata.negativePrompt).toBe('低解像度');
+  });
+});
+
+describe('embed - settings values with delimiters', () => {
+  it('round-trips a model name and an upscaler that contain commas', () => {
+    const metadata: StandardMetadata = {
+      software: 'sd-webui',
+      prompt: '1girl',
+      negativePrompt: '',
+      width: 512,
+      height: 512,
+      sampling: { steps: 20, sampler: 'DPM++ 2M', cfg: 7, seed: '42' },
+      model: { name: 'Pony Realism, v2.2', hash: 'abc12345' },
+      hires: {
+        upscaler: 'R-ESRGAN 4x+, Anime6B',
+        scale: 2,
+        steps: 10,
+        denoise: 0.5,
+      },
+    };
+
+    const written = embed(createMinimalPng(), metadata);
+    expect(written.ok).toBe(true);
+    if (!written.ok) return;
+
+    const result = read(written.value);
+    expect(result.status).toBe('success');
+    if (result.status !== 'success') return;
+    expect(result.metadata.model?.name).toBe('Pony Realism, v2.2');
+    expect(result.metadata.hires?.upscaler).toBe('R-ESRGAN 4x+, Anime6B');
+  });
+});

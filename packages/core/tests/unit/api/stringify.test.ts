@@ -1091,3 +1091,36 @@ describe('buildEmbedText - Denoising strength', () => {
     expect(text).not.toContain('Denoising strength: 0.8');
   });
 });
+
+describe('buildEmbedText - values with delimiters', () => {
+  it('quotes a value that contains a comma or colon, as A1111 does', () => {
+    const metadata: EmbedMetadata = {
+      prompt: 'test',
+      negativePrompt: '',
+      width: 0,
+      height: 0,
+      model: { name: 'Pony Realism, v2.2' },
+      hires: { upscaler: 'R-ESRGAN 4x+, Anime6B', scale: 2 },
+      extras: { 'ADetailer prompt': 'detailed face, eyes' },
+    };
+
+    expect(buildEmbedText(metadata)).toBe(
+      'test\nModel: "Pony Realism, v2.2", Hires upscale: 2, Hires upscaler: "R-ESRGAN 4x+, Anime6B", ADetailer prompt: "detailed face, eyes"',
+    );
+  });
+
+  it('leaves values without a delimiter as they are', () => {
+    const metadata: EmbedMetadata = {
+      prompt: 'test',
+      negativePrompt: '',
+      width: 0,
+      height: 0,
+      sampling: { steps: 20, sampler: 'DPM++ 2M SDE', scheduler: 'Karras' },
+      model: { name: 'ponyRealism_v22.safetensors' },
+    };
+
+    expect(buildEmbedText(metadata)).toBe(
+      'test\nSteps: 20, Sampler: DPM++ 2M SDE, Schedule type: Karras, Model: ponyRealism_v22.safetensors',
+    );
+  });
+});
