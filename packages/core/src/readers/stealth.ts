@@ -216,6 +216,11 @@ function concatBytes(parts: Uint8Array[]): Uint8Array {
 
 /**
  * Reverse PNG scanline filtering (filter types 0-4)
+ *
+ * One loop per filter type, with the first pixel of a row and the first
+ * row handled apart, so the inner loops carry no per-byte branches: this
+ * is where the scan spends its time after inflating. Stores into the
+ * Uint8Array wrap modulo 256 as the filters require.
  */
 function unfilter(
   raw: Uint8Array,
@@ -231,53 +236,99 @@ function unfilter(
   const pixels = new Uint8Array(height * stride);
   for (let y = 0; y < height; y++) {
     const filter = raw[y * (stride + 1)] ?? 0;
-    if (filter > 4) {
-      return null;
-    }
-    const rowStart = y * (stride + 1) + 1;
-    const outStart = y * stride;
-    for (let i = 0; i < stride; i++) {
-      const value = raw[rowStart + i] ?? 0;
-      const left = i >= channels ? (pixels[outStart + i - channels] ?? 0) : 0;
-      const up = y > 0 ? (pixels[outStart + i - stride] ?? 0) : 0;
-      const upLeft =
-        y > 0 && i >= channels
-          ? (pixels[outStart + i - stride - channels] ?? 0)
-          : 0;
+    // The row's bytes in `raw`, its pixels in `pixels`, and the row above
+    const row = y * (stride + 1) + 1;
+    const out = y * stride;
+    const prior = out - stride;
+    const first = y === 0;
 
-      let reconstructed = value;
-      switch (filter) {
-        case 1:
-          reconstructed = value + left;
-          break;
-        case 2:
-          reconstructed = value + up;
-          break;
-        case 3:
-          reconstructed = value + ((left + up) >> 1);
-          break;
-        case 4:
-          reconstructed = value + paeth(left, up, upLeft);
-          break;
-      }
-      pixels[outStart + i] = reconstructed & 0xff;
+    switch (filter) {
+      case 0:
+        pixels.set(raw.subarray(row, row + stride), out);
+        break;
+      case 1:
+        unfilterSub(raw, row, pixels, out, stride, channels);
+        break;
+      case 2:
+        if (first) {
+          pixels.set(raw.subarray(row, row + stride), out);
+        } else {
+          for (let i = 0; i < stride; i++) {
+            pixels[out + i] = (raw[row + i] ?? 0) + (pixels[prior + i] ?? 0);
+          }
+        }
+        break;
+      case 3:
+        if (first) {
+          // No row above: the average is half the left neighbour
+          for (let i = 0; i < channels; i++) {
+            pixels[out + i] = raw[row + i] ?? 0;
+          }
+          for (let i = channels; i < stride; i++) {
+            pixels[out + i] =
+              (raw[row + i] ?? 0) + ((pixels[out + i - channels] ?? 0) >> 1);
+          }
+        } else {
+          for (let i = 0; i < channels; i++) {
+            pixels[out + i] =
+              (raw[row + i] ?? 0) + ((pixels[prior + i] ?? 0) >> 1);
+          }
+          for (let i = channels; i < stride; i++) {
+            pixels[out + i] =
+              (raw[row + i] ?? 0) +
+              (((pixels[out + i - channels] ?? 0) + (pixels[prior + i] ?? 0)) >>
+                1);
+          }
+        }
+        break;
+      case 4:
+        if (first) {
+          // No row above: the Paeth predictor is the left neighbour
+          unfilterSub(raw, row, pixels, out, stride, channels);
+        } else {
+          // No left neighbour: the predictor is the byte above
+          for (let i = 0; i < channels; i++) {
+            pixels[out + i] = (raw[row + i] ?? 0) + (pixels[prior + i] ?? 0);
+          }
+          for (let i = channels; i < stride; i++) {
+            const left = pixels[out + i - channels] ?? 0;
+            const up = pixels[prior + i] ?? 0;
+            const upLeft = pixels[prior + i - channels] ?? 0;
+            const p = left + up - upLeft;
+            const pa = Math.abs(p - left);
+            const pb = Math.abs(p - up);
+            const pc = Math.abs(p - upLeft);
+            pixels[out + i] =
+              (raw[row + i] ?? 0) +
+              (pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft);
+          }
+        }
+        break;
+      default:
+        return null;
     }
   }
   return pixels;
 }
 
 /**
- * Paeth predictor (PNG filter type 4)
+ * Reverse the Sub filter (type 1) on one row: each byte plus the byte one
+ * pixel to its left
  */
-function paeth(left: number, up: number, upLeft: number): number {
-  const p = left + up - upLeft;
-  const pa = Math.abs(p - left);
-  const pb = Math.abs(p - up);
-  const pc = Math.abs(p - upLeft);
-  if (pa <= pb && pa <= pc) {
-    return left;
+function unfilterSub(
+  raw: Uint8Array,
+  row: number,
+  pixels: Uint8Array,
+  out: number,
+  stride: number,
+  channels: number,
+): void {
+  for (let i = 0; i < channels; i++) {
+    pixels[out + i] = raw[row + i] ?? 0;
   }
-  return pb <= pc ? up : upLeft;
+  for (let i = channels; i < stride; i++) {
+    pixels[out + i] = (raw[row + i] ?? 0) + (pixels[out + i - channels] ?? 0);
+  }
 }
 
 // ============================================================================

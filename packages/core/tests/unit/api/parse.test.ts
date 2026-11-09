@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { parse } from '../../../src/api/parse';
 import { read } from '../../../src/api/read';
+import { readChunkType, readUint32BE } from '../../../src/utils/binary';
+import { writePngMetadata } from '../../../src/writers/png';
 import {
   createMinimalJpeg,
   createMinimalPng,
   createMinimalWebp,
 } from '../../helpers/minimal-images';
+import { loadVendorSample } from '../../helpers/samples';
 import {
   createStealthPng,
   createStealthRgbaPixels,
@@ -159,5 +162,61 @@ describe('parse - WebP stealth via decodePixels', () => {
 
     expect(called).toBe(false);
     expect(result.status).toBe('success');
+  });
+});
+
+describe('parse - vendor declarations', () => {
+  /** The first chunk of the given type: length, type, data and CRC */
+  function pngChunk(png: Uint8Array, type: string): Uint8Array {
+    let offset = 8;
+    while (offset + 8 <= png.length) {
+      const length = readUint32BE(png, offset);
+      if (readChunkType(png, offset + 4) === type) {
+        return png.slice(offset, offset + 12 + length);
+      }
+      offset += 12 + length;
+    }
+    throw new Error(`no ${type} chunk`);
+  }
+
+  /** The PNG with a chunk inserted right after IHDR */
+  function withChunkAfterIhdr(png: Uint8Array, chunk: Uint8Array): Uint8Array {
+    const ihdrEnd = 8 + 12 + 13;
+    const out = new Uint8Array(png.length + chunk.length);
+    out.set(png.subarray(0, ihdrEnd), 0);
+    out.set(chunk, ihdrEnd);
+    out.set(png.subarray(ihdrEnd), ihdrEnd + chunk.length);
+    return out;
+  }
+
+  it('does not scan the pixels of an image that declares its vendor', async () => {
+    // The C2PA manifest of a vendor sample, moved into a PNG whose pixels
+    // carry stealth data: the declaration decides and the scan is skipped,
+    // as commercial services never write stealth data
+    const manifest = pngChunk(
+      loadVendorSample('png', 'gemini_3.1pro.png'),
+      'caBX',
+    );
+    const png = withChunkAfterIhdr(
+      createStealthPng({ payload: A1111_PAYLOAD }),
+      manifest,
+    );
+
+    const chunkResult = read(png);
+    expect(chunkResult.status).toBe('vendor');
+    expect(await parse(png)).toEqual(chunkResult);
+  });
+
+  it('still scans the pixels of an image whose chunks are unrecognized', async () => {
+    const written = writePngMetadata(
+      createStealthPng({ payload: A1111_PAYLOAD }),
+      [{ type: 'tEXt', keyword: 'unknown_tool', text: 'some data' }],
+    );
+    if (!written.ok) throw new Error(written.error.type);
+
+    expect(read(written.value).status).toBe('unrecognized');
+    const result = await parse(written.value);
+    expect(result.status).toBe('success');
+    expect(result.status === 'success' && result.stealth).toBe(true);
   });
 });

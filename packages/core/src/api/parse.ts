@@ -26,9 +26,12 @@ import { applyDimensionFallback, read } from './read';
  * image hosting services).
  *
  * The stealth scan decodes the full pixel data, so it only runs when
- * regular metadata is absent. PNG pixels are decoded by the library
- * itself. WebP pixels are decoded by the platform where possible
- * (browsers, via WebCodecs or canvas); in other runtimes supply
+ * regular metadata is absent. An image that declares its vendor (a C2PA
+ * manifest from ChatGPT, Gemini, ...) is not scanned either: those
+ * services write no stealth data, and the declaration is the answer.
+ * PNG pixels are decoded by the library itself. WebP pixels are decoded
+ * by the platform where possible (browsers, via WebCodecs or canvas); in
+ * other runtimes supply
  * {@link ReadOptions.decodePixels} (e.g. backed by sharp in Node.js)
  * or the WebP stealth scan is skipped.
  *
@@ -54,8 +57,14 @@ export async function parse(
   const chunkResult = read(data, options);
 
   // Only images without parsed generation metadata warrant a stealth
-  // scan, and only PNG and WebP carry stealth data.
-  if (chunkResult.status === 'success' || chunkResult.status === 'invalid') {
+  // scan, and only PNG and WebP carry stealth data. A vendor declaration
+  // settles the image too: commercial services write no stealth data, and
+  // their multi-megabyte PNGs would be decoded for nothing every time.
+  if (
+    chunkResult.status === 'success' ||
+    chunkResult.status === 'invalid' ||
+    chunkResult.status === 'vendor'
+  ) {
     return chunkResult;
   }
   const format = detectFormat(data);
@@ -92,8 +101,8 @@ export async function parse(
   }
 
   // Stealth data exists but is in an unknown format: surface it rather
-  // than reporting an empty file. Chunk-based results (unrecognized,
-  // vendor) stay as they are.
+  // than reporting an empty file. An unrecognized chunk-based result
+  // stays as it is.
   if (chunkResult.status === 'empty') {
     return {
       status: 'unrecognized',
