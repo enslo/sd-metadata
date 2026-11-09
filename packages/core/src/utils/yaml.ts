@@ -22,6 +22,13 @@ const KEY_LINE = /^( *)([^\s'"#][^:]*?):(?: +(.*))?$/;
 const BLOCK_HEADER = /^([|>])([+-]?)$/;
 
 /**
+ * Deepest nesting read. Metadata records are a few levels deep, and each
+ * level costs a recursion plus a rescan of the lines below it, so a
+ * document nested far beyond that is given up on rather than walked.
+ */
+const MAX_DEPTH = 64;
+
+/**
  * Read a YAML document made of block mappings
  *
  * @param text - YAML text
@@ -46,7 +53,9 @@ function readMapping(
   lines: string[],
   start: number,
   indent: number,
+  depth = 0,
 ): { mapping: YamlMapping; end: number } | undefined {
+  if (depth > MAX_DEPTH) return undefined;
   const mapping: YamlMapping = {};
   let i = start;
   while (i < lines.length) {
@@ -73,16 +82,33 @@ function readMapping(
 
     const firstBody = body.find((l) => l.trim() !== '');
     if (head === '' && firstBody !== undefined && KEY_LINE.test(firstBody)) {
-      const nested = readMapping(lines, i + 1, indentOf(firstBody));
+      const nested = readMapping(lines, i + 1, indentOf(firstBody), depth + 1);
       if (!nested) return undefined;
-      mapping[key] = nested.mapping;
+      setEntry(mapping, key, nested.mapping);
       i = nested.end;
     } else {
-      mapping[key] = readScalar(head, body);
+      setEntry(mapping, key, readScalar(head, body));
       i = end;
     }
   }
   return { mapping, end: i };
+}
+
+/**
+ * Add an entry as an own property, so a key taken from the file such as
+ * `__proto__` cannot replace the mapping's prototype
+ */
+function setEntry(
+  mapping: YamlMapping,
+  key: string,
+  value: string | YamlMapping,
+): void {
+  Object.defineProperty(mapping, key, {
+    value,
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  });
 }
 
 /**

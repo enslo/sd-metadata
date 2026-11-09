@@ -141,3 +141,34 @@ describe('parseYamlMapping - long lines', () => {
     expect(scalar(`key: x${blanks}y`, '  z')).toBe(`x${blanks}y z`);
   });
 });
+
+describe('parseYamlMapping - unusual keys and depth', () => {
+  it('keeps a __proto__ key as an own property instead of changing the prototype', () => {
+    const result = parseYamlMapping('a: 1\n__proto__:\n  seed: 42\n');
+
+    expect(result).toBeDefined();
+    if (result) {
+      expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+      expect(Object.hasOwn(result, '__proto__')).toBe(true);
+      expect((result as Record<string, unknown>).seed).toBeUndefined();
+    }
+  });
+
+  it('gives up on a document nested deeper than a metadata record ever is', () => {
+    // One level per line, 100 deep: the reader stops at 64 levels instead
+    // of recursing, and rescanning the lines below, all the way down
+    const stairs = Array.from(
+      { length: 100 },
+      (_, i) => `${' '.repeat(i)}k${i}:`,
+    );
+    const deep = `${stairs.join('\n')}\n${' '.repeat(100)}leaf: 1`;
+
+    expect(parseYamlMapping(deep)).toBeUndefined();
+  });
+
+  it('reads a document nested to a realistic depth', () => {
+    expect(parseYamlMapping('a:\n  b:\n    c:\n      d: 1\n')).toEqual({
+      a: { b: { c: { d: '1' } } },
+    });
+  });
+});
