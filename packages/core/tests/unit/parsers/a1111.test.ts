@@ -423,3 +423,42 @@ Steps: 20, Size: 512x512`;
     }
   });
 });
+
+describe('parseA1111 - settings line', () => {
+  it('should read a text that is only a settings line, as A1111 writes for empty prompts', () => {
+    const parameters =
+      'Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 12345, Size: 512x768, Model: animagine, Version: v1.10.1';
+    const entries = createA1111Entry(parameters);
+
+    const result = parseA1111(entries, 'sd-webui');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.prompt).toBe('');
+      expect(result.value.negativePrompt).toBe('');
+      expect(result.value.sampling?.steps).toBe(20);
+      expect(result.value.width).toBe(512);
+      expect(result.value.height).toBe(768);
+      expect(result.value.model?.name).toBe('animagine');
+    }
+  });
+
+  it('should keep "Steps:" inside a prompt and take the last line as settings', () => {
+    const parameters = `climbing the Steps: dramatic lighting, 1girl
+Negative prompt: lowres
+Steps: 20, Sampler: Euler a, CFG scale: 7, Seed: 1, Size: 512x512`;
+    const entries = createA1111Entry(parameters);
+
+    const result = parseA1111(entries, 'sd-webui');
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.prompt).toBe(
+        'climbing the Steps: dramatic lighting, 1girl',
+      );
+      expect(result.value.negativePrompt).toBe('lowres');
+      expect(result.value.sampling?.steps).toBe(20);
+      expect(result.value.width).toBe(512);
+    }
+  });
+});
