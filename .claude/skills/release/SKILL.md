@@ -157,10 +157,11 @@ for (a new API, a new media type, a new metadata field); `Added` holds
 every other addition (a new tool, a new chunk, samples that verify a
 parser, heuristics). Keep the two apart so the big items stand out.
 
-Write for **library users**, not contributors, and keep it short: one to
-three lines per item, the user-visible effect only, related fixes grouped
-under one item. The PR numbers are links; the mechanism and the evidence
-live there, not here. Show the drafted entry to the user before committing.
+Write for **library users**, not contributors, and keep it short: one or
+two lines per item — what changed for the user, nothing about how — with
+related fixes grouped under one item. The PR numbers are links; the
+mechanism and the evidence live there, not here. Show the drafted entry to
+the user before committing.
 
 - **Include**: features, bug fixes, breaking changes, deprecations
 - **Include**: security-relevant dependency updates (with advisory ID)
