@@ -182,7 +182,7 @@ describe('stringify - Samples', () => {
       const result = read(loadSample('png', 'invokeai-lora.png'));
 
       expect(stringify(result)).toBe(
-        'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, #テスト\n<lora:LECO_GoodHands:-0.8> <lora:LECO_BadHands:0.75> <lora:8be1e5d2cc7cd938037337603fb51565:0.45>\nNegative prompt: bad quality, worst quality, worst detail, sketch, censor, \n\nSteps: 20, Sampler: dpmpp_3m_k, CFG scale: 5, Seed: 3955673604, Size: 1024x1024, Model hash: blake3:5a694d07c5f371b902bfa04622af80d4e7e1fa0e633b798c1f03d7d1252548d7, Model: waiIllustriousSDXL_v170, Lora hashes: "LECO_GoodHands: blake3:bfd3808a9c2bcb186b648487dbdc4dce47a596cdda97b9f20a445baf1305516f, LECO_BadHands: blake3:4478c707e0e89c250c0897388782b9c926103e9ebbd93f241a1e9c3d0d6d69bf, 8be1e5d2cc7cd938037337603fb51565: blake3:4d12a16bec8fdc0be69ac1ccea9077104f0d61156e21b79a9b09419418c52626"',
+        'general, masterpiece, best quality, amazing quality, \n1girl, solo, hatsune miku, double v, #テスト\n<lora:LECO_GoodHands:-0.8> <lora:LECO_BadHands:0.75> <lora:8be1e5d2cc7cd938037337603fb51565:0.45>\nNegative prompt: bad quality, worst quality, worst detail, sketch, censor, \n\nSteps: 20, Sampler: dpmpp_3m_k, CFG scale: 5, Seed: 3955673604, Size: 1024x1024, Model hash: "blake3:5a694d07c5f371b902bfa04622af80d4e7e1fa0e633b798c1f03d7d1252548d7", Model: waiIllustriousSDXL_v170, Lora hashes: "LECO_GoodHands: blake3:bfd3808a9c2bcb186b648487dbdc4dce47a596cdda97b9f20a445baf1305516f, LECO_BadHands: blake3:4478c707e0e89c250c0897388782b9c926103e9ebbd93f241a1e9c3d0d6d69bf, 8be1e5d2cc7cd938037337603fb51565: blake3:4d12a16bec8fdc0be69ac1ccea9077104f0d61156e21b79a9b09419418c52626"',
       );
     });
 
@@ -222,7 +222,7 @@ describe('stringify - Samples', () => {
       const result = read(loadSample('png', 'civitai-lora-hires.png'));
 
       expect(stringify(result)).toBe(
-        'perfect eyes, 1girl, solo, hatsune miku, double v, #テスト\nNegative prompt: bad quality, worst quality, 3d, jpeg artifacts,\nSteps: 20, Sampler: euler_ancestral, Schedule type: normal, CFG scale: 4.5, Seed: 933381418, Size: 1536x1536, Model: urn:air:sdxl:checkpoint:civitai:2904237@3284240, Denoising strength: 0.75, Hires steps: 20, Hires upscaler: urn:air:other:upscaler:civitai:147759@164821, Civitai resources: [{"type":"lora","weight":0.4,"modelId":1547435,"modelVersionId":1750914},{"type":"lora","weight":0.95,"modelId":200255,"modelVersionId":2212079},{"type":"lora","weight":0.35,"modelId":1826240,"modelVersionId":2066663}]',
+        'perfect eyes, 1girl, solo, hatsune miku, double v, #テスト\nNegative prompt: bad quality, worst quality, 3d, jpeg artifacts,\nSteps: 20, Sampler: euler_ancestral, Schedule type: normal, CFG scale: 4.5, Seed: 933381418, Size: 1536x1536, Model: "urn:air:sdxl:checkpoint:civitai:2904237@3284240", Denoising strength: 0.75, Hires steps: 20, Hires upscaler: "urn:air:other:upscaler:civitai:147759@164821", Civitai resources: [{"type":"lora","weight":0.4,"modelId":1547435,"modelVersionId":1750914},{"type":"lora","weight":0.95,"modelId":200255,"modelVersionId":2212079},{"type":"lora","weight":0.35,"modelId":1826240,"modelVersionId":2066663}]',
       );
     });
   });

@@ -54,10 +54,19 @@ function normalizeLineEndings(text: string): string {
  * JSON-quoted when the value contains a comma, colon or newline (which
  * would otherwise break the `key: value, …` line), plain otherwise.
  */
-function quoteValue(value: string | undefined): string | undefined {
-  if (value === undefined) return undefined;
-  return /[,:\n]/.test(value) ? JSON.stringify(value) : value;
+function quoteValue(value: string | number): string | number {
+  return typeof value === 'string' && /[,:\n]/.test(value)
+    ? JSON.stringify(value)
+    : value;
 }
+
+/**
+ * Settings written without quoting whatever they contain
+ *
+ * CivitAI writes its resources list, a JSON array, unquoted and reads it
+ * back that way.
+ */
+const UNQUOTED_KEYS = new Set(['Civitai resources']);
 
 /**
  * CivitAI's A1111-style text lists LoRAs in `Civitai resources`, not as tags
@@ -95,7 +104,7 @@ function buildSettingsLine(
 ): string {
   const hires: HiresSettings | undefined = metadata.hires ?? metadata.upscale;
   const loras = metadata.loras ?? [];
-  const loraHashes = quoteValue(formatLoraHashes(loras));
+  const loraHashes = formatLoraHashes(loras);
   const civitaiResources = isCivitai(metadata)
     ? formatCivitaiResources(loras)
     : undefined;
@@ -131,8 +140,10 @@ function buildSettingsLine(
   };
 
   return Object.entries({ ...fields, ...extras })
-    .filter(([, v]) => v !== undefined)
-    .map(([k, v]) => `${k}: ${v}`)
+    .filter(
+      (entry): entry is [string, string | number] => entry[1] !== undefined,
+    )
+    .map(([k, v]) => `${k}: ${UNQUOTED_KEYS.has(k) ? v : quoteValue(v)}`)
     .join(', ');
 }
 

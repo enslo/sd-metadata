@@ -238,8 +238,9 @@ function findExifIfdOffset(
  * Decode UserComment based on encoding prefix
  *
  * @param data - UserComment data including encoding prefix
- * @param isLittleEndian - Byte order of the enclosing TIFF structure,
- *   used when the text itself does not reveal its byte order
+ * @param isLittleEndian - Byte order of the enclosing TIFF structure, which
+ *   UNICODE text follows unless it clearly reads in the other order; see
+ *   {@link decodeUtf16}
  * @returns Decoded string
  */
 export function decodeUserComment(
@@ -259,22 +260,7 @@ export function decodeUserComment(
     data[6] === 0x45 && // E
     data[7] === 0x00 // NULL
   ) {
-    // UTF-16 encoded. An ASCII first character reveals the byte order
-    // directly (its code unit has exactly one zero byte); some tools
-    // write the text in the opposite order from the TIFF header, so
-    // this sniffing takes precedence.
-    const textData = data.slice(8);
-    if (textData.length >= 2) {
-      if (textData[0] !== 0x00 && textData[1] === 0x00) {
-        return decodeUtf16LE(textData);
-      }
-      if (textData[0] === 0x00 && textData[1] !== 0x00) {
-        return decodeUtf16BE(textData);
-      }
-    }
-    // Both bytes non-zero (e.g. Japanese text or an emoji surrogate):
-    // per the Exif spec, follow the TIFF byte order
-    return isLittleEndian ? decodeUtf16LE(textData) : decodeUtf16BE(textData);
+    return decodeUtf16(data.slice(8), isLittleEndian);
   }
 
   // Check for ASCII prefix
@@ -304,6 +290,49 @@ export function decodeUserComment(
   } catch {
     return null;
   }
+}
+
+/**
+ * Decode UTF-16 text in the TIFF byte order, unless it was written in the
+ * other one
+ *
+ * Per the Exif spec the text follows the TIFF byte order, but some tools
+ * write the opposite (CivitAI puts UTF-16BE text in a little-endian TIFF).
+ * Prompts and JSON are mostly ASCII, and an ASCII code unit read in the
+ * wrong order becomes a CJK-range one, so the reading in which most code
+ * units are ASCII is the one that was written. The swapped reading is taken
+ * only when it is clearly that one: mostly ASCII, and far more so than the
+ * TIFF-order reading. Sniffing the first code unit alone misread CJK text
+ * whose first character has a zero low byte (一 U+4E00, the ideographic
+ * space U+3000) as ASCII in the other order.
+ */
+function decodeUtf16(data: Uint8Array, isLittleEndian: boolean): string {
+  const expected = isLittleEndian ? decodeUtf16LE(data) : decodeUtf16BE(data);
+  const swapped = isLittleEndian ? decodeUtf16BE(data) : decodeUtf16LE(data);
+  const expectedAscii = countAscii(expected);
+  const swappedAscii = countAscii(swapped);
+  return swappedAscii > expectedAscii * 2 && swappedAscii * 2 > swapped.length
+    ? swapped
+    : expected;
+}
+
+/**
+ * Number of code units that are printable ASCII, a tab or a line break
+ */
+function countAscii(text: string): number {
+  let count = 0;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if (
+      (code >= 0x20 && code <= 0x7e) ||
+      code === 0x0a ||
+      code === 0x0d ||
+      code === 0x09
+    ) {
+      count++;
+    }
+  }
+  return count;
 }
 
 /**

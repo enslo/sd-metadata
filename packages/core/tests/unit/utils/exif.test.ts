@@ -768,3 +768,43 @@ describe('Exif Utils - Round-trip', () => {
     expect(decoded.at(0)?.data).toBe(original);
   });
 });
+
+describe('decodeUserComment - byte order', () => {
+  /** "UNICODE\0" prefix followed by the text in UTF-16 of the given order */
+  function unicodeComment(text: string, littleEndian: boolean): Uint8Array {
+    const data = new Uint8Array(8 + text.length * 2);
+    data.set([0x55, 0x4e, 0x49, 0x43, 0x4f, 0x44, 0x45, 0x00]);
+    const view = new DataView(data.buffer);
+    for (let i = 0; i < text.length; i++) {
+      view.setUint16(8 + i * 2, text.charCodeAt(i), littleEndian);
+    }
+    return data;
+  }
+
+  it('reads UTF-16BE text in a big-endian TIFF when it starts with 一 (U+4E00)', () => {
+    // The low byte of 一 is zero, which looked like a little-endian ASCII
+    // character and swapped the whole text
+    const text = '一人の少女, masterpiece';
+    expect(decodeUserComment(unicodeComment(text, false), false)).toBe(text);
+  });
+
+  it('reads UTF-16BE text in a big-endian TIFF when it is all CJK', () => {
+    const text = '一人の少女';
+    expect(decodeUserComment(unicodeComment(text, false), false)).toBe(text);
+  });
+
+  it('reads UTF-16LE text in a little-endian TIFF when it starts with an ideographic space', () => {
+    const text = '　少女, masterpiece';
+    expect(decodeUserComment(unicodeComment(text, true), true)).toBe(text);
+  });
+
+  it('still reads UTF-16BE text written into a little-endian TIFF, as CivitAI does', () => {
+    const text = '{"3": {"class_type": "KSampler", "inputs": {"seed": 1}}}';
+    expect(decodeUserComment(unicodeComment(text, false), true)).toBe(text);
+  });
+
+  it('still reads UTF-16LE text written into a big-endian TIFF', () => {
+    const text = 'masterpiece, 1girl\nNegative prompt: lowres\nSteps: 20';
+    expect(decodeUserComment(unicodeComment(text, true), false)).toBe(text);
+  });
+});
