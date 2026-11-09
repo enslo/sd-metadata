@@ -131,6 +131,9 @@ describe('parseYamlMapping - malformed escapes', () => {
     expect(scalar('key: "a\\xZZb"')).toBe('a\\xZZb');
     expect(scalar('key: "a\\U7FFFFFFFb"')).toBe('a\\U7FFFFFFFb');
     expect(scalar('key: "a\\x4"')).toBe('a\\x4');
+  });
+});
+
 describe('parseYamlMapping - long lines', () => {
   it('folds a wrapped scalar with a long run of blanks in linear time', () => {
     // The trailing-blank trim `/[ \t]+$/` was retried from every blank

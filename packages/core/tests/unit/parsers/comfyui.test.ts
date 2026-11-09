@@ -2165,6 +2165,9 @@ describe('parseComfyUI - graph normalization', () => {
       expect(result.value.prompt).toBe('');
       expect(result.value.negativePrompt).toBe('bad quality');
     }
+  });
+});
+
 describe('parseComfyUI - NUL padding', () => {
   it('strips trailing NULs from the prompt JSON in linear time', () => {
     const graph =
