@@ -24,7 +24,10 @@ export function escapeHtml(text: string): string {
  *   collapse the raw view into a single unformatted line.
  */
 function sanitizeJsonText(text: string): string {
-  return text.replace(/\0+$/, '').replace(/([:,[])\s*NaN\b/g, '$1null');
+  // The lookbehind starts the NUL match at the first NUL of the run only;
+  // a plain /\0+$/ retried from every NUL when a byte followed the run,
+  // which froze the Raw tab on a chunk padded with tens of thousands of NULs
+  return text.replace(/(?<!\0)\0+$/, '').replace(/([:,[])\s*NaN\b/g, '$1null');
 }
 
 /**
