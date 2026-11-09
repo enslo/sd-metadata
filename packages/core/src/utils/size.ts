@@ -10,7 +10,10 @@
  * @returns Width and height in pixels
  */
 export function parseSize(value: unknown): { width: number; height: number } {
-  const match = typeof value === 'string' ? /(\d+)x(\d+)/.exec(value) : null;
+  // The lookbehind starts a match only at the first digit of a run, so a
+  // long run of digits without an "x" is tried once, not from every digit
+  const match =
+    typeof value === 'string' ? /(?<!\d)(\d+)x(\d+)/.exec(value) : null;
   if (!match) return { width: 0, height: 0 };
   return { width: Number(match[1] ?? 0), height: Number(match[2] ?? 0) };
 }

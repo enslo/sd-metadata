@@ -29,11 +29,25 @@ const M_HF_RESOLUTION = '"resolution"';
 const M_FOOOCUS_BASE = '"base_model"';
 
 /**
- * Dezgo job record: JobId, Function and Input keys, as the JSON of a PNG
- * GenInfo chunk or the YAML of an EXIF UserComment
+ * Dezgo job record as the YAML of an EXIF UserComment: JobId, Function and
+ * Input keys on consecutive lines
  */
-const DEZGO_JSON_JOB = /"JobId"[\s\S]*"Function"[\s\S]*"Input"/;
 const DEZGO_YAML_JOB = /^JobId: .*\r?\nFunction: .*\r?\nInput:\r?$/m;
+
+/**
+ * Whether text holds a Dezgo job record as the JSON of a PNG GenInfo
+ * chunk: the keys JobId, Function and Input in that order
+ *
+ * Three ordered lookups where `"JobId"[\s\S]*"Function"[\s\S]*"Input"`
+ * was cubic in the text length when the last key was missing.
+ */
+function isDezgoJsonJob(text: string): boolean {
+  const job = text.indexOf('"JobId"');
+  if (job < 0) return false;
+  const fn = text.indexOf('"Function"', job + '"JobId"'.length);
+  if (fn < 0) return false;
+  return text.indexOf('"Input"', fn + '"Function"'.length) >= 0;
+}
 
 /**
  * KusArt Copyright notice, also under its former name KusaPics (still
@@ -115,7 +129,7 @@ function detectUniqueKeywords(
   }
 
   // Dezgo: GenInfo chunk holding its job record (PNG)
-  if (DEZGO_JSON_JOB.test(entryRecord[M_DEZGO] ?? '')) {
+  if (isDezgoJsonJob(entryRecord[M_DEZGO] ?? '')) {
     return 'dezgo';
   }
 

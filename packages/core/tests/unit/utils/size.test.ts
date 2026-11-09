@@ -15,3 +15,17 @@ describe('parseSize', () => {
     expect(parseSize(512)).toEqual({ width: 0, height: 0 });
   });
 });
+
+describe('parseSize - long inputs', () => {
+  it('gives up in linear time on a long run of digits without an "x"', () => {
+    // The unanchored /(\d+)x(\d+)/ was retried from every digit
+    expect(parseSize('1'.repeat(200_000))).toEqual({ width: 0, height: 0 });
+  });
+
+  it('still reads a size embedded in other text', () => {
+    expect(parseSize('Size: 512x768 (hires)')).toEqual({
+      width: 512,
+      height: 768,
+    });
+  });
+});

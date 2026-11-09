@@ -380,3 +380,22 @@ describe('detectSoftware - Unit Tests', () => {
     });
   });
 });
+
+describe('detectSoftware - Dezgo job record', () => {
+  it('detects a GenInfo job record with JobId, Function and Input in order', () => {
+    expect(
+      detectSoftware({
+        GenInfo: '{"JobId":"1","Function":"text2image","Input":{}}',
+      }),
+    ).toBe('dezgo');
+    expect(
+      detectSoftware({ GenInfo: '{"Input":{},"Function":"f","JobId":"1"}' }),
+    ).not.toBe('dezgo');
+  });
+
+  it('rejects a long record without Input in linear time', () => {
+    // `"JobId"[\s\S]*"Function"[\s\S]*"Input"` was cubic in the text length
+    const genInfo = `{${'"JobId":1,"Function":2,'.repeat(2_000)}"x":0}`;
+    expect(detectSoftware({ GenInfo: genInfo })).not.toBe('dezgo');
+  });
+});

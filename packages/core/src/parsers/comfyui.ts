@@ -17,6 +17,7 @@ import { withoutFloatNoise } from '../utils/float';
 import { parseJson } from '../utils/json';
 import { optionalLoras } from '../utils/lora';
 import { trimObject } from '../utils/object';
+import { trimTrailingNul } from '../utils/text';
 import {
   extractCivitaiMetadata,
   extractExtraMetadata,
@@ -177,7 +178,7 @@ function normalizeDenoise(
  *   without touching the literal substring "NaN" inside quoted strings.
  */
 function cleanJsonString(json: string): string {
-  return json.replace(/\0+$/, '').replace(/([:,[])\s*NaN\b/g, '$1null');
+  return trimTrailingNul(json).replace(/([:,[])\s*NaN\b/g, '$1null');
 }
 
 // =============================================================================

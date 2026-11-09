@@ -2167,3 +2167,19 @@ describe('parseComfyUI - graph normalization', () => {
     }
   });
 });
+
+describe('parseComfyUI - NUL padding', () => {
+  it('strips trailing NULs from the prompt JSON in linear time', () => {
+    const graph =
+      '{"1":{"class_type":"CLIPTextEncode","inputs":{"text":"1girl"}}}';
+
+    const padded = parseComfyUI({ prompt: `${graph}${'\0'.repeat(200_000)}` });
+    expect(padded.ok && padded.value.prompt).toBe('1girl');
+
+    // A byte after the NULs made `/\0+$/` retry from every NUL
+    const trailing = parseComfyUI({
+      prompt: `${graph}${'\0'.repeat(200_000)}x`,
+    });
+    expect(trailing.ok).toBe(false);
+  });
+});

@@ -348,3 +348,17 @@ describe('parseTensorArt - broken node graphs', () => {
     }
   });
 });
+
+describe('parseTensorArt - NUL padding', () => {
+  it('strips trailing NULs from generation_data in linear time', () => {
+    const base = createTensorArtEntries({ prompt: '1girl' });
+    const entries = {
+      ...base,
+      generation_data: `${base.generation_data}${'\0'.repeat(200_000)}x`,
+    };
+
+    const result = parseTensorArt(entries);
+
+    expect(result.ok).toBe(false);
+  });
+});
