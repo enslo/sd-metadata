@@ -18,6 +18,7 @@ import { parseJson } from '../utils/json';
 import { optionalLoras } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { trimTrailingNul } from '../utils/text';
+import { hasA1111Text } from './a1111';
 import {
   extractCivitaiMetadata,
   extractExtraMetadata,
@@ -37,6 +38,7 @@ import {
   findModelLoaders,
   isNodeReference,
   resolveNumberInput,
+  resolveStringInput,
   toNodeGraph,
   upstreamNodeIds,
   wiredConditioning,
@@ -70,7 +72,9 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
     // with the extractor, so we cannot recover prompts or settings. We still
     // surface the image as ComfyUI with empty fields so software detection
     // and the raw view work — interpretation is intentionally given up.
-    if (hasWorkflowOnlyChunk(entries)) {
+    // A save node that wrote A1111 text next to the workflow (prompt
+    // embedding off) is left to the A1111 parser, which reads that text.
+    if (hasWorkflowOnlyChunk(entries) && !hasA1111Text(entries)) {
       return Result.ok({
         software: 'comfyui',
         nodes: {},
@@ -288,9 +292,10 @@ export function extractComfyUIMetadata(
   // Resolve hires scale from available sources
   const hiresScale = resolveHiresScale(nodes, c, width);
 
-  const upscalerName = c.hiresModelUpscale?.inputs.model_name as
-    | string
-    | undefined;
+  const upscalerName = resolveStringInput(
+    nodes,
+    c.hiresModelUpscale?.inputs.model_name,
+  );
 
   const rawSampling = normalizeDenoise(extractSampling(nodes, c.sampler));
   const clipSkip = extractClipSkip(c.clipSetLastLayer, c.allInOneLoader);
@@ -329,23 +334,29 @@ export function extractComfyUIMetadata(
  * Resolve hires scale factor from available node sources
  *
  * Priority:
- * 1. LatentUpscaleBy.scale_by (direct value)
- * 2. ImageScale.width as node reference → source node's clip_scale (rgthree)
+ * 1. LatentUpscaleBy.scale_by (literal or wired from a primitive)
+ * 2. ImageScaleBy.scale_by, when the image scaler has no target width
+ * 3. ImageScale.width as node reference → source node's clip_scale (rgthree)
  *    or, for CR Integer Multiple (ComfyRoll), its `multiple` factor
- * 3. ImageScale.width as number → calculate ratio against base width
+ * 4. ImageScale.width as number → calculate ratio against base width
  */
 function resolveHiresScale(
   nodes: ComfyNodeGraph,
   c: ClassifiedNodes,
   baseWidth: number,
 ): number | undefined {
-  const latentUpscale = c.latentUpscale?.inputs;
-  if (latentUpscale?.scale_by !== undefined) {
-    return latentUpscale.scale_by as number;
-  }
+  const latentScale = resolveNumberInput(
+    nodes,
+    c.latentUpscale?.inputs.scale_by,
+  );
+  if (latentScale !== undefined) return latentScale;
 
-  const widthInput = c.hiresImageScale?.inputs.width;
-  if (widthInput === undefined) return undefined;
+  const imageScale = c.hiresImageScale?.inputs;
+  const widthInput = imageScale?.width;
+  if (widthInput === undefined) {
+    // ImageScaleBy scales by a factor instead of to a size
+    return resolveNumberInput(nodes, imageScale?.scale_by);
+  }
 
   // Width from a node reference (e.g. rgthree provides scaled dimensions)
   if (isNodeReference(widthInput)) {

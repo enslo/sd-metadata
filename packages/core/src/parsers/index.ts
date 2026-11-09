@@ -1,6 +1,6 @@
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
-import { parseA1111 } from './a1111';
+import { hasA1111Text, parseA1111 } from './a1111';
 import { parseComfyUI } from './comfyui';
 import { detectSoftware } from './detect';
 import { parseDezgo } from './dezgo';
@@ -74,16 +74,22 @@ function routeToParser(entries: EntryRecord): InternalParseResult {
           software: 'civitai' as const,
         });
       }
-      // Fallback to A1111 format
-      return parseA1111(entries, 'civitai');
+      // Fallback to A1111 format, when there is such text: a cut-off JSON
+      // graph is not a prompt
+      return hasA1111Text(entries)
+        ? parseA1111(entries, 'civitai')
+        : comfyResult;
     }
 
     case 'comfyui': {
       // ComfyUI can use either JSON or A1111 text format (e.g., comfy-image-saver)
       const comfyResult = parseComfyUI(entries);
       if (comfyResult.ok) return comfyResult;
-      // Fallback to A1111 text format (treat as sd-webui since Version is absent)
-      return parseA1111(entries, 'sd-webui');
+      // Fallback to A1111 text format (treat as sd-webui since Version is
+      // absent), when there is such text: a cut-off JSON graph is not a prompt
+      return hasA1111Text(entries)
+        ? parseA1111(entries, 'sd-webui')
+        : comfyResult;
     }
 
     case 'invokeai':

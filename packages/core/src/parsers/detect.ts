@@ -20,7 +20,9 @@ const M_COMFYUI_NODE = 'class_type';
 const M_NOVELAI_SCHEDULE = 'noise_schedule';
 const M_NOVELAI_V4 = 'v4_prompt';
 const M_NOVELAI_UNCOND = 'uncond_scale';
-const M_CIVITAI_NS = 'civitai:';
+// The `civitai:` source segment of an AIR URN, which CivitAI's graphs use
+// for every model: urn:air:<ecosystem>:<type>:civitai:<id>@<version>
+const M_CIVITAI_AIR = ':civitai:';
 const M_CIVITAI_RESOURCES = 'Civitai resources:';
 const M_RUINED_FOOOCUS = 'RuinedFooocus';
 const M_EASYDIFFUSION = 'use_stable_diffusion_model';
@@ -331,8 +333,8 @@ function detectFromJsonFormat(json: string): GenerationSoftware | null {
     return 'easydiffusion';
   }
 
-  // CivitAI: Has "civitai:" namespace prefix OR "extraMetadata" key
-  if (json.includes(M_CIVITAI_NS) || json.includes(`"${M_CIVITAI_EXTRA}"`)) {
+  // CivitAI: Names a model by AIR URN OR has the "extraMetadata" key
+  if (json.includes(M_CIVITAI_AIR) || json.includes(`"${M_CIVITAI_EXTRA}"`)) {
     return 'civitai';
   }
 

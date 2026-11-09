@@ -310,7 +310,7 @@ export function resolveNumberInput(
 /**
  * Resolve a string input the same way as {@link resolveNumberInput}.
  */
-function resolveStringInput(
+export function resolveStringInput(
   nodes: ComfyNodeGraph,
   value: unknown,
 ): string | undefined {
@@ -705,17 +705,14 @@ export function extractSampling(
     return extractCustomSampling(nodes, sampler);
   }
 
-  // Handle seed which may be a reference or direct value; KSamplerAdvanced
-  // and KSampler Adv. (Efficient) name it noise_seed
-  let seed = sampler.inputs.seed ?? sampler.inputs.noise_seed;
-  if (isNodeReference(seed)) {
-    // Seed is from another node (e.g., CR Seed), try to extract it
-    const seedNode = nodes[String(seed[0])];
-    seed = seedNode?.inputs.seed;
-  }
+  // KSamplerAdvanced and KSampler Adv. (Efficient) name the seed noise_seed
+  const seed = resolveSeedInput(
+    nodes,
+    sampler.inputs.seed ?? sampler.inputs.noise_seed,
+  );
 
   return {
-    seed: toSeedString(seed),
+    seed,
     steps: resolveNumberInput(nodes, sampler.inputs.steps),
     cfg: resolveNumberInput(nodes, sampler.inputs.cfg),
     sampler: resolveStringInput(nodes, sampler.inputs.sampler_name),
@@ -743,13 +740,31 @@ function extractAdvancedSampling(
   const schedulerNode = resolveNode(nodes, sampler.inputs.sigmas);
 
   return {
-    seed: toSeedString(noiseNode?.inputs.noise_seed),
+    seed: resolveSeedInput(nodes, noiseNode?.inputs.noise_seed),
     steps: resolveNumberInput(nodes, schedulerNode?.inputs.steps),
     cfg: resolveNumberInput(nodes, guiderNode?.inputs.cfg),
     sampler: resolveStringInput(nodes, samplerSelectNode?.inputs.sampler_name),
     scheduler: resolveStringInput(nodes, schedulerNode?.inputs.scheduler),
     denoise: resolveNumberInput(nodes, schedulerNode?.inputs.denoise),
   };
+}
+
+/**
+ * Resolve a seed input to its string form
+ *
+ * A seed is a literal, a reference to a primitive node (PrimitiveInt)
+ * holding it in `value`, or a reference to a seed node (CR Seed) holding
+ * it in its own `seed` input.
+ */
+function resolveSeedInput(
+  nodes: ComfyNodeGraph,
+  value: unknown,
+): string | undefined {
+  const literal = resolveLiteralInput(nodes, value);
+  return (
+    toSeedString(literal) ??
+    toSeedString(resolveNode(nodes, value)?.inputs.seed)
+  );
 }
 
 /**
