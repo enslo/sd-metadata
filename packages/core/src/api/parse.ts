@@ -29,8 +29,9 @@ import { applyDimensionFallback, read } from './read';
  * regular metadata is absent. An image that declares its vendor (a C2PA
  * manifest from ChatGPT, Gemini, ...) is not scanned either: those
  * services write no stealth data, and the declaration is the answer.
- * PNG pixels are decoded by the library itself. WebP pixels are decoded by the platform where possible
- * (browsers, via WebCodecs or canvas); in other runtimes supply
+ * PNG pixels are decoded by the library itself. WebP pixels are decoded
+ * by the platform where possible (browsers, via WebCodecs or canvas); in
+ * other runtimes supply
  * {@link ReadOptions.decodePixels} (e.g. backed by sharp in Node.js)
  * or the WebP stealth scan is skipped.
  *
