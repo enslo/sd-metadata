@@ -21,15 +21,15 @@ describe('escapeUnicode', () => {
   });
 
   it('should handle special characters', () => {
-    // Latin-1 extended character (é = U+00E9) should NOT be escaped
-    // Emoji (🎉 = U+1F389) should be escaped
-    expect(escapeUnicode('émoji 🎉')).toBe('émoji \\ud83c\\udf89');
+    // Latin-1 extended (é = U+00E9) and the emoji (🎉 = U+1F389) are escaped
+    expect(escapeUnicode('émoji 🎉')).toBe('\\u00e9moji \\ud83c\\udf89');
   });
 
-  it('should not escape Latin-1 extended characters', () => {
-    // Characters in range 0x80-0xFF should not be escaped
-    expect(escapeUnicode('café')).toBe('café');
-    expect(escapeUnicode('niño')).toBe('niño');
+  it('should escape Latin-1 extended characters too', () => {
+    // A PIL-based reader decodes tEXt as Latin-1, so U+0080-U+00FF written
+    // as UTF-8 would come out as mojibake; the JSON value is unchanged
+    expect(escapeUnicode('café')).toBe('caf\\u00e9');
+    expect(escapeUnicode('niño')).toBe('ni\\u00f1o');
   });
 
   it('should handle empty string', () => {
@@ -52,6 +52,7 @@ describe('createEncodedChunk', () => {
       expect(chunks).toHaveLength(1);
       expect(chunks[0]?.type).toBe('tEXt');
       expect(chunks[0]?.text).toBe('café');
+      expect(chunks[0]).toMatchObject({ encoding: 'latin1' });
     });
 
     it('should use iTXt for non-Latin-1 content', () => {
@@ -93,11 +94,12 @@ describe('createEncodedChunk', () => {
       expect(chunks[0]?.text).toBe('hello world');
     });
 
-    it('should keep Latin-1 extended as-is', () => {
+    it('should escape Latin-1 extended in tEXt', () => {
       const chunks = createEncodedChunk('test', 'café', 'text-unicode-escape');
       expect(chunks).toHaveLength(1);
       expect(chunks[0]?.type).toBe('tEXt');
-      expect(chunks[0]?.text).toBe('café');
+      expect(chunks[0]?.text).toBe('caf\\u00e9');
+      expect(chunks[0]).toMatchObject({ encoding: 'latin1' });
     });
 
     it('should escape mixed content beyond Latin-1', () => {
@@ -119,6 +121,7 @@ describe('createEncodedChunk', () => {
       expect(chunks[0]?.type).toBe('tEXt');
       expect(chunks[0]?.keyword).toBe('test');
       expect(chunks[0]?.text).toBe('テスト');
+      expect(chunks[0]).toMatchObject({ encoding: 'utf8' });
     });
 
     it('should keep mixed content as-is', () => {

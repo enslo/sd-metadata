@@ -5,6 +5,11 @@
  * 1. dynamic: Choose tEXt/iTXt based on content (for tools like A1111, InvokeAI)
  * 2. text-unicode-escape: tEXt with Unicode escaping (for ComfyUI, SwarmUI)
  * 3. text-utf8-raw: tEXt with raw UTF-8 (for specific chunks in Stability Matrix, TensorArt)
+ *
+ * The first two produce tEXt chunks that hold Latin-1 characters only and
+ * mark them `latin1`, so the writer encodes them as the PNG specification
+ * prescribes and PIL-based tools (A1111, ComfyUI) read them back intact.
+ * The third keeps the raw UTF-8 the originating tool expects.
  */
 
 import type { PngTextChunk } from '../types';
@@ -32,17 +37,19 @@ export type ChunkEncodingMap = {
 };
 
 /**
- * Escape Unicode characters beyond Latin-1 for tEXt chunk
+ * Escape Unicode characters beyond ASCII for tEXt chunk
  *
- * Converts characters beyond Latin-1 to Unicode escape sequences.
- * Latin-1 range (0x00-0xFF) is left as-is since tEXt supports it.
- * Example: テスト → \u30c6\u30b9\u30c8
+ * Converts characters beyond ASCII to Unicode escape sequences, so the
+ * JSON text holds ASCII only and reads the same whichever encoding the
+ * reader assumes for tEXt (the upper half of Latin-1, U+0080-U+00FF,
+ * would otherwise differ between a Latin-1 and a UTF-8 reader).
+ * Example: a Japanese word becomes \\u30c6\\u30b9\\u30c8, é becomes \\u00e9
  *
  * @param text - Text to escape
- * @returns Text with non-Latin-1 characters escaped
+ * @returns Text with non-ASCII characters escaped
  */
 export function escapeUnicode(text: string): string {
-  return text.replace(/[\u0100-\uffff]/g, (char) => {
+  return text.replace(/[\u0080-\uffff]/g, (char) => {
     const code = char.charCodeAt(0).toString(16).padStart(4, '0');
     return `\\u${code}`;
   });
@@ -94,22 +101,21 @@ export function createEncodedChunk(
 
   switch (strategy) {
     case 'dynamic': {
-      // Choose based on content: tEXt for Latin-1, iTXt for beyond
-      const chunkType = hasNonLatin1(text) ? 'iTXt' : 'tEXt';
-      return chunkType === 'iTXt'
+      // Choose based on content: tEXt (Latin-1) for Latin-1, iTXt for beyond
+      return hasNonLatin1(text)
         ? createITxtChunk(keyword, text)
-        : createTextChunk(keyword, text);
+        : createTextChunk(keyword, text, 'latin1');
     }
 
     case 'text-unicode-escape': {
-      // tEXt with Unicode escaping (spec-compliant)
-      const escaped = escapeUnicode(text);
-      return createTextChunk(keyword, escaped);
+      // tEXt with Unicode escaping (spec-compliant): ASCII only after
+      // escaping, so Latin-1 and UTF-8 are the same bytes
+      return createTextChunk(keyword, escapeUnicode(text), 'latin1');
     }
 
     case 'text-utf8-raw': {
-      // tEXt with raw UTF-8 (non-compliant but compatible)
-      return createTextChunk(keyword, text);
+      // tEXt with raw UTF-8 (non-compliant but what the tool reads)
+      return createTextChunk(keyword, text, 'utf8');
     }
   }
 }

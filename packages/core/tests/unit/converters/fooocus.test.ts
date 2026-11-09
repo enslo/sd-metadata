@@ -43,8 +43,18 @@ describe('Fooocus converter', () => {
       const chunks = convertFooocusSegmentsToPng(segments);
 
       expect(chunks).toEqual([
-        { type: 'tEXt', keyword: 'parameters', text: JSON_TEXT },
-        { type: 'tEXt', keyword: 'fooocus_scheme', text: 'fooocus' },
+        {
+          type: 'tEXt',
+          keyword: 'parameters',
+          text: JSON_TEXT,
+          encoding: 'latin1',
+        },
+        {
+          type: 'tEXt',
+          keyword: 'fooocus_scheme',
+          text: 'fooocus',
+          encoding: 'utf8',
+        },
       ]);
     });
 
@@ -60,6 +70,7 @@ describe('Fooocus converter', () => {
         type: 'tEXt',
         keyword: 'parameters',
         text: '{"prompt": "\\u30c6\\u30b9\\u30c8"}',
+        encoding: 'latin1',
       });
       expect(chunks[1]?.text).toBe('fooocus');
     });
@@ -80,6 +91,7 @@ describe('Fooocus converter', () => {
         type: 'tEXt',
         keyword: 'fooocus_scheme',
         text: 'a1111',
+        encoding: 'utf8',
       });
     });
 
@@ -95,6 +107,7 @@ describe('Fooocus converter', () => {
         type: 'tEXt',
         keyword: 'parameters',
         text: ascii,
+        encoding: 'latin1',
       });
       expect(chunks[1]?.text).toBe('a1111');
     });

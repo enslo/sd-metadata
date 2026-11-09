@@ -9,19 +9,21 @@ const WORKFLOW = '{"nodes": []}';
 const PROMPT = '{"1": {"class_type": "KSampler", "inputs": {}}}';
 
 const EXPECTED_CHUNKS: PngTextChunk[] = [
-  { type: 'tEXt', keyword: 'prompt', text: PROMPT },
-  { type: 'tEXt', keyword: 'workflow', text: WORKFLOW },
+  { type: 'tEXt', keyword: 'prompt', text: PROMPT, encoding: 'latin1' },
+  { type: 'tEXt', keyword: 'workflow', text: WORKFLOW, encoding: 'latin1' },
 ];
 
 const PROMPT_CHUNK: PngTextChunk = {
   type: 'tEXt',
   keyword: 'prompt',
   text: PROMPT,
+  encoding: 'latin1',
 };
 const WORKFLOW_CHUNK: PngTextChunk = {
   type: 'tEXt',
   keyword: 'workflow',
   text: WORKFLOW,
+  encoding: 'latin1',
 };
 
 describe('ComfyUI converter', () => {
@@ -123,7 +125,7 @@ describe('ComfyUI converter', () => {
       const chunks = convertComfyUISegmentsToPng(segments);
 
       expect(chunks).toEqual([
-        { type: 'tEXt', keyword: 'prompt', text: PROMPT },
+        { type: 'tEXt', keyword: 'prompt', text: PROMPT, encoding: 'latin1' },
       ]);
     });
   });
