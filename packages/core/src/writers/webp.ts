@@ -1,9 +1,11 @@
+import { readImageDimensions } from '../readers/dimensions';
 import type { MetadataSegment } from '../types';
 import { Result } from '../types';
 import {
   isWebp,
   readChunkType,
   readUint32LE,
+  writeUint24LE,
   writeUint32LE,
 } from '../utils/binary';
 import { buildExifTiffData } from './exif';
@@ -20,6 +22,14 @@ const RIFF_SIGNATURE = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
 
 /** WebP format marker: "WEBP" */
 const WEBP_MARKER = new Uint8Array([0x57, 0x45, 0x42, 0x50]);
+
+/** VP8X feature flags, the first payload byte of the chunk */
+const VP8X_ALPHA_FLAG = 0x10;
+const VP8X_EXIF_FLAG = 0x08;
+const VP8X_XMP_FLAG = 0x04;
+
+/** VP8X payload: flags (1) + reserved (3) + canvas width-1 (3) + height-1 (3) */
+const VP8X_PAYLOAD_LENGTH = 10;
 
 /**
  * Write WebP metadata to binary data
@@ -59,18 +69,33 @@ export function writeWebpMetadata(
   const firstXmp = xmpSegments[0];
   const xmpChunk = firstXmp ? buildXmpChunk(firstXmp.data) : null;
 
-  // Collect metadata chunks to write after image chunk
+  // Metadata chunks go after the image data, where the extended format
+  // places them
   const metadataChunks: Uint8Array[] = [];
   if (exifChunk) metadataChunks.push(exifChunk);
   if (xmpChunk) metadataChunks.push(xmpChunk);
 
+  // libwebp-based readers (Pillow, A1111, ComfyUI) take EXIF and XMP chunks
+  // only from the extended format: a VP8X header first, with its EXIF and
+  // XMP flags set. A simple file (VP8 or VP8L alone) is promoted when
+  // metadata is written; an existing header has its flags updated.
+  const flags =
+    (exifChunk ? VP8X_EXIF_FLAG : 0) | (xmpChunk ? VP8X_XMP_FLAG : 0);
+  const [first, ...rest] = chunks;
+  let header: Uint8Array | null = null;
+  let body = chunks;
+  if (first && readChunkType(first, 0) === 'VP8X') {
+    header = withVp8xFlags(first, flags);
+    body = rest;
+  } else if (metadataChunks.length > 0) {
+    header = buildVp8xChunk(data, chunks, flags);
+  }
+  const ordered = [...(header ? [header] : []), ...body, ...metadataChunks];
+
   // Calculate new file size (excluding RIFF header)
   let newFileSize = 4; // "WEBP"
-  for (const chunk of chunks) {
+  for (const chunk of ordered) {
     newFileSize += chunk.length;
-  }
-  for (const meta of metadataChunks) {
-    newFileSize += meta.length;
   }
 
   // Build output
@@ -87,42 +112,58 @@ export function writeWebpMetadata(
   output.set(WEBP_MARKER, offset);
   offset += 4;
 
-  // Write metadata chunks after first image-related chunk (VP8/VP8L/VP8X)
-  let metadataWritten = false;
-
-  for (const chunk of chunks) {
-    // Write chunks in original order
+  for (const chunk of ordered) {
     output.set(chunk, offset);
     offset += chunk.length;
-
-    // Write metadata after first image-related chunk for best compatibility
-    if (!metadataWritten && metadataChunks.length > 0 && isImageChunk(chunk)) {
-      for (const meta of metadataChunks) {
-        output.set(meta, offset);
-        offset += meta.length;
-      }
-      metadataWritten = true;
-    }
-  }
-
-  // If metadata wasn't written yet (no VP8* chunk found), append it
-  if (!metadataWritten) {
-    for (const meta of metadataChunks) {
-      output.set(meta, offset);
-      offset += meta.length;
-    }
   }
 
   return Result.ok(output);
 }
 
 /**
- * Check if chunk is an image-related chunk (VP8, VP8L, VP8X)
+ * Copy of a VP8X chunk with its EXIF and XMP flags replaced by `flags`
  */
-function isImageChunk(chunk: Uint8Array): boolean {
-  if (chunk.length < 4) return false;
+function withVp8xFlags(vp8x: Uint8Array, flags: number): Uint8Array {
+  const copy = vp8x.slice();
+  if (copy.length > 8) {
+    copy[8] = ((copy[8] ?? 0) & ~(VP8X_EXIF_FLAG | VP8X_XMP_FLAG)) | flags;
+  }
+  return copy;
+}
+
+/**
+ * VP8X header for a file in the simple format
+ *
+ * The canvas size is the image's own and the alpha flag follows the
+ * bitstream. A file whose image header cannot be read gets no header and
+ * stays in the simple format (null).
+ */
+function buildVp8xChunk(
+  data: Uint8Array,
+  chunks: Uint8Array[],
+  flags: number,
+): Uint8Array | null {
+  const dimensions = readImageDimensions(data, 'webp');
+  if (!dimensions) return null;
+
+  const chunk = new Uint8Array(8 + VP8X_PAYLOAD_LENGTH);
+  chunk.set(new TextEncoder().encode('VP8X'));
+  writeUint32LE(chunk, 4, VP8X_PAYLOAD_LENGTH);
+  chunk[8] = flags | (chunks.some(hasAlpha) ? VP8X_ALPHA_FLAG : 0);
+  writeUint24LE(chunk, 12, dimensions.width - 1);
+  writeUint24LE(chunk, 15, dimensions.height - 1);
+  return chunk;
+}
+
+/**
+ * Whether a chunk carries alpha: an ALPH chunk, or a VP8L bitstream whose
+ * header sets alpha_is_used (bit 28 of the 32 bits after the signature)
+ */
+function hasAlpha(chunk: Uint8Array): boolean {
   const type = readChunkType(chunk, 0);
-  return type === 'VP8 ' || type === 'VP8L' || type === 'VP8X';
+  if (type === 'ALPH') return true;
+  if (type !== 'VP8L' || chunk.length < 13 || chunk[8] !== 0x2f) return false;
+  return (readUint32LE(chunk, 9) & 0x10000000) !== 0;
 }
 
 /**

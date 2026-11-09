@@ -207,3 +207,159 @@ describe('writeWebpMetadata - Unit Tests', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Extended format (VP8X) handling
+// ---------------------------------------------------------------------------
+
+/** RIFF container around the given chunks */
+function riff(...chunks: Uint8Array[]): Uint8Array {
+  const body = chunks.reduce((n, c) => n + c.length, 0);
+  const out = new Uint8Array(12 + body);
+  out.set(new TextEncoder().encode('RIFF'), 0);
+  new DataView(out.buffer).setUint32(4, 4 + body, true);
+  out.set(new TextEncoder().encode('WEBP'), 8);
+  let offset = 12;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.length;
+  }
+  return out;
+}
+
+/** Chunk with the given FourCC and payload, padded to an even length */
+function chunk(type: string, payload: Uint8Array): Uint8Array {
+  const out = new Uint8Array(8 + payload.length + (payload.length % 2));
+  out.set(new TextEncoder().encode(type), 0);
+  new DataView(out.buffer).setUint32(4, payload.length, true);
+  out.set(payload, 8);
+  return out;
+}
+
+/** VP8L chunk holding only the bitstream header of a width × height image */
+function vp8l(width: number, height: number, alpha: boolean): Uint8Array {
+  const bits = (width - 1) | ((height - 1) << 14) | (alpha ? 1 << 28 : 0);
+  const payload = new Uint8Array(5);
+  payload[0] = 0x2f;
+  new DataView(payload.buffer).setUint32(1, bits >>> 0, true);
+  return chunk('VP8L', payload);
+}
+
+/** VP8X chunk with the given flags and canvas size */
+function vp8x(flags: number, width: number, height: number): Uint8Array {
+  const payload = new Uint8Array(10);
+  payload[0] = flags;
+  for (let i = 0; i < 3; i++) {
+    payload[4 + i] = ((width - 1) >> (8 * i)) & 0xff;
+    payload[7 + i] = ((height - 1) >> (8 * i)) & 0xff;
+  }
+  return chunk('VP8X', payload);
+}
+
+/** Chunk FourCCs in file order */
+function chunkTypes(webp: Uint8Array): string[] {
+  const dv = new DataView(webp.buffer, webp.byteOffset, webp.byteLength);
+  const types: string[] = [];
+  let offset = 12;
+  while (offset + 8 <= webp.length) {
+    types.push(String.fromCharCode(...webp.subarray(offset, offset + 4)));
+    const size = dv.getUint32(offset + 4, true);
+    offset += 8 + size + (size % 2);
+  }
+  return types;
+}
+
+/** Flags and canvas size of the VP8X chunk at the start of the file */
+function vp8xHeader(webp: Uint8Array): {
+  flags: number;
+  width: number;
+  height: number;
+} {
+  const u24 = (o: number) =>
+    (webp[o] ?? 0) | ((webp[o + 1] ?? 0) << 8) | ((webp[o + 2] ?? 0) << 16);
+  return { flags: webp[20] ?? 0, width: u24(24) + 1, height: u24(27) + 1 };
+}
+
+const USER_COMMENT: MetadataSegment[] = [
+  { source: { type: 'exifUserComment' }, data: 'Test comment' },
+];
+
+describe('writeWebpMetadata - extended format', () => {
+  it('should promote a simple VP8L file to the extended format with the EXIF flag set', () => {
+    const result = writeWebpMetadata(riff(vp8l(300, 200, false)), USER_COMMENT);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(chunkTypes(result.value)).toEqual(['VP8X', 'VP8L', 'EXIF']);
+      expect(vp8xHeader(result.value)).toEqual({
+        flags: 0x08,
+        width: 300,
+        height: 200,
+      });
+      const readResult = readWebpMetadata(result.value);
+      expect(readResult.ok && readResult.value.at(0)?.data).toBe(
+        'Test comment',
+      );
+    }
+  });
+
+  it('should carry the alpha bit of a VP8L bitstream into the VP8X header', () => {
+    const result = writeWebpMetadata(riff(vp8l(16, 16, true)), USER_COMMENT);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(vp8xHeader(result.value).flags).toBe(0x18);
+    }
+  });
+
+  it('should set the EXIF flag on an existing VP8X header and keep its other flags', () => {
+    const input = riff(vp8x(0x10, 16, 16), vp8l(16, 16, true));
+
+    const result = writeWebpMetadata(input, USER_COMMENT);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(chunkTypes(result.value)).toEqual(['VP8X', 'VP8L', 'EXIF']);
+      expect(vp8xHeader(result.value)).toEqual({
+        flags: 0x18,
+        width: 16,
+        height: 16,
+      });
+    }
+  });
+
+  it('should clear the EXIF and XMP flags when stripping metadata', () => {
+    const input = riff(
+      vp8x(0x1c, 16, 16),
+      vp8l(16, 16, true),
+      chunk('EXIF', new Uint8Array([1, 2, 3])),
+    );
+
+    const result = writeWebpMetadata(input, []);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(chunkTypes(result.value)).toEqual(['VP8X', 'VP8L']);
+      expect(vp8xHeader(result.value).flags).toBe(0x10);
+    }
+  });
+
+  it('should leave a simple file in the simple format when no metadata is written', () => {
+    const result = writeWebpMetadata(riff(vp8l(16, 16, false)), []);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(chunkTypes(result.value)).toEqual(['VP8L']);
+    }
+  });
+
+  it('should append metadata without a header when the image header cannot be read', () => {
+    // The minimal test image has a placeholder VP8 payload with no size
+    const result = writeWebpMetadata(createMinimalWebp(), USER_COMMENT);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(chunkTypes(result.value)).toEqual(['VP8 ', 'EXIF']);
+    }
+  });
+});

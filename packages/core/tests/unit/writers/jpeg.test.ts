@@ -261,3 +261,38 @@ describe('writeJpegMetadata - Unit Tests', () => {
     });
   });
 });
+
+describe('writeJpegMetadata - segment size limit', () => {
+  it('should refuse Exif data that does not fit one APP1 segment instead of writing a wrapped length', () => {
+    const jpeg = createMinimalJpeg();
+    const segments: MetadataSegment[] = [
+      { source: { type: 'exifUserComment' }, data: 'x'.repeat(70_000) },
+    ];
+
+    const result = writeJpegMetadata(jpeg, segments);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.type).toBe('segmentTooLarge');
+    }
+  });
+
+  it('should write Exif data that fits the APP1 segment', () => {
+    const jpeg = createMinimalJpeg();
+    const text = 'x'.repeat(65_000);
+    const segments: MetadataSegment[] = [
+      { source: { type: 'exifUserComment' }, data: text },
+    ];
+
+    const result = writeJpegMetadata(jpeg, segments);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const readResult = readJpegMetadata(result.value);
+      expect(readResult.ok).toBe(true);
+      if (readResult.ok) {
+        expect(readResult.value.at(0)?.data).toBe(text);
+      }
+    }
+  });
+});
