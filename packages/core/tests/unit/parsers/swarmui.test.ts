@@ -258,3 +258,24 @@ describe('parseSwarmUI - LoRA extraction', () => {
     }
   });
 });
+
+describe('parseSwarmUI - broken node graphs', () => {
+  it('should ignore graph entries that are not nodes', () => {
+    const entries = {
+      ...createSwarmUIEntries({
+        sui_image_params: { prompt: '1girl', width: 512, height: 512 },
+      }),
+      prompt: JSON.stringify({
+        '1': null,
+        '2': { class_type: 'KSampler', inputs: {} },
+      }),
+    };
+
+    const result = parseSwarmUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok && result.value.software === 'swarmui') {
+      expect(Object.keys(result.value.nodes ?? {})).toEqual(['2']);
+    }
+  });
+});

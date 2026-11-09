@@ -331,3 +331,20 @@ describe('parseTensorArt - LoRA fallback', () => {
     }
   });
 });
+
+describe('parseTensorArt - broken node graphs', () => {
+  it('should ignore graph entries that are not nodes', () => {
+    const entries = createTensorArtEntries(
+      { prompt: 'from generation data' },
+      { '2': null, '3': { class_type: 'KSampler' } },
+    );
+
+    const result = parseTensorArt(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok && result.value.software === 'tensorart') {
+      expect(Object.keys(result.value.nodes)).toEqual(['1']);
+      expect(result.value.prompt).toBe('from generation data');
+    }
+  });
+});

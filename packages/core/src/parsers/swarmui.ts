@@ -1,10 +1,11 @@
-import type { ComfyNodeGraph, LoraSettings } from '../types';
+import type { LoraSettings } from '../types';
 import { Result } from '../types';
 import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
+import { toNodeGraph } from './comfyui-nodes';
 import type { InternalParseResult } from './types';
 
 /**
@@ -150,12 +151,10 @@ export function parseSwarmUI(entries: EntryRecord): InternalParseResult {
 
   // Parse nodes from prompt chunk (PNG format) or Make field (JPEG/WebP extended format)
   const promptSource = entries.prompt || entries.Make;
-  const promptParsed = promptSource
-    ? parseJson<ComfyNodeGraph>(promptSource)
-    : undefined;
+  const promptParsed = promptSource ? parseJson(promptSource) : undefined;
   const nodes =
     promptParsed?.ok && promptParsed.type === 'object'
-      ? promptParsed.value
+      ? toNodeGraph(promptParsed.value)
       : undefined;
 
   const loras = extractLoras(params, parsed.value.sui_models);
@@ -166,7 +165,8 @@ export function parseSwarmUI(entries: EntryRecord): InternalParseResult {
     negativePrompt: params.negativeprompt ?? '',
     width,
     height,
-    nodes,
+    // A plain-object copy: the walkers' graph has no prototype
+    nodes: nodes && { ...nodes },
     model: trimObject({ name: params.model }),
     sampling: trimObject({
       seed: toSeedString(params.seed),

@@ -1,10 +1,11 @@
-import type { ComfyNodeGraph, LoraSettings } from '../types';
+import type { LoraSettings } from '../types';
 import { Result } from '../types';
 import { type EntryRecord, extractFromCommentJson } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { extractComfyUIMetadata } from './comfyui';
+import { toNodeGraph } from './comfyui-nodes';
 import type { InternalParseResult } from './types';
 
 /**
@@ -107,14 +108,14 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
   if (!promptChunk) {
     return Result.error({ type: 'unsupportedFormat' });
   }
-  const promptParsed = parseJson<ComfyNodeGraph>(promptChunk);
+  const promptParsed = parseJson(promptChunk);
   if (!promptParsed.ok || promptParsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in prompt chunk',
     });
   }
-  const nodes = promptParsed.value;
+  const nodes = toNodeGraph(promptParsed.value);
 
   // Delegate node parsing to ComfyUI parser
   const comfy = extractComfyUIMetadata(nodes);
@@ -130,7 +131,8 @@ export function parseTensorArt(entries: EntryRecord): InternalParseResult {
 
   return Result.ok({
     software: 'tensorart',
-    nodes,
+    // A plain-object copy: the walkers' graph has no prototype
+    nodes: { ...nodes },
     // Prompt from generation_data, fallback to nodes
     prompt: data.prompt ?? comfy?.prompt ?? '',
     negativePrompt: data.negativePrompt ?? comfy?.negativePrompt ?? '',

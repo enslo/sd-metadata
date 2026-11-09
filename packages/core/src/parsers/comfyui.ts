@@ -36,22 +36,11 @@ import {
   findModelLoaders,
   isNodeReference,
   resolveNumberInput,
+  toNodeGraph,
   upstreamNodeIds,
   wiredConditioning,
 } from './comfyui-nodes';
 import type { InternalParseResult, PartialMetadata } from './types';
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-/**
- * CivitAI extension keys that are not ComfyUI nodes
- *
- * These keys are stored alongside nodes in JPEG format but should be
- * excluded from the nodes object to maintain type safety.
- */
-const CIVITAI_EXTENSION_KEYS = ['extra', 'extraMetadata', 'resource-stack'];
 
 // =============================================================================
 // Main Parser
@@ -93,14 +82,16 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  const parsed = parseJson<ComfyNodeGraph>(promptText);
+  const parsed = parseJson(promptText);
   if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
       message: 'Invalid JSON in prompt entry',
     });
   }
-  const prompt = parsed.value;
+  // The file may carry more than nodes (CivitAI's extraMetadata, entries a
+  // broken save left behind); the walkers get the nodes alone
+  const prompt = toNodeGraph(parsed.value);
 
   // Extract metadata from all sources and merge in priority order.
   // Higher index = higher priority. Flat scan is the brute-force fallback
@@ -113,18 +104,14 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
       flatScanComfyMetadata(prompt),
       wiredConditioning(prompt, classified.sampler),
     ),
-    extractCivitaiMetadata(extractExtraMetadata(prompt, entries)),
+    extractCivitaiMetadata(extractExtraMetadata(parsed.value, entries)),
     extractComfyUIMetadata(prompt, classified),
   );
 
   return Result.ok({
     software: 'comfyui',
-    // Build pure ComfyUI nodes (exclude CivitAI extensions)
-    nodes: Object.fromEntries(
-      Object.entries(prompt).filter(
-        ([key]) => !CIVITAI_EXTENSION_KEYS.includes(key),
-      ),
-    ),
+    // A plain-object copy: the walkers' graph has no prototype
+    nodes: { ...prompt },
     ...withoutFrontendNoise(final),
   });
 }

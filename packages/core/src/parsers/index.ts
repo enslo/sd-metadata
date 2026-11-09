@@ -27,6 +27,23 @@ import type { InternalParseResult } from './types';
  * @returns Parsed metadata or error
  */
 export function parseMetadata(entries: EntryRecord): InternalParseResult {
+  try {
+    return routeToParser(entries);
+  } catch (error) {
+    // A parser met a value shape it does not handle. The metadata is there
+    // but unreadable, which the callers report as `unrecognized` with the
+    // raw data attached, the same as malformed JSON.
+    return Result.error({
+      type: 'parseError',
+      message: `Parser failed: ${error instanceof Error ? error.message : String(error)}`,
+    });
+  }
+}
+
+/**
+ * Pick the parser for the detected software and run it
+ */
+function routeToParser(entries: EntryRecord): InternalParseResult {
   // Detect software from entries
   const software = detectSoftware(entries);
 

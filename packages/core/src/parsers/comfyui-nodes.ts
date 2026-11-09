@@ -183,6 +183,48 @@ export function classifyNodes(nodes: ComfyNodeGraph): ClassifiedNodes {
 }
 
 // =============================================================================
+// Graph Normalization
+// =============================================================================
+
+/**
+ * Whether a parsed JSON value has the shape of an API prompt node
+ */
+function isComfyNode(value: unknown): value is ComfyNode {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const { class_type, inputs } = value as Record<string, unknown>;
+  return (
+    typeof class_type === 'string' &&
+    typeof inputs === 'object' &&
+    inputs !== null &&
+    !Array.isArray(inputs)
+  );
+}
+
+/**
+ * Keep the entries of a parsed prompt JSON that are nodes
+ *
+ * The API prompt format puts one node under each key, but a graph read
+ * from a file may carry anything else as well: CivitAI's `extra` and
+ * `extraMetadata` entries, a `null` left by a broken save, nodes without
+ * `inputs` or with a non-string `class_type`. Those are dropped so the
+ * walkers can rely on the {@link ComfyNode} shape. The graph has no
+ * prototype, so a reference to an id such as "constructor" resolves to
+ * nothing rather than to a property of Object.
+ *
+ * @param value - Parsed prompt JSON object
+ * @returns The nodes, keyed as in the file
+ */
+export function toNodeGraph(value: Record<string, unknown>): ComfyNodeGraph {
+  const graph: ComfyNodeGraph = Object.create(null);
+  for (const [id, node] of Object.entries(value)) {
+    if (isComfyNode(node)) graph[id] = node;
+  }
+  return graph;
+}
+
+// =============================================================================
 // Node Reference Utilities
 // =============================================================================
 
@@ -516,16 +558,27 @@ function isSameReference(a: unknown, b: unknown): boolean {
  * chain continues through the same side (ControlNetApplyAdvanced) and then
  * through `conditioning*` inputs (ControlNetApply, ConditioningCombine,
  * ConditioningConcat, ...), first branch with text wins.
+ *
+ * A node is searched once per depth budget: nodes that combine several
+ * conditionings fan in on the same upstream nodes, and without the memo
+ * every route through them would be walked, exponential in the length of
+ * the chain.
  */
 function extractTextFromConditioning(
   nodes: ComfyNodeGraph,
   ref: unknown,
   condKey: 'positive' | 'negative',
   maxDepth = 10,
+  visited: Map<string, number> = new Map(),
 ): string {
   if (maxDepth <= 0 || !isNodeReference(ref)) return '';
 
   const nodeId = String(ref[0]);
+  // Already searched with at least this much depth to spare, nothing new
+  // can be found; a visit with more depth left searches again
+  if ((visited.get(nodeId) ?? -1) >= maxDepth) return '';
+  visited.set(nodeId, maxDepth);
+
   const node = nodes[nodeId];
   if (!node) return '';
 
@@ -553,6 +606,7 @@ function extractTextFromConditioning(
       next,
       condKey,
       maxDepth - 1,
+      visited,
     );
     if (found) return found;
   }

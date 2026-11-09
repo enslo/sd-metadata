@@ -504,3 +504,17 @@ describe('extractComfyLoras - loaders by shape', () => {
     expect(extractComfyLoras(nodes, new Set())).toEqual([]);
   });
 });
+
+describe('extractComfyLoras - prototype keys', () => {
+  it('should read a node whose class_type names a prototype property by shape', () => {
+    const nodes = graph(
+      ['constructor', { lora_name: 'A.safetensors', strength_model: 0.8 }],
+      ['__proto__', { lora_name: 'B.safetensors', strength_model: 0.5 }],
+    );
+
+    expect(extractComfyLoras(nodes)).toEqual([
+      { name: 'A.safetensors', weight: 0.8 },
+      { name: 'B.safetensors', weight: 0.5 },
+    ]);
+  });
+});

@@ -2080,3 +2080,90 @@ describe('parseComfyUI - frontend rounding errors', () => {
     ]);
   });
 });
+
+describe('parseComfyUI - graph normalization', () => {
+  it('should drop entries that are not nodes and still parse the rest', () => {
+    const entries = createComfyUIEntries({
+      '1': null,
+      '2': { class_type: 'KSampler' },
+      '3': { class_type: 5, inputs: {} },
+      extra: { ds: { scale: 1 } },
+      extraMetadata: '{"steps":20}',
+      '4': { class_type: 'CLIPTextEncode', inputs: { text: '1girl, solo' } },
+    });
+
+    const result = parseComfyUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok && result.value.software === 'comfyui') {
+      expect(Object.keys(result.value.nodes)).toEqual(['4']);
+      expect(result.value.prompt).toBe('1girl, solo');
+    }
+  });
+
+  it('should not follow a reference to a prototype property as a node', () => {
+    const entries = createComfyUIEntries({
+      '1': {
+        class_type: 'KSampler',
+        inputs: {
+          positive: ['constructor', 0],
+          negative: ['hasOwnProperty', 0],
+          seed: 1,
+          steps: 20,
+        },
+      },
+    });
+
+    const result = parseComfyUI(entries);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.prompt).toBe('');
+      expect(result.value.negativePrompt).toBe('');
+    }
+  });
+
+  it('should finish when ConditioningCombine nodes fan in on each other', () => {
+    // Nine combine stages, each pulling eight times from the previous one,
+    // ending in a node without text: all 8^9 routes used to be walked before
+    // the positive side gave up
+    const graph: Record<string, unknown> = {
+      zero: {
+        class_type: 'ConditioningZeroOut',
+        inputs: { conditioning: ['enc', 0] },
+      },
+      enc: { class_type: 'CLIPTextEncode', inputs: { text: 'bad quality' } },
+    };
+    let previous = 'zero';
+    for (let stage = 0; stage < 9; stage++) {
+      const id = `combine${stage}`;
+      graph[id] = {
+        class_type: 'ConditioningCombine',
+        inputs: Object.fromEntries(
+          Array.from({ length: 8 }, (_, i) => [
+            `conditioning_${i + 1}`,
+            [previous, 0],
+          ]),
+        ),
+      };
+      previous = id;
+    }
+    graph.sampler = {
+      class_type: 'KSampler',
+      inputs: {
+        positive: [previous, 0],
+        negative: ['enc', 0],
+        seed: 1,
+        steps: 20,
+      },
+    };
+
+    const result = parseComfyUI(createComfyUIEntries(graph));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.prompt).toBe('');
+      expect(result.value.negativePrompt).toBe('bad quality');
+    }
+  });
+});

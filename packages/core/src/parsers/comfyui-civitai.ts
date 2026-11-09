@@ -6,7 +6,6 @@
  */
 
 import type {
-  ComfyNodeGraph,
   HiresSettings,
   ModelSettings,
   SamplingSettings,
@@ -70,7 +69,7 @@ export interface CivitaiPartialMetadata {
  * 2. As a separate entry (PNG format: extraMetadata as separate chunk)
  */
 export function extractExtraMetadata(
-  prompt: ComfyNodeGraph,
+  prompt: Record<string, unknown>,
   entryRecord?: EntryRecord,
 ): CivitaiExtraMetadata | undefined {
   // First try to find extraMetadata inside the prompt (JPEG format)
