@@ -594,3 +594,86 @@ describe('parseVideo - input', () => {
     expect(expectRaw(result).tags).toHaveLength(1);
   });
 });
+
+// ============================================================================
+// Bounds
+// ============================================================================
+
+describe('parseVideo - bounds', () => {
+  const prompt = JSON.stringify({
+    '1': { class_type: 'CLIPTextEncode', inputs: { text: 'a fox' } },
+    '2': {
+      class_type: 'KSampler',
+      inputs: {
+        seed: 1,
+        steps: 4,
+        cfg: 1,
+        sampler_name: 'euler',
+        scheduler: 'simple',
+        positive: ['1', 0],
+        negative: ['1', 0],
+      },
+    },
+  });
+
+  /** A WebM whose video track declares the given PixelWidth bytes */
+  function webmWithPixelWidth(widthBytes: number[]): Uint8Array {
+    const track = element(0x1654ae6b, [
+      ...element(0xae, [
+        ...uint(0x83, 1),
+        ...element(0xe0, [...element(0xb0, widthBytes), ...uint(0xba, 720)]),
+      ]),
+    ]);
+    return new Uint8Array([
+      ...ebmlHeader('webm'),
+      ...element(SEGMENT, [...track, ...tagsElement(tag({ PROMPT: prompt }))]),
+    ]);
+  }
+
+  it('ignores a Matroska integer wider than 8 bytes instead of reporting 10^96', async () => {
+    // readUint multiplied byte by byte, so 40 bytes of 0xff became 2.1e96
+    // (and 200 bytes Infinity) and went out as the width
+    const result = await parseVideo(
+      webmWithPixelWidth(new Array(40).fill(0xff)),
+    );
+
+    if (result.status !== 'success') throw new Error(result.status);
+    expect([result.metadata.width, result.metadata.height]).toEqual([0, 0]);
+  });
+
+  it('leaves out a track size that no video has', async () => {
+    // 8 bytes, so a valid integer, but 2^40 pixels wide
+    const result = await parseVideo(
+      webmWithPixelWidth([0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]),
+    );
+
+    if (result.status !== 'success') throw new Error(result.status);
+    expect([result.metadata.width, result.metadata.height]).toEqual([0, 0]);
+  });
+
+  it('reads the boxes of a fragmented MP4 Blob in a few slices', async () => {
+    // Thousands of small boxes after moov, as a screen recording or a
+    // stream has: the reader walks every header, which read one slice
+    // of the Blob each
+    const fragments = Array.from({ length: 2000 }, () =>
+      box('free', new Array(8).fill(0)),
+    );
+    const file = mp4(
+      ftyp(),
+      box('moov', box('udta', mdtaMeta({ custom: 'value' }))),
+      ...fragments,
+    );
+    let slices = 0;
+    class CountingBlob extends Blob {
+      override slice(start?: number, end?: number, type?: string): Blob {
+        slices++;
+        return super.slice(start, end, type);
+      }
+    }
+
+    const result = await parseVideo(new CountingBlob([file]));
+
+    expect(expectRaw(result).tags).toHaveLength(1);
+    expect(slices).toBeLessThan(10);
+  });
+});
