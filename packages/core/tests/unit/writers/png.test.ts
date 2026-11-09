@@ -434,3 +434,57 @@ describe('writePngMetadata - tEXt encoding', () => {
     }
   });
 });
+
+describe('writePngMetadata - cut-off files', () => {
+  /** Signature and IHDR of the minimal PNG, without its IEND */
+  const signatureAndIhdr = createMinimalPng().slice(0, 8 + 4 + 4 + 13 + 4);
+
+  it('refuses a PNG that breaks off inside a chunk instead of writing it without that chunk', () => {
+    // A download that stopped partway: IDAT declares 100 bytes, 10 follow
+    const idatHeader = [0x00, 0x00, 0x00, 0x64, 0x49, 0x44, 0x41, 0x54];
+    const data = new Uint8Array([
+      ...signatureAndIhdr,
+      ...idatHeader,
+      ...Array.from({ length: 10 }, (_, i) => i),
+    ]);
+
+    const result = writePngMetadata(data, [
+      { type: 'tEXt', keyword: 'parameters', text: '1girl' },
+    ]);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toEqual({
+        type: 'corruptedStructure',
+        message: 'Unexpected end of file while reading chunk data (IDAT)',
+      });
+    }
+  });
+
+  it('refuses a PNG whose IHDR runs past the end of the file', () => {
+    // Length and type of the IHDR chunk, none of its 13 data bytes
+    const data = signatureAndIhdr.slice(0, 8 + 8);
+
+    const result = writePngMetadata(data, []);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.type).toBe('corruptedStructure');
+    }
+  });
+
+  it('writes a PNG that has no IEND when every chunk it has is whole', () => {
+    const result = writePngMetadata(signatureAndIhdr, [
+      { type: 'tEXt', keyword: 'parameters', text: '1girl' },
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const readResult = readPngMetadata(result.value);
+      expect(readResult.ok).toBe(true);
+      if (readResult.ok) {
+        expect(readResult.value.chunks.map((c) => c.text)).toEqual(['1girl']);
+      }
+    }
+  });
+});

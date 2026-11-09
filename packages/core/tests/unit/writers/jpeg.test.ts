@@ -33,7 +33,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         // Verify we can read it back
-        const readResult = readJpegMetadata(result.value);
+        const readResult = readJpegMetadata(result.value.data);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
@@ -58,7 +58,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const readResult = readJpegMetadata(result.value);
+        const readResult = readJpegMetadata(result.value.data);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
@@ -85,7 +85,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const readResult = readJpegMetadata(result.value);
+        const readResult = readJpegMetadata(result.value.data);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value.length).toBeGreaterThanOrEqual(2);
@@ -115,7 +115,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
       if (!resultWithMetadata.ok) return;
 
       // Verify metadata was added
-      const readBeforeStrip = readJpegMetadata(resultWithMetadata.value);
+      const readBeforeStrip = readJpegMetadata(resultWithMetadata.value.data);
       expect(readBeforeStrip.ok).toBe(true);
       if (readBeforeStrip.ok) {
         expect(readBeforeStrip.value.length).toBeGreaterThanOrEqual(2);
@@ -124,13 +124,13 @@ describe('writeJpegMetadata - Unit Tests', () => {
       // Now strip metadata with empty array
       const emptySegments: MetadataSegment[] = [];
       const resultStripped = writeJpegMetadata(
-        resultWithMetadata.value,
+        resultWithMetadata.value.data,
         emptySegments,
       );
 
       expect(resultStripped.ok).toBe(true);
       if (resultStripped.ok) {
-        const readResult = readJpegMetadata(resultStripped.value);
+        const readResult = readJpegMetadata(resultStripped.value.data);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(0);
@@ -153,7 +153,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const readResult = readJpegMetadata(result.value);
+        const readResult = readJpegMetadata(result.value.data);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value).toHaveLength(1);
@@ -176,7 +176,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const readResult = readJpegMetadata(result.value);
+        const readResult = readJpegMetadata(result.value.data);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value.at(0)?.data).toBe(specialData);
@@ -198,7 +198,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const readResult = readJpegMetadata(result.value);
+        const readResult = readJpegMetadata(result.value.data);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           expect(readResult.value.at(0)?.data).toBe(unicodeData);
@@ -240,7 +240,7 @@ describe('writeJpegMetadata - Unit Tests', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        const readResult = readJpegMetadata(result.value);
+        const readResult = readJpegMetadata(result.value.data);
         expect(readResult.ok).toBe(true);
         if (readResult.ok) {
           // Should have all segments (Exif segments may be combined in APP1)
@@ -288,11 +288,68 @@ describe('writeJpegMetadata - segment size limit', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      const readResult = readJpegMetadata(result.value);
+      const readResult = readJpegMetadata(result.value.data);
       expect(readResult.ok).toBe(true);
       if (readResult.ok) {
         expect(readResult.value.at(0)?.data).toBe(text);
       }
+    }
+  });
+});
+
+describe('writeJpegMetadata - oversized COM and XMP', () => {
+  it('should leave out a COM segment whose text does not fit and report it as dropped', () => {
+    const jpeg = createMinimalJpeg();
+    const oversized: MetadataSegment = {
+      source: { type: 'jpegCom' },
+      data: 'x'.repeat(70_000),
+    };
+    const segments: MetadataSegment[] = [
+      oversized,
+      { source: { type: 'jpegCom' }, data: 'kept' },
+    ];
+
+    const result = writeJpegMetadata(jpeg, segments);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.dropped).toEqual([oversized]);
+      const readResult = readJpegMetadata(result.value.data);
+      expect(readResult.ok).toBe(true);
+      if (readResult.ok) {
+        expect(readResult.value.map((s) => s.data)).toEqual(['kept']);
+      }
+    }
+  });
+
+  it('should leave out an XMP packet that does not fit', () => {
+    const jpeg = createMinimalJpeg();
+    const oversized: MetadataSegment = {
+      source: { type: 'xmpPacket' },
+      data: `<x:xmpmeta>${'x'.repeat(70_000)}</x:xmpmeta>`,
+    };
+
+    const result = writeJpegMetadata(jpeg, [oversized]);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.dropped).toEqual([oversized]);
+      const readResult = readJpegMetadata(result.value.data);
+      expect(readResult.ok).toBe(true);
+      if (readResult.ok) {
+        expect(readResult.value).toEqual([]);
+      }
+    }
+  });
+
+  it('should report nothing dropped when every segment fits', () => {
+    const result = writeJpegMetadata(createMinimalJpeg(), [
+      { source: { type: 'jpegCom' }, data: 'fits' },
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.dropped).toEqual([]);
     }
   });
 });

@@ -67,10 +67,14 @@ export function convertComfyUIPngToSegments(
  * The reader keeps each value's label as `prefix`, so route by label and fall
  * back to the save-image-extended layout for values that carry no label.
  *
+ * @param labelled - Only match when at least one value carries a label;
+ *   without one, a Make tag may be a camera's, so the UserComment is tried
+ *   first and the unlabelled layout last
  * @returns PNG chunks if format matches, null otherwise
  */
 const tryParseExtendedFormat = (
   segments: MetadataSegment[],
+  labelled: boolean,
 ): PngTextChunk[] | null => {
   const imageDescription = findSegment(segments, 'exifImageDescription');
   const make = findSegment(segments, 'exifMake');
@@ -85,16 +89,22 @@ const tryParseExtendedFormat = (
     tagged.find(
       (s) => 'prefix' in s.source && s.source.prefix?.toLowerCase() === keyword,
     )?.data;
+  const prompt = byLabel('prompt');
+  const workflow = byLabel('workflow');
+
+  if (labelled && prompt === undefined && workflow === undefined) {
+    return null;
+  }
 
   return [
     ...createEncodedChunk(
       'prompt',
-      byLabel('prompt') ?? make?.data,
+      prompt ?? make?.data,
       'text-unicode-escape',
     ),
     ...createEncodedChunk(
       'workflow',
-      byLabel('workflow') ?? imageDescription?.data,
+      workflow ?? imageDescription?.data,
       'text-unicode-escape',
     ),
   ];
@@ -115,9 +125,10 @@ const tryParseSaveImagePlusFormat = (
 /**
  * Convert JPEG/WebP segments to ComfyUI PNG chunks
  *
- * Supports:
+ * Supports, in this order:
  * - labelled IFD0 ASCII tags: save-image-extended, Save Animated WEBP
  * - saveimage-plus format: exifUserComment with {"prompt": {...}, "workflow": {...}}
+ * - unlabelled IFD0 ASCII tags in the save-image-extended layout
  *
  * @param segments - Metadata segments from JPEG/WebP
  * @returns PNG text chunks
@@ -125,10 +136,10 @@ const tryParseSaveImagePlusFormat = (
 export function convertComfyUISegmentsToPng(
   segments: MetadataSegment[],
 ): PngTextChunk[] {
-  // Try each format in order of priority
   return (
-    tryParseExtendedFormat(segments) ??
+    tryParseExtendedFormat(segments, true) ??
     tryParseSaveImagePlusFormat(segments) ??
+    tryParseExtendedFormat(segments, false) ??
     []
   );
 }
