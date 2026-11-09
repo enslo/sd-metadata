@@ -19,6 +19,14 @@ export interface ByteSource {
 }
 
 /**
+ * Bytes read from a Blob beyond what was asked for. The readers walk a
+ * file box by box with a 16-byte header read each, and a fragmented MP4
+ * (screen recordings, streams) has thousands of boxes: with a window, a
+ * run of such reads costs one slice instead of one per box.
+ */
+const BLOB_READ_AHEAD = 64 * 1024;
+
+/**
  * Wrap video input as a {@link ByteSource}.
  *
  * @param input - Bytes, or a Blob read lazily
@@ -27,13 +35,7 @@ export function toByteSource(
   input: Uint8Array | ArrayBuffer | Blob,
 ): ByteSource {
   if (typeof Blob !== 'undefined' && input instanceof Blob) {
-    return {
-      size: input.size,
-      read: async (offset, length) =>
-        new Uint8Array(
-          await input.slice(offset, offset + length).arrayBuffer(),
-        ),
-    };
+    return blobByteSource(input);
   }
   const bytes =
     input instanceof Uint8Array ? input : new Uint8Array(input as ArrayBuffer);
@@ -44,5 +46,34 @@ export function toByteSource(
         Math.min(offset, bytes.length),
         Math.min(offset + length, bytes.length),
       ),
+  };
+}
+
+/**
+ * A Blob read range by range, keeping the last slice as a window that
+ * later reads inside it are served from
+ */
+function blobByteSource(blob: Blob): ByteSource {
+  let windowStart = 0;
+  let window = new Uint8Array(0);
+  return {
+    size: blob.size,
+    async read(offset, length) {
+      const end = Math.min(offset + length, blob.size);
+      if (offset >= end) {
+        return new Uint8Array(0);
+      }
+      if (offset < windowStart || end > windowStart + window.length) {
+        const windowEnd = Math.min(
+          Math.max(end, offset + BLOB_READ_AHEAD),
+          blob.size,
+        );
+        window = new Uint8Array(
+          await blob.slice(offset, windowEnd).arrayBuffer(),
+        );
+        windowStart = offset;
+      }
+      return window.subarray(offset - windowStart, end - windowStart);
+    },
   };
 }

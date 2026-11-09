@@ -24,8 +24,10 @@ type JsonObject = Record<string, unknown>;
  * Internal parameter bag for generation metadata.
  *
  * Every field is text: the output is A1111-format text and lite never does
- * arithmetic on these values, so numbers are kept exactly as the tool wrote
- * them (64-bit seeds included). An empty string means "not found".
+ * arithmetic on these values. Text is kept exactly as the tool wrote it,
+ * so a 64-bit seed written as a string keeps every digit; one written as a
+ * JSON number has already been rounded past 2^53 by JSON.parse, the same
+ * limit the core library has. An empty string means "not found".
  *
  * Property names are kept to 1-2 characters because esbuild does not
  * mangle object properties — shorter keys keep the IIFE bundle small.
@@ -643,9 +645,11 @@ function parseJson(text: string | undefined): JsonObject | null {
 }
 
 /**
- * Coerce a scalar to text. Strings pass through unchanged (so 64-bit seeds
- * keep every digit), numbers are stringified, and anything else — missing,
- * null, objects, ComfyUI node references like ["95", 0] — becomes "".
+ * Coerce a scalar to text. Strings pass through unchanged (a 64-bit seed
+ * written as a string keeps every digit), numbers are stringified (one
+ * written as a JSON number was already rounded past 2^53 by JSON.parse),
+ * and anything else — missing, null, objects, ComfyUI node references like
+ * ["95", 0] — becomes "".
  *
  * Every value ends up interpolated into A1111 text, so there is no reason to
  * hold numbers as numbers. Returning "" (falsy) enables `||` fallback chains:

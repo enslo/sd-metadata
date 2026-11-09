@@ -303,8 +303,14 @@ function readVint(
   return { value, length, unknown: !keepMarker && allOnes };
 }
 
-/** Unsigned integer element value (up to 8 bytes, big-endian). */
+/**
+ * Unsigned integer element value (up to 8 bytes, big-endian)
+ *
+ * A wider element is not an integer the format allows; reading it would
+ * multiply up to Infinity, so it reads as 0, which no caller accepts.
+ */
 function readUint(bytes: Uint8Array, element: Element): number {
+  if (element.end - element.dataStart > 8) return 0;
   let value = 0;
   for (let i = element.dataStart; i < element.end; i++) {
     value = value * 256 + (bytes[i] ?? 0);

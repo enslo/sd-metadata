@@ -87,7 +87,12 @@ export async function parseVideo(
     const parsed = parseMetadata(entries);
     if (parsed.ok) {
       const metadata = parsed.value;
-      if (!options?.strict) {
+      // The track size fills in, when it is one a video can have
+      if (
+        !options?.strict &&
+        isPixelSize(container.width) &&
+        isPixelSize(container.height)
+      ) {
         metadata.width = metadata.width || container.width;
         metadata.height = metadata.height || container.height;
       }
@@ -131,4 +136,15 @@ function detectVideoVendor(
 
 function isEncoderTag({ key }: VideoTag): boolean {
   return ENCODER_TAG_KEYS.has(key.toLowerCase());
+}
+
+/**
+ * Whether a track dimension is one a video can have
+ *
+ * The containers store dimensions in up to 64 bits, and a crafted file can
+ * claim any value; what goes into the result is bounded to what an image
+ * dimension field holds.
+ */
+function isPixelSize(value: number): boolean {
+  return Number.isInteger(value) && value > 0 && value <= 0xffff;
 }
