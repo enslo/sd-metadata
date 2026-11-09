@@ -39,6 +39,21 @@ type A1111Software = (typeof A1111_SOFTWARE_LIST)[number];
 export const A1111_SOFTWARE: ReadonlySet<string> = new Set(A1111_SOFTWARE_LIST);
 
 /**
+ * Whether the entries hold A1111-style text for {@link parseA1111} to read
+ *
+ * Looks for the settings line or the negative prompt marker in the text
+ * entry, so that a JSON blob the detected parser could not read is not
+ * taken for a prompt.
+ */
+export function hasA1111Text(entries: EntryRecord): boolean {
+  const text = entries.parameters ?? entries.UserComment;
+  return (
+    text !== undefined &&
+    (text.includes('Steps:') || text.includes('Negative prompt:'))
+  );
+}
+
+/**
  * Parse A1111-format metadata from entries
  *
  * A1111 format is used by:

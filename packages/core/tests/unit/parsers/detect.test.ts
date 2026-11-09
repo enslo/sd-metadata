@@ -399,3 +399,27 @@ describe('detectSoftware - Dezgo job record', () => {
     expect(detectSoftware({ GenInfo: genInfo })).not.toBe('dezgo');
   });
 });
+
+describe('detectSoftware - CivitAI AIR identifiers', () => {
+  it('should detect CivitAI from an AIR URN in a UserComment graph', () => {
+    const entries: EntryRecord = {
+      UserComment:
+        '{"3": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "urn:air:sdxl:checkpoint:civitai:827184@2514310"}}}',
+    };
+
+    expect(detectSoftware(entries)).toBe('civitai');
+  });
+
+  it('should not take a Fooocus JSON for CivitAI because its prompt mentions civitai:', () => {
+    const entries: EntryRecord = {
+      UserComment: JSON.stringify({
+        prompt: 'portrait, style from civitai: 12345',
+        negative_prompt: 'lowres',
+        base_model: 'juggernautXL_v8.safetensors',
+        steps: 30,
+      }),
+    };
+
+    expect(detectSoftware(entries)).toBe('fooocus');
+  });
+});

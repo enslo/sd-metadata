@@ -2183,3 +2183,136 @@ describe('parseComfyUI - NUL padding', () => {
     expect(trailing.ok).toBe(false);
   });
 });
+
+describe('parseComfyUI - wired hires and seed inputs', () => {
+  const base = {
+    '1': {
+      class_type: 'CheckpointLoaderSimple',
+      inputs: { ckpt_name: 'model.safetensors' },
+    },
+    '2': {
+      class_type: 'CLIPTextEncode',
+      inputs: { text: '1girl', clip: ['1', 1] },
+    },
+    '3': {
+      class_type: 'CLIPTextEncode',
+      inputs: { text: 'lowres', clip: ['1', 1] },
+    },
+    '4': {
+      class_type: 'EmptyLatentImage',
+      inputs: { width: 512, height: 768, batch_size: 1 },
+    },
+  };
+  function kSampler(inputs: Record<string, unknown>) {
+    return {
+      class_type: 'KSampler',
+      inputs: {
+        seed: 7,
+        steps: 20,
+        cfg: 7,
+        sampler_name: 'euler',
+        scheduler: 'normal',
+        denoise: 1,
+        model: ['1', 0],
+        positive: ['2', 0],
+        negative: ['3', 0],
+        latent_image: ['4', 0],
+        ...inputs,
+      },
+    };
+  }
+  function parse(prompt: Record<string, unknown>) {
+    const result = parseComfyUI(createComfyUIEntries(prompt));
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error.type);
+    return result.value;
+  }
+
+  it('resolves a LatentUpscaleBy factor wired from a PrimitiveFloat', () => {
+    const value = parse({
+      ...base,
+      '5': kSampler({}),
+      '6': {
+        class_type: 'LatentUpscaleBy',
+        inputs: {
+          samples: ['5', 0],
+          upscale_method: 'nearest-exact',
+          scale_by: ['9', 0],
+        },
+      },
+      '7': kSampler({ steps: 10, denoise: 0.5, latent_image: ['6', 0] }),
+      '9': { class_type: 'PrimitiveFloat', inputs: { value: 1.5 } },
+    });
+
+    expect(value.hires).toEqual({ scale: 1.5, steps: 10, denoise: 0.5 });
+  });
+
+  it('resolves an upscale model name wired from a PrimitiveString', () => {
+    const value = parse({
+      ...base,
+      '5': kSampler({}),
+      '6': {
+        class_type: 'VAEDecode',
+        inputs: { samples: ['5', 0], vae: ['1', 2] },
+      },
+      '7': {
+        class_type: 'UpscaleModelLoader',
+        inputs: { model_name: ['9', 0] },
+      },
+      '8': {
+        class_type: 'ImageUpscaleWithModel',
+        inputs: { upscale_model: ['7', 0], image: ['6', 0] },
+      },
+      '9': {
+        class_type: 'PrimitiveString',
+        inputs: { value: '4x-UltraSharp.pth' },
+      },
+    });
+
+    expect(value.upscale).toEqual({ upscaler: '4x-UltraSharp.pth' });
+  });
+
+  it('reads the factor of an ImageScaleBy hires pass', () => {
+    // VAEDecode → ImageScaleBy → VAEEncode → KSampler, the plain hires fix
+    const value = parse({
+      ...base,
+      '5': kSampler({}),
+      '6': {
+        class_type: 'VAEDecode',
+        inputs: { samples: ['5', 0], vae: ['1', 2] },
+      },
+      '8': {
+        class_type: 'ImageScaleBy',
+        inputs: { upscale_method: 'lanczos', scale_by: 2, image: ['6', 0] },
+      },
+      '10': {
+        class_type: 'VAEEncode',
+        inputs: { pixels: ['8', 0], vae: ['1', 2] },
+      },
+      '11': kSampler({ steps: 10, denoise: 0.5, latent_image: ['10', 0] }),
+    });
+
+    expect(value.hires).toEqual({ scale: 2, steps: 10, denoise: 0.5 });
+  });
+
+  it('resolves a seed wired from a PrimitiveInt', () => {
+    const value = parse({
+      ...base,
+      '5': kSampler({ seed: ['10', 0] }),
+      '10': { class_type: 'PrimitiveInt', inputs: { value: 123456 } },
+    });
+
+    expect(value.sampling?.seed).toBe('123456');
+    expect(value.sampling?.steps).toBe(20);
+  });
+
+  it('still reads a seed from the seed input of a seed node', () => {
+    const value = parse({
+      ...base,
+      '5': kSampler({ seed: ['10', 0] }),
+      '10': { class_type: 'CR Seed', inputs: { seed: 42 } },
+    });
+
+    expect(value.sampling?.seed).toBe('42');
+  });
+});
