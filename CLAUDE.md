@@ -40,9 +40,9 @@ sd-metadata/
 ```text
 parse(image) → readers/ → parsers/detect → parsers/* → ParseResult
                └ falls back to readers/stealth (pixel LSB) when no
-                 metadata is found; PNG pixels are decoded built-in,
-                 WebP pixels via the platform (browsers) or an
-                 injected ReadOptions.decodePixels (servers)
+                 metadata is found; PNG and WebP pixels are decoded
+                 built-in, the same way in every runtime (WebP: only
+                 what is stored losslessly, via readers/vp8l)
 read(image)  → same as parse, minus the stealth fallback (deprecated)
 write(image) → converters/*              → writers/  → Uint8Array
 embed(image) → (always A1111 format)     → writers/  → Uint8Array

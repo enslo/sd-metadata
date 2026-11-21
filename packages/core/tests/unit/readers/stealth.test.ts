@@ -2,6 +2,7 @@ import { deflateSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import {
   readStealthChunks,
+  scanDecodedPixels,
   scanStealthPixels,
 } from '../../../src/readers/stealth';
 import { createMinimalPng } from '../../helpers/minimal-images';
@@ -207,6 +208,47 @@ describe('scanStealthPixels', () => {
     const data = new Uint8Array(64 * 64 * 4).fill(255);
 
     expect(await scanStealthPixels({ data, width: 64, height: 64 })).toBeNull();
+  });
+});
+
+describe('scanDecodedPixels - a lone alpha plane', () => {
+  /** The alpha channel of an RGBA buffer, one byte per pixel */
+  function alphaPlane(rgba: Uint8Array): Uint8Array {
+    return rgba.filter((_, i) => i % 4 === 3);
+  }
+
+  it('reads alpha-embedded stealth data', async () => {
+    // What a lossy WebP offers: its colors are gone, alpha is exact
+    const { data, width, height } = createStealthRgbaPixels({
+      payload: A1111_PAYLOAD,
+    });
+
+    const chunks = await scanDecodedPixels({
+      width,
+      height,
+      channels: 1,
+      pixels: alphaPlane(data),
+    });
+
+    expect(chunks).toEqual([
+      { type: 'tEXt', keyword: 'parameters', text: A1111_PAYLOAD },
+    ]);
+  });
+
+  it('finds nothing when the stealth data was in the colors', async () => {
+    const { data, width, height } = createStealthRgbaPixels({
+      payload: A1111_PAYLOAD,
+      mode: 'rgb',
+    });
+
+    expect(
+      await scanDecodedPixels({
+        width,
+        height,
+        channels: 1,
+        pixels: alphaPlane(data),
+      }),
+    ).toBeNull();
   });
 });
 

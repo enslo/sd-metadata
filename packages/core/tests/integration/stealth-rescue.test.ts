@@ -15,7 +15,6 @@ import { read } from '../../src/api/read';
 import { write } from '../../src/api/write';
 import { loadSample } from '../helpers/samples';
 import { stripTextChunks } from '../helpers/stealth-images';
-import { decodeWithSharp } from '../helpers/webp-pixels';
 
 describe('stealth rescue write-back', () => {
   it('restores NovelAI-native chunks to a stripped PNG', async () => {
@@ -82,12 +81,9 @@ describe('stealth rescue write-back', () => {
       return;
     }
 
-    // Recovery needs decoded pixels (sharp stands in for the browser
-    // platform decoder); the rescued raw metadata is chunk-shaped, so
-    // write() converts it to the WebP EXIF layout NovelAI uses.
-    const rescued = await parse(strippedResult.value, {
-      decodePixels: decodeWithSharp,
-    });
+    // The rescued raw metadata is chunk-shaped, so write() converts it
+    // to the WebP EXIF layout NovelAI uses.
+    const rescued = await parse(strippedResult.value);
     expect(rescued.status).toBe('success');
     if (baseline.status !== 'success' || rescued.status !== 'success') {
       return;

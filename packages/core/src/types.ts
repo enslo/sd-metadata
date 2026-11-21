@@ -604,11 +604,12 @@ export interface ReadOptions {
   strict?: boolean;
 
   /**
-   * Decode compressed image pixels for the stealth scan when the
-   * platform cannot (currently WebP outside browsers — e.g. via sharp
-   * in Node.js). parse() calls it lazily, only when a WebP carries no
-   * readable metadata. Return null when decoding is unavailable for
-   * the given image; the platform decoder is then tried as a fallback.
+   * Decode WebP pixels for the stealth scan.
+   *
+   * @deprecated parse() decodes WebP pixels itself in every runtime, so
+   * no decoder needs to be supplied. The callback is only asked for a
+   * WebP the built-in decoder has no pixels for, and will be removed in
+   * the next major version.
    */
   decodePixels?: (
     data: Uint8Array,

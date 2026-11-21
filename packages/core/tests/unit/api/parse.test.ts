@@ -13,6 +13,7 @@ import {
   createStealthPng,
   createStealthRgbaPixels,
 } from '../../helpers/stealth-images';
+import { encodeWebp } from '../../helpers/webp-pixels';
 
 const A1111_PAYLOAD =
   'masterpiece, 1girl\nNegative prompt: lowres\n' +
@@ -98,10 +99,89 @@ describe('parse', () => {
   });
 });
 
-describe('parse - WebP stealth via decodePixels', () => {
+describe('parse - WebP stealth', () => {
+  it('recovers metadata from a lossless WebP', async () => {
+    const webp = await encodeWebp(
+      createStealthRgbaPixels({ payload: A1111_PAYLOAD }),
+      { lossless: true },
+    );
+
+    // The chunk-based path sees nothing...
+    expect(read(webp).status).toBe('empty');
+
+    // ...but parse() decodes the pixels and recovers the metadata.
+    const result = await parse(webp);
+    expect(result.status).toBe('success');
+    if (result.status === 'success') {
+      expect(result.stealth).toBe(true);
+      expect(result.metadata.software).toBe('sd-webui');
+      expect(result.metadata.prompt).toBe('masterpiece, 1girl');
+      // Stealth raw metadata is chunk-shaped regardless of container.
+      expect(result.raw).toEqual({
+        format: 'png',
+        chunks: [{ type: 'tEXt', keyword: 'parameters', text: A1111_PAYLOAD }],
+      });
+    }
+  });
+
+  it('recovers RGB-embedded metadata from a lossless WebP', async () => {
+    const webp = await encodeWebp(
+      createStealthRgbaPixels({ payload: A1111_PAYLOAD, mode: 'rgb' }),
+      { lossless: true },
+    );
+
+    const result = await parse(webp);
+
+    expect(result.status).toBe('success');
+    expect(result.status === 'success' && result.stealth).toBe(true);
+  });
+
+  it('recovers alpha-embedded metadata from a lossy WebP', async () => {
+    // A lossy WebP stores its alpha plane losslessly, so the bits hidden
+    // there survive a lossy re-save
+    const webp = await encodeWebp(
+      createStealthRgbaPixels({ payload: A1111_PAYLOAD }),
+      { quality: 80 },
+    );
+
+    const result = await parse(webp);
+
+    expect(result.status).toBe('success');
+    if (result.status === 'success') {
+      expect(result.stealth).toBe(true);
+      expect(result.metadata.prompt).toBe('masterpiece, 1girl');
+    }
+  });
+
+  it('finds nothing in a lossy WebP when the metadata was in the colors', async () => {
+    const webp = await encodeWebp(
+      createStealthRgbaPixels({ payload: A1111_PAYLOAD, mode: 'rgb' }),
+      { quality: 80 },
+    );
+
+    expect((await parse(webp)).status).toBe('empty');
+  });
+});
+
+describe('parse - deprecated decodePixels', () => {
   const stealthPixels = createStealthRgbaPixels({ payload: A1111_PAYLOAD });
 
-  it('recovers metadata from pixels supplied by the callback', async () => {
+  it('is not asked for a WebP the built-in decoder reads', async () => {
+    const webp = await encodeWebp(stealthPixels, { lossless: true });
+    let called = false;
+
+    const result = await parse(webp, {
+      decodePixels: async () => {
+        called = true;
+        return null;
+      },
+    });
+
+    expect(called).toBe(false);
+    expect(result.status).toBe('success');
+  });
+
+  it('is asked for a WebP without losslessly stored pixels', async () => {
     const webp = createMinimalWebp();
     const formats: string[] = [];
 
@@ -134,8 +214,8 @@ describe('parse - WebP stealth via decodePixels', () => {
     expect(result.status).toBe('empty');
   });
 
-  it('returns the chunk-based result when no decoder is available', async () => {
-    // Node.js has no platform decoder and no callback is supplied.
+  it('returns the chunk-based result without a callback', async () => {
+    // A lossy image chunk alone: nothing the built-in decoder can read
     expect((await parse(createMinimalWebp())).status).toBe('empty');
   });
 
