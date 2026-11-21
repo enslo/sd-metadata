@@ -9,8 +9,13 @@
  */
 
 import { parseMetadata } from '../parsers';
-import { decodePixelsWithPlatform } from '../readers/pixel-decode';
-import { readStealthChunks, scanStealthPixels } from '../readers/stealth';
+import {
+  MAX_PIXEL_BYTES,
+  readStealthChunks,
+  scanDecodedPixels,
+  scanStealthPixels,
+} from '../readers/stealth';
+import { decodeWebpPixels } from '../readers/webp-pixels';
 import type { ParseResult, PngTextChunk, ReadOptions } from '../types';
 import { detectFormat, toUint8Array } from '../utils/binary';
 import { pngChunksToRecord } from '../utils/convert';
@@ -29,11 +34,8 @@ import { applyDimensionFallback, read } from './read';
  * regular metadata is absent. An image that declares its vendor (a C2PA
  * manifest from ChatGPT, Gemini, ...) is not scanned either: those
  * services write no stealth data, and the declaration is the answer.
- * PNG pixels are decoded by the library itself. WebP pixels are decoded
- * by the platform where possible (browsers, via WebCodecs or canvas); in
- * other runtimes supply
- * {@link ReadOptions.decodePixels} (e.g. backed by sharp in Node.js)
- * or the WebP stealth scan is skipped.
+ * PNG and WebP pixels are decoded by the library itself, the same way in
+ * every runtime.
  *
  * @example
  * ```typescript
@@ -114,18 +116,20 @@ export async function parse(
 }
 
 /**
- * Decode WebP pixels and scan them for stealth data
+ * Decode the losslessly stored pixels of a WebP and scan them for
+ * stealth data
  *
- * An injected decoder takes precedence; the platform decoder fills in
- * when none is supplied or it returns null. Without either, WebP
- * stealth data is not recoverable and null is returned.
+ * The deprecated ReadOptions.decodePixels is only asked when the built-in
+ * decoder has no pixels to offer for the file.
  */
 async function readWebpStealthChunks(
   data: Uint8Array,
   options?: ReadOptions,
 ): Promise<PngTextChunk[] | null> {
-  const pixels =
-    (await options?.decodePixels?.(data, 'webp')) ??
-    (await decodePixelsWithPlatform(data, 'image/webp'));
-  return pixels ? scanStealthPixels(pixels) : null;
+  const image = decodeWebpPixels(data, MAX_PIXEL_BYTES);
+  if (image) {
+    return scanDecodedPixels(image);
+  }
+  const injected = await options?.decodePixels?.(data, 'webp');
+  return injected ? scanStealthPixels(injected) : null;
 }

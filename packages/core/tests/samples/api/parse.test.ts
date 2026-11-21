@@ -5,7 +5,7 @@ import { write } from '../../../src/api/write';
 import { pngChunksToRecord } from '../../../src/utils/convert';
 import { loadSample, PNG_SAMPLES } from '../../helpers/samples';
 import { stripTextChunks } from '../../helpers/stealth-images';
-import { decodeWithSharp } from '../../helpers/webp-pixels';
+import { decodeWithSharp, encodeWebp } from '../../helpers/webp-pixels';
 
 /**
  * Stealth PNGInfo carriers among the samples:
@@ -160,10 +160,8 @@ describe('parse - Stealth PNGInfo samples', () => {
 
   describe('WebP stealth recovery', () => {
     // NovelAI writes stealth_pngcomp into the alpha LSBs of its
-    // lossless (VP8L) WebP exports too. The library cannot decode WebP
-    // pixels itself; in Node.js the ReadOptions.decodePixels escape
-    // hatch (here backed by sharp) supplies them. In browsers the
-    // platform decoder fills the same role automatically.
+    // lossless (VP8L) WebP exports too, and the library decodes those
+    // pixels itself.
     // (The sd-webui-stealth-pnginfo extension only hooks PNG saves,
     // so Forge WebP output carries no stealth data.)
     const NOVELAI_WEBP_SAMPLES = [
@@ -173,7 +171,7 @@ describe('parse - Stealth PNGInfo samples', () => {
     ];
 
     for (const filename of NOVELAI_WEBP_SAMPLES) {
-      it(`recovers metadata via an injected decoder: ${filename}`, async () => {
+      it(`recovers metadata from the pixels: ${filename}`, async () => {
         const original = loadSample('webp', filename);
         const baseline = read(original);
         expect(baseline.status).toBe('success');
@@ -185,25 +183,33 @@ describe('parse - Stealth PNGInfo samples', () => {
         }
         expect(read(strippedResult.value).status).toBe('empty');
 
-        const recovered = await parse(strippedResult.value, {
-          decodePixels: decodeWithSharp,
-        });
+        const recovered = await parse(strippedResult.value);
         expect(recovered.status).toBe('success');
         if (baseline.status === 'success' && recovered.status === 'success') {
+          expect(recovered.stealth).toBe(true);
           expect(recovered.metadata).toEqual(baseline.metadata);
         }
       });
     }
 
-    it('recovers nothing without a decoder outside the browser', async () => {
-      const original = loadSample('webp', 'novelai-curated.webp');
-      const strippedResult = write(original, { status: 'empty' });
-      expect(strippedResult.ok).toBe(true);
-      if (!strippedResult.ok) {
-        return;
-      }
+    it('recovers NovelAI metadata from a lossy WebP re-save of the PNG', async () => {
+      // Converting the PNG to a lossy WebP drops the text chunks and
+      // rewrites the colors, but the alpha plane is stored losslessly,
+      // and the stealth data in it comes through intact
+      const original = loadSample('png', 'novelai-full.png');
+      const baseline = read(original);
+      const pixels = await decodeWithSharp(original);
+      if (!pixels) throw new Error('reference decoder failed');
+      const webp = await encodeWebp(pixels, { quality: 80 });
+      expect(read(webp).status).toBe('empty');
 
-      expect((await parse(strippedResult.value)).status).toBe('empty');
+      const recovered = await parse(webp);
+
+      expect(recovered.status).toBe('success');
+      if (baseline.status === 'success' && recovered.status === 'success') {
+        expect(recovered.stealth).toBe(true);
+        expect(recovered.metadata).toEqual(baseline.metadata);
+      }
     });
   });
 });

@@ -18,6 +18,11 @@
  * normalized here into synthesized text chunks so the regular parser
  * pipeline can consume them.
  *
+ * The same bits survive in a WebP wherever its pixels are stored
+ * losslessly (NovelAI's lossless exports, and the alpha plane of a lossy
+ * re-save); decodeWebpPixels in webp-pixels.ts supplies those pixels and
+ * scanDecodedPixels reads them here.
+ *
  * @see https://github.com/NovelAI/novelai-image-metadata
  * @see https://github.com/ashen-sensored/sd_webui_stealth_pnginfo
  */
@@ -35,7 +40,7 @@ const MAGIC_LENGTH = 15;
  * unfiltered first; past this size that work is not worth a long shot at
  * hidden metadata, and a crafted header could claim gigabytes.
  */
-const MAX_PIXEL_BYTES = 256 * 1024 * 1024;
+export const MAX_PIXEL_BYTES = 256 * 1024 * 1024;
 
 /**
  * Largest stealth payload after gunzip. Payloads are generation metadata
@@ -51,10 +56,10 @@ const RGB_MAGICS = ['stealth_rgbinfo', 'stealth_rgbcomp'];
 type LsbMode = 'alpha' | 'rgb';
 
 /** Decoded pixel data, interleaved and row-major */
-interface PixelData {
+export interface PixelData {
   width: number;
   height: number;
-  /** Bytes per pixel: 4 = RGBA, 3 = RGB */
+  /** Bytes per pixel: 4 = RGBA, 3 = RGB, 1 = alpha only */
   channels: number;
   /** width * height * channels bytes */
   pixels: Uint8Array;
@@ -74,19 +79,18 @@ export async function readStealthChunks(
     return null;
   }
 
-  const image = await decodePixels(data);
+  const image = await decodePngPixels(data);
   if (!image) {
     return null;
   }
-  return scanPixels(image);
+  return scanDecodedPixels(image);
 }
 
 /**
  * Scan externally decoded RGBA pixels for Stealth PNGInfo
  *
- * Used for formats the built-in decoder cannot handle (currently
- * WebP), with pixels supplied by the platform (browser image decoding)
- * or by an injected decoder (ReadOptions.decodePixels).
+ * For pixels the library did not decode itself: those an injected
+ * decoder (the deprecated ReadOptions.decodePixels) supplies.
  *
  * @param rgba - Decoded RGBA pixel data
  * @returns Synthesized text chunks, or null when no stealth data is found
@@ -102,16 +106,28 @@ export async function scanStealthPixels(
     data instanceof Uint8Array
       ? data
       : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-  return scanPixels({ width, height, channels: 4, pixels });
+  return scanDecodedPixels({ width, height, channels: 4, pixels });
 }
 
 /**
- * Try each LSB mode the pixel layout can carry
+ * Scan decoded pixels for Stealth PNGInfo, trying each LSB mode the
+ * pixel layout can carry
+ *
+ * @param image - Pixels from the PNG decoder here or from decodeWebpPixels
+ * @returns Synthesized text chunks, or null when no stealth data is found
  */
-async function scanPixels(image: PixelData): Promise<PngTextChunk[] | null> {
+export async function scanDecodedPixels(
+  image: PixelData,
+): Promise<PngTextChunk[] | null> {
   // RGBA images may carry either variant; alpha is checked first to
-  // match the reference readers. RGB images can only carry rgb variants.
-  const modes: LsbMode[] = image.channels === 4 ? ['alpha', 'rgb'] : ['rgb'];
+  // match the reference readers. RGB images can only carry rgb variants,
+  // and a lone alpha plane (a lossy WebP) only alpha variants.
+  const modes: LsbMode[] =
+    image.channels === 4
+      ? ['alpha', 'rgb']
+      : image.channels === 1
+        ? ['alpha']
+        : ['rgb'];
   for (const mode of modes) {
     const text = await extractStealthText(image, mode);
     if (text !== null) {
@@ -128,7 +144,7 @@ async function scanPixels(image: PixelData): Promise<PngTextChunk[] | null> {
 /**
  * Decode PNG pixel data (8-bit RGB/RGBA, non-interlaced only)
  */
-async function decodePixels(data: Uint8Array): Promise<PixelData | null> {
+async function decodePngPixels(data: Uint8Array): Promise<PixelData | null> {
   let width = 0;
   let height = 0;
   let bitDepth = 0;
