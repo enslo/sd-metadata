@@ -202,12 +202,13 @@ export function isItxtUpgradeExpected(filename: string): boolean {
 }
 
 /**
- * List all sample files in a format directory, excluding non-metadata files
+ * List every image file in a format directory, the ones without generation
+ * metadata (empty, gimp) included
  *
  * @param format - The image format directory to scan
  * @returns Array of filenames (not full paths)
  */
-function listSamples(format: 'png' | 'jpg' | 'webp'): string[] {
+export function listSampleFiles(format: 'png' | 'jpg' | 'webp'): string[] {
   const dir = getSamplesDir(format);
   const files = fs.readdirSync(dir);
 
@@ -220,9 +221,19 @@ function listSamples(format: 'png' | 'jpg' | 'webp'): string[] {
           : format === 'jpg'
             ? ['.jpg', '.jpeg']
             : ['.webp'];
-      return validExtensions.includes(ext) && !isExcluded(file);
+      return validExtensions.includes(ext);
     })
     .sort();
+}
+
+/**
+ * List all sample files in a format directory, excluding non-metadata files
+ *
+ * @param format - The image format directory to scan
+ * @returns Array of filenames (not full paths)
+ */
+function listSamples(format: 'png' | 'jpg' | 'webp'): string[] {
+  return listSampleFiles(format).filter((file) => !isExcluded(file));
 }
 
 /**
