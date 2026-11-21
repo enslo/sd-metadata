@@ -275,6 +275,31 @@ export const JPEG_SAMPLES = listSamples('jpg');
 export const WEBP_SAMPLES = listSamples('webp');
 
 /**
+ * Stealth PNGInfo carriers among the samples, by where the bits sit
+ *
+ * - Alpha, PNG: every NovelAI PNG, the alpha variants of the two stealth
+ *   extensions, and forge.png, which carries stealth data although its
+ *   name does not say so.
+ * - RGB, PNG: the RGB variants of the extensions and the two
+ *   forge-classic-lora files, RGB PNGs that carry stealth data as well.
+ * - WebP: NovelAI writes stealth data into the alpha of its lossless WebP
+ *   exports too.
+ */
+export const STEALTH_ALPHA_PNG_SAMPLES = PNG_SAMPLES.filter(
+  (name) =>
+    name.startsWith('novelai-') ||
+    name.includes('-stealth-alpha-') ||
+    name === 'forge.png',
+);
+export const STEALTH_RGB_PNG_SAMPLES = PNG_SAMPLES.filter(
+  (name) =>
+    name.includes('-stealth-rgb-') || name.startsWith('forge-classic-lora'),
+);
+export const STEALTH_WEBP_SAMPLES = WEBP_SAMPLES.filter((name) =>
+  name.startsWith('novelai-'),
+);
+
+/**
  * Load a video sample file as Uint8Array
  *
  * Generation-metadata videos live under samples/<container>/ like images;

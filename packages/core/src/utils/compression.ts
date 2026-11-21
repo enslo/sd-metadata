@@ -1,11 +1,11 @@
 /**
- * Decompression helpers built on the Web Streams API
+ * Compression helpers built on the Web Streams API
  *
- * Uses DecompressionStream, available in Node.js 18+ and all modern
- * browsers, so the library stays dependency-free. Every call states how
- * much output it is prepared to take: a deflate stream expands up to about
- * a thousandfold, so a few hundred kilobytes of input could otherwise
- * claim gigabytes of memory.
+ * Uses DecompressionStream and CompressionStream, available in Node.js
+ * 18+ and all modern browsers, so the library stays dependency-free.
+ * Every decompression states how much output it is prepared to take: a
+ * deflate stream expands up to about a thousandfold, so a few hundred
+ * kilobytes of input could otherwise claim gigabytes of memory.
  */
 
 /**
@@ -66,4 +66,16 @@ export function gunzip(
   maxBytes: number,
 ): Promise<Uint8Array> {
   return decompress(data, 'gzip', maxBytes);
+}
+
+/**
+ * Compress data into a zlib (RFC 1950) stream, e.g. PNG IDAT data
+ *
+ * @throws if the runtime has no CompressionStream
+ */
+export async function deflate(data: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([data as BlobPart])
+    .stream()
+    .pipeThrough(new CompressionStream('deflate'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
 }
