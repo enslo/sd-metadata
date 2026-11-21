@@ -10,8 +10,13 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./strip": {
+      "import": "./dist/strip.js",
+      "types": "./dist/strip.d.ts"
     }
   },
+  "sideEffects": false,
   "files": [
     "dist",
     "docs",

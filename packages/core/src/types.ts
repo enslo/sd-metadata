@@ -650,3 +650,43 @@ type WriteError =
 export type WriteResult =
   | { ok: true; value: Uint8Array; warning?: WriteWarning }
   | { ok: false; error: WriteError };
+
+/**
+ * Warning types for strip operations
+ *
+ * The image was written without its metadata chunks and segments, but
+ * stealth data may be left in its pixels:
+ * - `stealthUnchecked`: the pixels could not be examined. `reason` says
+ *   why: a PNG layout the decoder does not take (interlaced, 16-bit,
+ *   grayscale or palette), an image past the size cap, or pixel data that
+ *   does not decode
+ * - `stealthRemains`: stealth data was found and is still there
+ */
+export type StripWarning =
+  | {
+      type: 'stealthUnchecked';
+      reason: 'unsupportedLayout' | 'imageTooLarge' | 'undecodable';
+    }
+  | { type: 'stealthRemains' };
+
+/**
+ * Error types for strip operations
+ */
+type StripError =
+  | { type: 'unsupportedFormat' }
+  | { type: 'writeFailed'; message: string };
+
+/**
+ * Result of the strip operation
+ *
+ * `stealthRemoved` is true when pixels were rewritten to take stealth data
+ * out. A warning tells when stealth data may still be in the image.
+ */
+export type StripResult =
+  | {
+      ok: true;
+      value: Uint8Array;
+      stealthRemoved: boolean;
+      warning?: StripWarning;
+    }
+  | { ok: false; error: StripError };

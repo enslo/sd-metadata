@@ -46,18 +46,25 @@ parse(image) → readers/ → parsers/detect → parsers/* → ParseResult
 read(image)  → same as parse, minus the stealth fallback (deprecated)
 write(image) → converters/*              → writers/  → Uint8Array
 embed(image) → (always A1111 format)     → writers/  → Uint8Array
+strip(image) → readers/stealth (pixels)  → writers/  → Uint8Array
+               └ own entry point (@enslo/sd-metadata/strip): clears
+                 Stealth PNGInfo from the pixels (writers/stealth,
+                 writers/png-pixels), then keeps only what a decoder
+                 uses (writers/essentials), known metadata or not
 ```
 
 Core source layout (`packages/core/src/`):
 
 ```text
 src/
-├── api/          Public API (read, write, embed, stringify)
+├── api/          Public API (parse, read, write, embed, stringify, strip)
 ├── readers/      Format-specific extraction (PNG chunks, JPEG/WebP EXIF)
 ├── parsers/      Software detection + per-tool metadata parsing
 ├── converters/   Metadata format conversion between tools
 ├── writers/      Binary encoding (PNG chunks, EXIF segments)
 ├── utils/        Shared utilities
+├── index.ts      Main entry point
+├── strip.ts      Entry point of the /strip subpath
 └── types.ts      All type definitions
 ```
 

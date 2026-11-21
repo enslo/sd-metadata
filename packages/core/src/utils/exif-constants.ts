@@ -18,3 +18,6 @@ export const MODEL_TAG = 0x0110;
 
 /** Exif IFD pointer tag */
 export const EXIF_IFD_POINTER_TAG = 0x8769;
+
+/** Orientation tag ID: how the stored pixels are turned for display */
+export const ORIENTATION_TAG = 0x0112;

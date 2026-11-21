@@ -252,7 +252,7 @@ function serializeITXtChunk(chunk: ITXtChunk): Uint8Array {
 /**
  * Build a complete PNG chunk with length, type, data, and CRC
  */
-function buildChunk(type: string, data: Uint8Array): Uint8Array {
+export function buildChunk(type: string, data: Uint8Array): Uint8Array {
   const chunk = new Uint8Array(4 + 4 + data.length + 4);
 
   // Write length (4 bytes, big-endian)

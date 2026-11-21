@@ -53,7 +53,7 @@ const ALPHA_MAGICS = ['stealth_pnginfo', 'stealth_pngcomp'];
 const RGB_MAGICS = ['stealth_rgbinfo', 'stealth_rgbcomp'];
 
 /** Which pixel channels carry the hidden bitstream */
-type LsbMode = 'alpha' | 'rgb';
+export type LsbMode = 'alpha' | 'rgb';
 
 /** Decoded pixel data, interleaved and row-major */
 export interface PixelData {
@@ -63,6 +63,29 @@ export interface PixelData {
   channels: number;
   /** width * height * channels bytes */
   pixels: Uint8Array;
+}
+
+/** Decoded PNG pixels, with what it takes to store them the same way again */
+export interface PngPixels extends PixelData {
+  /** Filter type of each scanline */
+  filters: Uint8Array;
+}
+
+/**
+ * Why the pixels of a PNG were not decoded: a layout the decoder does not
+ * take (anything but 8-bit RGB/RGBA, non-interlaced), a size past the cap,
+ * or data that does not decode
+ */
+export type PixelDecodeFailure =
+  | 'unsupportedLayout'
+  | 'imageTooLarge'
+  | 'undecodable';
+
+/** Where a stealth payload sits in the pixels */
+export interface StealthLocation {
+  mode: LsbMode;
+  /** Bits it spans from the first pixel on: magic, length and payload */
+  bits: number;
 }
 
 /**
@@ -80,7 +103,7 @@ export async function readStealthChunks(
   }
 
   const image = await decodePngPixels(data);
-  if (!image) {
+  if (typeof image === 'string') {
     return null;
   }
   return scanDecodedPixels(image);
@@ -119,16 +142,7 @@ export async function scanStealthPixels(
 export async function scanDecodedPixels(
   image: PixelData,
 ): Promise<PngTextChunk[] | null> {
-  // RGBA images may carry either variant; alpha is checked first to
-  // match the reference readers. RGB images can only carry rgb variants,
-  // and a lone alpha plane (a lossy WebP) only alpha variants.
-  const modes: LsbMode[] =
-    image.channels === 4
-      ? ['alpha', 'rgb']
-      : image.channels === 1
-        ? ['alpha']
-        : ['rgb'];
-  for (const mode of modes) {
+  for (const mode of lsbModes(image.channels)) {
     const text = await extractStealthText(image, mode);
     if (text !== null) {
       return toTextChunks(text);
@@ -137,14 +151,62 @@ export async function scanDecodedPixels(
   return null;
 }
 
+/**
+ * Find the stealth payloads in decoded pixels without reading them
+ *
+ * Only the magic and the declared length are looked at, so a payload is
+ * located even when its content would not decode. A length that makes no
+ * sense counts as running to the last pixel.
+ *
+ * @returns One entry per LSB mode that opens with a stealth magic
+ */
+export function locateStealth(image: PixelData): StealthLocation[] {
+  const found: StealthLocation[] = [];
+  for (const mode of lsbModes(image.channels)) {
+    const cursor = new LsbCursor(image, mode);
+    const magic = cursor.readBytes(MAGIC_LENGTH);
+    const expected = mode === 'alpha' ? ALPHA_MAGICS : RGB_MAGICS;
+    if (!magic || !expected.includes(String.fromCharCode(...magic))) {
+      continue;
+    }
+    const capacity = image.width * image.height * (mode === 'alpha' ? 1 : 3);
+    const payloadBits = cursor.readUint32() ?? 0;
+    const bits = (MAGIC_LENGTH + 4) * 8 + payloadBits;
+    found.push({
+      mode,
+      bits: payloadBits === 0 || bits > capacity ? capacity : bits,
+    });
+  }
+  return found;
+}
+
+/**
+ * The LSB modes a pixel layout can carry
+ *
+ * RGBA images may carry either variant; alpha comes first to match the
+ * reference readers. RGB images can only carry rgb variants, and a lone
+ * alpha plane (a lossy WebP) only alpha variants.
+ */
+function lsbModes(channels: number): LsbMode[] {
+  return channels === 4
+    ? ['alpha', 'rgb']
+    : channels === 1
+      ? ['alpha']
+      : ['rgb'];
+}
+
 // ============================================================================
 // PNG pixel decoding
 // ============================================================================
 
 /**
  * Decode PNG pixel data (8-bit RGB/RGBA, non-interlaced only)
+ *
+ * @returns The pixels, or the reason there are none
  */
-async function decodePngPixels(data: Uint8Array): Promise<PixelData | null> {
+export async function decodePngPixels(
+  data: Uint8Array,
+): Promise<PngPixels | PixelDecodeFailure> {
   let width = 0;
   let height = 0;
   let bitDepth = 0;
@@ -159,12 +221,12 @@ async function decodePngPixels(data: Uint8Array): Promise<PixelData | null> {
     const chunkType = readChunkType(data, offset + 4);
     const dataStart = offset + 8;
     if (dataStart + length > data.length) {
-      return null;
+      return 'undecodable';
     }
 
     if (chunkType === 'IHDR') {
       if (length < 13) {
-        return null;
+        return 'undecodable';
       }
       width = readUint32BE(data, dataStart);
       height = readUint32BE(data, dataStart + 4);
@@ -183,13 +245,13 @@ async function decodePngPixels(data: Uint8Array): Promise<PixelData | null> {
   }
 
   if (!sawIhdr || idatParts.length === 0 || width === 0 || height === 0) {
-    return null;
+    return 'undecodable';
   }
   if (bitDepth !== 8 || interlace !== 0) {
-    return null;
+    return 'unsupportedLayout';
   }
   if (colorType !== 2 && colorType !== 6) {
-    return null;
+    return 'unsupportedLayout';
   }
 
   // Filtered scanlines: one filter byte and then the pixels of each row.
@@ -199,21 +261,25 @@ async function decodePngPixels(data: Uint8Array): Promise<PixelData | null> {
   const channels = colorType === 6 ? 4 : 3;
   const rawLength = height * (width * channels + 1);
   if (rawLength > MAX_PIXEL_BYTES) {
-    return null;
+    return 'imageTooLarge';
   }
 
   let raw: Uint8Array;
   try {
     raw = await inflate(concatBytes(idatParts), rawLength);
   } catch {
-    return null;
+    return 'undecodable';
   }
 
   const pixels = unfilter(raw, width, height, channels);
   if (!pixels) {
-    return null;
+    return 'undecodable';
   }
-  return { width, height, channels, pixels };
+  const filters = new Uint8Array(height);
+  for (let y = 0; y < height; y++) {
+    filters[y] = raw[y * (width * channels + 1)] ?? 0;
+  }
+  return { width, height, channels, pixels, filters };
 }
 
 /**

@@ -2,7 +2,8 @@ import { defineConfig } from 'tsdown';
 
 export default defineConfig([
   {
-    entry: ['src/index.ts'],
+    // strip is its own entry point; the code both share goes into a chunk
+    entry: ['src/index.ts', 'src/strip.ts'],
     format: ['esm'],
     dts: true,
     clean: true,
