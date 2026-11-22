@@ -88,6 +88,35 @@ describe('clearStealth - PNG samples', () => {
   }
 });
 
+describe('clearStealth - a payload whose header is gone', () => {
+  it('clears what is left in a picture with alpha values of its own: novelai-v5-full.png', async () => {
+    // This sample is not opaque everywhere: nine pixels in the middle of
+    // the picture have alpha between 239 and 253, far from the payload
+    // in its first columns. "Opaque but for 254s" therefore cannot be
+    // asked of the whole picture, only of the run it opens with.
+    const image = await pngPixels('novelai-v5-full.png');
+    const ownAlpha = image.pixels.filter((v, i) => i % 4 === 3 && v < 254);
+    expect(ownAlpha).toHaveLength(9);
+
+    // Paint over the magic: the first 120 pixels of the first column
+    for (let y = 0; y < 120; y++) {
+      image.pixels[y * image.width * 4 + 3] = 255;
+    }
+    // No reader finds the payload now, though the rest of it is there
+    expect(await scanDecodedPixels(image)).toBeNull();
+    expect(locateStealth(image)).toEqual([]);
+    expect(
+      image.pixels.filter((v, i) => i % 4 === 3 && v === 254),
+    ).not.toHaveLength(0);
+
+    expect(clearStealth(image)).toBe(true);
+
+    const alpha = image.pixels.filter((_, i) => i % 4 === 3);
+    expect(alpha).not.toContain(254);
+    expect(alpha.filter((v) => v < 254)).toEqual(ownAlpha);
+  });
+});
+
 describe('clearStealth - WebP samples', () => {
   // NovelAI's lossless WebP exports carry the same alpha payload
   for (const filename of STEALTH_WEBP_SAMPLES) {

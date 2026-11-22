@@ -7,24 +7,20 @@ import { webpChunk } from '../../helpers/webp-pixels';
 const MAX_PIXELS = 8192 * 8192;
 
 /**
- * rewriteVp8l on the image streams of real files, one per tool whose
- * WebP output is lossless among the samples. Rewriting leans on what the
- * original encoder chose (transforms, color cache, code groups, backward
- * references), and those choices differ from encoder to encoder: NovelAI
- * uses no color cache, for one, where libwebp's defaults do.
+ * rewriteVp8l on the image streams of real files. Rewriting leans on what
+ * the original encoder chose (transforms, color cache, code groups,
+ * backward references), and the lossless samples differ in exactly three
+ * ways there, one sample for each:
+ *
+ * - novelai-curated.webp: no color cache, 54,000 backward references
+ * - swarmui.webp: a color cache of 1,024 entries, 6,000 references
+ * - dezgo.webp: no cross-color transform, next to no references
  *
  * The pixels are left as they are: a stream that stores them again
  * correctly, at the size it had, stores edited ones the same way. Edits
  * are covered on synthetic pictures in tests/unit/writers/vp8l.test.ts.
  */
-const SAMPLES = [
-  'novelai-curated.webp',
-  'comfyui-saveimage-plus.webp',
-  'dezgo.webp',
-  'sd-next.webp',
-  'swarmui.webp',
-  'empty.webp',
-];
+const SAMPLES = ['novelai-curated.webp', 'swarmui.webp', 'dezgo.webp'];
 
 // Megapixel streams: decoding twice and rewriting takes a while on a slow
 // machine
