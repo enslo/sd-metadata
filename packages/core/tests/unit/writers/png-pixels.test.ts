@@ -4,19 +4,9 @@ import { readChunkType, readUint32BE } from '../../../src/utils/binary';
 import { buildChunk, writePngMetadata } from '../../../src/writers/png';
 import { writePngPixels } from '../../../src/writers/png-pixels';
 import { pngChunkTypes } from '../../helpers/containers';
+import { randomBytes } from '../../helpers/pictures';
 import { createStealthPng } from '../../helpers/stealth-images';
 import { decodeWithSharp } from '../../helpers/webp-pixels';
-
-/** Deterministic pseudo-random bytes (mulberry32) */
-function randomBytes(seed: number): () => number {
-  let state = seed;
-  return () => {
-    state = (state + 0x6d2b79f5) | 0;
-    let t = Math.imul(state ^ (state >>> 15), 1 | state);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) & 0xff;
-  };
-}
 
 async function decode(png: Uint8Array): Promise<PngPixels> {
   const decoded = await decodePngPixels(png);

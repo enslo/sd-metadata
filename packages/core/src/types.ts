@@ -660,7 +660,8 @@ export type WriteResult =
  *   why: a PNG layout the decoder does not take (interlaced, 16-bit,
  *   grayscale or palette), an image past the size cap, or pixel data that
  *   does not decode
- * - `stealthRemains`: stealth data was found and is still there
+ * - `stealthRemains`: stealth data was found and is still there, because
+ *   the runtime has no CompressionStream to store PNG pixels again
  */
 export type StripWarning =
   | {

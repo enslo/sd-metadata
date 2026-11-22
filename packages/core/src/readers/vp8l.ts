@@ -25,11 +25,47 @@ export interface Vp8lImage {
   height: number;
   /** One ARGB value per pixel, row-major */
   pixels: Uint32Array;
+  /** How the stream stored the image, when `options.layout` asked for it */
+  layout?: Vp8lLayout;
+}
+
+/**
+ * How a stream stored its image: what it takes to store edited pixels the
+ * same way again (writers/vp8l.ts) without choosing transforms, a color
+ * cache or backward references anew
+ */
+export interface Vp8lLayout {
+  /**
+   * Bit offset of the prefix codes. Everything before it (image header,
+   * transforms, color cache size, entropy image) holds for edited pixels
+   * as it is.
+   */
+  codesStart: number;
+  /** Width the pixels are coded at: narrower under color indexing */
+  codedWidth: number;
+  /** Size of the color cache as a power of two, 0 for none */
+  cacheBits: number;
+  entropy: EntropyImage | null;
+  groupCount: number;
+  /** In the order the encoder applied them */
+  transforms: Transform[];
+  tokens: Vp8lTokens;
+}
+
+/** The sequence of symbols a stream spells its image with */
+export interface Vp8lTokens {
+  count: number;
+  /** Pixels each token covers: 1 for a literal or a color cache hit */
+  length: Int32Array;
+  /** Distance code of a backward reference, 0 for a single pixel */
+  distance: Int32Array;
 }
 
 export interface Vp8lOptions {
   /** Largest pixel count to decode; a larger image throws */
   maxPixels: number;
+  /** Also return the {@link Vp8lLayout} of the stream */
+  layout?: boolean;
   /**
    * Dimensions of a stream that has no image header of its own: the
    * alpha plane of a lossy WebP starts right at the transforms
@@ -52,7 +88,7 @@ const DISTANCE_MAP = new Int8Array([
 ]);
 
 /** Order in which the lengths of the code-length code are stored */
-const CODE_LENGTH_ORDER = [
+export const CODE_LENGTH_ORDER = [
   17, 18, 0, 1, 2, 3, 4, 5, 16, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 ];
 
@@ -60,13 +96,13 @@ const MAX_CODE_LENGTH = 15;
 /** Codes up to this length resolve with one table lookup */
 const ROOT_BITS = 8;
 
-const LITERAL_CODES = 256;
+export const LITERAL_CODES = 256;
 const LENGTH_CODES = 24;
 const DISTANCE_CODES = 40;
 /** First color cache symbol of the green alphabet */
-const CACHE_BASE = LITERAL_CODES + LENGTH_CODES;
+export const CACHE_BASE = LITERAL_CODES + LENGTH_CODES;
 
-const OPAQUE_BLACK = 0xff000000;
+export const OPAQUE_BLACK = 0xff000000;
 
 /** Bit positions are kept in a 32-bit integer */
 const MAX_STREAM_BYTES = 0x0fffffff;
@@ -77,7 +113,7 @@ const TRUNCATED = 'VP8L: truncated stream';
 // Bit reader and prefix codes
 // ============================================================================
 
-class BitReader {
+export class BitReader {
   /** Position in bits from the start of the stream */
   pos = 0;
 
@@ -315,7 +351,7 @@ function readCodeGroup(br: BitReader, cacheBits: number): CodeGroup {
 // ============================================================================
 
 /** Which code group each block of the main image uses */
-interface EntropyImage {
+export interface EntropyImage {
   /** Blocks are (1 << bits) pixels square */
   bits: number;
   /** Blocks per row */
@@ -325,7 +361,7 @@ interface EntropyImage {
 }
 
 /** Size in blocks of (1 << bits) pixels, rounded up */
-function blockCount(size: number, bits: number): number {
+export function blockCount(size: number, bits: number): number {
   return (size + (1 << bits) - 1) >> bits;
 }
 
@@ -339,7 +375,7 @@ function prefixValue(br: BitReader, symbol: number): number {
 }
 
 /** Distance in pixels of a distance code: the first 120 name neighbours */
-function pixelDistance(code: number, width: number): number {
+export function pixelDistance(code: number, width: number): number {
   if (code > 120) {
     return code - 120;
   }
@@ -348,7 +384,7 @@ function pixelDistance(code: number, width: number): number {
   return Math.max(distance, 1);
 }
 
-function cacheKey(argb: number, cacheBits: number): number {
+export function cacheKey(argb: number, cacheBits: number): number {
   return Math.imul(argb, 0x1e35a7bd) >>> (32 - cacheBits);
 }
 
@@ -391,6 +427,7 @@ function readPixels(
   groups: CodeGroup[],
   entropy: EntropyImage | null,
   cacheBits: number,
+  tokens: Vp8lTokens | null,
 ): Uint32Array {
   const total = width * height;
   const out = new Uint32Array(total);
@@ -430,6 +467,10 @@ function readPixels(
         argb = cached;
       }
       out[pos++] = argb;
+      if (tokens) {
+        tokens.length[tokens.count] = 1;
+        tokens.distance[tokens.count++] = 0;
+      }
       if (++x === width) {
         x = 0;
         y++;
@@ -439,10 +480,8 @@ function readPixels(
 
     // Backward reference: copy `length` pixels from `distance` back
     const length = prefixValue(br, green - LITERAL_CODES);
-    const distance = pixelDistance(
-      prefixValue(br, group.distance.read(br)),
-      width,
-    );
+    const distanceCode = prefixValue(br, group.distance.read(br));
+    const distance = pixelDistance(distanceCode, width);
     if (distance > pos || pos + length > total) {
       throw new Error('VP8L: backward reference out of range');
     }
@@ -450,6 +489,10 @@ function readPixels(
       const argb = out[pos - distance] ?? 0;
       out[pos] = argb;
       if (cache) cache[cacheKey(argb, cacheBits)] = argb;
+    }
+    if (tokens) {
+      tokens.length[tokens.count] = length;
+      tokens.distance[tokens.count++] = distanceCode;
     }
     x += length;
     while (x >= width) {
@@ -476,7 +519,7 @@ function readSubImage(
 ): Uint32Array {
   const cacheBits = readCacheBits(br);
   const groups = [readCodeGroup(br, cacheBits)];
-  return readPixels(br, width, height, groups, null, cacheBits);
+  return readPixels(br, width, height, groups, null, cacheBits, null);
 }
 
 // ============================================================================
@@ -484,7 +527,7 @@ function readSubImage(
 // ============================================================================
 
 /** Predictor and cross-color transforms: one parameter value per block */
-interface BlockTransform {
+export interface BlockTransform {
   type: 'predictor' | 'color';
   /** Image width when the transform was applied */
   width: number;
@@ -494,7 +537,7 @@ interface BlockTransform {
   blocks: Uint32Array;
 }
 
-interface ColorIndexingTransform {
+export interface ColorIndexingTransform {
   type: 'colorIndexing';
   /** Image width before indexes were packed */
   width: number;
@@ -503,7 +546,7 @@ interface ColorIndexingTransform {
   table: Uint32Array;
 }
 
-type Transform =
+export type Transform =
   | BlockTransform
   | { type: 'subtractGreen' }
   | ColorIndexingTransform;
@@ -563,7 +606,7 @@ function clampAddSubtractHalf(a: number, b: number): number {
  * The top-right neighbour of the last column is the first pixel of the
  * current row: simply the next one in memory.
  */
-function predict(
+export function predict(
   px: Uint32Array,
   pos: number,
   width: number,
@@ -805,12 +848,28 @@ export function decodeVp8l(data: Uint8Array, options: Vp8lOptions): Vp8lImage {
     }
     entropy = { bits, width: blocksPerRow, groups };
   }
+  const codesStart = br.pos;
   const groups: CodeGroup[] = [];
   for (let i = 0; i < groupCount; i++) {
     groups.push(readCodeGroup(br, cacheBits));
   }
 
-  let pixels = readPixels(br, codedWidth, height, groups, entropy, cacheBits);
+  const tokens: Vp8lTokens | null = options.layout
+    ? {
+        count: 0,
+        length: new Int32Array(codedWidth * height),
+        distance: new Int32Array(codedWidth * height),
+      }
+    : null;
+  let pixels = readPixels(
+    br,
+    codedWidth,
+    height,
+    groups,
+    entropy,
+    cacheBits,
+    tokens,
+  );
   for (let i = transforms.length - 1; i >= 0; i--) {
     const t = transforms[i];
     if (!t) continue;
@@ -830,5 +889,21 @@ export function decodeVp8l(data: Uint8Array, options: Vp8lOptions): Vp8lImage {
     }
   }
 
-  return { width, height, pixels };
+  if (!tokens) {
+    return { width, height, pixels };
+  }
+  return {
+    width,
+    height,
+    pixels,
+    layout: {
+      codesStart,
+      codedWidth,
+      cacheBits,
+      entropy,
+      groupCount,
+      transforms,
+      tokens,
+    },
+  };
 }

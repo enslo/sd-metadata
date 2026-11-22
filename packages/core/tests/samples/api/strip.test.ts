@@ -1,26 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import { parse } from '../../../src/api/parse';
 import { write } from '../../../src/api/write';
-import { decodePngPixels, type PixelData } from '../../../src/readers/stealth';
-import { strip } from '../../../src/strip';
-import { writePngPixels } from '../../../src/writers/png-pixels';
-import { clearStealth } from '../../../src/writers/stealth';
 import {
-  loadSample,
-  loadVendorSample,
-  STEALTH_WEBP_SAMPLES,
-} from '../../helpers/samples';
-import { decodeWithSharp } from '../../helpers/webp-pixels';
+  decodePngPixels,
+  MAX_PIXEL_BYTES,
+  type PixelData,
+} from '../../../src/readers/stealth';
+import { decodeWebpPixels } from '../../../src/readers/webp-pixels';
+import { strip } from '../../../src/strip';
+import { clearStealth } from '../../../src/writers/stealth';
+import { loadSample, loadVendorSample } from '../../helpers/samples';
+import { decodeWithSharp, encodeWebp } from '../../helpers/webp-pixels';
 
 /**
  * strip() end to end on real files: the result is read back with parse()
  * and its pixels with the reference decoder.
  *
- * Stripping a megapixel PNG decodes it, compresses it again and re-reads
- * it, so this runs on one sample per kind. The two halves are checked on
- * every sample where that is cheap: clearing decoded pixels in
- * tests/samples/writers/stealth.test.ts, and which container blocks go in
- * tests/samples/writers/essentials.test.ts.
+ * Stripping a megapixel image decodes it, stores it again and re-reads
+ * it, which takes seconds on a two-core CI runner, so this runs on one
+ * sample per path through strip(). Its halves are checked on every sample
+ * where that is cheap:
+ *
+ * - clearing decoded pixels, on all stealth samples:
+ *   tests/samples/writers/stealth.test.ts
+ * - which container blocks go, on all samples:
+ *   tests/samples/writers/essentials.test.ts
+ * - storing a lossless WebP stream again, on one sample per kind of
+ *   stream: tests/samples/writers/vp8l.test.ts
  */
 
 // Recompressing a large image takes seconds on a slow machine
@@ -38,12 +44,6 @@ async function rgbaOf(image: Uint8Array): Promise<Buffer> {
   return Buffer.from(decoded.data);
 }
 
-async function pixelsOf(png: Uint8Array) {
-  const image = await decodePngPixels(png);
-  if (typeof image === 'string') throw new Error(image);
-  return image;
-}
-
 /** Decoded pixels as RGBA bytes: an RGB image is opaque */
 function toRgba({ channels, pixels }: PixelData): Buffer {
   if (channels === 4) return Buffer.from(pixels);
@@ -54,20 +54,32 @@ function toRgba({ channels, pixels }: PixelData): Buffer {
   return rgba;
 }
 
-describe('strip - stealth PNG samples', TIMEOUT, () => {
-  // One per way stealth data gets into a PNG: NovelAI's own (alpha), the
-  // WebUI extension in alpha mode, the ComfyUI node in RGB mode with a
-  // whole workflow as payload, and the extension on an RGB PNG
-  const samples = [
-    'novelai-full.png',
-    'forge-stealth-alpha-comp.png',
-    'comfyui-stealth-rgb-raw.png',
-    'forge-classic-lora.png',
+describe('strip - stealth samples', TIMEOUT, () => {
+  /** What the original decodes to, with its stealth data cleared */
+  async function clearedPixels(
+    format: 'png' | 'webp',
+    original: Uint8Array,
+  ): Promise<Buffer> {
+    const image =
+      format === 'png'
+        ? await decodePngPixels(original)
+        : decodeWebpPixels(original, MAX_PIXEL_BYTES);
+    if (!image || typeof image === 'string') throw new Error('not decoded');
+    clearStealth(image);
+    return toRgba(image);
+  }
+
+  // NovelAI's alpha payload in a PNG, the ComfyUI node's RGB payload of a
+  // whole workflow in a PNG, and NovelAI's alpha payload in a lossless WebP
+  const samples: ['png' | 'webp', string][] = [
+    ['png', 'novelai-full.png'],
+    ['png', 'comfyui-stealth-rgb-raw.png'],
+    ['webp', 'novelai-curated.webp'],
   ];
 
-  for (const filename of samples) {
+  for (const [format, filename] of samples) {
     it(`takes the stealth data out of the file: ${filename}`, async () => {
-      const original = loadSample('png', filename);
+      const original = loadSample(format, filename);
       // An empty write leaves the copy in the pixels
       const emptied = await parse(emptyWrite(original));
       expect(emptied.status === 'success' && emptied.stealth).toBe(true);
@@ -79,73 +91,50 @@ describe('strip - stealth PNG samples', TIMEOUT, () => {
       expect(result.warning).toBeUndefined();
       expect((await parse(result.value)).status).toBe('empty');
 
-      // The file holds the cleared pixels, as libpng reads them
-      const cleared = await pixelsOf(original);
-      clearStealth(cleared);
-      expect((await rgbaOf(result.value)).equals(toRgba(cleared))).toBe(true);
-      // Recompressed with the original filter types: about the same size
+      // The file holds the cleared pixels, as the reference decoder
+      // reads them
+      expect(
+        (await rgbaOf(result.value)).equals(
+          await clearedPixels(format, original),
+        ),
+      ).toBe(true);
+      // Stored the way the original was: about the same size
       expect(result.value.length).toBeLessThan(original.length * 1.05);
     });
   }
 
-  it('removes what a painted-over header leaves in a picture with alpha values of its own: novelai-v5-full.png', async () => {
-    // This sample is not opaque everywhere: nine pixels in the middle of
-    // the picture have alpha between 239 and 253, far from the payload
-    // in its first columns. "Opaque but for 254s" therefore cannot be
-    // asked of the whole picture, only of the run it opens with.
-    const original = loadSample('png', 'novelai-v5-full.png');
-    const image = await pixelsOf(original);
-    const ownAlpha = image.pixels.filter((v, i) => i % 4 === 3 && v < 254);
-    expect(ownAlpha).toHaveLength(9);
+  it('takes the stealth data out of a lossy re-save: novelai-full.png as WebP', async () => {
+    // Re-saved as a lossy WebP, the picture keeps its alpha plane
+    // lossless, and the payload with it. The plane is all the picture
+    // has of alpha, so clearing it leaves nothing to store.
+    const pixels = await decodeWithSharp(loadSample('png', 'novelai-full.png'));
+    if (!pixels) throw new Error('reference decoder failed');
+    const webp = await encodeWebp(pixels, { quality: 80 });
+    const before = await parse(webp);
+    expect(before.status === 'success' && before.stealth).toBe(true);
 
-    // The magic sits in the first 120 pixels of the first column
-    for (let y = 0; y < 120; y++) {
-      image.pixels[y * image.width * 4 + 3] = 255;
-    }
-    const damaged = await writePngPixels(original, image);
-    // No reader finds the payload now, though all of it is still there
-    expect((await parse(emptyWrite(damaged))).status).toBe('empty');
-
-    const result = await strip(damaged);
+    const result = await strip(webp);
 
     expect(result).toMatchObject({ ok: true, stealthRemoved: true });
     if (!result.ok) return;
-    const alpha = (await rgbaOf(result.value)).filter((_, i) => i % 4 === 3);
-    expect(alpha).not.toContain(254);
-    expect(alpha.filter((v) => v < 254)).toEqual(Buffer.from(ownAlpha));
+    expect(result.warning).toBeUndefined();
+    expect((await parse(result.value)).status).toBe('empty');
+    const expected = await rgbaOf(webp);
+    for (let i = 3; i < expected.length; i += 4) {
+      expected[i] = 255;
+    }
+    expect((await rgbaOf(result.value)).equals(expected)).toBe(true);
   });
-});
-
-describe('strip - stealth WebP samples', TIMEOUT, () => {
-  // Writing WebP pixels back is not implemented yet: until it is, the
-  // metadata chunks go and a warning says the copy in the pixels stays
-  for (const filename of STEALTH_WEBP_SAMPLES) {
-    it(`warns that stealth data remains: ${filename}`, async () => {
-      const original = loadSample('webp', filename);
-
-      const result = await strip(original);
-
-      expect(result).toMatchObject({
-        ok: true,
-        stealthRemoved: false,
-        warning: { type: 'stealthRemains' },
-      });
-      if (!result.ok) return;
-      const after = await parse(result.value);
-      expect(after.status === 'success' && after.stealth).toBe(true);
-    });
-  }
 });
 
 describe('strip - samples without stealth data', TIMEOUT, () => {
   // The metadata goes and the picture stays exactly what it was. One
-  // sample per container and kind of metadata: text and EXIF in a PNG,
-  // EXIF in a JPEG, EXIF in a lossless and in a lossy WebP.
+  // sample per container: text and EXIF chunks in a PNG, EXIF in a JPEG
+  // and in a lossless WebP.
   const samples: ['png' | 'jpg' | 'webp', string][] = [
-    ['png', 'civitai-lora-hires.png'],
+    ['png', 'dezgo.png'],
     ['jpg', 'civitai-hires.jpg'],
-    ['webp', 'comfyui-animated-webp.webp'],
-    ['webp', 'comfyui-save-image-extended.webp'],
+    ['webp', 'dezgo.webp'],
   ];
 
   for (const [format, filename] of samples) {
@@ -169,11 +158,10 @@ describe('strip - samples without stealth data', TIMEOUT, () => {
 
 describe('strip - vendor samples', TIMEOUT, () => {
   // Pictures from commercial services declare their origin in a C2PA
-  // manifest (a PNG chunk, a JPEG segment) or in XMP. An empty write
-  // only drops what it manages, so the manifest stays and the picture
-  // still parses as a vendor's; strip() keeps nothing but the image.
-  const samples: ['png' | 'jpg' | 'webp', string, boolean][] = [
-    ['png', 'chatgpt-image2.png', true],
+  // manifest or in XMP. An empty write only drops what it manages, so
+  // the manifest stays and the picture still parses as a vendor's;
+  // strip() keeps nothing but the image.
+  const samples: ['jpg' | 'webp', string, boolean][] = [
     ['jpg', 'gemini_3.1pro-latest.jpg', true],
     ['webp', 'muse.webp', false],
   ];
