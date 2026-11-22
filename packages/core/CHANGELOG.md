@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-11-22
+
+Strip It All, WebP Built In
+
+### New Features
+
+- **`strip()`** (#341, #342, #344): new `@enslo/sd-metadata/strip` entry
+  point. Removes every metadata block, known or not (C2PA included), and
+  Stealth PNGInfo from PNG and WebP pixels; warns when stealth data may
+  remain.
+- **WebP stealth recovery everywhere** (#340): WebP pixels are decoded built
+  in, so Node.js, Bun and Deno need no setup, and an alpha embedding is read
+  even after a lossy re-save.
+
+### Added
+
+- **Re-saved stealth PNGs** (#344): interlaced, 16-bit and grayscale-with-alpha
+  PNGs are scanned too.
+
+### Deprecated
+
+- **`ReadOptions.decodePixels`** (#340): no longer needed; only called for a
+  WebP the built-in decoder cannot read. Removed in the next major version.
+
+### Demo Site
+
+- **Remove mode uses `strip()`** (#343): stealth data is removed as well.
+
 ## [4.1.0] - 2026-11-09
 
 Safer Parsing, Compatible Writing

@@ -21,6 +21,7 @@ A TypeScript library to read and write metadata embedded in AI-generated images.
 - **Format Conversion**: Seamlessly convert metadata between PNG, JPEG, and WebP
 - **Metadata Preservation**: Preserves original metadata structure when converting formats (e.g., PNG → JPEG → PNG maintains all original data)
 - **AI Provenance Detection**: identifies images and videos that commercial AI services (OpenAI, Google, xAI, Meta) declared as their own, through C2PA, XMP or signature markers — detection only, no signature verification
+- **Metadata Removal**: `strip()` removes every metadata block, known or not, and the stealth data in the pixels
 
 ## Installation
 
@@ -168,7 +169,7 @@ For userscripts (Tampermonkey, Violentmonkey, etc.), load the IIFE build via `@r
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.1.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.2.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -199,10 +200,37 @@ if (result.status === 'success') {
 ```
 
 - **All four variants** are read — alpha- or RGB-channel embedding, compressed or uncompressed — for both NovelAI's JSON payloads and the extensions' plain-infotext payloads.
-- **WebP**: NovelAI embeds stealth data in its lossless WebP exports too. Browsers decode the pixels automatically; in Node.js, Bun or Deno pass a decoder through the `decodePixels` option (e.g. backed by sharp), otherwise the WebP scan is skipped. See "Stealth recovery on servers" under [Advanced Examples](#advanced-examples).
+- **PNG**: besides the files the tools write, PNGs that another tool saved again are read: interlaced, 16-bit, and grayscale with alpha (which keeps an alpha-channel embedding). Palette PNGs are not scanned.
+- **WebP**: wherever the pixels are stored losslessly — NovelAI's lossless WebP exports, and the alpha plane of a lossy WebP, so an alpha-channel embedding survives a lossy re-save. The library decodes these pixels itself, the same way in Node.js, Bun, Deno and browsers, with no setup.
 - **Rescue**: a recovered result feeds `write()` unchanged, restoring the original tool's native metadata to the stripped file. See "Rescuing stripped metadata" under [Advanced Examples](#advanced-examples).
-- **Servers**: the scan inflates and unfilters the whole image (about 50 ms for a 1-megapixel PNG, 200 ms for 4 megapixels, on Node.js 24). Decompression is capped at what the header declares, 256 MiB of pixels and 16 MiB of payload, so a crafted file cannot claim gigabytes, but on untrusted uploads limit the file size and dimensions before calling `parse()`, or use `read()` where recovery is not wanted.
+- **Removal**: `strip()` takes it out of the pixels. See [Removing Metadata](#removing-metadata).
+- **Servers**: the scan decodes the whole image (about 60 ms for a 1-megapixel PNG and 70 ms for a lossless WebP of that size, 200 ms for a 4-megapixel PNG, on Node.js 24). Decompression is capped at what the header declares, 256 MiB of pixels and 16 MiB of payload, so a crafted file cannot claim gigabytes, but on untrusted uploads limit the file size and dimensions before calling `parse()`, or use `read()` where recovery is not wanted.
 - The scan needs `DecompressionStream` (Node.js 18+, Bun 1.4+, Deno, all modern browsers); without it `parse()` degrades to chunk-based reading. Writing stealth data is intentionally out of scope.
+
+## Removing Metadata
+
+`strip()` leaves an image with nothing but what it takes to display it. It has its own entry point, so an app that only reads never loads the code that rewrites pixels:
+
+```typescript
+import { strip } from '@enslo/sd-metadata/strip';
+import { readFileSync, writeFileSync } from 'fs';
+
+const result = await strip(readFileSync('image.png'));
+if (result.ok) {
+  writeFileSync('clean.png', result.value);
+  if (result.warning) {
+    console.warn('Stealth data may remain:', result.warning);
+  }
+}
+```
+
+- **Everything goes, known or not**: text chunks, EXIF, XMP, comments, C2PA manifests, vendor blocks, and anything after the end of the image. What a decoder uses stays: the image data, transparency, the color profile, animation. The EXIF orientation is carried over, so the picture does not turn.
+- **Stealth PNGInfo too**: removed from PNG pixels and from WebP pixels stored losslessly, and `stealthRemoved` is `true`. Only the bits that carried it change, so the picture looks the same; the image data is compressed again (an interlaced PNG is stored non-interlaced). An image without stealth data keeps its image data byte for byte. JPEG pixels cannot carry stealth data.
+- **Never silent**: when stealth data could not be looked for (a palette PNG, more than 256 MiB of pixels, pixel data that does not decode) or could not be removed (a runtime without `CompressionStream`), the image is still returned, with a `warning`.
+- **Cost**: a few hundred milliseconds for a 1-megapixel image with stealth data (about 350 ms for a PNG, most of it recompression, and 200 ms for a lossless WebP).
+- **ESM only**: `strip()` is not part of the IIFE build (`index.global.js`).
+
+`write(image, { status: 'empty' })` is not the same: it empties only the metadata this library writes (PNG text chunks and eXIf, JPEG and WebP EXIF, XMP and comments) and passes every other block through, stealth data included.
 
 ## Video Files
 
@@ -380,28 +408,6 @@ The list comes from `<lora:…>` tags and `Lora hashes` in A1111-style text, fro
 </details>
 
 <details>
-<summary>Stealth recovery on servers (WebP)</summary>
-
-PNG pixels are decoded by the library itself, but WebP decoding depends on the runtime. Browsers use the platform decoder (WebCodecs `ImageDecoder`, falling back to `createImageBitmap` + `OffscreenCanvas`) with no configuration. In Node.js, Bun or Deno supply the pixels via `decodePixels`, e.g. backed by [sharp](https://www.npmjs.com/package/sharp); without it the WebP stealth scan is skipped gracefully:
-
-```typescript
-import { parse } from '@enslo/sd-metadata';
-import sharp from 'sharp';
-
-const result = await parse(webpData, {
-  decodePixels: async (data) => {
-    const { data: pixels, info } = await sharp(data)
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    return { data: new Uint8Array(pixels), width: info.width, height: info.height };
-  },
-});
-```
-
-</details>
-
-<details>
 <summary>Rescuing stripped metadata</summary>
 
 A stealth-recovered result feeds `write()` directly, restoring the original tool's native metadata to the stripped file — no separate API needed:
@@ -414,24 +420,8 @@ if (rescued.status === 'success') {
   const restored = write(strippedImage, rescued);
   if (restored.ok) {
     // restored.value now carries regular metadata again,
-    // readable by any tool — stealth data stays untouched in the pixels.
+    // readable by any tool. The stealth data stays in the pixels.
   }
-}
-```
-
-</details>
-
-<details>
-<summary>Removing Metadata</summary>
-
-To strip all metadata from an image:
-
-```typescript
-import { write } from '@enslo/sd-metadata';
-
-const result = write(imageData, { status: 'empty' });
-if (result.ok) {
-  writeFileSync('clean-image.png', result.value);
 }
 ```
 
@@ -503,7 +493,7 @@ Reads and parses metadata from an image file. When an image carries no readable 
 - `input` - Image file data (PNG, JPEG, or WebP)
 - `options` - Optional read options
   - `strict?: boolean` (default: `false`) — When `true`, dimensions (`width` / `height`) are taken strictly from metadata only. When `false`, missing dimensions are extracted from image headers.
-  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — Decodes WebP pixels for the stealth scan where the platform cannot (servers). Called lazily, only when a WebP carries no readable metadata. See "Stealth recovery on servers" under [Advanced Examples](#advanced-examples).
+  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — **Deprecated**: no longer needed, as WebP pixels are decoded built in. Only called for a WebP the built-in decoder has no pixels for; removed in the next major version.
 
 **Returns:**
 
@@ -549,7 +539,7 @@ Writes metadata to an image file. The target's existing metadata is replaced, no
 
 - `input` - Target image file data (PNG, JPEG, or WebP)
 - `metadata` - `ParseResult` from `parse()`
-  - `status: 'success'` or `'empty'` - Can write directly
+  - `status: 'success'` or `'empty'` - Can write directly. `'empty'` empties the metadata this library writes; to remove everything, stealth data included, use [`strip()`](#stripinput-uint8array--arraybuffer-promisestripresult)
   - `status: 'unrecognized'` - Same format: writes as-is; Cross-format: drops metadata with warning
   - Stealth-recovered results work as-is — writing restores the original tool's native metadata (see "Rescuing stripped metadata" under [Advanced Examples](#advanced-examples))
 
@@ -583,6 +573,23 @@ Embeds custom metadata into an image in SD WebUI (A1111) format. As with `write(
 - Creating custom metadata for programmatically generated images
 - Converting metadata from other tools to WebUI-compatible format
 - Building applications that output WebUI-readable metadata
+
+### `strip(input: Uint8Array | ArrayBuffer): Promise<StripResult>`
+
+Imported from `@enslo/sd-metadata/strip`. Removes all metadata from an image, Stealth PNGInfo included; see [Removing Metadata](#removing-metadata).
+
+**Parameters:**
+
+- `input` - Image file data (PNG, JPEG, or WebP)
+
+**Returns:**
+
+- `{ ok: true, value: Uint8Array, stealthRemoved: boolean, warning?: StripWarning }` - The image without metadata
+  - `stealthRemoved`: `true` when pixels were rewritten to take stealth data out
+  - `warning` is set when stealth data may remain: `{ type: 'stealthUnchecked', reason }` when the pixels could not be examined (`reason` is `'unsupportedLayout'` for a palette PNG, `'imageTooLarge'` or `'undecodable'`), `{ type: 'stealthRemains' }` when stealth data was found but the runtime has no `CompressionStream` to store the PNG pixels again
+- `{ ok: false, error: { type, message? } }` - Failed. `type` is one of:
+  - `'unsupportedFormat'`: The image is not PNG, JPEG, or WebP
+  - `'writeFailed'`: The image cannot be written back (`message` says why)
 
 ### `stringify(input: ParseResult | VideoParseResult | EmbedMetadata | GenerationMetadata): string`
 
