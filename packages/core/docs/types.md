@@ -23,6 +23,8 @@ Complete type reference for `@enslo/sd-metadata`.
   - [`VideoTag`](#videotag)
   - [`WriteResult`](#writeresult)
   - [`WriteWarning`](#writewarning)
+  - [`StripResult`](#stripresult)
+  - [`StripWarning`](#stripwarning)
 - [Metadata Types](#metadata-types)
   - [`BaseMetadata`](#basemetadata)
   - [`StandardMetadata`](#standardmetadata)
@@ -128,13 +130,13 @@ interface ReadOptions {
 **Fields:**
 
 - **`strict`** (default: `false`): When `true`, dimensions (`width` / `height`) are taken strictly from metadata only. When `false`, missing dimensions are extracted from image headers.
-- **`decodePixels`**: Decodes compressed image pixels for the Stealth PNGInfo scan when the platform cannot (currently WebP outside browsers — e.g. backed by sharp in Node.js). `parse()` calls it lazily, only when a WebP carries no readable metadata. Return `null` when decoding is unavailable; the platform decoder is then tried as a fallback. Ignored by `read()`, which never scans pixels.
+- **`decodePixels`** (deprecated): `parse()` decodes WebP pixels itself in every runtime, so no decoder needs to be supplied. The callback is only asked for a WebP the built-in decoder has no pixels for (an animated WebP, or a lossy one without an alpha plane), and will be removed in the next major version. Ignored by `read()`, which never scans pixels.
 
 ---
 
 ### `RgbaPixels`
 
-Decoded RGBA pixel data supplied to the Stealth PNGInfo scan via `ReadOptions.decodePixels`.
+Decoded RGBA pixel data supplied to the Stealth PNGInfo scan via the deprecated `ReadOptions.decodePixels`.
 
 ```typescript
 interface RgbaPixels {
@@ -548,6 +550,59 @@ Returned when the image was written but some or all of the metadata was left out
 - `unrecognizedCrossFormat`: unrecognized metadata cannot be converted to another image format, so none was written
 - `conversionEmpty`: the detected tool's converter found nothing the target format can hold (e.g. a NovelAI JPEG without its UserComment), so none was written
 - `segmentTooLarge`: a JPEG COM or XMP segment was skipped because its text does not fit the 16-bit segment length (65,535 bytes); `message` names the skipped segments. Exif data that does not fit is an error (`writeFailed`) instead.
+
+---
+
+### `StripResult`
+
+Result type returned by `strip()` (from `@enslo/sd-metadata/strip`).
+
+```typescript
+export type StripResult =
+  | { ok: true; value: Uint8Array; stealthRemoved: boolean; warning?: StripWarning }
+  | { ok: false; error: StripError };
+
+type StripError =
+  | { type: 'unsupportedFormat' }
+  | { type: 'writeFailed'; message: string };
+```
+
+**Success:**
+
+```typescript
+if (result.ok) {
+  saveFile('clean.png', result.value);
+  if (result.warning) {
+    console.warn('Stealth data may remain:', result.warning.type);
+  }
+}
+```
+
+**Fields:**
+
+- **`value`**: The image without metadata. It keeps what a decoder uses (image data, transparency, color profile, animation) and the EXIF orientation.
+- **`stealthRemoved`**: `true` when pixels were rewritten to take Stealth PNGInfo out. When `false`, the image data is the original's, byte for byte.
+- **`warning`**: Set when stealth data may remain in the pixels; see [`StripWarning`](#stripwarning).
+
+**Error Types:**
+
+- `unsupportedFormat`: the image is not PNG, JPEG, or WebP
+- `writeFailed`: the image cannot be written back (e.g. a cut-off file); `message` says why
+
+### `StripWarning`
+
+Warning type for strip operations.
+
+```typescript
+export type StripWarning =
+  | { type: 'stealthUnchecked'; reason: 'unsupportedLayout' | 'imageTooLarge' | 'undecodable' }
+  | { type: 'stealthRemains' };
+```
+
+Returned when the metadata blocks were removed but stealth data may be left in the pixels:
+
+- `stealthUnchecked`: the pixels could not be examined. `reason` is `unsupportedLayout` for a palette PNG, `imageTooLarge` for more than 256 MiB of decoded pixels, and `undecodable` for pixel data that does not decode.
+- `stealthRemains`: stealth data was found and is still there, because the runtime has no `CompressionStream` to store the PNG pixels again.
 
 ---
 

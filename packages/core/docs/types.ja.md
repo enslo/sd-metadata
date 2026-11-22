@@ -23,6 +23,8 @@
   - [`VideoTag`](#videotag)
   - [`WriteResult`](#writeresult)
   - [`WriteWarning`](#writewarning)
+  - [`StripResult`](#stripresult)
+  - [`StripWarning`](#stripwarning)
 - [メタデータ型](#メタデータ型)
   - [`BaseMetadata`](#basemetadata)
   - [`StandardMetadata`](#standardmetadata)
@@ -128,13 +130,13 @@ interface ReadOptions {
 **フィールド：**
 
 - **`strict`**（デフォルト: `false`）: `true` の場合、寸法（`width` / `height`）はメタデータからのみ取得します。`false` の場合、メタデータに寸法がなければ画像ヘッダーから取得します。
-- **`decodePixels`**: プラットフォームがデコードできない環境（現在はブラウザ以外での WebP — 例：Node.js で sharp を利用）で、Stealth PNGInfo スキャン用に圧縮画像のピクセルをデコードします。`parse()` は WebP に読み取り可能なメタデータがない場合にのみ遅延呼び出しします。デコードできない画像ではコールバックから `null` を返します。その場合、プラットフォームのデコーダがフォールバックとして試されます。ピクセルスキャンを行わない `read()` では無視されます。
+- **`decodePixels`**（非推奨）: `parse()` はどのランタイムでも WebP のピクセルを自身でデコードするため、デコーダを渡す必要はありません。このコールバックは、組み込みのデコーダがピクセルを得られない WebP（アニメーション WebP、アルファプレーンのないロッシー WebP）に対してのみ呼ばれ、次のメジャーバージョンで削除されます。ピクセルスキャンを行わない `read()` では無視されます。
 
 ---
 
 ### `RgbaPixels`
 
-`ReadOptions.decodePixels` 経由で Stealth PNGInfo スキャンに供給される、デコード済みRGBAピクセルデータ。
+非推奨の `ReadOptions.decodePixels` 経由で Stealth PNGInfo スキャンに供給される、デコード済みRGBAピクセルデータ。
 
 ```typescript
 interface RgbaPixels {
@@ -548,6 +550,59 @@ export type WriteWarning =
 - `unrecognizedCrossFormat`: 未対応のメタデータは別の画像フォーマットへ変換できないため、何も書き込まれなかった
 - `conversionEmpty`: 検出したツールの変換器が、書き込み先フォーマットに収まるものを見つけられなかった（例：UserComment の無い NovelAI の JPEG）ため、何も書き込まれなかった
 - `segmentTooLarge`: JPEG の COM または XMP セグメントのテキストが 16 ビットのセグメント長（65,535 バイト）に収まらず省かれた。`message` に省いたセグメント名が入る。収まらない Exif データはエラー（`writeFailed`）になる
+
+---
+
+### `StripResult`
+
+`strip()`（`@enslo/sd-metadata/strip` から import）が返す結果型。
+
+```typescript
+export type StripResult =
+  | { ok: true; value: Uint8Array; stealthRemoved: boolean; warning?: StripWarning }
+  | { ok: false; error: StripError };
+
+type StripError =
+  | { type: 'unsupportedFormat' }
+  | { type: 'writeFailed'; message: string };
+```
+
+**成功：**
+
+```typescript
+if (result.ok) {
+  saveFile('clean.png', result.value);
+  if (result.warning) {
+    console.warn('stealth データが残っている可能性があります:', result.warning.type);
+  }
+}
+```
+
+**フィールド：**
+
+- **`value`**: メタデータを削除した画像。デコーダが使うもの（画像データ、透過、カラープロファイル、アニメーション）と EXIF の向き（Orientation）は残ります。
+- **`stealthRemoved`**: Stealth PNGInfo を取り除くためにピクセルを書き換えた場合は `true`。`false` のとき、画像データは元のものとバイト単位で同じです。
+- **`warning`**: ピクセルに stealth データが残っている可能性がある場合に設定されます。[`StripWarning`](#stripwarning) を参照。
+
+**エラータイプ：**
+
+- `unsupportedFormat`: 画像がPNG、JPEG、WebP以外
+- `writeFailed`: 画像を書き戻せない（例：途中で切れたファイル）。`message` に理由
+
+### `StripWarning`
+
+削除操作の警告型。
+
+```typescript
+export type StripWarning =
+  | { type: 'stealthUnchecked'; reason: 'unsupportedLayout' | 'imageTooLarge' | 'undecodable' }
+  | { type: 'stealthRemains' };
+```
+
+メタデータのブロックは削除されたが、ピクセルに stealth データが残っている可能性がある場合に返されます：
+
+- `stealthUnchecked`: ピクセルを調べられなかった。`reason` はパレット PNG なら `unsupportedLayout`、デコード後のピクセルが 256 MiB を超えるなら `imageTooLarge`、ピクセルデータをデコードできないなら `undecodable`
+- `stealthRemains`: stealth データは見つかったが残っている。ランタイムに PNG のピクセルを保存し直す `CompressionStream` がないため
 
 ---
 

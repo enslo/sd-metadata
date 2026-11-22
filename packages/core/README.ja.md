@@ -21,6 +21,7 @@ AI生成画像に埋め込まれたメタデータを読み書きするための
 - **フォーマット変換**: PNG、JPEG、WebP間でメタデータをシームレスに変換
 - **メタデータ保持**: フォーマット変換時に元のメタデータ構造を保持（例：PNG → JPEG → PNG で全データを維持）
 - **AI生成元の検出**: 商用AIサービス（OpenAI、Google、xAI、Meta）が自社製と宣言した画像・動画を、C2PA、XMP、署名のマーカーから識別 — 検出のみ、署名検証なし
+- **メタデータの削除**: `strip()` が、既知かどうかを問わずすべてのメタデータブロックと、ピクセル内の stealth データを削除
 
 ## インストール
 
@@ -168,7 +169,7 @@ fileInput.addEventListener('change', async (e) => {
 // ==UserScript==
 // @name        My Script
 // @namespace   https://example.com
-// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.1.0/dist/index.global.js
+// @require     https://cdn.jsdelivr.net/npm/@enslo/sd-metadata@4.2.0/dist/index.global.js
 // ==/UserScript==
 
 const response = await fetch(imageUrl);
@@ -199,10 +200,37 @@ if (result.status === 'success') {
 ```
 
 - **4つの変種すべて** — アルファ/RGBチャンネル埋め込み × 圧縮/非圧縮 — に対応し、NovelAI の JSON ペイロードも拡張機能のプレーンテキスト（infotext）ペイロードも扱えます。
-- **WebP**: NovelAI はロスレス WebP 書き出しにも stealth データを埋め込みます。ブラウザではピクセルが自動でデコードされます。Node.js / Bun / Deno では `decodePixels` オプションでデコーダ（例：sharp）を渡してください。指定がない場合、WebP のスキャンはスキップされます。[応用例](#応用例)の「サーバーでの stealth 復元（WebP）」を参照してください。
+- **PNG**: ツールが書き出したファイルに加え、別のツールで保存し直された PNG も読み取ります。対象はインターレース、16 ビット、アルファ付きグレースケール（アルファチャンネルへの埋め込みが残ります）です。パレット PNG はスキャンしません。
+- **WebP**: ピクセルがロスレスで保存されている部分を読み取ります。NovelAI のロスレス WebP 書き出しと、ロッシー WebP のアルファプレーンです。そのため、アルファチャンネルへの埋め込みはロッシーで保存し直しても残ります。これらのピクセルはライブラリ自身がデコードし、Node.js / Bun / Deno / ブラウザのどこでも同じように、設定なしで動きます。
 - **レスキュー**: 復元した結果はそのまま `write()` に渡せ、剥がされたファイルに元ツールのネイティブメタデータが復元されます。[応用例](#応用例)の「剥がされたメタデータのレスキュー」を参照してください。
-- **サーバー**: スキャンは画像全体を展開・unfilter します（Node.js 24 で 1 メガピクセルの PNG に約 50 ms、4 メガピクセルに約 200 ms）。展開はヘッダーが宣言するサイズ、ピクセル 256 MiB、ペイロード 16 MiB で打ち切られるので細工ファイルがギガバイト単位を要求することはありませんが、信頼できないアップロードではファイルサイズと寸法を事前に制限してから `parse()` を呼ぶか、復元が不要なら `read()` を使ってください。
+- **削除**: `strip()` でピクセルから取り除けます。[メタデータの削除](#メタデータの削除)を参照してください。
+- **サーバー**: スキャンは画像全体をデコードします（Node.js 24 で 1 メガピクセルの PNG に約 60 ms、同じサイズのロスレス WebP に約 70 ms、4 メガピクセルの PNG に約 200 ms）。展開はヘッダーが宣言するサイズ、ピクセル 256 MiB、ペイロード 16 MiB で打ち切られるので細工ファイルがギガバイト単位を要求することはありませんが、信頼できないアップロードではファイルサイズと寸法を事前に制限してから `parse()` を呼ぶか、復元が不要なら `read()` を使ってください。
 - スキャンには `DecompressionStream` が必要です（Node.js 18+、Bun 1.4+、Deno、全モダンブラウザ）。対応していないランタイムでは `parse()` はチャンクベースの読み取りにフォールバックします。stealth データの書き込みは意図的にスコープ外です。
+
+## メタデータの削除
+
+`strip()` は、画像を表示に必要なものだけにします。エントリポイントが分かれているので、読み取りだけのアプリがピクセルを書き換えるコードを読み込むことはありません：
+
+```typescript
+import { strip } from '@enslo/sd-metadata/strip';
+import { readFileSync, writeFileSync } from 'fs';
+
+const result = await strip(readFileSync('image.png'));
+if (result.ok) {
+  writeFileSync('clean.png', result.value);
+  if (result.warning) {
+    console.warn('stealth データが残っている可能性があります:', result.warning);
+  }
+}
+```
+
+- **既知かどうかを問わずすべて削除**: テキストチャンク、EXIF、XMP、コメント、C2PA マニフェスト、ベンダー独自のブロック、画像の終端より後ろのデータ。デコーダが使うもの（画像データ、透過、カラープロファイル、アニメーション）は残ります。EXIF の向き（Orientation）は引き継ぐので、画像が回転してしまうことはありません。
+- **Stealth PNGInfo も**: PNG のピクセルと、WebP のロスレスで保存されたピクセルから削除し、`stealthRemoved` が `true` になります。変わるのは埋め込みに使われたビットだけなので見た目は変わりませんが、画像データは圧縮し直されます（インターレース PNG は非インターレースで保存されます）。stealth データのない画像は、画像データがバイト単位でそのまま残ります。JPEG のピクセルには stealth データは残りません。
+- **黙って残さない**: stealth データを探せなかった場合（パレット PNG、256 MiB を超えるピクセル、デコードできないピクセルデータ）や削除できなかった場合（`CompressionStream` のないランタイム）も画像は返し、`warning` を付けます。
+- **処理時間**: stealth データのある 1 メガピクセルの画像で数百ミリ秒です（PNG で約 350 ms、その大半は再圧縮。ロスレス WebP で約 200 ms）。
+- **ESM のみ**: `strip()` は IIFE ビルド（`index.global.js`）には含まれません。
+
+`write(image, { status: 'empty' })` とは別物です。こちらはこのライブラリが書き込むメタデータ（PNG のテキストチャンクと eXIf、JPEG・WebP の EXIF、XMP、コメント）だけを空にし、それ以外のブロックは stealth データも含めてそのまま残します。
 
 ## 動画ファイル
 
@@ -380,28 +408,6 @@ if (result.status === 'success') {
 </details>
 
 <details>
-<summary>サーバーでの stealth 復元（WebP）</summary>
-
-PNG のピクセルはライブラリ自身がデコードしますが、WebP のデコードはランタイム依存です。ブラウザではプラットフォームのデコーダ（WebCodecs `ImageDecoder`、フォールバックとして `createImageBitmap` + `OffscreenCanvas`）が設定なしで使われます。Node.js / Bun / Deno では `decodePixels` でピクセルを供給してください（例：[sharp](https://www.npmjs.com/package/sharp) を利用）。指定がない場合、WebP の stealth スキャンは静かにスキップされます：
-
-```typescript
-import { parse } from '@enslo/sd-metadata';
-import sharp from 'sharp';
-
-const result = await parse(webpData, {
-  decodePixels: async (data) => {
-    const { data: pixels, info } = await sharp(data)
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    return { data: new Uint8Array(pixels), width: info.width, height: info.height };
-  },
-});
-```
-
-</details>
-
-<details>
 <summary>剥がされたメタデータのレスキュー</summary>
 
 stealth 復元した結果はそのまま `write()` に渡せます。剥がされたファイルに元ツールのネイティブメタデータが復元されます — 専用APIは不要です：
@@ -414,24 +420,8 @@ if (rescued.status === 'success') {
   const restored = write(strippedImage, rescued);
   if (restored.ok) {
     // restored.value は再び通常のメタデータを持ち、
-    // どのツールからも読み取れます — ピクセル内の stealth データはそのまま残ります。
+    // どのツールからも読み取れます。ピクセル内の stealth データはそのまま残ります。
   }
-}
-```
-
-</details>
-
-<details>
-<summary>メタデータの削除</summary>
-
-画像から全てのメタデータを削除：
-
-```typescript
-import { write } from '@enslo/sd-metadata';
-
-const result = write(imageData, { status: 'empty' });
-if (result.ok) {
-  writeFileSync('clean-image.png', result.value);
 }
 ```
 
@@ -503,7 +493,7 @@ if (result.status === 'success') {
 - `input` - 画像ファイルデータ（PNG、JPEG、またはWebP）
 - `options` - オプションの読み込み設定
   - `strict?: boolean`（デフォルト: `false`）— `true` の場合、寸法（`width` / `height`）はメタデータからのみ取得します。`false` の場合、メタデータに寸法がなければ画像ヘッダーから取得します。
-  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — プラットフォームがデコードできない環境（サーバー）で、stealth スキャン用に WebP ピクセルをデコードします。WebP に読み取り可能なメタデータがない場合にのみ遅延呼び出しされます。[応用例](#応用例)の「サーバーでの stealth 復元（WebP）」を参照。
+  - `decodePixels?: (data, format) => Promise<RgbaPixels | null>` — **非推奨**: WebP のピクセルは組み込みでデコードされるため不要になりました。組み込みのデコーダがピクセルを得られない WebP に対してのみ呼ばれます。次のメジャーバージョンで削除されます。
 
 **戻り値:**
 
@@ -549,7 +539,7 @@ if (result.status === 'success') {
 
 - `input` - ターゲット画像ファイルデータ（PNG、JPEG、またはWebP）
 - `metadata` - `parse()` から得られた `ParseResult`
-  - `status: 'success'` または `'empty'` - 直接書き込み可能
+  - `status: 'success'` または `'empty'` - 直接書き込み可能。`'empty'` はこのライブラリが書き込むメタデータを空にします。stealth データを含めてすべて削除するには [`strip()`](#stripinput-uint8array--arraybuffer-promisestripresult) を使ってください
   - `status: 'unrecognized'` - 同じフォーマット：そのまま書き込み、異なるフォーマット：warning付きでメタデータ削除
   - stealth 復元された結果もそのまま渡せます — 書き込むと元ツールのネイティブメタデータが復元されます（[応用例](#応用例)の「剥がされたメタデータのレスキュー」を参照）
 
@@ -583,6 +573,23 @@ SD WebUI (A1111) フォーマットでカスタムメタデータを画像に埋
 - プログラムで生成した画像にカスタムメタデータを作成
 - 他のツールからWebUI互換フォーマットにメタデータを変換
 - WebUIで読み取り可能なメタデータを出力するアプリケーションの構築
+
+### `strip(input: Uint8Array | ArrayBuffer): Promise<StripResult>`
+
+`@enslo/sd-metadata/strip` から import します。Stealth PNGInfo を含め、画像からすべてのメタデータを削除します。[メタデータの削除](#メタデータの削除)を参照してください。
+
+**パラメータ:**
+
+- `input` - 画像ファイルデータ（PNG、JPEG、またはWebP）
+
+**戻り値:**
+
+- `{ ok: true, value: Uint8Array, stealthRemoved: boolean, warning?: StripWarning }` - メタデータを削除した画像
+  - `stealthRemoved`: stealth データを取り除くためにピクセルを書き換えた場合は `true`
+  - `warning` は stealth データが残っている可能性がある場合に設定される。ピクセルを調べられなかった場合は `{ type: 'stealthUnchecked', reason }`（`reason` はパレット PNG なら `'unsupportedLayout'`、ほかに `'imageTooLarge'`、`'undecodable'`）、stealth データは見つかったがランタイムに PNG のピクセルを保存し直す `CompressionStream` がない場合は `{ type: 'stealthRemains' }`
+- `{ ok: false, error: { type, message? } }` - 失敗。`type` は以下のいずれか：
+  - `'unsupportedFormat'`: 画像がPNG、JPEG、WebP以外の場合
+  - `'writeFailed'`: 画像を書き戻せない場合（`message` に理由）
 
 ### `stringify(input: ParseResult | VideoParseResult | EmbedMetadata | GenerationMetadata): string`
 

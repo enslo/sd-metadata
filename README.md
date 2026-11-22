@@ -23,6 +23,7 @@ Zero dependencies, works in Node.js and browsers.
 - **Metadata preservation**: Keeps the original metadata structure when converting formats (e.g., PNG → JPEG → PNG retains all original data)
 - **Stealth PNGInfo recovery**: Reads metadata hidden in pixel data when the regular metadata has been stripped
 - **AI provenance detection**: Identifies images and videos from commercial services (OpenAI, Google, xAI) by their C2PA / XMP declarations — detection only, no signature verification
+- **Metadata removal**: Removes every metadata block, known or not, and the stealth data in the pixels
 
 ## Installation
 
