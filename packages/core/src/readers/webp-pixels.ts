@@ -123,7 +123,7 @@ function decodeLossless(payload: Uint8Array, maxBytes: number): PixelData {
  * (0 = raw bytes, 1 = a VP8L stream without its header, alpha in the
  * green channel), bits 2-3 a prediction filter applied before that.
  */
-function decodeAlphaPlane(
+export function decodeAlphaPlane(
   chunk: Uint8Array,
   size: { width: number; height: number },
   maxBytes: number,

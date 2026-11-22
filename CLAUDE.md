@@ -48,9 +48,11 @@ write(image) → converters/*              → writers/  → Uint8Array
 embed(image) → (always A1111 format)     → writers/  → Uint8Array
 strip(image) → readers/stealth (pixels)  → writers/  → Uint8Array
                └ own entry point (@enslo/sd-metadata/strip): clears
-                 Stealth PNGInfo from the pixels (writers/stealth,
-                 writers/png-pixels), then keeps only what a decoder
-                 uses (writers/essentials), known metadata or not
+                 Stealth PNGInfo from the pixels (writers/stealth) and
+                 stores them again (writers/png-pixels; for WebP
+                 writers/webp-pixels, which rewrites the lossless
+                 stream through writers/vp8l), then keeps only what a
+                 decoder uses (writers/essentials), known metadata or not
 ```
 
 Core source layout (`packages/core/src/`):

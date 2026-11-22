@@ -8,7 +8,6 @@
  */
 
 import { decodePngPixels, MAX_PIXEL_BYTES } from '../readers/stealth';
-import { decodeWebpPixels } from '../readers/webp-pixels';
 import type { StripResult, StripWarning } from '../types';
 import { detectFormat, toUint8Array } from '../utils/binary';
 import {
@@ -18,6 +17,7 @@ import {
 } from '../writers/essentials';
 import { writePngPixels } from '../writers/png-pixels';
 import { clearStealth } from '../writers/stealth';
+import { rewriteWebpPixels } from '../writers/webp-pixels';
 
 /**
  * Remove all metadata from an image, stealth data included
@@ -82,11 +82,13 @@ export async function strip(
       }
     }
   } else if (format === 'webp') {
-    // WebP pixels cannot be written back yet: clear a decoded copy only
-    // to learn whether there is anything to remove, and say so
-    const pixels = decodeWebpPixels(data, MAX_PIXEL_BYTES);
-    if (pixels && clearStealth(pixels)) {
-      warning = { type: 'stealthRemains' };
+    // A lossless image, or the alpha plane of a lossy one
+    const rewritten = rewriteWebpPixels(data, MAX_PIXEL_BYTES, clearStealth);
+    if (rewritten === 'undecodable') {
+      warning = { type: 'stealthUnchecked', reason: 'undecodable' };
+    } else if (rewritten !== 'unchanged') {
+      image = rewritten;
+      stealthRemoved = true;
     }
   }
 

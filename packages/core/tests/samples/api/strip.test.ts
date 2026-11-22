@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parse } from '../../../src/api/parse';
 import { write } from '../../../src/api/write';
-import { decodePngPixels, type PixelData } from '../../../src/readers/stealth';
+import {
+  decodePngPixels,
+  MAX_PIXEL_BYTES,
+  type PixelData,
+} from '../../../src/readers/stealth';
+import { decodeWebpPixels } from '../../../src/readers/webp-pixels';
 import { strip } from '../../../src/strip';
 import { writePngPixels } from '../../../src/writers/png-pixels';
 import { clearStealth } from '../../../src/writers/stealth';
@@ -10,7 +15,7 @@ import {
   loadVendorSample,
   STEALTH_WEBP_SAMPLES,
 } from '../../helpers/samples';
-import { decodeWithSharp } from '../../helpers/webp-pixels';
+import { decodeWithSharp, encodeWebp } from '../../helpers/webp-pixels';
 
 /**
  * strip() end to end on real files: the result is read back with parse()
@@ -117,24 +122,54 @@ describe('strip - stealth PNG samples', TIMEOUT, () => {
 });
 
 describe('strip - stealth WebP samples', TIMEOUT, () => {
-  // Writing WebP pixels back is not implemented yet: until it is, the
-  // metadata chunks go and a warning says the copy in the pixels stays
+  // NovelAI's lossless WebP exports carry the payload in alpha, like its
+  // PNGs. The image stream is rewritten rather than encoded anew, so the
+  // file does not grow.
   for (const filename of STEALTH_WEBP_SAMPLES) {
-    it(`warns that stealth data remains: ${filename}`, async () => {
+    it(`takes the stealth data out of the file: ${filename}`, async () => {
       const original = loadSample('webp', filename);
+      // An empty write leaves the copy in the pixels
+      const emptied = await parse(emptyWrite(original));
+      expect(emptied.status === 'success' && emptied.stealth).toBe(true);
 
       const result = await strip(original);
 
-      expect(result).toMatchObject({
-        ok: true,
-        stealthRemoved: false,
-        warning: { type: 'stealthRemains' },
-      });
+      expect(result).toMatchObject({ ok: true, stealthRemoved: true });
       if (!result.ok) return;
-      const after = await parse(result.value);
-      expect(after.status === 'success' && after.stealth).toBe(true);
+      expect(result.warning).toBeUndefined();
+      expect((await parse(result.value)).status).toBe('empty');
+
+      // The file holds the cleared pixels, as libwebp reads them
+      const cleared = decodeWebpPixels(original, MAX_PIXEL_BYTES);
+      if (!cleared) throw new Error('not decoded');
+      clearStealth(cleared);
+      expect((await rgbaOf(result.value)).equals(toRgba(cleared))).toBe(true);
+      expect(result.value.length).toBeLessThan(original.length);
     });
   }
+
+  it('takes the stealth data out of a lossy re-save: novelai-full.png as WebP', async () => {
+    // Re-saved as a lossy WebP, the picture keeps its alpha plane
+    // lossless, and the payload with it. The plane is all the picture
+    // has of alpha, so clearing it leaves nothing to store.
+    const pixels = await decodeWithSharp(loadSample('png', 'novelai-full.png'));
+    if (!pixels) throw new Error('reference decoder failed');
+    const webp = await encodeWebp(pixels, { quality: 80 });
+    const before = await parse(webp);
+    expect(before.status === 'success' && before.stealth).toBe(true);
+
+    const result = await strip(webp);
+
+    expect(result).toMatchObject({ ok: true, stealthRemoved: true });
+    if (!result.ok) return;
+    expect(result.warning).toBeUndefined();
+    expect((await parse(result.value)).status).toBe('empty');
+    const expected = await rgbaOf(webp);
+    for (let i = 3; i < expected.length; i += 4) {
+      expected[i] = 255;
+    }
+    expect((await rgbaOf(result.value)).equals(expected)).toBe(true);
+  });
 });
 
 describe('strip - samples without stealth data', TIMEOUT, () => {

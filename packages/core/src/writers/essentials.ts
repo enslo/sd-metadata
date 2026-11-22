@@ -396,7 +396,7 @@ function withMetadataFlags(vp8x: Uint8Array, flags: number): Uint8Array {
 }
 
 /** A RIFF chunk: FourCC, size, payload, and a pad byte for an odd size */
-function riffChunk(type: string, payload: Uint8Array): Uint8Array {
+export function riffChunk(type: string, payload: Uint8Array): Uint8Array {
   const chunk = new Uint8Array(8 + payload.length + (payload.length % 2));
   for (let i = 0; i < 4; i++) {
     chunk[i] = type.charCodeAt(i);
@@ -493,7 +493,7 @@ function orientationTiff(orientation: number): Uint8Array {
   ]);
 }
 
-function concat(parts: Uint8Array[]): Uint8Array {
+export function concat(parts: Uint8Array[]): Uint8Array {
   const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
   let offset = 0;
   for (const part of parts) {

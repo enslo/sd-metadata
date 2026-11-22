@@ -18,7 +18,11 @@ import {
   createStealthPng,
   createStealthRgbaPixels,
 } from '../../helpers/stealth-images';
-import { decodeWithSharp, encodeWebp } from '../../helpers/webp-pixels';
+import {
+  buildWebp,
+  decodeWithSharp,
+  encodeWebp,
+} from '../../helpers/webp-pixels';
 
 const A1111_PAYLOAD =
   'masterpiece, 1girl\nNegative prompt: lowres\n' +
@@ -265,27 +269,61 @@ describe('strip - JPEG', () => {
 describe('strip - WebP', () => {
   const stealthPixels = createStealthRgbaPixels({ payload: A1111_PAYLOAD });
 
-  it('warns that stealth data remains in a lossless WebP', async () => {
+  it('removes alpha-embedded stealth data from a lossless WebP', async () => {
     const webp = await encodeWebp(stealthPixels, { lossless: true });
+    expect((await parse(webp)).status).toBe('success');
 
     const result = await strip(webp);
 
-    expect(result).toMatchObject({
-      ok: true,
-      stealthRemoved: false,
-      warning: { type: 'stealthRemains' },
-    });
+    expect(result).toMatchObject({ ok: true, stealthRemoved: true });
+    if (!result.ok) return;
+    expect(result.warning).toBeUndefined();
+    expect((await parse(result.value)).status).toBe('empty');
   });
 
-  it('warns that stealth data remains in the alpha plane of a lossy WebP', async () => {
-    const webp = await encodeWebp(stealthPixels, { quality: 80 });
+  it('removes RGB-embedded stealth data from a lossless WebP', async () => {
+    const webp = await encodeWebp(
+      createStealthRgbaPixels({ payload: A1111_PAYLOAD, mode: 'rgb' }),
+      { lossless: true },
+    );
+    expect((await parse(webp)).status).toBe('success');
 
     const result = await strip(webp);
 
-    expect(result).toMatchObject({
+    expect(result).toMatchObject({ ok: true, stealthRemoved: true });
+    if (!result.ok) return;
+    expect(result.warning).toBeUndefined();
+    expect((await parse(result.value)).status).toBe('empty');
+  });
+
+  it('removes alpha-embedded stealth data from a lossy WebP', async () => {
+    // A lossy WebP keeps its alpha plane lossless, and the payload in it
+    const webp = await encodeWebp(stealthPixels, { quality: 80 });
+    expect((await parse(webp)).status).toBe('success');
+    const before = await decodeWithSharp(webp);
+
+    const result = await strip(webp);
+
+    expect(result).toMatchObject({ ok: true, stealthRemoved: true });
+    if (!result.ok) return;
+    expect(result.warning).toBeUndefined();
+    expect((await parse(result.value)).status).toBe('empty');
+    // The picture was opaque but for the bits: its colors are untouched
+    const after = await decodeWithSharp(result.value);
+    expect(after?.data).toEqual(
+      before?.data.map((value, i) => (i % 4 === 3 ? 255 : value)),
+    );
+  });
+
+  it('warns when the pixels of a WebP do not decode', async () => {
+    const webp = buildWebp([
+      { type: 'VP8L', payload: Uint8Array.of(0x2f, 1, 2, 3, 4, 5, 6, 7) },
+    ]);
+
+    expect(await strip(webp)).toMatchObject({
       ok: true,
       stealthRemoved: false,
-      warning: { type: 'stealthRemains' },
+      warning: { type: 'stealthUnchecked', reason: 'undecodable' },
     });
   });
 
