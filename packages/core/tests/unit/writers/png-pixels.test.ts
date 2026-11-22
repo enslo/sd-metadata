@@ -1,16 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { decodePngPixels, type PngPixels } from '../../../src/readers/stealth';
+import {
+  decodePngPixels,
+  type PngPixels,
+} from '../../../src/readers/png-pixels';
+import { MAX_PIXEL_BYTES } from '../../../src/readers/stealth';
 import { readChunkType, readUint32BE } from '../../../src/utils/binary';
 import { buildChunk, writePngMetadata } from '../../../src/writers/png';
 import { writePngPixels } from '../../../src/writers/png-pixels';
 import { pngChunkTypes } from '../../helpers/containers';
-import { randomBytes } from '../../helpers/pictures';
+import { randomBytes, samplePictures } from '../../helpers/pictures';
+import {
+  bytes,
+  decodeAsRgba8,
+  open,
+  pngHeader,
+  RESAVED_LAYOUTS,
+} from '../../helpers/png-layouts';
 import { createStealthPng } from '../../helpers/stealth-images';
 import { decodeWithSharp } from '../../helpers/webp-pixels';
 
 async function decode(png: Uint8Array): Promise<PngPixels> {
-  const decoded = await decodePngPixels(png);
-  if (typeof decoded === 'string') {
+  const decoded = await decodePngPixels(png, MAX_PIXEL_BYTES);
+  if (!decoded || typeof decoded === 'string') {
     throw new Error(`not decoded: ${decoded}`);
   }
   return decoded;
@@ -106,5 +117,62 @@ describe('writePngPixels', () => {
     const written = await writePngPixels(png, image);
 
     expect(new Set((await decode(written)).pixels)).toEqual(new Set([255]));
+  });
+});
+
+describe('writePngPixels - files saved in other layouts', () => {
+  // A translucent ramp: every alpha value matters
+  const [, picture] = samplePictures()[4] ?? [];
+  if (!picture) throw new Error('missing picture');
+
+  for (const layout of RESAVED_LAYOUTS) {
+    it(`stores edited pixels of a file that was ${layout.name}`, async () => {
+      const file = await bytes(layout.convert(open(picture)));
+      const image = await decode(file);
+      // Set the low alpha bit everywhere, as clearing a payload does
+      for (let i = 3; i < image.pixels.length; i += 4) {
+        image.pixels[i] = (image.pixels[i] ?? 0) | 1;
+      }
+      const expected = image.pixels.slice();
+
+      const written = await writePngPixels(file, image);
+
+      // The same channels at the same bit depth, and no interlacing
+      expect(pngHeader(written)).toEqual({
+        colorType: layout.colorType,
+        bitDepth: layout.bitDepth,
+        interlaced: false,
+      });
+      expect(await decodeAsRgba8(written)).toEqual(expected);
+      expect((await decode(written)).pixels).toEqual(expected);
+    });
+  }
+
+  it('keeps the low byte of 16-bit samples it did not change', async () => {
+    const file = await bytes(open(picture).toColourspace('rgb16').png());
+    const image = await decode(file);
+    // Samples are two bytes, high first: red of pixel 0 at 0-1, red of
+    // pixel 1 at 8-9. Give both a low byte of their own, as a true
+    // 16-bit picture has, then change pixel 1 in the 8-bit view.
+    image.samples[1] = 0x12;
+    image.samples[9] = 0x34;
+    const changed = (image.pixels[4] ?? 0) ^ 0x80;
+    image.pixels[4] = changed;
+
+    const written = await decode(await writePngPixels(file, image));
+
+    expect(written.samples[1]).toBe(0x12);
+    // A changed value becomes its 16-bit equivalent: both bytes alike
+    expect([...written.samples.subarray(8, 10)]).toEqual([changed, changed]);
+  });
+
+  it('takes the gray of a grayscale file from the red channel of the view', async () => {
+    const file = await bytes(open(picture).toColourspace('b-w').png());
+    const image = await decode(file);
+    image.pixels[0] = 77;
+
+    const written = await decode(await writePngPixels(file, image));
+
+    expect([...written.pixels.subarray(0, 3)]).toEqual([77, 77, 77]);
   });
 });

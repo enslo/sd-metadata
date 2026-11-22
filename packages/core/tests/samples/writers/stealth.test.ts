@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { decodePngPixels } from '../../../src/readers/png-pixels';
 import {
-  decodePngPixels,
   locateStealth,
   MAX_PIXEL_BYTES,
   type PixelData,
@@ -26,8 +26,13 @@ import {
  */
 
 async function pngPixels(filename: string): Promise<PixelData> {
-  const image = await decodePngPixels(loadSample('png', filename));
-  if (typeof image === 'string') throw new Error(`${filename}: ${image}`);
+  const image = await decodePngPixels(
+    loadSample('png', filename),
+    MAX_PIXEL_BYTES,
+  );
+  if (!image || typeof image === 'string') {
+    throw new Error(`${filename}: ${image}`);
+  }
   return image;
 }
 

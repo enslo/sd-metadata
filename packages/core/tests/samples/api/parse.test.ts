@@ -3,6 +3,7 @@ import { parse } from '../../../src/api/parse';
 import { read } from '../../../src/api/read';
 import { write } from '../../../src/api/write';
 import { pngChunksToRecord } from '../../../src/utils/convert';
+import { bytes, open, RESAVED_LAYOUTS } from '../../helpers/png-layouts';
 import { loadSample, PNG_SAMPLES } from '../../helpers/samples';
 import { stripTextChunks } from '../../helpers/stealth-images';
 import { decodeWithSharp, encodeWebp } from '../../helpers/webp-pixels';
@@ -212,4 +213,34 @@ describe('parse - Stealth PNGInfo samples', () => {
       }
     });
   });
+});
+
+// Converting and decoding a megapixel picture takes a while on a slow machine
+describe('parse - a stealth PNG sample saved again', {
+  timeout: 30_000,
+}, () => {
+  // A real picture through the layouts another tool may save it in: the
+  // text chunks are gone, the pixel values and the payload in them stay.
+  // The interlaced one keeps every channel, the 16-bit one stores each
+  // value as its 16-bit equivalent, the grayscale one keeps alpha only.
+  const layouts = RESAVED_LAYOUTS.filter((layout) =>
+    ['interlaced', '16-bit', 'grayscale with alpha'].includes(layout.name),
+  );
+
+  for (const layout of layouts) {
+    it(`recovers NovelAI metadata from novelai-full.png re-saved ${layout.name}`, async () => {
+      const original = loadSample('png', 'novelai-full.png');
+      const baseline = read(original);
+      const png = await bytes(layout.convert(open(original)));
+      expect(read(png).status).toBe('empty');
+
+      const recovered = await parse(png);
+
+      expect(recovered.status).toBe('success');
+      if (baseline.status === 'success' && recovered.status === 'success') {
+        expect(recovered.stealth).toBe(true);
+        expect(recovered.metadata).toEqual(baseline.metadata);
+      }
+    });
+  }
 });

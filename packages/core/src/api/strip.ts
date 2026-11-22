@@ -7,7 +7,8 @@
  * least-significant bits.
  */
 
-import { decodePngPixels, MAX_PIXEL_BYTES } from '../readers/stealth';
+import { decodePngPixels } from '../readers/png-pixels';
+import { MAX_PIXEL_BYTES } from '../readers/stealth';
 import type { StripResult, StripWarning } from '../types';
 import { detectFormat, toUint8Array } from '../utils/binary';
 import {
@@ -69,10 +70,10 @@ export async function strip(
   let stealthRemoved = false;
   let warning: StripWarning | undefined;
   if (format === 'png') {
-    const pixels = await decodePngPixels(data);
+    const pixels = await decodePngPixels(data, MAX_PIXEL_BYTES);
     if (typeof pixels === 'string') {
       warning = { type: 'stealthUnchecked', reason: pixels };
-    } else if (clearStealth(pixels)) {
+    } else if (pixels && clearStealth(pixels)) {
       try {
         image = await writePngPixels(data, pixels);
         stealthRemoved = true;
