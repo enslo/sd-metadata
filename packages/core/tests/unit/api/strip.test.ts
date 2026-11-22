@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { parse } from '../../../src/api/parse';
 import { read } from '../../../src/api/read';
 import { write } from '../../../src/api/write';
-import { decodePngPixels } from '../../../src/readers/stealth';
+import { decodePngPixels } from '../../../src/readers/png-pixels';
+import { MAX_PIXEL_BYTES } from '../../../src/readers/stealth';
 import { strip } from '../../../src/strip';
 import { writePngMetadata } from '../../../src/writers/png';
 import { writePngPixels } from '../../../src/writers/png-pixels';
@@ -14,6 +15,7 @@ import {
   pngChunkTypes,
 } from '../../helpers/containers';
 import { createMinimalWebp } from '../../helpers/minimal-images';
+import { decodeAsRgba8, RESAVED_LAYOUTS } from '../../helpers/png-layouts';
 import {
   createStealthPng,
   createStealthRgbaPixels,
@@ -170,8 +172,8 @@ describe('strip - PNG', () => {
       width: 64,
       height: 64,
     });
-    const image = await decodePngPixels(png);
-    if (typeof image === 'string') throw new Error(image);
+    const image = await decodePngPixels(png, MAX_PIXEL_BYTES);
+    if (!image || typeof image === 'string') throw new Error(String(image));
     for (let i = 0; i < 120; i++) {
       image.pixels[((i % 64) * 64 + Math.floor(i / 64)) * 4 + 3] = 255;
     }
@@ -190,31 +192,61 @@ describe('strip - PNG', () => {
     );
   });
 
-  // Layouts the pixel decoder does not take. The stealth bits survive
-  // such a re-save (other readers find them), so strip() must not pass
-  // the file off as clean.
-  const layouts: [string, (image: Sharp) => Sharp][] = [
-    ['interlaced', (image) => image.png({ progressive: true })],
-    ['16-bit', (image) => image.toColourspace('rgb16').png()],
-    ['palette', (image) => image.png({ palette: true })],
-    ['grayscale with alpha', (image) => image.toColourspace('b-w').png()],
-  ];
-  for (const [name, convert] of layouts) {
-    it(`warns that it could not examine a PNG re-saved as ${name}`, async () => {
+  // Layouts another tool may save the PNG again in: the pixel values
+  // stay, and the stealth bits with them
+  for (const layout of RESAVED_LAYOUTS) {
+    it(`removes stealth data from a PNG re-saved ${layout.name}`, async () => {
       const stealth = createStealthPng({ payload: A1111_PAYLOAD });
-      const png = withParameters(await bytes(convert(sharp(stealth))));
+      const png = withParameters(await bytes(layout.convert(sharp(stealth))));
+      const emptied = await parse(emptyWrite(png));
+      expect(emptied.status === 'success' && emptied.stealth).toBe(true);
+      const before = await decodeAsRgba8(png);
 
       const result = await strip(png);
 
-      expect(result).toMatchObject({
-        ok: true,
-        stealthRemoved: false,
-        warning: { type: 'stealthUnchecked', reason: 'unsupportedLayout' },
-      });
-      // The metadata chunks are gone all the same
-      expect(result.ok && read(result.value).status).toBe('empty');
+      expect(result).toMatchObject({ ok: true, stealthRemoved: true });
+      if (!result.ok) return;
+      expect(result.warning).toBeUndefined();
+      expect((await parse(result.value)).status).toBe('empty');
+      // Opaque again, with the colors untouched
+      expect(await decodeAsRgba8(result.value)).toEqual(
+        before.map((value, i) => (i % 4 === 3 ? 255 : value)),
+      );
     });
   }
+
+  it('has nothing to check in a grayscale PNG without alpha', async () => {
+    // An RGB-embedded payload does not survive the loss of color, and
+    // without alpha there is nowhere else one could be
+    const stealth = createStealthPng({ payload: A1111_PAYLOAD, mode: 'rgb' });
+    const png = withParameters(
+      await bytes(sharp(stealth).toColourspace('b-w').png()),
+    );
+
+    const result = await strip(png);
+
+    expect(result).toMatchObject({ ok: true, stealthRemoved: false });
+    if (!result.ok) return;
+    expect(result.warning).toBeUndefined();
+    expect((await parse(result.value)).status).toBe('empty');
+  });
+
+  it('warns that it could not examine a palette PNG', async () => {
+    const stealth = createStealthPng({ payload: A1111_PAYLOAD });
+    const png = withParameters(
+      await bytes(sharp(stealth).png({ palette: true })),
+    );
+
+    const result = await strip(png);
+
+    expect(result).toMatchObject({
+      ok: true,
+      stealthRemoved: false,
+      warning: { type: 'stealthUnchecked', reason: 'unsupportedLayout' },
+    });
+    // The metadata chunks are gone all the same
+    expect(result.ok && read(result.value).status).toBe('empty');
+  });
 
   it('warns when the pixel data does not decode', async () => {
     const png = createStealthPng({ payload: A1111_PAYLOAD });

@@ -28,10 +28,10 @@
  */
 
 import type { PngTextChunk, RgbaPixels } from '../types';
-import { isPng, readChunkType, readUint32BE } from '../utils/binary';
-import { gunzip, inflate } from '../utils/compression';
+import { isPng } from '../utils/binary';
+import { gunzip } from '../utils/compression';
+import { decodePngPixels } from './png-pixels';
 
-const PNG_SIGNATURE_LENGTH = 8;
 const MAGIC_LENGTH = 15;
 
 /**
@@ -65,22 +65,6 @@ export interface PixelData {
   pixels: Uint8Array;
 }
 
-/** Decoded PNG pixels, with what it takes to store them the same way again */
-export interface PngPixels extends PixelData {
-  /** Filter type of each scanline */
-  filters: Uint8Array;
-}
-
-/**
- * Why the pixels of a PNG were not decoded: a layout the decoder does not
- * take (anything but 8-bit RGB/RGBA, non-interlaced), a size past the cap,
- * or data that does not decode
- */
-export type PixelDecodeFailure =
-  | 'unsupportedLayout'
-  | 'imageTooLarge'
-  | 'undecodable';
-
 /** Where a stealth payload sits in the pixels */
 export interface StealthLocation {
   mode: LsbMode;
@@ -93,7 +77,7 @@ export interface StealthLocation {
  *
  * @param data - PNG file data
  * @returns Synthesized text chunks, or null when no stealth data is found
- *   or the image is not a supported PNG (8-bit RGB/RGBA, non-interlaced)
+ *   or the pixels are not ones decodePngPixels reads
  */
 export async function readStealthChunks(
   data: Uint8Array,
@@ -102,8 +86,8 @@ export async function readStealthChunks(
     return null;
   }
 
-  const image = await decodePngPixels(data);
-  if (typeof image === 'string') {
+  const image = await decodePngPixels(data, MAX_PIXEL_BYTES);
+  if (image === null || typeof image === 'string') {
     return null;
   }
   return scanDecodedPixels(image);
@@ -193,224 +177,6 @@ function lsbModes(channels: number): LsbMode[] {
     : channels === 1
       ? ['alpha']
       : ['rgb'];
-}
-
-// ============================================================================
-// PNG pixel decoding
-// ============================================================================
-
-/**
- * Decode PNG pixel data (8-bit RGB/RGBA, non-interlaced only)
- *
- * @returns The pixels, or the reason there are none
- */
-export async function decodePngPixels(
-  data: Uint8Array,
-): Promise<PngPixels | PixelDecodeFailure> {
-  let width = 0;
-  let height = 0;
-  let bitDepth = 0;
-  let colorType = 0;
-  let interlace = 0;
-  let sawIhdr = false;
-  const idatParts: Uint8Array[] = [];
-
-  let offset = PNG_SIGNATURE_LENGTH;
-  while (offset + 8 <= data.length) {
-    const length = readUint32BE(data, offset);
-    const chunkType = readChunkType(data, offset + 4);
-    const dataStart = offset + 8;
-    if (dataStart + length > data.length) {
-      return 'undecodable';
-    }
-
-    if (chunkType === 'IHDR') {
-      if (length < 13) {
-        return 'undecodable';
-      }
-      width = readUint32BE(data, dataStart);
-      height = readUint32BE(data, dataStart + 4);
-      bitDepth = data[dataStart + 8] ?? 0;
-      colorType = data[dataStart + 9] ?? 0;
-      interlace = data[dataStart + 12] ?? 0;
-      sawIhdr = true;
-    } else if (chunkType === 'IDAT') {
-      idatParts.push(data.subarray(dataStart, dataStart + length));
-    } else if (chunkType === 'IEND') {
-      break;
-    }
-
-    // Skip data and CRC
-    offset = dataStart + length + 4;
-  }
-
-  if (!sawIhdr || idatParts.length === 0 || width === 0 || height === 0) {
-    return 'undecodable';
-  }
-  if (bitDepth !== 8 || interlace !== 0) {
-    return 'unsupportedLayout';
-  }
-  if (colorType !== 2 && colorType !== 6) {
-    return 'unsupportedLayout';
-  }
-
-  // Filtered scanlines: one filter byte and then the pixels of each row.
-  // A header past the size cap is not decoded, and the IDAT stream is not
-  // inflated past the scanlines it declares, so a crafted file cannot
-  // claim memory far beyond its pixel count.
-  const channels = colorType === 6 ? 4 : 3;
-  const rawLength = height * (width * channels + 1);
-  if (rawLength > MAX_PIXEL_BYTES) {
-    return 'imageTooLarge';
-  }
-
-  let raw: Uint8Array;
-  try {
-    raw = await inflate(concatBytes(idatParts), rawLength);
-  } catch {
-    return 'undecodable';
-  }
-
-  const pixels = unfilter(raw, width, height, channels);
-  if (!pixels) {
-    return 'undecodable';
-  }
-  const filters = new Uint8Array(height);
-  for (let y = 0; y < height; y++) {
-    filters[y] = raw[y * (width * channels + 1)] ?? 0;
-  }
-  return { width, height, channels, pixels, filters };
-}
-
-/**
- * Concatenate byte arrays
- */
-function concatBytes(parts: Uint8Array[]): Uint8Array {
-  const total = parts.reduce((sum, part) => sum + part.length, 0);
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const part of parts) {
-    out.set(part, offset);
-    offset += part.length;
-  }
-  return out;
-}
-
-/**
- * Reverse PNG scanline filtering (filter types 0-4)
- *
- * One loop per filter type, with the first pixel of a row and the first
- * row handled apart, so the inner loops carry no per-byte branches: this
- * is where the scan spends its time after inflating. Stores into the
- * Uint8Array wrap modulo 256 as the filters require.
- */
-function unfilter(
-  raw: Uint8Array,
-  width: number,
-  height: number,
-  channels: number,
-): Uint8Array | null {
-  const stride = width * channels;
-  if (raw.length < height * (stride + 1)) {
-    return null;
-  }
-
-  const pixels = new Uint8Array(height * stride);
-  for (let y = 0; y < height; y++) {
-    const filter = raw[y * (stride + 1)] ?? 0;
-    // The row's bytes in `raw`, its pixels in `pixels`, and the row above
-    const row = y * (stride + 1) + 1;
-    const out = y * stride;
-    const prior = out - stride;
-    const first = y === 0;
-
-    switch (filter) {
-      case 0:
-        pixels.set(raw.subarray(row, row + stride), out);
-        break;
-      case 1:
-        unfilterSub(raw, row, pixels, out, stride, channels);
-        break;
-      case 2:
-        if (first) {
-          pixels.set(raw.subarray(row, row + stride), out);
-        } else {
-          for (let i = 0; i < stride; i++) {
-            pixels[out + i] = (raw[row + i] ?? 0) + (pixels[prior + i] ?? 0);
-          }
-        }
-        break;
-      case 3:
-        if (first) {
-          // No row above: the average is half the left neighbour
-          for (let i = 0; i < channels; i++) {
-            pixels[out + i] = raw[row + i] ?? 0;
-          }
-          for (let i = channels; i < stride; i++) {
-            pixels[out + i] =
-              (raw[row + i] ?? 0) + ((pixels[out + i - channels] ?? 0) >> 1);
-          }
-        } else {
-          for (let i = 0; i < channels; i++) {
-            pixels[out + i] =
-              (raw[row + i] ?? 0) + ((pixels[prior + i] ?? 0) >> 1);
-          }
-          for (let i = channels; i < stride; i++) {
-            pixels[out + i] =
-              (raw[row + i] ?? 0) +
-              (((pixels[out + i - channels] ?? 0) + (pixels[prior + i] ?? 0)) >>
-                1);
-          }
-        }
-        break;
-      case 4:
-        if (first) {
-          // No row above: the Paeth predictor is the left neighbour
-          unfilterSub(raw, row, pixels, out, stride, channels);
-        } else {
-          // No left neighbour: the predictor is the byte above
-          for (let i = 0; i < channels; i++) {
-            pixels[out + i] = (raw[row + i] ?? 0) + (pixels[prior + i] ?? 0);
-          }
-          for (let i = channels; i < stride; i++) {
-            const left = pixels[out + i - channels] ?? 0;
-            const up = pixels[prior + i] ?? 0;
-            const upLeft = pixels[prior + i - channels] ?? 0;
-            const p = left + up - upLeft;
-            const pa = Math.abs(p - left);
-            const pb = Math.abs(p - up);
-            const pc = Math.abs(p - upLeft);
-            pixels[out + i] =
-              (raw[row + i] ?? 0) +
-              (pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft);
-          }
-        }
-        break;
-      default:
-        return null;
-    }
-  }
-  return pixels;
-}
-
-/**
- * Reverse the Sub filter (type 1) on one row: each byte plus the byte one
- * pixel to its left
- */
-function unfilterSub(
-  raw: Uint8Array,
-  row: number,
-  pixels: Uint8Array,
-  out: number,
-  stride: number,
-  channels: number,
-): void {
-  for (let i = 0; i < channels; i++) {
-    pixels[out + i] = raw[row + i] ?? 0;
-  }
-  for (let i = channels; i < stride; i++) {
-    pixels[out + i] = (raw[row + i] ?? 0) + (pixels[out + i - channels] ?? 0);
-  }
 }
 
 // ============================================================================

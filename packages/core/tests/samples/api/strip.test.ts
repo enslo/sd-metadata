@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { parse } from '../../../src/api/parse';
 import { write } from '../../../src/api/write';
-import {
-  decodePngPixels,
-  MAX_PIXEL_BYTES,
-  type PixelData,
-} from '../../../src/readers/stealth';
+import { decodePngPixels } from '../../../src/readers/png-pixels';
+import { MAX_PIXEL_BYTES, type PixelData } from '../../../src/readers/stealth';
 import { decodeWebpPixels } from '../../../src/readers/webp-pixels';
 import { strip } from '../../../src/strip';
 import { clearStealth } from '../../../src/writers/stealth';
@@ -62,7 +59,7 @@ describe('strip - stealth samples', TIMEOUT, () => {
   ): Promise<Buffer> {
     const image =
       format === 'png'
-        ? await decodePngPixels(original)
+        ? await decodePngPixels(original, MAX_PIXEL_BYTES)
         : decodeWebpPixels(original, MAX_PIXEL_BYTES);
     if (!image || typeof image === 'string') throw new Error('not decoded');
     clearStealth(image);

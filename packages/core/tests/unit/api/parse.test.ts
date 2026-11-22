@@ -8,6 +8,7 @@ import {
   createMinimalPng,
   createMinimalWebp,
 } from '../../helpers/minimal-images';
+import { bytes, open, RESAVED_LAYOUTS } from '../../helpers/png-layouts';
 import { loadVendorSample } from '../../helpers/samples';
 import {
   createStealthPng,
@@ -298,5 +299,43 @@ describe('parse - vendor declarations', () => {
     const result = await parse(written.value);
     expect(result.status).toBe('success');
     expect(result.status === 'success' && result.stealth).toBe(true);
+  });
+});
+
+describe('parse - stealth PNG saved again in another layout', () => {
+  // Another tool may store the same pixels interlaced, at 16 bits per
+  // sample, or as grayscale: the bits hidden in them stay
+  for (const layout of RESAVED_LAYOUTS) {
+    it(`recovers alpha-embedded metadata from a PNG re-saved ${layout.name}`, async () => {
+      const stealth = createStealthPng({ payload: A1111_PAYLOAD });
+      const png = await bytes(layout.convert(open(stealth)));
+      expect(read(png).status).toBe('empty');
+
+      const result = await parse(png);
+
+      expect(result.status).toBe('success');
+      if (result.status === 'success') {
+        expect(result.stealth).toBe(true);
+        expect(result.metadata.prompt).toBe('masterpiece, 1girl');
+      }
+    });
+  }
+
+  it('recovers RGB-embedded metadata from layouts that keep the colors', async () => {
+    const stealth = createStealthPng({ payload: A1111_PAYLOAD, mode: 'rgb' });
+
+    for (const layout of RESAVED_LAYOUTS.filter((l) => l.colorType === 6)) {
+      const result = await parse(await bytes(layout.convert(open(stealth))));
+
+      expect(result.status, layout.name).toBe('success');
+      expect(result.status === 'success' && result.stealth).toBe(true);
+    }
+  });
+
+  it('finds nothing where an RGB embedding lost its colors', async () => {
+    const stealth = createStealthPng({ payload: A1111_PAYLOAD, mode: 'rgb' });
+    const png = await bytes(open(stealth).toColourspace('b-w').png());
+
+    expect((await parse(png)).status).toBe('empty');
   });
 });
