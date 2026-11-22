@@ -105,6 +105,8 @@
     "previewEmpty": "プレビューを表示するには、少なくともプロンプトを入力してください",
     "metadataDropped": "このメタデータはこの形式に書き込めないため、メタデータ無しで保存しました。",
     "segmentTooLarge": "メタデータの一部が JPEG のセグメントに収まらず、書き込みませんでした。",
+    "stealthUnchecked": "画素に隠されたメタデータ（Stealth PNGInfo）が残っていないか確認できませんでした。",
+    "stealthRemains": "画素に隠されたメタデータ（Stealth PNGInfo）を消せませんでした。",
     "formatFallback": "このブラウザは {format} を書き出せないため、{actual} で保存しました。"
   },
   "copyTab": {

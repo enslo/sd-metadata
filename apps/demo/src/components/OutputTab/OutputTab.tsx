@@ -101,7 +101,7 @@ export function OutputTab({
       }
       // Convert the loaded image via canvas, then write the metadata
       const converted = await convertImageFormat(fileData, target);
-      const { data, suffix, warning } = applyMetadata(
+      const { data, suffix, warning } = await applyMetadata(
         converted.data,
         parseResult,
         { mode, metadataFormat, metadata, extras },
