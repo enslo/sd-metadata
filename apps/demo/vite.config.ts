@@ -23,7 +23,12 @@ export default defineConfig({
     alias: {
       // In local development, use the parent directory's source code directly
       // In production build (Cloudflare Pages), use the npm package
+      // The subpath comes first: an alias also matches what starts with it
       ...(process.env.NODE_ENV !== 'production' && {
+        '@enslo/sd-metadata/strip': resolve(
+          import.meta.dirname,
+          '../../packages/core/src/strip.ts',
+        ),
         '@enslo/sd-metadata': resolve(
           import.meta.dirname,
           '../../packages/core/src/index.ts',

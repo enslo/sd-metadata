@@ -8,6 +8,7 @@ import type {
   WriteWarning,
 } from '@enslo/sd-metadata';
 import { embed, write } from '@enslo/sd-metadata';
+import { type StripWarning, strip } from '@enslo/sd-metadata/strip';
 import type { I18nMessages } from '../i18n';
 
 export type MetadataMode = 'keep' | 'strip' | 'edit';
@@ -65,8 +66,11 @@ export interface WrittenImage {
   data: Uint8Array;
   /** Describes what was written; empty when the metadata was kept as it is */
   suffix: string;
-  /** Set when write() left some or all of the metadata out */
-  warning?: WriteWarning;
+  /**
+   * Set when write() left some or all of the metadata out, or when strip()
+   * could not vouch for the pixels
+   */
+  warning?: WriteWarning | StripWarning;
 }
 
 /**
@@ -75,16 +79,19 @@ export interface WrittenImage {
  * When the loaded metadata cannot be carried into the target format,
  * write() returns the image without it and a warning; the suffix then
  * says so, as it does for an explicit strip.
+ *
+ * Removing goes through strip() rather than an empty write: it also takes
+ * Stealth PNGInfo out of the pixels, where an empty write leaves it.
  */
-export function applyMetadata(
+export async function applyMetadata(
   baseData: Uint8Array,
   parseResult: ParseResult,
   plan: OutputPlan,
-): WrittenImage {
+): Promise<WrittenImage> {
   if (plan.mode === 'strip') {
-    const result = write(baseData, { status: 'empty' });
+    const result = await strip(baseData);
     if (!result.ok) throw new Error(result.error.type);
-    return { data: result.value, suffix: '_noinfo' };
+    return { data: result.value, suffix: '_noinfo', warning: result.warning };
   }
   if (plan.mode === 'edit') {
     const result = embed(baseData, { ...plan.metadata, extras: plan.extras });
@@ -103,12 +110,19 @@ export function applyMetadata(
   return { data: result.value, suffix: lostAll ? '_noinfo' : '', warning };
 }
 
-/** The notice to show the user for a write warning */
+/** The notice to show the user for a write or strip warning */
 export function describeWarning(
-  warning: WriteWarning,
+  warning: WriteWarning | StripWarning,
   t: I18nMessages['outputTab'],
 ): string {
-  return warning.reason === 'segmentTooLarge'
-    ? t.segmentTooLarge
-    : t.metadataDropped;
+  switch (warning.type) {
+    case 'stealthUnchecked':
+      return t.stealthUnchecked;
+    case 'stealthRemains':
+      return t.stealthRemains;
+    default:
+      return warning.reason === 'segmentTooLarge'
+        ? t.segmentTooLarge
+        : t.metadataDropped;
+  }
 }

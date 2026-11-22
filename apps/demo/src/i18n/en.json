@@ -105,6 +105,8 @@
     "previewEmpty": "Fill in at least a prompt to see a preview",
     "metadataDropped": "The metadata cannot be carried into this format, so the file was saved without it.",
     "segmentTooLarge": "Part of the metadata did not fit a JPEG segment and was left out.",
+    "stealthUnchecked": "The pixels could not be checked for hidden metadata (Stealth PNGInfo), so some may remain.",
+    "stealthRemains": "Metadata hidden in the pixels (Stealth PNGInfo) could not be removed.",
     "formatFallback": "This browser cannot encode {format}; the image was saved as {actual}."
   },
   "copyTab": {
