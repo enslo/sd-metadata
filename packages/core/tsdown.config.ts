@@ -18,6 +18,7 @@ export default defineConfig([
     fixedExtension: false,
     outputOptions: {
       entryFileNames: 'index.global.js',
+      comments: { annotation: false },
     },
   },
 ]);
