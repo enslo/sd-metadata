@@ -1,50 +1,45 @@
 /**
- * Simple chunk converter utilities
+ * Simple chunk conversion utilities
  *
- * Factory functions for converters that simply copy a single chunk keyword
- * between PNG and JPEG/WebP formats, with encoding based on tool strategy.
+ * Handles conversion for tools that keep all their metadata as JSON in a
+ * single place (Ruined Fooocus, HuggingFace Space):
+ * - PNG: `parameters` tEXt chunk, non-ASCII characters as Unicode escapes
+ * - JPEG/WebP: Exif UserComment
  */
 
 import type { MetadataSegment, PngTextChunk } from '../types';
-import {
-  type ChunkEncodingStrategy,
-  createEncodedChunk,
-} from './chunk-encoding';
+import { createEncodedChunk } from './chunk-encoding';
 
 /**
- * Create a PNG-to-segments converter that extracts a single chunk by keyword
+ * Convert the `parameters` PNG chunk to JPEG/WebP segments
  *
- * @param keyword - The PNG chunk keyword to extract
- * @returns Converter function
+ * @param chunks - PNG text chunks
+ * @returns Metadata segments for JPEG/WebP
  */
-export function createPngToSegments(
-  keyword: string,
-): (chunks: PngTextChunk[]) => MetadataSegment[] {
-  return (chunks) => {
-    const chunk = chunks.find((c) => c.keyword === keyword);
-    return !chunk
-      ? []
-      : [{ source: { type: 'exifUserComment' }, data: chunk.text }];
-  };
+export function convertSimpleChunkPngToSegments(
+  chunks: PngTextChunk[],
+): MetadataSegment[] {
+  const chunk = chunks.find((c) => c.keyword === 'parameters');
+  return !chunk
+    ? []
+    : [{ source: { type: 'exifUserComment' }, data: chunk.text }];
 }
 
 /**
- * Create a segments-to-PNG converter that writes to a single chunk keyword
+ * Convert JPEG/WebP segments to the `parameters` PNG chunk
  *
- * @param keyword - The PNG chunk keyword to write
- * @param encodingStrategy - Encoding strategy to use
- * @returns Converter function
+ * @param segments - Metadata segments from JPEG/WebP
+ * @returns PNG text chunks
  */
-export function createSegmentsToPng(
-  keyword: string,
-  encodingStrategy: ChunkEncodingStrategy,
-): (segments: MetadataSegment[]) => PngTextChunk[] {
-  return (segments) => {
-    const userComment = segments.find(
-      (s) => s.source.type === 'exifUserComment',
-    );
-    if (!userComment) return [];
+export function convertSimpleChunkSegmentsToPng(
+  segments: MetadataSegment[],
+): PngTextChunk[] {
+  const userComment = segments.find((s) => s.source.type === 'exifUserComment');
+  if (!userComment) return [];
 
-    return createEncodedChunk(keyword, userComment.data, encodingStrategy);
-  };
+  return createEncodedChunk(
+    'parameters',
+    userComment.data,
+    'text-unicode-escape',
+  );
 }
