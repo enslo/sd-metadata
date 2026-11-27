@@ -1,6 +1,5 @@
 import type { GenerationSoftware } from '../types';
-import type { EntryRecord } from '../utils/entries';
-import { parseJson } from '../utils/json';
+import { type EntryRecord, parseEntryJson } from '../utils/entries';
 
 // =============================================================================
 // Detection Marker Strings
@@ -180,9 +179,10 @@ function detectUniqueKeywords(
   }
 
   // Check UserComment (Exif) first, then Comment (JPEG COM)
-  const comment = entryRecord.UserComment ?? entryRecord.Comment;
-  if (comment?.startsWith('{')) {
-    return detectFromCommentJson(comment);
+  const commentKey =
+    entryRecord.UserComment !== undefined ? 'UserComment' : 'Comment';
+  if (entryRecord[commentKey]?.startsWith('{')) {
+    return detectFromCommentJson(entryRecord, commentKey);
   }
 
   return null;
@@ -193,9 +193,14 @@ function detectUniqueKeywords(
  *
  * Handles PNG→JPEG/WebP conversions where chunks become JSON.
  */
-function detectFromCommentJson(comment: string): GenerationSoftware | null {
-  const result = parseJson(comment);
-  if (!result.ok || result.type !== 'object') return null;
+function detectFromCommentJson(
+  entryRecord: EntryRecord,
+  key: 'UserComment' | 'Comment',
+): GenerationSoftware | null {
+  // Parsed once per record: the parser of the detected software reads the
+  // same entry
+  const result = parseEntryJson(entryRecord, key);
+  if (!result?.ok || result.type !== 'object') return null;
   const parsed = result.value;
 
   // Unique key detection (InvokeAI, TensorArt, Stability Matrix, CivitAI)

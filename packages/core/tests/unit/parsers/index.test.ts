@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseMetadata } from '../../../src/parsers';
+import { segmentsToRecord } from '../../../src/utils/convert';
 
 const A1111_TEXT = [
   '1girl, solo',
@@ -62,5 +63,72 @@ describe('parseMetadata - ComfyUI and CivitAI fallbacks', () => {
 
     expect(result.ok && result.value.software).toBe('sd-webui');
     expect(result.ok && result.value.prompt).toBe('1girl, solo');
+  });
+
+  it('rejects a saveimage-plus envelope whose prompt is not a graph', () => {
+    const result = parseMetadata({
+      UserComment: '{"prompt": ["1girl, solo"], "workflow": {}}',
+    });
+
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('parseMetadata - JSON entries are parsed once', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('parses a ComfyUI graph in a UserComment once from segments to metadata', () => {
+    // As ComfyUI save nodes for JPEG/WebP store it: the API prompt and the
+    // UI workflow in one JSON object, which can be megabytes of text
+    const text = JSON.stringify({
+      prompt: {
+        3: {
+          class_type: 'KSampler',
+          inputs: {
+            seed: 42,
+            steps: 20,
+            cfg: 7,
+            sampler_name: 'euler_ancestral',
+            scheduler: 'normal',
+            denoise: 1,
+            model: ['4', 0],
+            positive: ['6', 0],
+            negative: ['7', 0],
+            latent_image: ['5', 0],
+          },
+        },
+        4: {
+          class_type: 'CheckpointLoaderSimple',
+          inputs: { ckpt_name: 'anything-v5.safetensors' },
+        },
+        5: {
+          class_type: 'EmptyLatentImage',
+          inputs: { width: 512, height: 768, batch_size: 1 },
+        },
+        6: {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: '1girl, solo', clip: ['4', 1] },
+        },
+        7: {
+          class_type: 'CLIPTextEncode',
+          inputs: { text: 'lowres', clip: ['4', 1] },
+        },
+      },
+      workflow: JSON.parse(UI_WORKFLOW),
+    });
+    const jsonParse = vi.spyOn(JSON, 'parse');
+
+    const result = parseMetadata(
+      segmentsToRecord([{ source: { type: 'exifUserComment' }, data: text }]),
+    );
+
+    expect(result.ok && result.value.software).toBe('comfyui');
+    expect(result.ok && result.value.prompt).toBe('1girl, solo');
+    expect(result.ok && result.value.sampling?.steps).toBe(20);
+    // Building the record, detecting the software and the parser all read
+    // the UserComment; none of them parses it or a part of it again
+    expect(jsonParse).toHaveBeenCalledTimes(1);
   });
 });

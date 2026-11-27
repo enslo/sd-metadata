@@ -4,8 +4,8 @@ import type {
   PngTextChunk,
   VideoTag,
 } from '../types';
-import type { EntryRecord } from './entries';
-import { parseJson } from './json';
+import { type EntryRecord, rememberEntryJson } from './entries';
+import { type JsonParseResult, parseJson } from './json';
 import { extractXmpEntries, isXmpKeyword } from './xmp';
 
 /**
@@ -83,11 +83,15 @@ export function segmentsToRecord(segments: MetadataSegment[]): EntryRecord {
       // Try to detect and expand NovelAI WebP format
       // Format: {"Comment": "{...}", "Software": "NovelAI", ...}
       if (text.startsWith('{')) {
-        const expanded = tryExpandNovelAIWebpFormat(text);
+        const parsed = parseJson(text);
+        const expanded = tryExpandNovelAIWebpFormat(parsed);
         if (expanded) {
           Object.assign(record, expanded);
           continue;
         }
+        // Any other JSON stays the UserComment entry: software detection
+        // and the parsers reuse this parse of it
+        rememberEntryJson(record, keyword, text, parsed);
       }
     }
 
@@ -105,11 +109,12 @@ export function segmentsToRecord(segments: MetadataSegment[]): EntryRecord {
  * - Comment: inner JSON string with actual parameters
  * - Source: model name and hash
  *
- * @param text - JSON text to try to expand
+ * @param outerParsed - Parse result of the JSON text to try to expand
  * @returns Entry record if NovelAI format, null otherwise
  */
-function tryExpandNovelAIWebpFormat(text: string): EntryRecord | null {
-  const outerParsed = parseJson(text);
+function tryExpandNovelAIWebpFormat(
+  outerParsed: JsonParseResult,
+): EntryRecord | null {
   if (!outerParsed.ok || outerParsed.type !== 'object') {
     return null;
   }

@@ -12,9 +12,9 @@ import type {
   SamplingSettings,
 } from '../types';
 import { Result } from '../types';
-import type { EntryRecord } from '../utils/entries';
+import { type EntryRecord, parseEntryJson } from '../utils/entries';
 import { withoutFloatNoise } from '../utils/float';
-import { parseJson } from '../utils/json';
+import { type JsonParseResult, parseJson } from '../utils/json';
 import { optionalLoras } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { trimTrailingNul } from '../utils/text';
@@ -65,8 +65,8 @@ import type { InternalParseResult, PartialMetadata } from './types';
  */
 export function parseComfyUI(entries: EntryRecord): InternalParseResult {
   // Find and parse prompt JSON
-  const promptText = findPromptJson(entries);
-  if (!promptText) {
+  const parsed = findPromptJson(entries);
+  if (!parsed) {
     // ComfyUI workflow-only chunk: UI state JSON without an accompanying
     // API "prompt" graph. The UI workflow format (nodes as an array, values
     // packed into positional `widgets_values`) is structurally incompatible
@@ -88,7 +88,6 @@ export function parseComfyUI(entries: EntryRecord): InternalParseResult {
     return Result.error({ type: 'unsupportedFormat' });
   }
 
-  const parsed = parseJson(promptText);
   if (!parsed.ok || parsed.type !== 'object') {
     return Result.error({
       type: 'parseError',
@@ -191,42 +190,60 @@ function cleanJsonString(json: string): string {
 // =============================================================================
 
 /**
- * Find ComfyUI prompt JSON from entry record
+ * Find the ComfyUI prompt JSON in an entry record and parse it
  *
  * PNG uses 'prompt', JPEG/WebP may use Comment, Description, or Make.
+ *
+ * @returns The parse result of the prompt (a failure when the entry holds
+ *   broken JSON), or undefined when no entry holds a prompt
  */
-function findPromptJson(entryRecord: EntryRecord): string | undefined {
+function findPromptJson(entryRecord: EntryRecord): JsonParseResult | undefined {
   // PNG format: prompt entry
   if (entryRecord.prompt) {
-    return cleanJsonString(entryRecord.prompt);
+    const cleaned = cleanJsonString(entryRecord.prompt);
+    return cleaned ? parseJson(cleaned) : undefined;
   }
 
   // JPEG/WebP format: may be in various entries
-  const candidates = [
-    entryRecord.UserComment,
-    entryRecord.ImageDescription,
-    entryRecord.Make,
-    entryRecord.Prompt, // save-image-extended uses this
-    entryRecord.Workflow, // Not a prompt, but may contain nodes info
+  const keys = [
+    'UserComment',
+    'ImageDescription',
+    'Make',
+    'Prompt', // save-image-extended uses this
+    'Workflow', // Not a prompt, but may contain nodes info
   ];
 
-  for (const candidate of candidates) {
+  for (const key of keys) {
+    const candidate = entryRecord[key];
     if (!candidate) continue;
 
     // Check if it's JSON that looks like ComfyUI prompt
     if (candidate.startsWith('{')) {
+      // A text that needs no cleaning is parsed once per record: software
+      // detection has read the same entry
       const cleaned = cleanJsonString(candidate);
-      const parsed = parseJson(cleaned);
-      if (!parsed.ok || parsed.type !== 'object') continue;
+      const parsed =
+        cleaned === candidate
+          ? parseEntryJson(entryRecord, key)
+          : parseJson(cleaned);
+      if (!parsed?.ok || parsed.type !== 'object') continue;
 
-      // Check if it's wrapped in {"prompt": {...}} format
-      if (parsed.value.prompt && typeof parsed.value.prompt === 'object') {
-        return JSON.stringify(parsed.value.prompt);
+      // Check if it's wrapped in {"prompt": {...}} format: the prompt is
+      // handed on as parsed, not serialized to be parsed again
+      const inner = parsed.value.prompt;
+      if (inner && typeof inner === 'object') {
+        return Array.isArray(inner)
+          ? { ok: true, type: 'array', value: inner }
+          : {
+              ok: true,
+              type: 'object',
+              value: inner as Record<string, unknown>,
+            };
       }
       // Check for nodes with class_type
       const values = Object.values(parsed.value);
       if (values.some((v) => v && typeof v === 'object' && 'class_type' in v)) {
-        return cleaned; // Return cleaned JSON, not original candidate
+        return parsed;
       }
     }
   }
