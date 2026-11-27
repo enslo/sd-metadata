@@ -46,8 +46,13 @@ export function parseMetadata(entries: EntryRecord): InternalParseResult {
 function routeToParser(entries: EntryRecord): InternalParseResult {
   // Detect software from entries
   const software = detectSoftware(entries);
+  if (software === null) {
+    return Result.error({ type: 'unsupportedFormat' });
+  }
 
-  // Route to appropriate parser based on detected software
+  // Route to appropriate parser based on detected software. There is no
+  // default case on purpose: every software returns from a case of its own,
+  // so one added to GenerationSoftware without a case does not compile.
   switch (software) {
     case 'novelai':
       return parseNovelAI(entries);
@@ -130,8 +135,5 @@ function routeToParser(entries: EntryRecord): InternalParseResult {
 
     case 'kusart':
       return parseKusArt(entries);
-
-    default:
-      return Result.error({ type: 'unsupportedFormat' });
   }
 }
