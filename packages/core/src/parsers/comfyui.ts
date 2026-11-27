@@ -24,16 +24,9 @@ import {
   extractExtraMetadata,
 } from './comfyui-civitai';
 import { flatScanComfyMetadata } from './comfyui-flat-scan';
-import { extractComfyLoras } from './comfyui-loras';
 import {
   type ClassifiedNodes,
-  calculateScale,
   classifyNodes,
-  extractClipSkip,
-  extractDimensions,
-  extractModel,
-  extractPromptTexts,
-  extractSampling,
   findHiresSampler,
   findModelLoaders,
   isNodeReference,
@@ -41,8 +34,16 @@ import {
   resolveStringInput,
   toNodeGraph,
   upstreamNodeIds,
-  wiredConditioning,
-} from './comfyui-nodes';
+} from './comfyui-graph';
+import { extractComfyLoras } from './comfyui-loras';
+import { extractPromptTexts, wiredConditioning } from './comfyui-prompts';
+import {
+  calculateScale,
+  extractClipSkip,
+  extractDimensions,
+  extractModel,
+  extractSampling,
+} from './comfyui-settings';
 import type { InternalParseResult, PartialMetadata } from './types';
 
 // =============================================================================

@@ -6,7 +6,7 @@ import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { trimTrailingNul } from '../utils/text';
 import { extractComfyUIMetadata } from './comfyui';
-import { toNodeGraph } from './comfyui-nodes';
+import { toNodeGraph } from './comfyui-graph';
 import type { InternalParseResult } from './types';
 
 /**

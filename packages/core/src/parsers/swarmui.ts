@@ -5,7 +5,7 @@ import { parseJson } from '../utils/json';
 import { lora, optionalLoras, toWeight } from '../utils/lora';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
-import { toNodeGraph } from './comfyui-nodes';
+import { toNodeGraph } from './comfyui-graph';
 import type { InternalParseResult } from './types';
 
 /**

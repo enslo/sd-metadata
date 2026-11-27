@@ -15,7 +15,7 @@ import type { EntryRecord } from '../utils/entries';
 import { parseJson } from '../utils/json';
 import { trimObject } from '../utils/object';
 import { toSeedString } from '../utils/seed';
-import { calculateScale } from './comfyui-nodes';
+import { calculateScale } from './comfyui-settings';
 
 // =============================================================================
 // Types
