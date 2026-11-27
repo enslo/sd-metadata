@@ -5,6 +5,7 @@
  */
 
 import type {
+  GenerationSoftware,
   MetadataSegment,
   ParseResult,
   PngTextChunk,
@@ -46,7 +47,10 @@ import {
   convertNovelaiPngToSegments,
   convertNovelaiSegmentsToPng,
 } from './novelai';
-import { createPngToSegments, createSegmentsToPng } from './simple-chunk';
+import {
+  convertSimpleChunkPngToSegments,
+  convertSimpleChunkSegmentsToPng,
+} from './simple-chunk';
 import {
   convertStabilityMatrixPngToSegments,
   convertStabilityMatrixSegmentsToPng,
@@ -132,9 +136,9 @@ export function convertMetadata(
 
   const software = parseResult.metadata.software;
 
-  // Get converter for detected software
-  const converter = softwareConverters[software];
-  if (!converter) {
+  // Get the converter pair for detected software
+  const converters = softwareConverters[software];
+  if (!converters) {
     // This should never happen if software is a valid GenerationSoftware
     return Result.error({
       type: 'unsupportedSoftware',
@@ -142,16 +146,10 @@ export function convertMetadata(
     });
   }
 
-  return converter(raw, targetFormat);
+  return convertRaw(raw, targetFormat, converters);
 }
 
-// Type for converter function
-type ConverterFn = (
-  raw: RawMetadata,
-  targetFormat: ConversionTargetFormat,
-) => ConversionResult;
-
-// Type for PNG↔segment conversion functions
+// PNG↔segment conversion functions of one tool
 type PngToSegmentsFn = (chunks: PngTextChunk[]) => MetadataSegment[];
 type PngRaw = Extract<RawMetadata, { format: 'png' }>;
 // A converter answers with text chunks, or with text chunks plus the
@@ -159,162 +157,109 @@ type PngRaw = Extract<RawMetadata, { format: 'png' }>;
 type SegmentsToPngFn = (
   segments: MetadataSegment[],
 ) => PngTextChunk[] | Omit<PngRaw, 'format'>;
+type ConverterPair = readonly [PngToSegmentsFn, SegmentsToPngFn];
 
 /**
- * Factory function to create format converters
+ * Convert raw metadata to another format with a tool's pair of converters
  *
- * All converters follow the same pattern:
+ * All tools follow the same pattern:
  * - PNG → JPEG/WebP: convert chunks to segments; segments already held in
  *   an eXIf chunk are carried over as they are
  * - JPEG/WebP → PNG: convert segments to chunks (or to an eXIf chunk)
  * - Same format: return as-is
  */
-function createFormatConverter(
-  pngToSegments: PngToSegmentsFn,
-  segmentsToPng: SegmentsToPngFn,
-): ConverterFn {
-  return (raw, targetFormat) => {
-    if (raw.format === 'png') {
-      // PNG → same format: return as-is
-      if (targetFormat === 'png') {
-        return Result.ok(raw);
-      }
-      // PNG → JPEG/WebP
-      const segments = [
-        ...(raw.chunks.length > 0 ? pngToSegments(raw.chunks) : []),
-        ...(raw.exif ?? []),
-      ];
-      return Result.ok({ format: targetFormat, segments });
+function convertRaw(
+  raw: RawMetadata,
+  targetFormat: ConversionTargetFormat,
+  [pngToSegments, segmentsToPng]: ConverterPair,
+): ConversionResult {
+  if (raw.format === 'png') {
+    // PNG → same format: return as-is
+    if (targetFormat === 'png') {
+      return Result.ok(raw);
     }
+    // PNG → JPEG/WebP
+    const segments = [
+      ...(raw.chunks.length > 0 ? pngToSegments(raw.chunks) : []),
+      ...(raw.exif ?? []),
+    ];
+    return Result.ok({ format: targetFormat, segments });
+  }
 
-    // JPEG/WebP → JPEG/WebP: just copy segments
-    if (targetFormat === 'jpeg' || targetFormat === 'webp') {
-      return Result.ok({ format: targetFormat, segments: raw.segments });
-    }
+  // JPEG/WebP → JPEG/WebP: just copy segments
+  if (targetFormat === 'jpeg' || targetFormat === 'webp') {
+    return Result.ok({ format: targetFormat, segments: raw.segments });
+  }
 
-    // JPEG/WebP → PNG
-    const png = segmentsToPng(raw.segments);
-    return Result.ok(
-      Array.isArray(png)
-        ? { format: 'png', chunks: png }
-        : { format: 'png', ...png },
-    );
-  };
+  // JPEG/WebP → PNG
+  const png = segmentsToPng(raw.segments);
+  return Result.ok(
+    Array.isArray(png)
+      ? { format: 'png', chunks: png }
+      : { format: 'png', ...png },
+  );
 }
 
-// Create converters using factory
-const convertNovelai = createFormatConverter(
-  convertNovelaiPngToSegments,
-  convertNovelaiSegmentsToPng,
-);
-
-const convertA1111 = createFormatConverter(
+// Pairs shared by several tools
+const a1111: ConverterPair = [
   convertA1111PngToSegments,
   convertA1111SegmentsToPng,
-);
-
-const convertComfyUI = createFormatConverter(
-  convertComfyUIPngToSegments,
-  convertComfyUISegmentsToPng,
-);
-
-const convertEasyDiffusion = createFormatConverter(
-  convertEasyDiffusionPngToSegments,
-  convertEasyDiffusionSegmentsToPng,
-);
-
-const convertFooocus = createFormatConverter(
-  convertFooocusPngToSegments,
-  convertFooocusSegmentsToPng,
-);
-
-const convertRuinedFooocus = createFormatConverter(
-  createPngToSegments('parameters'),
-  createSegmentsToPng('parameters', 'text-unicode-escape'),
-);
-
-const convertSwarmUI = createFormatConverter(
-  convertSwarmUIPngToSegments,
-  convertSwarmUISegmentsToPng,
-);
-
-const convertInvokeAI = createFormatConverter(
-  convertInvokeAIPngToSegments,
-  convertInvokeAISegmentsToPng,
-);
-
-const convertHfSpace = createFormatConverter(
-  createPngToSegments('parameters'),
-  createSegmentsToPng('parameters', 'text-unicode-escape'),
-);
-
-const convertDrawThings = createFormatConverter(
-  convertDrawThingsPngToSegments,
-  convertDrawThingsSegmentsToPng,
-);
-
-const convertCivitai = createFormatConverter(
-  convertCivitaiPngToSegments,
-  convertCivitaiSegmentsToPng,
-);
-
-const convertStabilityMatrix = createFormatConverter(
-  convertStabilityMatrixPngToSegments,
-  convertStabilityMatrixSegmentsToPng,
-);
-
-const convertDezgo = createFormatConverter(
-  convertDezgoPngToSegments,
-  convertDezgoSegmentsToPng,
-);
-
-const convertKusArt = createFormatConverter(
-  convertKusArtPngToSegments,
-  convertKusArtSegmentsToPng,
-);
-
-const convertTensorArt = createFormatConverter(
-  convertTensorArtPngToSegments,
-  convertTensorArtSegmentsToPng,
-);
+];
+const simpleChunk: ConverterPair = [
+  convertSimpleChunkPngToSegments,
+  convertSimpleChunkSegmentsToPng,
+];
 
 /**
- * Lookup table: software name → converter function
+ * Lookup table: software name → its pair of converters
+ *
+ * The table holds function references only. Nothing is called while the
+ * module loads, so a bundler drops every converter from a bundle that
+ * never calls convertMetadata().
  */
-const softwareConverters = {
+const softwareConverters: Record<GenerationSoftware, ConverterPair> = {
   // NovelAI
-  novelai: convertNovelai,
+  novelai: [convertNovelaiPngToSegments, convertNovelaiSegmentsToPng],
   // A1111-format (sd-webui, forge family, sd-next)
-  'sd-webui': convertA1111,
-  'sd-next': convertA1111,
-  forge: convertA1111,
-  'forge-classic': convertA1111,
-  'forge-neo': convertA1111,
-  reforge: convertA1111,
-  'easy-reforge': convertA1111,
+  'sd-webui': a1111,
+  'sd-next': a1111,
+  forge: a1111,
+  'forge-classic': a1111,
+  'forge-neo': a1111,
+  reforge: a1111,
+  'easy-reforge': a1111,
   // CivitAI Orchestration format
-  civitai: convertCivitai,
+  civitai: [convertCivitaiPngToSegments, convertCivitaiSegmentsToPng],
   // ComfyUI-format
-  comfyui: convertComfyUI,
+  comfyui: [convertComfyUIPngToSegments, convertComfyUISegmentsToPng],
   // TensorArt (per-chunk encoding: generation_data uses raw UTF-8)
-  tensorart: convertTensorArt,
+  tensorart: [convertTensorArtPngToSegments, convertTensorArtSegmentsToPng],
   // Stability Matrix (per-chunk encoding: parameters uses raw UTF-8)
-  'stability-matrix': convertStabilityMatrix,
+  'stability-matrix': [
+    convertStabilityMatrixPngToSegments,
+    convertStabilityMatrixSegmentsToPng,
+  ],
   // Easy Diffusion
-  easydiffusion: convertEasyDiffusion,
+  easydiffusion: [
+    convertEasyDiffusionPngToSegments,
+    convertEasyDiffusionSegmentsToPng,
+  ],
   // Fooocus variants
-  fooocus: convertFooocus,
-  'ruined-fooocus': convertRuinedFooocus,
+  fooocus: [convertFooocusPngToSegments, convertFooocusSegmentsToPng],
+  'ruined-fooocus': simpleChunk,
   // SwarmUI
-  swarmui: convertSwarmUI,
+  swarmui: [convertSwarmUIPngToSegments, convertSwarmUISegmentsToPng],
   // InvokeAI
-  invokeai: convertInvokeAI,
+  invokeai: [convertInvokeAIPngToSegments, convertInvokeAISegmentsToPng],
   // HuggingFace Space
-  'hf-space': convertHfSpace,
+  'hf-space': simpleChunk,
   // Draw Things (XMP format)
-  'draw-things': convertDrawThings,
+  'draw-things': [
+    convertDrawThingsPngToSegments,
+    convertDrawThingsSegmentsToPng,
+  ],
   // Dezgo (YAML in the EXIF UserComment)
-  dezgo: convertDezgo,
+  dezgo: [convertDezgoPngToSegments, convertDezgoSegmentsToPng],
   // KusArt (both chunks packed into the EXIF UserComment)
-  kusart: convertKusArt,
-} as const;
+  kusart: [convertKusArtPngToSegments, convertKusArtSegmentsToPng],
+};
