@@ -49,16 +49,14 @@ export function readPng(data: Uint8Array): Entries {
             tryUtf8(textData) ??
             str(data, nullIdx + 1, offset + length - nullIdx - 1);
         } else {
-          // Skip null + compression flag (1) + method (1), then two null-terminated strings
-          const pos = nullIdx + 3;
-          const langEnd = data.indexOf(0, pos);
-          const transEnd = langEnd < 0 ? -1 : data.indexOf(0, langEnd + 1);
-          if (langEnd < 0 || transEnd < 0) {
-            offset += length + 4;
-            continue;
-          }
-          entries[keyword] =
-            tryUtf8(data.subarray(transEnd + 1, offset + length)) ?? '';
+          // Skip null + compression flag (1) + method (1), then two null-terminated strings.
+          // Without a language terminator the second search starts over from
+          // the first byte, and its result is not used.
+          const langEnd = data.indexOf(0, nullIdx + 3);
+          const transEnd = data.indexOf(0, langEnd + 1);
+          if (langEnd >= 0 && transEnd >= 0)
+            entries[keyword] =
+              tryUtf8(data.subarray(transEnd + 1, offset + length)) ?? '';
         }
       }
     }
@@ -94,12 +92,11 @@ export function readJpeg(data: Uint8Array): Entries {
 
     const segLen = (data[offset + 2]! << 8) | data[offset + 3]!;
 
-    // APP1 (EXIF)
-    if (
-      marker === 0xe1 &&
-      offset + 10 <= data.length &&
-      str(data, offset + 4, 6) === 'Exif\0\0'
-    ) {
+    // APP1 (EXIF). No length check is needed in front of the identifier:
+    // str() reads bytes past the end of the data as NUL, so a file cut short
+    // right after "Exif" still matches, but it leaves no TIFF bytes and
+    // readExif returns nothing for it.
+    if (marker === 0xe1 && str(data, offset + 4, 6) === 'Exif\0\0') {
       Object.assign(
         entries,
         readExif(data.subarray(offset + 10, offset + 2 + segLen)),
@@ -160,47 +157,69 @@ export function readWebp(data: Uint8Array): Entries {
  * Parse EXIF/TIFF data and extract metadata entries.
  */
 function readExif(data: Uint8Array): Entries {
-  if (data.length < 8) return {};
-
+  const entries: Entries = {};
   const firstByte = data[0];
   const le = firstByte === 0x49; // "II" = little-endian (both bytes are identical per TIFF spec)
-  if (!le && firstByte !== 0x4d) return {}; // Not "MM" either
-
   const dv = dataview(data);
-  if (dv.getUint16(2, le) !== 42) return {}; // TIFF magic
+  // The readers are closures over the byte order, which keeps every call
+  // site (and scanIfd's parameter list) short
+  const u16 = (o: number) => dv.getUint16(o, le);
+  const u32 = (o: number) => dv.getUint32(o, le);
 
-  const entries: Entries = {};
-  const ifd0 = dv.getUint32(4, le);
+  // Too short, neither "II" nor "MM", or no TIFF magic (the magic is only
+  // read once the length check has passed)
+  if (data.length < 8 || (!le && firstByte !== 0x4d) || u16(2) !== 42)
+    return entries;
+
+  // Scan IFD entries and call the handler with each tag, its value bytes and
+  // the offset they start at.
+  const scanIfd = (
+    ifdOffset: number,
+    handler: (tag: number, tagData: Uint8Array, valOffset: number) => void,
+  ) => {
+    // `left` counts the entries still to read. The entry count is only read
+    // when its two bytes are inside the data, and the scan stops at the
+    // first entry that does not fit.
+    for (
+      let pos = ifdOffset + 2, left = pos > data.length ? 0 : u16(ifdOffset);
+      left-- && pos + 12 <= data.length;
+      pos += 12
+    ) {
+      const typeSize = [0, 1, 1, 2, 4, 8, 0, 1][u16(pos + 2)] ?? 1;
+      const size = u32(pos + 4) * typeSize;
+      const valOffset = size <= 4 ? pos + 8 : u32(pos + 8);
+
+      if (valOffset + size <= data.length)
+        handler(
+          u16(pos),
+          data.subarray(valOffset, valOffset + size),
+          valOffset,
+        );
+    }
+  };
 
   // Scan IFD0 for ImageDescription, Make, Model, UserComment, and Exif IFD pointer
   let exifIfdOffset = 0;
   const handleUserComment = (tagData: Uint8Array) => {
     const text = decodeUserComment(tagData);
     if (text) {
-      if (text.startsWith('{')) {
-        try {
-          const obj = JSON.parse(text) as Record<string, unknown>;
-          const software = obj.Software;
-          const comment = obj.Comment;
-          if (
-            typeof software === 'string' &&
-            software.startsWith('NovelAI') &&
-            typeof comment === 'string'
-          ) {
-            entries.Software = software;
-            entries.Comment = comment;
-            // Model name and hash, as in the PNG Source chunk
-            entries.Source = obj.Source as string;
-            return;
-          }
-        } catch {
-          // Not valid JSON — fall through to UserComment assignment.
-        }
-      }
-      entries.UserComment = text;
+      // Text that is not valid JSON leaves `obj` null and is kept as it is
+      const obj = text.startsWith('{') ? parseJson(text) : null;
+      const software = obj?.Software;
+      const comment = obj?.Comment;
+      if (
+        typeof software === 'string' &&
+        software.startsWith('NovelAI') &&
+        typeof comment === 'string'
+      ) {
+        entries.Software = software;
+        entries.Comment = comment;
+        // Model name and hash, as in the PNG Source chunk
+        entries.Source = obj!.Source as string;
+      } else entries.UserComment = text;
     }
   };
-  scanIfd(data, dv, ifd0, le, (tag, tagData) => {
+  scanIfd(u32(4), (tag, tagData, valOffset) => {
     // ImageDescription (0x010E) through Model (0x0110). Tools label the value
     // with the PNG chunk keyword it stands in for, so the label decides the
     // entry key: save-image-extended writes ImageDescription "Workflow: {...}"
@@ -213,16 +232,11 @@ function readExif(data: Uint8Array): Entries {
         // in front of JSON so values like "http://..." keep their text.
         const prefixMatch = text.match(/^([A-Za-z]+):(?:\s|(?=\{))/);
         if (prefixMatch) {
-          const key = prefixMatch[1];
-          if (key) entries[key] = text.slice(prefixMatch[0].length);
+          // The label group matched at least one letter
+          entries[prefixMatch[1]!] = text.slice(prefixMatch[0].length);
         } else {
-          entries[
-            tag === 0x010e
-              ? 'ImageDescription'
-              : tag === 0x010f
-                ? 'Make'
-                : 'Model'
-          ] = text;
+          // The three tags are consecutive, in this order
+          entries[['ImageDescription', 'Make', 'Model'][tag - 0x010e]!] = text;
         }
       }
     } else if (tag === 0x9286) {
@@ -230,50 +244,18 @@ function readExif(data: Uint8Array): Entries {
       handleUserComment(tagData);
     } else if (tag === 0x8769) {
       // Exif IFD pointer
-      exifIfdOffset = dv.getUint32(tagData.byteOffset - data.byteOffset, le);
+      exifIfdOffset = u32(valOffset);
     }
   });
 
   // Scan Exif IFD for UserComment (if not already found in IFD0)
   if (exifIfdOffset && !entries.UserComment && !entries.Software) {
-    scanIfd(data, dv, exifIfdOffset, le, (tag, tagData) => {
+    scanIfd(exifIfdOffset, (tag, tagData) => {
       if (tag === 0x9286) handleUserComment(tagData); // UserComment
     });
   }
 
   return entries;
-}
-
-/**
- * Scan IFD entries and call handler for each tag.
- */
-function scanIfd(
-  data: Uint8Array,
-  dv: DataView,
-  ifdOffset: number,
-  le: boolean,
-  handler: (tag: number, tagData: Uint8Array) => void,
-): void {
-  const u16 = (o: number) => dv.getUint16(o, le);
-  const u32 = (o: number) => dv.getUint32(o, le);
-  if (ifdOffset + 2 > data.length) return;
-  const count = u16(ifdOffset);
-  let pos = ifdOffset + 2;
-
-  for (let i = 0; i < count; i++) {
-    if (pos + 12 > data.length) return;
-    const tag = u16(pos);
-    const type = u16(pos + 2);
-    const valueCount = u32(pos + 4);
-    const typeSize = [0, 1, 1, 2, 4, 8, 0, 1][type] ?? 1;
-    const size = valueCount * typeSize;
-    const valOffset = size <= 4 ? pos + 8 : u32(pos + 8);
-
-    if (valOffset + size <= data.length) {
-      handler(tag, data.subarray(valOffset, valOffset + size));
-    }
-    pos += 12;
-  }
 }
 
 // ============================================================================
@@ -320,11 +302,10 @@ function decodeUserComment(data: Uint8Array): string | null {
   const prefix = str(data, 0, 8);
   const payload = data.subarray(8);
 
-  if (prefix === 'UNICODE\0') {
-    if (payload.length < 2) return null;
-    const isLE = payload[0] !== 0 && payload[1] === 0;
-    return decodeUtf16(payload, isLE);
-  }
+  // A zero second byte means little-endian. The first byte needs no check:
+  // when it is zero too, the text starts with a NUL and decodes to "" in
+  // either byte order, as does a payload shorter than one character.
+  if (prefix === 'UNICODE\0') return decodeUtf16(payload, payload[1] === 0);
 
   if (prefix === 'ASCII\0\0\0') {
     return decodeAscii(payload);
@@ -344,4 +325,19 @@ function decodeUtf16(data: Uint8Array, le: boolean): string {
     s += fromCharCode(code);
   }
   return s;
+}
+
+/**
+ * Safely parse JSON, returning null on failure. Lives here because the EXIF
+ * reader needs it too; extract.ts imports it.
+ */
+export function parseJson(
+  text: string | undefined,
+): Record<string, unknown> | null {
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 }

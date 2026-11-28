@@ -16,7 +16,7 @@
  *   Civitai, TensorArt, Fooocus, RuinedFooocus, EasyDiffusion, HF Space
  */
 
-import type { Entries } from './read';
+import { type Entries, parseJson } from './read';
 
 type JsonObject = Record<string, unknown>;
 
@@ -85,109 +85,90 @@ const PARAMS = 'parameters';
 const EASY_DIFF_KEY = 'use_stable_diffusion_model';
 
 // ============================================================================
-// Normalize — Pure Channeling (no parsing, no mutation)
+// Normalize — Pure Channeling (no parsing)
 // ============================================================================
 
 /**
- * Channel tool-specific entry keys into `entries.parameters`.
+ * Channel tool-specific keys of `src` into `entries.parameters`.
  *
- * Each key string appears exactly once in this loop to minimize IIFE size
- * (esbuild cannot mangle object property names).
+ * Each key string appears exactly once to minimize IIFE size (esbuild cannot
+ * mangle object property names).
  *
  * Matched keys and their tools:
  *   - "extraMetadata"     → Civitai (JPEG UserComment JSON)
  *   - "invokeai_metadata" → InvokeAI (PNG tEXt / JPEG UserComment JSON)
  *   - "generation_data"   → TensorArt (JPEG UserComment JSON)
  *
- * Returns a NEW Entries with the matched value routed to `parameters`.
- * If no key matches, returns the original `entries` reference unchanged
- * (enables identity check with `!==`).
+ * Writes into `entries`, which is the copy normalize() works on, and tells
+ * whether a key matched. A value that is already there is kept.
  */
 function channelKnownKeys(
   src: Record<string, unknown>,
   entries: Entries,
-): Entries {
-  for (const key of ['extraMetadata', 'invokeai_metadata', 'generation_data']) {
-    if (src[key]) {
-      const result: Entries = {
-        ...entries,
-        // PNG tEXt chunks can have trailing null bytes — strip them. The
-        // lookbehind starts the match at the first NUL of the run only, so a
-        // byte after the run does not make the regex retry from every NUL.
-        [PARAMS]:
-          entries[PARAMS] ??
-          stringifyValue(src[key]).replace(/(?<!\0)\0+$/, ''),
-      };
-      // TensorArt stores ComfyUI workflow JSON in a separate "prompt" key.
-      // Preserve it so extract() can merge ComfyUI nodes with TensorArt metadata.
-      if (src.prompt) result.prompt ??= stringifyValue(src.prompt);
-      return result;
-    }
+): boolean {
+  const key = ['extraMetadata', 'invokeai_metadata', 'generation_data'].find(
+    (k) => src[k],
+  );
+  if (key) {
+    // PNG tEXt chunks can have trailing null bytes — strip them. The
+    // lookbehind starts the match at the first NUL of the run only, so a
+    // byte after the run does not make the regex retry from every NUL.
+    entries[PARAMS] ??= stringifyValue(src[key]).replace(/(?<!\0)\0+$/, '');
+    // TensorArt stores ComfyUI workflow JSON in a separate "prompt" key.
+    // Preserve it so extract() can merge ComfyUI nodes with TensorArt metadata.
+    if (src.prompt) entries.prompt ??= stringifyValue(src.prompt);
   }
-  return entries;
+  return !!key;
 }
 
 /**
  * Normalize heterogeneous entry formats into a uniform shape.
  *
- * Pure function — returns a new Entries without mutating the input.
- * Only identifies WHERE data lives and channels it to `entries.parameters`.
- * All actual parsing/extraction is deferred to extract().
+ * Returns a copy of the entries with the generation data channeled to
+ * `parameters` (and a ComfyUI graph to `prompt`); the input is not modified.
+ * The copy is made once and filled with `??=`, which costs fewer bytes than
+ * spreading a new object in every branch. Only identifies WHERE data lives:
+ * all actual parsing/extraction is deferred to extract().
  *
  * Entry points by image format:
  *   PNG  → entries already has named keys (parameters, prompt, Comment, etc.)
  *   JPEG → metadata is in EXIF UserComment (plain text or JSON blob)
  *   WebP → same as JPEG (EXIF-based)
  */
-function normalize(entries: Entries): Entries {
+function normalize(rawEntries: Entries): Entries {
+  const entries = { ...rawEntries };
+  // All JPEG/WebP paths except NovelAI go through UserComment.
+  const uc = entries.UserComment;
+
   // NovelAI (PNG/WebP): metadata is in the Comment field.
   // When Software starts with "NovelAI", Comment is always present.
   if (entries.Software?.startsWith('NovelAI'))
-    return { ...entries, [PARAMS]: entries[PARAMS] ?? entries.Comment! };
-
-  // All remaining JPEG/WebP paths go through UserComment.
-  const uc = entries.UserComment;
-
+    entries[PARAMS] ??= entries.Comment!;
   // No UserComment: check top-level entries for tool-specific keys.
   // This handles PNG images from InvokeAI, Civitai, TensorArt where
   // the data is stored in named PNG tEXt chunks.
-  if (!uc) return channelKnownKeys(entries, entries);
-
-  // Plain-text UserComment (not JSON).
-  if (!uc.startsWith('{')) {
-    // A1111 / Forge / reForge (JPEG): UserComment contains A1111-format
-    // text with "Steps:" marker. Channel it directly to parameters.
-    if (uc.includes('Steps:'))
-      return { ...entries, [PARAMS]: entries[PARAMS] ?? uc };
-    // Unknown plain text — return unchanged.
-    return entries;
+  else if (!uc) channelKnownKeys(entries, entries);
+  // Plain-text UserComment (not JSON). A1111 / Forge / reForge (JPEG) write
+  // A1111-format text with a "Steps:" marker: channel it to parameters.
+  // Unknown plain text is left where it is.
+  else if (!uc.startsWith('{')) {
+    if (uc.includes('Steps:')) entries[PARAMS] ??= uc;
+  } else {
+    // JSON UserComment — parse the envelope to inspect keys. Civitai,
+    // InvokeAI, TensorArt (JPEG) embed their data as nested JSON.
+    const obj = parseJson(uc);
+    if (obj && !channelKnownKeys(obj, entries)) {
+      // ComfyUI (JPEG): UserComment has both "prompt" (node graph) and
+      // "workflow" keys. Extract the prompt for flatScan in extract().
+      if ('prompt' in obj && 'workflow' in obj)
+        entries.prompt ??= stringifyValue(obj.prompt);
+      // A1111 / Forge (JPEG variant): some tools wrap A1111-format text
+      // inside a JSON object with a "parameters" key. Any other JSON goes
+      // to parameters whole, so extract() can attempt tool detection on it.
+      else entries[PARAMS] ??= PARAMS in obj ? stringifyValue(obj[PARAMS]) : uc;
+    }
   }
-
-  // JSON UserComment — parse the envelope to inspect keys.
-  const obj = parseJson(uc);
-  if (!obj) return entries;
-
-  // Check for tool-specific keys inside the JSON envelope.
-  // Civitai, InvokeAI, TensorArt (JPEG) embed their data as nested JSON.
-  const channeled = channelKnownKeys(obj, entries);
-  if (channeled !== entries) return channeled;
-
-  // ComfyUI (JPEG): UserComment has both "prompt" (node graph) and
-  // "workflow" keys. Extract the prompt for flatScan in extract().
-  if ('prompt' in obj && 'workflow' in obj)
-    return { ...entries, prompt: entries.prompt ?? stringifyValue(obj.prompt) };
-
-  // A1111 / Forge (JPEG variant): some tools wrap A1111-format text
-  // inside a JSON object with a "parameters" key.
-  if (PARAMS in obj)
-    return {
-      ...entries,
-      [PARAMS]: entries[PARAMS] ?? stringifyValue(obj[PARAMS]),
-    };
-
-  // Unknown JSON structure — treat the entire UserComment as parameters
-  // so extract() can attempt tool detection on it.
-  return { ...entries, [PARAMS]: entries[PARAMS] ?? uc };
+  return entries;
 }
 
 // ============================================================================
@@ -204,56 +185,55 @@ export function extract(rawEntries: Entries): string {
   // Hoisted: used in both the JSON block and the ComfyUI-only fallback below.
   const prompt = entries.prompt ?? entries.Prompt;
 
+  // Parsed once for the SwarmUI check and the JSON block. Plain A1111 text
+  // does not parse and leaves this null.
+  const obj = parseJson(params);
+
   // --- SwarmUI ---------------------------------------------------------
   // SwarmUI wraps its metadata in a "sui_image_params" key.
-  if (params?.includes('sui_image_params')) {
-    // A1111 text may mention the key too; such text is returned below
-    const obj = parseJson(params);
-    if (obj)
-      return buildA1111(
-        extractCommon((obj.sui_image_params ?? obj) as JsonObject),
-      );
-  }
+  // A1111 text may mention the key too; such text is returned below
+  if (obj && params!.includes('sui_image_params'))
+    return buildA1111(
+      extractCommon((obj.sui_image_params ?? obj) as JsonObject),
+    );
 
   // --- Plain text (A1111 / Forge / reForge) ----------------------------
   // Already in A1111 format — return as-is.
   if (params && !params.startsWith('{')) return params;
 
   // --- JSON parameters -------------------------------------------------
-  if (params) {
-    const obj = parseJson(params);
-    if (obj) {
-      // Try specific tool detectors (RuinedFooocus, EasyDiffusion,
-      // Fooocus, HF Space, NovelAI).
-      // NovelAI keeps the model in Source, outside the Comment JSON.
-      if (entries.Source) obj.Source = entries.Source;
-      const result = tryJsonTool(obj, params);
-      if (result) return result;
+  // `obj` is only set when params is a non-empty text, hence the `params!`
+  if (obj) {
+    // Try specific tool detectors (RuinedFooocus, EasyDiffusion,
+    // Fooocus, HF Space, NovelAI).
+    // NovelAI keeps the model in Source, outside the Comment JSON.
+    if (entries.Source) obj.Source = entries.Source;
+    const result = tryJsonTool(obj, params!);
+    if (result) return result;
 
-      // ComfyUI (PNG): node graph stored directly in parameters.
-      if (params.includes(CT)) return buildA1111(flatScan(params));
+    // ComfyUI (PNG): node graph stored directly in parameters.
+    if (params!.includes(CT)) return buildA1111(flatScan(params!));
 
-      // Generic JSON fallback: extract common fields.
-      // Handles InvokeAI, Civitai, TensorArt, and other tools that
-      // use standard field names (prompt, seed, steps, cfg, etc.).
-      const base = extractCommon(obj);
+    // Generic JSON fallback: extract common fields.
+    // Handles InvokeAI, Civitai, TensorArt, and other tools that
+    // use standard field names (prompt, seed, steps, cfg, etc.).
+    const base = extractCommon(obj);
 
-      // TensorArt + ComfyUI hybrid: TensorArt stores generation
-      // metadata in generation_data (→ params), but the ComfyUI
-      // node graph is in a separate prompt field. Merge them:
-      // flatScan provides seed/steps/cfg/sampler from ComfyUI nodes,
-      // base provides prompt/negative/model/hash from TensorArt.
-      if (prompt?.includes(CT))
-        return buildA1111({
-          ...flatScan(prompt),
-          p: base.p,
-          n: base.n,
-          md: base.md,
-          mh: base.mh,
-        });
+    // TensorArt + ComfyUI hybrid: TensorArt stores generation
+    // metadata in generation_data (→ params), but the ComfyUI
+    // node graph is in a separate prompt field. Merge them:
+    // flatScan provides seed/steps/cfg/sampler from ComfyUI nodes,
+    // base provides prompt/negative/model/hash from TensorArt.
+    if (prompt?.includes(CT))
+      return buildA1111({
+        ...flatScan(prompt),
+        p: base.p,
+        n: base.n,
+        md: base.md,
+        mh: base.mh,
+      });
 
-      return buildA1111(base);
-    }
+    return buildA1111(base);
   }
 
   // --- EasyDiffusion (PNG, non-JSON parameters) ------------------------
@@ -305,8 +285,7 @@ function readC2paName(manifest: string | undefined): string {
 
   // The value of a `name` key that starts within `max` bytes of a marker. The
   // window is kept short so a stray "...name" elsewhere cannot be misread.
-  const nameAfter = (marker: string, max: number): string => {
-    const at = manifest.indexOf(marker);
+  const nameAfter = (at: number, max: number): string => {
     const p = manifest.indexOf('dname', at);
     return at < 0 || p < 0 || p > at + max ? '' : readCborText(manifest, p + 5);
   };
@@ -316,8 +295,8 @@ function readC2paName(manifest: string | undefined): string {
   const agent = manifest.indexOf('softwareAgent');
   return (
     (agent < 0 ? '' : readCborText(manifest, agent + 13)) ||
-    nameAfter('softwareAgent', 14) ||
-    nameAfter('claim_generator_info', 256)
+    nameAfter(agent, 14) ||
+    nameAfter(manifest.indexOf('claim_generator_info'), 256)
   );
 }
 
@@ -359,25 +338,20 @@ function tryJsonTool(obj: JsonObject, text: string): string | null {
 
   // Fooocus: identified by having both "Model" (capital M) and "resolution"
   // keys. Resolution format: "1024x1024". Also has optional upscaler data.
-  if (text.includes('"Model"') && text.includes('"resolution"')) {
-    // The lookbehind starts a match at the first digit of a run only, so a
-    // long run of digits without an "x" is tried once, not from every digit
-    const [w, h] = parseDimensions(
-      asText(obj.resolution),
-      /(?<!\d)(\d+)\s*x\s*(\d+)/,
-    );
-    return buildA1111({ ...extractCommon(obj), w, h });
-  }
+  const fooocus = text.includes('"Model"') && text.includes('"resolution"');
 
   // HF Space / Civitai generator / Fooocus JSON scheme: identified by
   // "base_model" key.
   // Resolution format: "(1024, 1024)" (Python tuple string).
-  if ('base_model' in obj) {
-    const [w, h] = parseDimensions(
-      asText(obj.resolution),
-      /\(\s*(\d+)\s*,\s*(\d+)\s*\)/,
+  if (fooocus || 'base_model' in obj) {
+    // Both tools take their size from `resolution` alone; only the pattern
+    // differs. In the Fooocus one the lookbehind starts a match at the first
+    // digit of a run only, so a long run of digits without an "x" is tried
+    // once, not from every digit
+    const size = asText(obj.resolution).match(
+      fooocus ? /(?<!\d)(\d+)\s*x\s*(\d+)/ : /\(\s*(\d+)\s*,\s*(\d+)\s*\)/,
     );
-    return buildA1111({ ...extractCommon(obj), w, h });
+    return buildA1111({ ...extractCommon(obj), w: size?.[1], h: size?.[2] });
   }
 
   // NovelAI (PNG/WebP JSON): identified by "noise_schedule" key.
@@ -438,9 +412,10 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
         obj.scale,
     ),
     // InvokeAI quirk: stores the sampler name in the "scheduler" field
-    // and has no separate sampler field. If sa is empty, use sc as sa.
+    // and has no separate sampler field. If sa is empty, use sc as sa
+    // (and leave sc empty: `sa && sc` is "" then).
     sa: sa || sc,
-    sc: sa ? sc : undefined,
+    sc: sa && sc,
     w: asText(obj.width),
     h: asText(obj.height),
     // Model name: extensive fallback chain covering all known patterns.
@@ -453,28 +428,25 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
     // "baseModel.modelFileName" → TensorArt (nested object)
     // "use_stable_diffusion_model" → EasyDiffusion (full path, take filename)
     md:
-      asText(mod) ||
-      asText(obj.Model) ||
-      asText(obj.base_model) ||
-      asText(obj.base_model_name) ||
-      asText(base) ||
-      asText(mod?.name) ||
-      asText(base?.modelFileName) ||
-      asText(obj[EASY_DIFF_KEY]).split(/[\\/]/).pop(),
+      asText(
+        mod,
+        obj.Model,
+        obj.base_model,
+        obj.base_model_name,
+        base,
+        mod?.name,
+        base?.modelFileName,
+      ) || asText(obj[EASY_DIFF_KEY]).split(/[\\/]/).pop(),
     // Model hash: similar multi-tool fallback chain.
     // "Model hash"    → Fooocus
     // "model.hash"    → Civitai (nested)
     // "baseModel.hash" → TensorArt (nested)
-    mh:
-      asText(obj.base_model_hash) ||
-      asText(obj['Model hash']) ||
-      asText(mod?.hash) ||
-      asText(base?.hash),
+    mh: asText(obj.base_model_hash, obj['Model hash'], mod?.hash, base?.hash),
     cs: asText(obj.clip_skip ?? obj.clipSkip),
     // Hires/upscaler: use_upscaler (Fooocus, HF Space) → refiner* (SwarmUI)
-    hs: asText(up?.upscale_by) || asText(obj.refinerupscale),
-    hu: asText(up?.upscale_method) || asText(obj.refinerupscalemethod),
-    hd: asText(up?.upscaler_strength) || asText(obj.refinercontrolpercentage),
+    hs: asText(up?.upscale_by, obj.refinerupscale),
+    hu: asText(up?.upscale_method, obj.refinerupscalemethod),
+    hd: asText(up?.upscaler_strength, obj.refinercontrolpercentage),
     ht: asText(up?.upscale_steps),
   };
 }
@@ -503,11 +475,11 @@ function buildNovelAI(obj: JsonObject): string {
     ...extractCommon(obj),
     // Prefer v4 captions, fall back to legacy flat fields. The V5 web
     // client appends quoted texts as ", teXt: ..."; drop that block.
-    p: (asText(v4Caption?.base_caption) || asText(obj.prompt)).replace(
+    p: asText(v4Caption?.base_caption, obj.prompt).replace(
       /(^|, )teXt:(?!:).*/s,
       '',
     ),
-    n: asText(v4NegCaption?.base_caption) || asText(obj.uc),
+    n: asText(v4NegCaption?.base_caption, obj.uc),
     // img2img strength (Img2ImgRequest only)
     dn: asText(obj.strength),
     md: src?.[1] ?? asText(obj.Source),
@@ -546,13 +518,14 @@ function flatScan(json: string): GenerationParams {
   if (!nodes) return result;
 
   for (const key in nodes) {
-    const node = nodes[key] as JsonObject;
-    if (!node || typeof node !== 'object') continue;
-    const classType = asText(node[CT]);
-    const inputs = node.inputs as JsonObject | undefined;
+    // Only a node object can have inputs: null, a text or a number yields
+    // undefined here and is skipped, so `node!` below is safe.
+    const node = nodes[key] as JsonObject | null;
+    const inputs = node?.inputs as JsonObject | undefined;
     if (!inputs) continue;
+    const classType = asText(node![CT]);
 
-    if (/User Prompt/.test(asText((node._meta as JsonObject)?.title)))
+    if (/User Prompt/.test(asText((node!._meta as JsonObject)?.title)))
       up ||= asText(inputs.value);
 
     // --- Prompt text nodes -------------------------------------------
@@ -564,12 +537,13 @@ function flatScan(json: string): GenerationParams {
     // Unified classification: if class name contains "neg" → negative prompt,
     // otherwise first-come-first-served (1st → positive, 2nd → negative).
     if (/Text(Encode|.?Box)|ShowText|PromptStash/.test(classType)) {
-      const txt =
-        asText(inputs.text) ||
-        asText(inputs.prompt) ||
-        asText(inputs.Text) ||
-        asText(inputs.prompt_text) ||
-        asText(inputs.text_0);
+      const txt = asText(
+        inputs.text,
+        inputs.prompt,
+        inputs.Text,
+        inputs.prompt_text,
+        inputs.text_0,
+      );
       if (txt) {
         if (/neg/i.test(classType)) {
           result.n ??= txt;
@@ -584,7 +558,7 @@ function flatScan(json: string): GenerationParams {
     // Class-type guard is required here: "steps" and "seed" also appear
     // on non-sampler nodes (BasicScheduler, RandomNoise, etc.).
     if (classType.includes('Sampler')) {
-      result.se ||= asText(inputs.seed) || asText(inputs.noise_seed);
+      result.se ||= asText(inputs.seed, inputs.noise_seed);
       result.st ||= asText(inputs.steps);
       result.cf ||= asText(inputs.cfg);
       result.sa ||= asText(inputs.sampler_name);
@@ -594,7 +568,7 @@ function flatScan(json: string): GenerationParams {
     // --- Model loader nodes ------------------------------------------
     // ckpt_name / unet_name are unique to checkpoint and UNET loaders —
     // no class_type guard needed; unconditional ||= is safe here.
-    result.md ||= asText(inputs.ckpt_name) || asText(inputs.unet_name);
+    result.md ||= asText(inputs.ckpt_name, inputs.unet_name);
 
     // --- Latent image nodes (for dimensions) -------------------------
     result.w ||= asText(inputs.width);
@@ -617,48 +591,40 @@ function flatScan(json: string): GenerationParams {
  *   Line 3: comma-separated key-value pairs (Steps, Sampler, CFG, etc.)
  */
 function buildA1111(params: GenerationParams): string {
-  const lines: string[] = [];
-  if (params.p) lines.push(params.p);
-  if (params.n) lines.push(`Negative prompt: ${params.n}`);
+  // "" for an empty value (undefined or ""), which the lists below drop
+  const field = (key: string, value: string | undefined) =>
+    value ? `${key}: ${value}` : '';
 
-  const fields: string[] = [];
-  // addField only appends when value is non-empty (skips undefined and "").
-  const addField = (key: string, value: string | undefined) => {
-    if (value) fields.push(`${key}: ${value}`);
-  };
-
-  addField('Steps', params.st);
-  addField('Sampler', params.sa);
-  addField('Schedule type', params.sc);
-  addField('CFG scale', params.cf);
-  addField('Seed', params.se);
-  if (params.w && params.h) addField('Size', `${params.w}x${params.h}`);
-  addField('Model hash', params.mh);
-  addField('Model', params.md);
-  addField('Clip skip', params.cs);
-  // Denoising strength: dn (standard) or hd (Fooocus refiner percentage).
-  addField('Denoising strength', params.dn ?? params.hd);
-  addField('Hires upscale', params.hs);
-  addField('Hires steps', params.ht);
-  addField('Hires upscaler', params.hu);
-
-  if (fields.length) lines.push(fields.join(', '));
-  return lines.join('\n');
+  // Lines, then the fields of the last line: empty ones are filtered out
+  return [
+    params.p,
+    field('Negative prompt', params.n),
+    [
+      field('Steps', params.st),
+      field('Sampler', params.sa),
+      field('Schedule type', params.sc),
+      field('CFG scale', params.cf),
+      field('Seed', params.se),
+      field('Size', params.w && params.h && `${params.w}x${params.h}`),
+      field('Model hash', params.mh),
+      field('Model', params.md),
+      field('Clip skip', params.cs),
+      // Denoising strength: dn (standard) or hd (Fooocus refiner percentage).
+      field('Denoising strength', params.dn ?? params.hd),
+      field('Hires upscale', params.hs),
+      field('Hires steps', params.ht),
+      field('Hires upscaler', params.hu),
+    ]
+      .filter(Boolean)
+      .join(', '),
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // ============================================================================
 // Helpers
 // ============================================================================
-
-/** Safely parse JSON, returning null on failure. */
-function parseJson(text: string | undefined): JsonObject | null {
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as JsonObject;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Coerce a scalar to text. Strings pass through unchanged (a 64-bit seed
@@ -668,11 +634,18 @@ function parseJson(text: string | undefined): JsonObject | null {
  * ["95", 0] — becomes "".
  *
  * Every value ends up interpolated into A1111 text, so there is no reason to
- * hold numbers as numbers. Returning "" (falsy) enables `||` fallback chains:
- * `asText(a) || asText(b)`.
+ * hold numbers as numbers.
+ *
+ * Given several candidates, returns the first one that yields text, so
+ * `asText(a, b)` reads like `asText(a) || asText(b)` at a fraction of the
+ * bytes. An empty string is skipped like a missing value; a number never is
+ * (0 gives "0").
  */
-function asText(v: unknown): string {
-  return typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '';
+function asText(...values: unknown[]): string {
+  const found = values.find(
+    (v) => (typeof v === 'string' && v) || typeof v === 'number',
+  );
+  return `${found ?? ''}`;
 }
 
 /**
@@ -685,19 +658,4 @@ function stringifyValue(v: unknown): string {
   if (typeof v === 'string') return v;
   if (v && typeof v === 'object') return JSON.stringify(v);
   return '';
-}
-
-/**
- * Extract width/height from a dimension string using the given regex.
- * Different tools use different formats:
- *   - Fooocus:  "1024x1024"       → /(\d+)\s*x\s*(\d+)/
- *   - HF Space: "(1024, 1024)"    → /\(\s*(\d+)\s*,\s*(\d+)\s*\)/
- */
-function parseDimensions(
-  text: string | undefined,
-  pattern: RegExp,
-): [string?, string?] {
-  if (!text) return [];
-  const match = text.match(pattern);
-  return match ? [match[1], match[2]] : [];
 }

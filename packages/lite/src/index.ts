@@ -27,21 +27,18 @@ export function parse(input: Uint8Array | ArrayBuffer): string {
   // Format detection is intentionally loose (first 2 bytes only) to
   // minimize bundle size. False positives are harmless: the reader
   // will find no metadata and extract() returns "".
-
-  // PNG: 89 50 (full signature: 89 50 4E 47 0D 0A 1A 0A)
-  if (data[0] === 0x89 && data[1] === 0x50) {
-    return extract(readPng(data));
-  }
-
-  // JPEG: FF D8
-  if (data[0] === 0xff && data[1] === 0xd8) {
-    return extract(readJpeg(data));
-  }
-
-  // WebP: 52 49 (full signature: RIFF....WEBP)
-  if (data[0] === 0x52 && data[1] === 0x49) {
-    return extract(readWebp(data));
-  }
-
-  return '';
+  //
+  // The two bytes are compared as one number, which costs less than a pair
+  // of comparisons per format. Data of any other kind has no entries, and
+  // extract() returns "" for an empty set too.
+  const magic = (data[0]! << 8) | data[1]!;
+  return extract(
+    magic === 0x8950 // PNG (full signature: 89 50 4E 47 0D 0A 1A 0A)
+      ? readPng(data)
+      : magic === 0xffd8 // JPEG
+        ? readJpeg(data)
+        : magic === 0x5249 // WebP (full signature: RIFF....WEBP)
+          ? readWebp(data)
+          : {},
+  );
 }
