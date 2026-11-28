@@ -51,6 +51,16 @@ export const VENDOR_SAMPLES = [
     info: { vendor: 'google', source: 'c2pa', media: 'image' },
   },
   {
+    format: 'png',
+    filename: 'kling.png',
+    info: {
+      vendor: 'kuaishou',
+      product: 'Kling AI',
+      source: 'c2pa',
+      media: 'image',
+    },
+  },
+  {
     format: 'jpg',
     filename: 'gemini_3.1pro-latest.jpg',
     info: { vendor: 'google', source: 'c2pa', media: 'image' },
@@ -61,6 +71,16 @@ export const VENDOR_SAMPLES = [
     info: {
       vendor: 'xai',
       product: 'Grok Imagine',
+      source: 'c2pa',
+      media: 'image',
+    },
+  },
+  {
+    format: 'jpg',
+    filename: 'dreamina.jpeg',
+    info: {
+      vendor: 'bytedance',
+      product: 'Dreamina/7.5.0',
       source: 'c2pa',
       media: 'image',
     },

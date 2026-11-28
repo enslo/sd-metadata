@@ -95,6 +95,14 @@ const VENDOR_MARKERS: ReadonlyArray<{ marker: string; vendor: Vendor }> = [
   // xAI: signer "xAI Grok Imagine", generator "Grok Imagine".
   { marker: 'xAI Grok Imagine', vendor: 'xai' },
   { marker: 'Grok Imagine', vendor: 'xai' },
+  // Kuaishou's Kling: signing certificate "Kling AI C2PA Claim Signing"
+  // under "Kling AI C2PA Root CA" (generator "ks-c2pa-service").
+  { marker: 'Kling AI C2PA', vendor: 'kuaishou' },
+  // ByteDance's Dreamina: claim generator "Dreamina/<version> c2pa-tool/…".
+  // Not the signer "Bytedance Pte. Ltd.", which ByteDance's other apps can
+  // sign with as well, and Dreamina declares no AI DigitalSourceType that
+  // would tell them apart.
+  { marker: 'Dreamina/', vendor: 'bytedance' },
 ];
 
 /** One manifest of a store, as byte ranges of the store. */

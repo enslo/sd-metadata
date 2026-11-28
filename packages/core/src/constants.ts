@@ -65,6 +65,8 @@ export const vendorLabels: Readonly<Record<Vendor, string>> = Object.freeze({
   google: 'Google',
   xai: 'xAI',
   meta: 'Meta',
+  kuaishou: 'Kuaishou',
+  bytedance: 'ByteDance',
   unknown: 'Unknown',
 });
 
@@ -95,6 +97,8 @@ const DEFAULT_PRODUCTS: Readonly<
     google: 'Gemini',
     xai: 'Grok Imagine',
     meta: 'Muse',
+    kuaishou: 'Kling AI',
+    bytedance: 'Dreamina',
     unknown: vendorLabels.unknown,
   },
   video: {
@@ -102,22 +106,29 @@ const DEFAULT_PRODUCTS: Readonly<
     google: 'Veo',
     xai: 'Grok Imagine',
     meta: 'Muse',
+    kuaishou: 'Kling AI',
+    bytedance: 'Dreamina',
     unknown: vendorLabels.unknown,
   },
 };
+
+/** A product declared as `name/version`, such as `Dreamina/7.5.0`. */
+const VERSIONED_PRODUCT = /^([^/]+)\/\d[\w.+-]*$/;
 
 /**
  * Display name of the AI service that made a vendor image or video.
  *
  * Includes inference, for display only: a known product value is mapped to
  * the service's name, and a missing one falls back to the vendor's main
- * service for the media (images: GPT Image, Gemini, Grok Imagine, Muse;
- * videos: Sora, Veo, Grok Imagine, Muse). A Google image is therefore
- * reported as Gemini, even though Google
- * also signs other AI edits (e.g. Pixel's Magic Editor), and an image made
- * with OpenAI's gpt-image API as GPT Image. An unknown product value is
+ * service for the media (images: GPT Image, Gemini, Grok Imagine, Muse,
+ * Kling AI, Dreamina; videos: Sora, Veo, Grok Imagine, Muse, Kling AI,
+ * Dreamina). A Google image is therefore reported as Gemini, even though
+ * Google also signs other AI edits (e.g. Pixel's Magic Editor), and an image
+ * made with OpenAI's gpt-image API as GPT Image. An unknown product value is
  * returned as written, also for an unknown vendor, which is `Unknown` only
- * when it names no product. The declared value stays in `info.product`.
+ * when it names no product; a value declared as `name/version`
+ * (`Dreamina/7.5.0`) is shown by its name. The declared value stays in
+ * `info.product`.
  *
  * @example
  * ```typescript
@@ -137,7 +148,11 @@ export function productLabel(info: VendorInfo): string {
   if (info.product === undefined) {
     return DEFAULT_PRODUCTS[info.media][info.vendor];
   }
-  return PRODUCT_NAMES[info.vendor]?.get(info.product) ?? info.product;
+  return (
+    PRODUCT_NAMES[info.vendor]?.get(info.product) ??
+    info.product.match(VERSIONED_PRODUCT)?.[1] ??
+    info.product
+  );
 }
 
 /**

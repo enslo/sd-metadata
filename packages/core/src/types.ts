@@ -426,7 +426,14 @@ export interface LoraSettings {
  * Coarse by design: the declaration identifies the vendor, and only sometimes
  * the service (see {@link VendorInfo.product}).
  */
-export type Vendor = 'openai' | 'google' | 'xai' | 'meta' | 'unknown';
+export type Vendor =
+  | 'openai'
+  | 'google'
+  | 'xai'
+  | 'meta'
+  | 'kuaishou'
+  | 'bytedance'
+  | 'unknown';
 
 /**
  * Where a vendor declaration was read from.

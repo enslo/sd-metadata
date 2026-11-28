@@ -260,6 +260,66 @@ describe('detectC2paVendor - vendor and product', () => {
     expect(detectC2paVendor(png, 'png')).toBeNull();
   });
 
+  it('names Kuaishou by the certificate that signs Kling images', () => {
+    const png = pngWithCaBX(
+      store(
+        manifest({
+          claimGenerator: 'ks-c2pa-service',
+          signer: 'CN=Kling AI C2PA Claim Signing',
+          actions: [
+            {
+              action: 'c2pa.created',
+              softwareAgent: { name: 'Kling AI' },
+              digitalSourceType: AI_DST,
+            },
+          ],
+        }),
+      ),
+    );
+
+    expect(detectC2paVendor(png, 'png')).toEqual({
+      vendor: 'kuaishou',
+      product: 'Kling AI',
+      source: 'c2pa',
+    });
+  });
+
+  it('names ByteDance by the Dreamina claim generator, without an AI DigitalSourceType', () => {
+    const png = pngWithCaBX(
+      store(
+        manifest({
+          claimGenerator: 'Dreamina/7.5.0 c2pa-tool/0.1.0 c2pa-rs/0.31.3',
+          signer: 'O=Bytedance Pte. Ltd.',
+          actions: [
+            { action: 'c2pa.created', softwareAgent: 'Dreamina/7.5.0' },
+          ],
+        }),
+      ),
+    );
+
+    expect(detectC2paVendor(png, 'png')).toEqual({
+      vendor: 'bytedance',
+      product: 'Dreamina/7.5.0',
+      source: 'c2pa',
+    });
+  });
+
+  it('does not take a ByteDance signature alone for an AI service', () => {
+    // ByteDance signs for its other apps too; without the Dreamina generator
+    // or an AI DigitalSourceType the manifest declares nothing
+    const png = pngWithCaBX(
+      store(
+        manifest({
+          claimGenerator: 'CapCut/14.0.0 c2pa-rs/0.31.3',
+          signer: 'O=Bytedance Pte. Ltd.',
+          actions: [{ action: 'c2pa.created', softwareAgent: 'CapCut/14.0.0' }],
+        }),
+      ),
+    );
+
+    expect(detectC2paVendor(png, 'png')).toBeNull();
+  });
+
   it('reads a software agent written as a text string (Grok Imagine)', () => {
     const png = pngWithCaBX(
       store(
