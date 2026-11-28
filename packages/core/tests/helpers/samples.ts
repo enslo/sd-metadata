@@ -12,11 +12,12 @@ const EXCLUDED_PATTERNS = ['empty', 'gimp'];
 /**
  * Vendor (commercial AI service) samples.
  *
- * These images carry only a vendor's declaration (a C2PA manifest, an XMP
- * DigitalSourceType or an xAI signature) and NO generation parameters, so
- * they are not handled by the SD-tool parsers. They live in their own
- * directory tree (samples/vendor/<format>/), so the generation-metadata
- * sweeps never see them; they are exercised by tests/samples/vendor.test.ts.
+ * These images carry only a vendor's declaration (a C2PA manifest, an AIGC
+ * label, an XMP DigitalSourceType or an xAI signature) and NO generation
+ * parameters, so they are not handled by the SD-tool parsers. They live in
+ * their own directory tree (samples/vendor/<format>/), so the
+ * generation-metadata sweeps never see them; they are exercised by
+ * tests/samples/vendor.test.ts.
  * `info` is the exact VendorInfo each one must produce.
  */
 export const VENDOR_SAMPLES = [
@@ -59,6 +60,11 @@ export const VENDOR_SAMPLES = [
       source: 'c2pa',
       media: 'image',
     },
+  },
+  {
+    format: 'png',
+    filename: 'yuanbao.png',
+    info: { vendor: 'tencent', source: 'aigc', media: 'image' },
   },
   {
     format: 'jpg',

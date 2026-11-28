@@ -56,6 +56,9 @@ describe('productLabel', () => {
     expect(
       productLabel({ vendor: 'bytedance', source: 'c2pa', media: 'image' }),
     ).toBe('Dreamina');
+    expect(
+      productLabel({ vendor: 'tencent', source: 'aigc', media: 'image' }),
+    ).toBe('Yuanbao');
   });
 
   it('returns an unknown product value as written', () => {
@@ -150,6 +153,7 @@ describe('vendorLabels', () => {
       meta: 'Meta',
       kuaishou: 'Kuaishou',
       bytedance: 'ByteDance',
+      tencent: 'Tencent',
       unknown: 'Unknown',
     });
   });
@@ -165,6 +169,7 @@ describe('productLabel - videos', () => {
     expect(video('meta')).toBe('Muse');
     expect(video('kuaishou')).toBe('Kling AI');
     expect(video('bytedance')).toBe('Dreamina');
+    expect(video('tencent')).toBe('Yuanbao');
     expect(video('unknown')).toBe('Unknown');
   });
 

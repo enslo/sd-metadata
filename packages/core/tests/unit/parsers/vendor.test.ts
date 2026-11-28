@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { detectVendor } from '../../../src/parsers/vendor';
-import type { MetadataSegment, RawMetadata } from '../../../src/types';
-import { createMinimalJpeg } from '../../helpers/minimal-images';
+import type {
+  MetadataSegment,
+  PngTextChunk,
+  RawMetadata,
+} from '../../../src/types';
+import {
+  createMinimalJpeg,
+  createMinimalPng,
+  createMinimalWebp,
+} from '../../helpers/minimal-images';
 
 const AI_DST =
   'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia';
@@ -117,7 +125,130 @@ describe('detectVendor - xAI signature', () => {
   });
 });
 
+/**
+ * China's AIGC label (GB 45438-2025) with the fields services write. Kling
+ * names itself and leaves the reserved fields null.
+ */
+const aigcLabel = (producer: unknown = 'kling') => ({
+  Label: '1',
+  ContentProducer: producer,
+  ProduceID: 'SGP_PROD_ai_web_327830412527199',
+  ReservedCode1: null,
+  ContentPropagator: producer,
+  PropagateID: 'SGP_PROD_ai_web_327830412527199',
+  ReservedCode2: null,
+});
+
+/**
+ * Provider code as Tencent Yuanbao writes it: the company's unified social
+ * credit code between a prefix and a suffix
+ */
+const TENCENT_PRODUCER = '001191440300708461136T1WFUO';
+
+/** The label as a PNG text chunk named AIGC (Kling) */
+const aigcChunk = (text: string): PngTextChunk => ({
+  type: 'tEXt',
+  keyword: 'AIGC',
+  text,
+});
+
+/** The label wrapped in an object, as an EXIF UserComment (Yuanbao) */
+const userComment = (data: string): MetadataSegment => ({
+  source: { type: 'exifUserComment' },
+  data,
+});
+
+const detectPng = (chunks: PngTextChunk[], exif?: MetadataSegment[]) =>
+  detectVendor(createMinimalPng(), 'png', {
+    format: 'png',
+    chunks,
+    ...(exif ? { exif } : {}),
+  });
+
+describe('detectVendor - AIGC label', () => {
+  it('names Kuaishou from the label Kling writes into a PNG text chunk', () => {
+    expect(detectPng([aigcChunk(JSON.stringify(aigcLabel('kling')))])).toEqual({
+      vendor: 'kuaishou',
+      source: 'aigc',
+    });
+  });
+
+  it('names Tencent by the company code inside the provider code, from the EXIF of a PNG', () => {
+    const comment = JSON.stringify({ AIGC: aigcLabel(TENCENT_PRODUCER) });
+
+    expect(detectPng([], [userComment(comment)])).toEqual({
+      vendor: 'tencent',
+      source: 'aigc',
+    });
+  });
+
+  it('reads the label in a JPEG or WebP UserComment the same way', () => {
+    const comment = JSON.stringify({ AIGC: aigcLabel(TENCENT_PRODUCER) });
+    const expected = { vendor: 'tencent', source: 'aigc' };
+
+    expect(detect(jpegRaw(userComment(comment)))).toEqual(expected);
+    expect(
+      detectVendor(createMinimalWebp(), 'webp', {
+        format: 'webp',
+        segments: [userComment(comment)],
+      }),
+    ).toEqual(expected);
+  });
+
+  it('reports an unknown vendor for a provider it has no name for', () => {
+    expect(detectPng([aigcChunk(JSON.stringify(aigcLabel('000123')))])).toEqual(
+      { vendor: 'unknown', source: 'aigc' },
+    );
+  });
+
+  it('ignores an AIGC chunk that does not hold a label', () => {
+    for (const text of [
+      'AIGC',
+      '{"Label":"1","ContentProducer":"kling"',
+      '["kling"]',
+      'null',
+      '{"note":"made with AIGC tools"}',
+      '{"Label":"1"}',
+      '{"ContentProducer":"kling"}',
+      JSON.stringify(aigcLabel(5)),
+    ]) {
+      expect(detectPng([aigcChunk(text)]), text).toBeNull();
+    }
+  });
+
+  it('ignores a UserComment whose AIGC entry is not a label', () => {
+    for (const comment of [
+      '1girl, solo, AIGC',
+      '{"AIGC":"1"}',
+      '{"AIGC":null}',
+      '{"AIGC":{"Label":"1"}}',
+      '{"prompt":{"3":{"class_type":"KSampler","inputs":{}}}}',
+    ]) {
+      expect(detectPng([], [userComment(comment)]), comment).toBeNull();
+      expect(detect(jpegRaw(userComment(comment))), comment).toBeNull();
+    }
+  });
+
+  it('does not take a chunk under another keyword for the label', () => {
+    const chunk: PngTextChunk = {
+      type: 'tEXt',
+      keyword: 'Comment',
+      text: JSON.stringify(aigcLabel('kling')),
+    };
+
+    expect(detectPng([chunk])).toBeNull();
+  });
+});
+
 describe('detectVendor - precedence', () => {
+  it('prefers the AIGC label over XMP', () => {
+    const raw = jpegRaw(
+      xmpSegment(xmp(AI_DST, ['Meta'])),
+      userComment(JSON.stringify({ AIGC: aigcLabel(TENCENT_PRODUCER) })),
+    );
+    expect(detect(raw)).toEqual({ vendor: 'tencent', source: 'aigc' });
+  });
+
   it('prefers XMP over the signature', () => {
     const raw = jpegRaw(
       signatureSegment(base64Of(192)),
