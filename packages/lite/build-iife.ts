@@ -40,6 +40,10 @@ const terserResult = await minify(wrapped, {
     ecma: 2020,
     passes: 3,
     unsafe: true,
+    // Turns `function(e){...}` expressions into arrows (~65 bytes). Safe
+    // here: nothing in the bundle is called with `new` or reads `this` /
+    // `arguments`.
+    unsafe_arrows: true,
     collapse_vars: true,
     reduce_vars: true,
   },
