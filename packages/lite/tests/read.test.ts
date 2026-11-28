@@ -271,3 +271,25 @@ describe('NovelAI text block, img2img strength and model', () => {
     );
   });
 });
+
+// Fooocus and HF Space write the size as one "resolution" text ("1024x1024"
+// in Fooocus's own scheme, the Python tuple "(1024, 1024)" in the JSON scheme
+// and HF Space), with no width / height. The cross-test above does not
+// compare Size, so it is compared with core here.
+describe('Size from a resolution text', () => {
+  it('should match core for the Fooocus and HF Space samples', () => {
+    const files: Array<[string, string]> = [
+      ['png', 'fooocus.png'],
+      ['jpg', 'fooocus.jpg'],
+      ['webp', 'fooocus.webp'],
+      ['png', 'huggingface-space.png'],
+      ['png', 'huggingface-space-upscale.png'],
+    ];
+    for (const [format, file] of files) {
+      const data = load(format, file);
+      const size = field(liteRead(data), 'Size');
+      expect(size, file).toMatch(/^\d+x\d+$/);
+      expect(size, file).toBe(field(stringify(fullRead(data)), 'Size'));
+    }
+  });
+});
