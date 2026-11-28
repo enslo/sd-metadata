@@ -80,8 +80,8 @@ const CT = 'class_type';
 const PARAMS = 'parameters';
 
 // EasyDiffusion stores metadata as flat PNG tEXt entries keyed by this name.
-// Extracted as a constant because the 27-character string appears in three
-// places: detection (tryJsonTool, extract) and extraction (extractCommon).
+// Extracted as a constant because the 27-character string appears in two
+// places: detection (extract) and extraction (extractCommon).
 const EASY_DIFF_KEY = 'use_stable_diffusion_model';
 
 // ============================================================================
@@ -204,19 +204,20 @@ export function extract(rawEntries: Entries): string {
   // --- JSON parameters -------------------------------------------------
   // `obj` is only set when params is a non-empty text, hence the `params!`
   if (obj) {
-    // Try specific tool detectors (RuinedFooocus, EasyDiffusion,
-    // Fooocus, HF Space, NovelAI).
     // NovelAI keeps the model in Source, outside the Comment JSON.
     if (entries.Source) obj.Source = entries.Source;
-    const result = tryJsonTool(obj, params!);
-    if (result) return result;
+
+    // NovelAI (PNG/WebP JSON): identified by "noise_schedule" key.
+    // Has special v4 prompt format that needs dedicated handling.
+    if ('noise_schedule' in obj) return buildNovelAI(obj);
 
     // ComfyUI (PNG): node graph stored directly in parameters.
     if (params!.includes(CT)) return buildA1111(flatScan(params!));
 
-    // Generic JSON fallback: extract common fields.
-    // Handles InvokeAI, Civitai, TensorArt, and other tools that
-    // use standard field names (prompt, seed, steps, cfg, etc.).
+    // Every other JSON tool: extract common fields. InvokeAI, Civitai,
+    // TensorArt, Fooocus, RuinedFooocus, EasyDiffusion and HF Space are not
+    // told apart: their field names do not collide, so the fallback chain
+    // of each field (see extractCommon) reads all of them.
     const base = extractCommon(obj);
 
     // TensorArt + ComfyUI hybrid: TensorArt stores generation
@@ -319,49 +320,6 @@ function readCborText(manifest: string, pos: number): string {
 }
 
 // ============================================================================
-// JSON Tool Detector
-// ============================================================================
-
-/**
- * Attempt to identify specific tools from a parsed JSON object.
- * Returns A1111-format text if a tool is recognized, null otherwise.
- *
- * Detection is ordered from most specific to least specific signatures.
- */
-function tryJsonTool(obj: JsonObject, text: string): string | null {
-  // RuinedFooocus: identified by "software" field containing "RuinedFooocus".
-  if (asText(obj.software).includes('RuinedFooocus'))
-    return buildA1111(extractCommon(obj));
-
-  // EasyDiffusion (JSON variant): identified by "use_stable_diffusion_model".
-  if (EASY_DIFF_KEY in obj) return buildA1111(extractCommon(obj));
-
-  // Fooocus: identified by having both "Model" (capital M) and "resolution"
-  // keys. Resolution format: "1024x1024". Also has optional upscaler data.
-  const fooocus = text.includes('"Model"') && text.includes('"resolution"');
-
-  // HF Space / Civitai generator / Fooocus JSON scheme: identified by
-  // "base_model" key.
-  // Resolution format: "(1024, 1024)" (Python tuple string).
-  if (fooocus || 'base_model' in obj) {
-    // Both tools take their size from `resolution` alone; only the pattern
-    // differs. In the Fooocus one the lookbehind starts a match at the first
-    // digit of a run only, so a long run of digits without an "x" is tried
-    // once, not from every digit
-    const size = asText(obj.resolution).match(
-      fooocus ? /(?<!\d)(\d+)\s*x\s*(\d+)/ : /\(\s*(\d+)\s*,\s*(\d+)\s*\)/,
-    );
-    return buildA1111({ ...extractCommon(obj), w: size?.[1], h: size?.[2] });
-  }
-
-  // NovelAI (PNG/WebP JSON): identified by "noise_schedule" key.
-  // Has special v4 prompt format that needs dedicated handling.
-  if ('noise_schedule' in obj) return buildNovelAI(obj);
-
-  return null;
-}
-
-// ============================================================================
 // Common JSON Extractor
 // ============================================================================
 
@@ -370,6 +328,8 @@ function tryJsonTool(obj: JsonObject, text: string): string | null {
  *
  * Each field tries multiple property names to cover all known JSON-based tools.
  * The fallback order generally goes: most common name → tool-specific aliases.
+ * No tool is detected first: a key one tool uses is simply absent from the
+ * others.
  *
  * Covered tools: A1111, NovelAI, SwarmUI, InvokeAI, Civitai, TensorArt,
  * Fooocus, RuinedFooocus, EasyDiffusion, HF Space.
@@ -380,6 +340,12 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
   const mod = obj.model as JsonObject | undefined;
   const base = obj.baseModel as JsonObject | undefined;
   const up = obj.use_upscaler as JsonObject | undefined;
+  // Size as one text: "1024x1024" (Fooocus) or the Python tuple
+  // "(1024, 1024)" (HF Space / Civitai generator / Fooocus JSON scheme). One
+  // pattern reads both. The lookbehind starts a match at the first digit of
+  // a run only, so a long run of digits with no separator is tried once, not
+  // from every digit.
+  const size = asText(obj.resolution).match(/(?<!\d)(\d+)\s*[x,]\s*(\d+)/);
   return {
     // Prompt: Fooocus "full_prompt" (style-resolved parts, joined with ", "
     // like its own a1111 scheme) → "prompt" (most tools) → "Prompt" (Fooocus)
@@ -416,8 +382,9 @@ function extractCommon(obj: Record<string, unknown>): GenerationParams {
     // (and leave sc empty: `sa && sc` is "" then).
     sa: sa || sc,
     sc: sa && sc,
-    w: asText(obj.width),
-    h: asText(obj.height),
+    // "resolution" first: the tools that write it have no width / height
+    w: size?.[1] ?? asText(obj.width),
+    h: size?.[2] ?? asText(obj.height),
     // Model name: extensive fallback chain covering all known patterns.
     // "model" (string)          → InvokeAI, SwarmUI, Civitai
     // "Model" (capital)         → Fooocus

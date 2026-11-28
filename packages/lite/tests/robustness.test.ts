@@ -330,3 +330,42 @@ describe('extract - entries it is given', () => {
     ).toBe(own);
   });
 });
+
+// One pattern reads the size text of every JSON tool, with no tool detected
+// first
+describe('extract - size given as one text', () => {
+  it('reads "WxH" and a Python tuple, whatever else the JSON holds', () => {
+    const forms = ['1152x896', '1152 x 896', '(1152, 896)', '(1152,896)'];
+    for (const resolution of forms) {
+      const text = JSON.stringify({ prompt: '1girl', steps: 20, resolution });
+      expect(extract({ parameters: text }), resolution).toBe(
+        '1girl\nSteps: 20, Size: 1152x896',
+      );
+    }
+  });
+
+  it('prefers it over width and height', () => {
+    const text = JSON.stringify({
+      prompt: '1girl',
+      resolution: '1152x896',
+      width: 512,
+      height: 512,
+    });
+    expect(extract({ parameters: text })).toBe('1girl\nSize: 1152x896');
+  });
+
+  it('falls back to width and height when it holds no size', () => {
+    for (const resolution of ['auto', '1152', '', 1152, null]) {
+      const text = JSON.stringify({
+        Model: 'animagine-xl-4.0',
+        base_model: 'animagine-xl-4.0',
+        resolution,
+        width: 832,
+        height: 1216,
+      });
+      expect(extract({ parameters: text }), `${resolution}`).toBe(
+        'Size: 832x1216, Model: animagine-xl-4.0',
+      );
+    }
+  });
+});
