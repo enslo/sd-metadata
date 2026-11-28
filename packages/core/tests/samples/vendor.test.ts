@@ -25,12 +25,32 @@ const EXPECTED_TEXT: Record<
   'gemini_3.1pro.png': 'Google Gemini',
   'gemini_unknown.png': 'Google Gemini',
   'kling.png': 'Kuaishou Kling AI',
+  'yuanbao.png': 'Tencent Yuanbao',
   'gemini_3.1pro-latest.jpg': 'Google Gemini',
   'grok-imagine2.jpg': 'xAI Grok Imagine',
   'dreamina.jpeg': 'ByteDance Dreamina',
   'muse-free.jpg': 'Unknown',
   'muse.webp': 'Meta Muse',
 };
+
+/** A PNG without its chunks of one type */
+function withoutChunks(png: Uint8Array, type: string): Uint8Array {
+  const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
+  const kept = [png.subarray(0, 8)];
+  for (let pos = 8; pos + 12 <= png.length; ) {
+    const end = pos + 12 + view.getUint32(pos);
+    const name = String.fromCharCode(...png.subarray(pos + 4, pos + 8));
+    if (name !== type) kept.push(png.subarray(pos, end));
+    pos = end;
+  }
+  const result = new Uint8Array(kept.reduce((n, part) => n + part.length, 0));
+  let offset = 0;
+  for (const part of kept) {
+    result.set(part, offset);
+    offset += part.length;
+  }
+  return result;
+}
 
 describe('Vendor detection - real samples', () => {
   for (const { format, filename, info } of VENDOR_SAMPLES) {
@@ -93,6 +113,41 @@ describe('Vendor detection - real samples', () => {
 
     const result = await parse(data);
     expect(result.status).toBe('vendor');
+  });
+
+  // yuanbao.png carries no C2PA, only China's AIGC label in the EXIF of the
+  // PNG. The label names the provider by a code and no service, so the
+  // service shown is the one assumed for Tencent.
+  it('yuanbao.png is read from its AIGC label', async () => {
+    const result = await parse(loadVendorSample('png', 'yuanbao.png'));
+    if (result.status !== 'vendor') throw new Error(result.status);
+    expect(result.info.source).toBe('aigc');
+    expect(result.info.product).toBeUndefined();
+    expect(productLabel(result.info)).toBe('Yuanbao');
+    expect(vendorLabels[result.info.vendor]).toBe('Tencent');
+  });
+
+  // kling.png carries both a C2PA manifest and the AIGC label as a PNG text
+  // chunk; C2PA wins because only it names the service.
+  it('kling.png is read from C2PA, not from its AIGC label', async () => {
+    const data = loadVendorSample('png', 'kling.png');
+    expect(new TextDecoder('latin1').decode(data)).toContain('tEXtAIGC\0{');
+
+    const result = await parse(data);
+    expect(result.status === 'vendor' && result.info.source).toBe('c2pa');
+  });
+
+  // Converters and platforms may drop the C2PA chunk and keep the text
+  // chunk: the label alone still names Kuaishou, but no service.
+  it('kling.png without its C2PA chunk is read from the AIGC label', async () => {
+    const data = withoutChunks(loadVendorSample('png', 'kling.png'), 'caBX');
+
+    const result = await parse(data);
+    expect(result).toEqual({
+      status: 'vendor',
+      info: { vendor: 'kuaishou', source: 'aigc', media: 'image' },
+    });
+    expect(stringify(result)).toBe('Kuaishou Kling AI');
   });
 
   it('write() refuses to copy a vendor declaration', async () => {

@@ -1,18 +1,21 @@
 /**
  * Vendor detection
  *
- * Commercial AI services declare their images in one of three places. They
+ * Commercial AI services declare their images in one of four places. They
  * are checked in this order, and the first declaration found wins:
  *
  * 1. C2PA Content Credentials: the only source that can also name the
  *    service, so it is preferred when an image carries several.
- * 2. XMP: an IPTC DigitalSourceType declaring AI generation, with the vendor
+ * 2. The AIGC label of China's GB 45438-2025, in a PNG text chunk or an
+ *    EXIF UserComment (Kling, Tencent Yuanbao). It names the provider.
+ * 3. XMP: an IPTC DigitalSourceType declaring AI generation, with the vendor
  *    in `dc:publisher` (Meta's Muse).
- * 3. xAI's `Signature: <base64>` in EXIF ImageDescription (Grok).
+ * 4. xAI's `Signature: <base64>` in EXIF ImageDescription (Grok).
  */
 
 import type { MetadataSegment, RawMetadata } from '../types';
 import type { ImageFormat } from '../utils/binary';
+import { detectAigcVendor } from './aigc';
 import { declaresAiDigitalSourceType, detectC2paVendor } from './c2pa';
 import type { VendorDeclaration } from './types';
 
@@ -45,7 +48,12 @@ export function detectVendor(
   const c2pa = detectC2paVendor(data, format);
   if (c2pa) return c2pa;
 
-  if (!raw || raw.format === 'png') return null;
+  if (!raw) return null;
+  const aigc = detectAigcVendor(raw);
+  if (aigc) return aigc;
+
+  // XMP declarations and xAI signatures are read from JPEG and WebP only
+  if (raw.format === 'png') return null;
   return detectXmpVendor(raw.segments) ?? detectSignatureVendor(raw.segments);
 }
 

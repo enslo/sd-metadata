@@ -74,7 +74,7 @@ export function read(
 
   // 2. No generation metadata: surface a vendor declaration if present.
   //    Commercial AI services (ChatGPT, Gemini, Grok, ...) carry only a
-  //    C2PA manifest, an XMP source type or a signature.
+  //    C2PA manifest, an AIGC label, an XMP source type or a signature.
   const info = detectVendor(
     data,
     format,

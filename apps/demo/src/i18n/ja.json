@@ -37,7 +37,8 @@
       "sources": {
         "c2pa": "Content Credentials (C2PA)",
         "xmp": "XMP (IPTC)",
-        "signature": "署名 (EXIF)"
+        "signature": "署名 (EXIF)",
+        "aigc": "AIGC ラベル (GB 45438-2025)"
       }
     }
   },

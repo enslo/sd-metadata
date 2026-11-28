@@ -67,6 +67,7 @@ export const vendorLabels: Readonly<Record<Vendor, string>> = Object.freeze({
   meta: 'Meta',
   kuaishou: 'Kuaishou',
   bytedance: 'ByteDance',
+  tencent: 'Tencent',
   unknown: 'Unknown',
 });
 
@@ -99,6 +100,7 @@ const DEFAULT_PRODUCTS: Readonly<
     meta: 'Muse',
     kuaishou: 'Kling AI',
     bytedance: 'Dreamina',
+    tencent: 'Yuanbao',
     unknown: vendorLabels.unknown,
   },
   video: {
@@ -108,6 +110,7 @@ const DEFAULT_PRODUCTS: Readonly<
     meta: 'Muse',
     kuaishou: 'Kling AI',
     bytedance: 'Dreamina',
+    tencent: 'Yuanbao',
     unknown: vendorLabels.unknown,
   },
 };
@@ -121,8 +124,9 @@ const VERSIONED_PRODUCT = /^([^/]+)\/\d[\w.+-]*$/;
  * Includes inference, for display only: a known product value is mapped to
  * the service's name, and a missing one falls back to the vendor's main
  * service for the media (images: GPT Image, Gemini, Grok Imagine, Muse,
- * Kling AI, Dreamina; videos: Sora, Veo, Grok Imagine, Muse, Kling AI,
- * Dreamina). A Google image is therefore reported as Gemini, even though
+ * Kling AI, Dreamina, Yuanbao; videos: Sora, Veo, Grok Imagine, Muse,
+ * Kling AI, Dreamina, Yuanbao). A Google image is therefore reported as
+ * Gemini, even though
  * Google also signs other AI edits (e.g. Pixel's Magic Editor), and an image
  * made with OpenAI's gpt-image API as GPT Image. An unknown product value is
  * returned as written, also for an unknown vendor, which is `Unknown` only

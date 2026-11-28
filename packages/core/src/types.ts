@@ -433,6 +433,7 @@ export type Vendor =
   | 'meta'
   | 'kuaishou'
   | 'bytedance'
+  | 'tencent'
   | 'unknown';
 
 /**
@@ -444,8 +445,11 @@ export type Vendor =
  *   MP4 `uuid` box)
  * - `signature`: xAI's `Signature: <base64>` value (EXIF ImageDescription,
  *   MP4 `©cmt`)
+ * - `aigc`: the AIGC label of China's GB 45438-2025 (a PNG text chunk named
+ *   `AIGC`, or `{"AIGC": {...}}` in an EXIF UserComment). It names the
+ *   provider and no service, so {@link VendorInfo.product} is absent.
  */
-export type VendorSource = 'c2pa' | 'xmp' | 'signature';
+export type VendorSource = 'c2pa' | 'xmp' | 'signature' | 'aigc';
 
 /**
  * A commercial AI service's declaration that it made an image or a video.
