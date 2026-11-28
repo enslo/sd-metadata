@@ -24,8 +24,10 @@ const EXPECTED_TEXT: Record<
   'chatgpt-image2-latest.png': 'OpenAI GPT Image',
   'gemini_3.1pro.png': 'Google Gemini',
   'gemini_unknown.png': 'Google Gemini',
+  'kling.png': 'Kuaishou Kling AI',
   'gemini_3.1pro-latest.jpg': 'Google Gemini',
   'grok-imagine2.jpg': 'xAI Grok Imagine',
+  'dreamina.jpeg': 'ByteDance Dreamina',
   'muse-free.jpg': 'Unknown',
   'muse.webp': 'Meta Muse',
 };
@@ -68,6 +70,29 @@ describe('Vendor detection - real samples', () => {
         media: 'image',
       },
     });
+  });
+
+  // Dreamina declares itself as "Dreamina/<app version>"; the declared value
+  // is kept verbatim and productLabel() shows the name without the version.
+  it('productLabel() names dreamina.jpeg Dreamina, without the app version', async () => {
+    const result = await parse(loadVendorSample('jpg', 'dreamina.jpeg'));
+    if (result.status !== 'vendor') throw new Error(result.status);
+    expect(result.info.product).toBe('Dreamina/7.5.0');
+    expect(productLabel(result.info)).toBe('Dreamina');
+    expect(vendorLabels[result.info.vendor]).toBe('ByteDance');
+  });
+
+  // dreamina.jpeg holds two manifests, Dreamina's and one a ByteDance
+  // transcoding service added on top, and neither declares an AI
+  // DigitalSourceType: the image is recognized by the tool that created it.
+  it('dreamina.jpeg is recognized without an AI DigitalSourceType', async () => {
+    const data = loadVendorSample('jpg', 'dreamina.jpeg');
+    const text = new TextDecoder('latin1').decode(data);
+    expect(text).toContain('ByteDance Media Transcode Service');
+    expect(text).not.toContain('AlgorithmicMedia');
+
+    const result = await parse(data);
+    expect(result.status).toBe('vendor');
   });
 
   it('write() refuses to copy a vendor declaration', async () => {
