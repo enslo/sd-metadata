@@ -12,12 +12,14 @@ import { readJpeg, readPng, readWebp } from './read';
  * Parse AI-generated image metadata and return A1111-format text.
  *
  * Supports PNG, JPEG, and WebP formats across 18+ generation tools. For PNG
- * images with no generation parameters, falls back to C2PA Content Credentials
- * and returns the generator name (e.g. ChatGPT / Gemini exports).
+ * and JPEG images with no generation parameters, falls back to C2PA Content
+ * Credentials and returns the name of the tool that made the image
+ * (`ChatGPT`, `Kling AI`, `Grok Imagine`), or of the program that signed it
+ * when the manifest names no tool (Gemini exports).
  * Returns empty string if no metadata is found.
  *
  * @param input - Image file data
- * @returns A1111-format metadata text, the C2PA generator name, or empty string
+ * @returns A1111-format metadata text, a C2PA tool name, or empty string
  */
 export function parse(input: Uint8Array | ArrayBuffer): string {
   const data = input instanceof ArrayBuffer ? new Uint8Array(input) : input;

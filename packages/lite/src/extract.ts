@@ -290,28 +290,44 @@ export function extract(rawEntries: Entries): string {
 // ============================================================================
 
 /**
- * Recover `claim_generator_info.name` from a caBX manifest captured as a Latin-1
- * string (1:1 byte view, see readPng). Detection only — no JUMBF/CBOR decoder
- * and no signature verification.
+ * Recover the name of the tool that made the image from a caBX manifest
+ * captured as a Latin-1 string (1:1 byte view, see readPng): the
+ * `softwareAgent` of an action, which names the product (`Kling AI`,
+ * `Dreamina/7.5.0`), else `claim_generator_info.name`, the signing program.
+ * Detection only — no JUMBF/CBOR decoder and no signature verification.
  *
- * The `name` key is encoded as 0x64 ('d') + "name", i.e. the run "dname", so the
- * value's CBOR text-string header sits 5 bytes later. Generator names are short
- * ASCII, so only inline (0x60-0x77) and 1-byte (0x78) length headers are read.
- * charCodeAt yields NaN past the string end, which fails every comparison below,
- * so out-of-range offsets fall through to "".
+ * A `softwareAgent` is a text, or a map that starts with a `name`. The `name`
+ * key is encoded as 0x64 ('d') + "name", i.e. the run "dname", so its value
+ * sits 5 bytes later.
  */
 function readC2paName(manifest: string | undefined): string {
   if (!manifest) return '';
 
-  const cgi = manifest.indexOf('claim_generator_info');
-  if (cgi < 0) return '';
+  // The value of a `name` key that starts within `max` bytes of a marker. The
+  // window is kept short so a stray "...name" elsewhere cannot be misread.
+  const nameAfter = (marker: string, max: number): string => {
+    const at = manifest.indexOf(marker);
+    const p = manifest.indexOf('dname', at);
+    return at < 0 || p < 0 || p > at + max ? '' : readCborText(manifest, p + 5);
+  };
 
-  // Require the key within a short window of the marker so a stray "...name"
-  // elsewhere cannot be misread as the generator name.
-  const p = manifest.indexOf('dname', cgi);
-  if (p < 0 || p > cgi + 256) return '';
+  // "softwareAgent" is 13 characters: a text value follows it directly, and
+  // a map puts one header byte before its "dname"
+  const agent = manifest.indexOf('softwareAgent');
+  return (
+    (agent < 0 ? '' : readCborText(manifest, agent + 13)) ||
+    nameAfter('softwareAgent', 14) ||
+    nameAfter('claim_generator_info', 256)
+  );
+}
 
-  const pos = p + 5;
+/**
+ * Read a CBOR text string at a position of the Latin-1 view. Names are short
+ * ASCII, so only inline (0x60-0x77) and 1-byte (0x78) length headers are
+ * read. charCodeAt yields NaN past the string end, which fails every
+ * comparison below, so out-of-range offsets fall through to "".
+ */
+function readCborText(manifest: string, pos: number): string {
   const head = manifest.charCodeAt(pos);
   if (!(head >= 0x60 && head <= 0x78)) return '';
 
